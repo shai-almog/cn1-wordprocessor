@@ -12,7 +12,7 @@ p.add_argument('wordcraft',type=Path)
 p.add_argument('--out',type=Path,required=True)
 a=p.parse_args()
 root=Path(__file__).resolve().parent.parent
-paths=sorted(set(Path(s) for s in (root/'desktop/target/runtime-classpath.txt').read_text().strip().split(os.pathsep)))
+paths=sorted(set(Path(s) for s in (root/'cli/target/runtime-classpath.txt').read_text().strip().split(os.pathsep)))
 artifacts=[]
 for path in paths:
     data=path.read_bytes()
@@ -31,10 +31,10 @@ report={'schema':1,'java':subprocess.run([java,'-version'],capture_output=True,t
         'javaDependencyBytes':sum(x['bytes'] for x in artifacts if not x['projectArtifact']),
         'rustLockedPackages':len(packages),'rustExternalLockedPackages':sum('source' in x for x in packages),
         'rustLockSha256':hashlib.sha256((a.wordcraft/'Cargo.lock').read_bytes()).hexdigest(),
-        'javaDesktopZip':file_info(root/'desktop/target/cn1-wordprocessor-desktop.zip'),
+        'nativeApplication':file_info(root/'app/common/target/mac-native/Build/Products/Release/Main.app/Contents/MacOS/Main'),
         'wordcraftCli':file_info(a.wordcraft/'target/release/wordcraft-cli'),
         'comparableArtifactScope':False,
-        'notes':['Java ZIP includes GUI and CLI libraries, multiple platform native dependencies, and no JVM. Rust artifact is CLI only.',
+        'notes':['Java classpath is separate JVM CLI tooling. The application is a ParparVM AppKit binary. Rust artifact is CLI only.',
                  'Classpath jars and lockfile packages are dependency inventories, not comparable source-LOC totals or installed app sizes.',
                  'Source metrics exclude both frameworks and dependencies. CN1 reuses platform UI/input/storage and text-format APIs; Rust reuses its Cargo dependency stack.']}
 a.out.parent.mkdir(parents=True,exist_ok=True)

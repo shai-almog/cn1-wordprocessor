@@ -61,13 +61,13 @@ public final class Commands {
 
   public void register(
       String id, String description, String spec, boolean transactional, Handler handler) {
-    if (commands.containsKey(id) || !id.matches("[a-z][a-zA-Z0-9.]+"))
+    if (commands.containsKey(id) || !TextUtil.commandId(id))
       throw new IllegalArgumentException("Duplicate/invalid command " + id);
     Map<String, String> params = new LinkedHashMap<String, String>();
     Set<String> required = new HashSet<String>();
     if (!spec.isEmpty())
-      for (String p : spec.split(",")) {
-        String[] kv = p.split(":");
+      for (String p : TextUtil.split(spec, ',')) {
+        String[] kv = TextUtil.split(p, ':');
         String key = kv[0];
         if (!key.endsWith("?")) required.add(key);
         else key = key.substring(0, key.length() - 1);

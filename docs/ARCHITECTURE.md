@@ -6,7 +6,7 @@
 
 `LayoutEngine.Metrics` separates font measurement from layout. Paragraph caches are keyed by immutable paragraph identity and available width. Edits to one paragraph remeasure that paragraph. Pagination currently rebuilds placements for the whole document; the engine is not a fully incremental page tree. Wrapping uses code-point measurements, not a complete shaped-text layout implementation. CN1 paints only visible pages, but the full layout remains in memory.
 
-`EditorSurface` implements CN1 `TextInputClient` and uses the public editor-host bridge from `RichTextArea` for platform input. It owns its canvas, document model, selection and rendering. Native input receives the current paragraph as surrounding text. The app does not wrap a browser editor or use Swing text editing. JavaSE uses a small Swing window/file-picker boundary; document and UI logic are shared Java.
+`EditorSurface` implements CN1 `TextInputClient` and uses the public editor-host bridge from `RichTextArea` for platform input. It owns its canvas, document model, selection and rendering. Native input receives the current paragraph as surrounding text. The app does not wrap a browser editor or use Swing text editing. The macOS application uses the standard ParparVM AppKit/Metal port and CN1 file APIs. Separate JVM CLI tools have no GUI host.
 
 The `formats` module owns format boundaries. `.cn1doc` packages the editable native XML and, when available, the original DOCX. Unedited DOCX re-export retains original part contents. Edited conversion rebuilds the supported document body; unsupported features require an explicit opt-in. Preserving unknown ZIP entries is a preservation mechanism, not a general fidelity guarantee.
 
@@ -14,4 +14,4 @@ The `formats` module owns format boundaries. `.cn1doc` packages the editable nat
 
 Recovery serializes immutable snapshots off the UI thread, writes one of two checksummed slots, reads it back and verifies it. A later revision prevents a delayed older write from replacing it. Startup chooses the highest valid generation. Application stop commits composition and saves synchronously; very large shutdown serialization remains a performance concern.
 
-The native lifecycle wrapper in `app/common` extends CN1 `Lifecycle`, delegates to `WordProcessor`, and supplies platform file selection/download/share adapters. It is generated from the current CN1 Maven archetype. Actual native device behavior still needs validation.
+The native lifecycle wrapper in `app/common` extends CN1 `Lifecycle`, delegates to `WordProcessor`, and supplies platform file selection/download/share adapters. It is generated from the current CN1 Maven archetype. UI construction occurs in init(), after Display initialization. Native macOS launch/render and ZIP recovery were exercised; mobile device behavior remains unverified.

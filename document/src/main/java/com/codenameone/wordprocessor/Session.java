@@ -211,7 +211,7 @@ public final class Session {
             int first = x.startBlock();
             Paragraph p = document.paragraph(first), last = document.paragraph(x.endBlock());
             String normalized = value.replace("\r\n", "\n").replace('\r', '\n');
-            String[] lines = normalized.split("\n", -1);
+            String[] lines = TextUtil.split(normalized, '\n');
             TextStyle style =
                 insertionStyle != null
                     ? insertionStyle

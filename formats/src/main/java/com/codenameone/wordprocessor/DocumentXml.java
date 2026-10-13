@@ -136,7 +136,7 @@ public final class DocumentXml {
       }
       long next = Long.parseLong(Xml.attr(e, "next", "1"));
       for (String id : ids)
-        if (id.matches("[pt][0-9]+")) next = Math.max(next, Long.parseLong(id.substring(1)) + 1);
+        if ((id.startsWith("p") || id.startsWith("t")) && TextUtil.digits(id, 1)) next = Math.max(next, Long.parseLong(id.substring(1)) + 1);
       return new Document(blocks, spec, Xml.attr(e, "title", "Untitled"), next);
     } catch (IllegalArgumentException ex) {
       throw new IOException("Invalid document values", ex);

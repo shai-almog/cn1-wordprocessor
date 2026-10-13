@@ -10,8 +10,8 @@ The approved target is a standalone application and reusable Java libraries, tar
 - TXT/HTML/Markdown/RTF/AsciiDoc adapters through CN1; limited selectable-text PDF output.
 - Two-slot checksummed recovery, damaged-write fallback, and revision ordering against delayed autosaves.
 - Validated command registry, compiled Java extension interface, parameterized macros with rollback/cancellation and stale-preview rejection; template filling and writing checks; stdio MCP lifecycle and rooted file access.
-- Native Java CLI on macOS arm64 via local GraalVM ahead-of-time compilation; the same commands, formats and MCP interface, checked against the JVM runtime. See [startup measurements](STARTUP.md).
-- Shared desktop/mobile/web application code, working macOS JavaSE launch, compiled JavaScript bundle.
+- Standard Maven/ParparVM macOS AppKit/Metal application, native launch/render and ZIP recovery verified. The custom Swing host and GraalVM build path were removed. See [native startup status](STARTUP.md).
+- Shared desktop/mobile/web application code; previously compiled JavaScript bundle. CLI/MCP remain separate JVM tooling. Native keyboard/IME and file chooser workflows still require validation.
 
 ## Remaining work required by the plan
 

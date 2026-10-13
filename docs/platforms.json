@@ -7,12 +7,12 @@
       "platform": "macOS",
       "cn1": {
         "declared": true,
-        "build": "JavaSE compiled; native Java CLI compiled locally with GraalVM",
-        "exercise": "desktop callback smoke and render; CLI/MCP tested",
+        "build": "Maven mac-source + ParparVM + Xcode Release; ARM64 AppKit/Metal application",
+        "exercise": "native launch/render, File tab and ZIP recovery verified; keyboard/IME and open/save dialogs not certified",
         "evidence": [
-          "desktop/src/test/java/com/codenameone/wordprocessor/UiSmoke.java",
-          "docs/validation.json",
-          "docs/native-validation.json"
+          "scripts/build-native.sh",
+          "app/common/src/main/java/com/codenameone/wordprocessor/app/Main.java",
+          "docs/validation.json"
         ]
       },
       "wordcraft": {
@@ -29,11 +29,10 @@
       "platform": "Windows",
       "cn1": {
         "declared": true,
-        "build": "shared JavaSE classes only; Windows packaging unverified",
+        "build": "Codename One target; native application not built or tested on this platform",
         "exercise": "not tested",
         "evidence": [
-          "desktop/src/main/java/com/codenameone/wordprocessor/Desktop.java",
-          "scripts/package-desktop.py"
+          "app/common/src/main/java/com/codenameone/wordprocessor/app/Main.java"
         ]
       },
       "wordcraft": {
@@ -51,10 +50,10 @@
       "platform": "Linux",
       "cn1": {
         "declared": true,
-        "build": "shared JavaSE classes only; Linux packaging unverified",
+        "build": "Codename One target; native application not built or tested on this platform",
         "exercise": "not tested",
         "evidence": [
-          "desktop/src/main/java/com/codenameone/wordprocessor/Desktop.java"
+          "app/common/src/main/java/com/codenameone/wordprocessor/app/Main.java"
         ]
       },
       "wordcraft": {
@@ -89,7 +88,7 @@
       "platform": "Browser",
       "cn1": {
         "declared": true,
-        "build": "JavaScript bundle compiled locally",
+        "build": "JavaScript bundle compiled before native migration; current changes not rebuilt for browser",
         "exercise": "unverified; browser automation unavailable",
         "evidence": [
           "scripts/build-web.sh",

@@ -7,10 +7,12 @@ import com.codenameone.wordprocessor.WordProcessor;
 import java.io.*;
 
 /** Native/mobile/browser lifecycle; the application and model are shared Java libraries. */
-public final class Main extends com.codename1.system.Lifecycle {
-  private final WordProcessor app = new WordProcessor();
+public class Main extends com.codename1.system.Lifecycle {
+  private WordProcessor app;
 
   public void init(Object context) {
+    // The native stub constructs Main before Display.init(); create UI only here.
+    app = new WordProcessor();
     app.init(context);
     app.setFiles(
         new WordProcessor.Files() {

@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
-source "$(dirname "$0")/java-classpath.sh"
-if [[ -z "${JAVA_HOME:-}" && -x /usr/libexec/java_home ]]; then
-  export JAVA_HOME="$(/usr/libexec/java_home -v 1.8)"
-fi
-exec "${JAVA_HOME:+$JAVA_HOME/bin/}java" ${JAVA_OPTS:-} -cp "$WORDPROCESSOR_CLASSPATH" com.codenameone.wordprocessor.Desktop "$@"
+cd "${BASH_SOURCE[0]%/*}/.."
+app='app/common/target/mac-native/Build/Products/Release/Main.app'
+[[ -d "$app" ]] || { echo 'Run scripts/build-native.sh first.' >&2; exit 1; }
+exec open "$app"

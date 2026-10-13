@@ -8,6 +8,12 @@ import org.junit.jupiter.api.Test;
 
 public class PortableFormatTest {
   @Test
+  public void lifecycleCanBeConstructedBeforeDisplayInit() {
+    // Matches the generated ParparVM stub, which constructs Main before Display.init().
+    new Main();
+  }
+
+  @Test
   public void portableDocumentRoundTrip() throws Exception {
     Session s = new Session(Document.empty());
     s.replace("Portable text שלום 😀");

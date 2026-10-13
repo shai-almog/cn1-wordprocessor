@@ -7,17 +7,17 @@
 | Metric | Java + Codename One | Wordcraft Rust |
 | --- | ---: | ---: |
 | Application files | 33 | 281 |
-| Application LOC, before inline-test pruning | 5,177 | 138,785 |
-| Application LOC, explicit tests pruned (estimate) | 5,177 | 118,659 |
-| Application source tokens, before inline-test pruning | 47,108 | 1,980,112 |
-| Application source tokens, explicit tests pruned (estimate) | 47,108 | 1,646,847 |
-| Separate test source tokens | 10,246 | 410,496 |
+| Application LOC, before inline-test pruning | 5,085 | 138,785 |
+| Application LOC, explicit tests pruned (estimate) | 5,085 | 118,659 |
+| Application source tokens, before inline-test pruning | 46,550 | 1,980,112 |
+| Application source tokens, explicit tests pruned (estimate) | 46,550 | 1,646,847 |
+| Separate test source tokens | 8,976 | 410,496 |
 
-Counts use `cloc` and pinned `tiktoken` `o200k_base`. Source tokens include comments/whitespace, tokenize each file separately, and exclude filename/chat framing. Frameworks, dependencies, assets and generated output are excluded for both sides. Java includes the document libraries, desktop host and shared platform lifecycle. Tests, benchmarks, examples and build tooling have separate buckets in [the complete file/hash manifest](source-metrics.json).
+Counts use `cloc` and pinned `tiktoken` `o200k_base`. Source tokens include comments/whitespace, tokenize each file separately, and exclude filename/chat framing. Frameworks, dependencies, assets and generated output are excluded for both sides. Java includes the document libraries, command-line tools and shared platform lifecycle. Tests, benchmarks, examples and build tooling have separate buckets in [the complete file/hash manifest](source-metrics.json).
 
 The Rust estimate removes 266 explicit inline test items and identifies external test modules. The parser cannot fully parse 7 source files; those remain unpruned and are listed in the manifest. This estimate does not evaluate all feature configurations/macros. Separate test-source tokens above do not include tokens removed from inline test items.
 
-The CN1 implementation delegates platform UI/input/storage and several text-format adapters to its framework. Wordcraft uses its own Rust dependency stack. That reuse is part of the proposed stack comparison and must be disclosed; these numbers do not count all code needed to execute either application. [Dependency hashes and artifact sizes](dependency-inventory.json) are recorded separately. The Java distribution requires an installed JVM. Its GUI/CLI ZIP and Wordcraft's CLI binary have different scopes and are not comparable package-size benchmarks.
+The CN1 implementation delegates platform UI/input/storage and several text-format adapters to its framework. Wordcraft uses its own Rust dependency stack. That reuse is part of the proposed stack comparison and must be disclosed; these numbers do not count all code needed to execute either application. [Dependency hashes and artifact sizes](dependency-inventory.json) are recorded separately. The application uses ParparVM. The separate JVM CLI and Wordcraft CLI have different scopes from the native GUI and are not comparable application-size benchmarks.
 
 ## Equivalent behavior probes
 
@@ -39,19 +39,7 @@ Initial JVM baseline: complete fresh-process DOCX text extraction on the same 1,
 | Median | 135.03 ms | 8.78 ms |
 | p95 | 148.02 ms | 11.86 ms |
 
-The process boundary includes JVM/runtime startup and output capture, with warm filesystem caches after one discarded invocation. It measures neither typing nor rendering. Wordcraft was faster in this initial JVM CLI test. The optimized native CLI is measured separately below. Raw samples, environment and document/output hashes are in [the timing record](cli-comparison.json). Runs were collected after local build/UI work finished.
-
-## Optimized native CLI startup
-
-The same Java CLI compiled locally with GraalVM Native Image, compared with the same Rust release binary. Each cell is median / p95 in milliseconds; outputs are byte-identical for every sample.
-
-| Fixture | Native Java | Wordcraft Rust | Java shell launcher | JVM fallback |
-| --- | ---: | ---: | ---: | ---: |
-| 1000-paragraphs | 12.25 / 13.14 | 12.17 / 12.92 | 16.15 / 17.09 | 118.59 / 123.38 |
-| 1-paragraphs | 5.98 / 7.03 | 4.63 / 5.09 | 10.20 / 11.30 | 73.84 / 78.65 |
-| 10000-paragraphs | 18.90 / 20.72 | 22.14 / 23.26 | 22.73 / 24.47 | 130.19 / 135.41 |
-
-These are fresh processes with warm filesystem caches, no daemon or cached output. The JVM GUI is unchanged. Native Java retains a small-document startup gap; this is not a universal startup or language win. See [diagnosis and reproduction](STARTUP.md), [raw samples and binary hashes](startup-comparison.json), and [native/JVM behavior checks](native-validation.json).
+The process boundary includes JVM/runtime startup and output capture, with warm filesystem caches after one discarded invocation. It measures neither typing nor rendering. Wordcraft was faster in this initial JVM CLI test. These historical JVM measurements do not measure the current ParparVM GUI. Raw samples, environment and document/output hashes are in [the timing record](cli-comparison.json). Runs were collected after local build/UI work finished.
 
 
 Warmed in-memory DOCX parsing plus text extraction on that same fixture (three alternating process rounds, 50 warmups and 100 measured operations per process):
@@ -69,9 +57,9 @@ The [CN1 model/layout timings](model-layout.json) separately exercise warmed edi
 
 | Platform | CN1 application evidence | Wordcraft evidence inspected |
 | --- | --- | --- |
-| macOS | JavaSE GUI launch/render and callback smoke; CLI/MCP tests | Release CLI built and exercised; GUI untested here |
-| Windows | Shared JavaSE target; execution untested | Declared target and workflow source; execution untested here |
-| Linux | Shared JavaSE target; execution untested | Declared target and workflow source; execution untested here |
+| macOS | ParparVM AppKit/Metal application; see current native validation | Release CLI built and exercised; GUI untested here |
+| Windows | CN1 native target; application execution untested | Declared target and workflow source; execution untested here |
+| Linux | CN1 native target; application execution untested | Declared target and workflow source; execution untested here |
 | BSD | No app support claimed | Declared target and FreeBSD workflow; execution untested here |
 | Browser | JavaScript build passed; live interaction unverified | WebAssembly target exists; not built/tested here |
 | Android | CN1 profile/lifecycle present; no device build/test | No advertised app target in inspected README/workspace |

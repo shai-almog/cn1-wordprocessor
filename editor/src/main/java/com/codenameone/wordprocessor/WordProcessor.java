@@ -336,7 +336,7 @@ public class WordProcessor {
             : "italic".equals(property)
                 ? style.italic
                 : "underline".equals(property) ? style.underline : style.strike;
-    run("format.set", Json.object("property", property, "value", Boolean.toString(!current)));
+    run("format.set", Json.object("property", property, "value", String.valueOf(!current)));
   }
 
   private void heading(int level) {
@@ -348,7 +348,7 @@ public class WordProcessor {
             s.select(i, 0, s.document().paragraph(i).text.length());
             s.paragraph("style", level == 0 ? "Normal" : "Heading" + level);
             s.format("size", level == 1 ? "26" : level == 2 ? "18" : "12");
-            s.format("bold", Boolean.toString(level > 0));
+            s.format("bold", String.valueOf(level > 0));
           }
           s.selectRange(x.anchorBlock, x.anchor, x.block, x.caret);
         });
@@ -696,7 +696,7 @@ public class WordProcessor {
               bytes = TextFormats.write(session.document(), type).getBytes("UTF-8");
             }
             files.save(
-                session.document().title.replaceAll("[^a-zA-Z0-9_-]", "_") + "." + format,
+                TextUtil.fileName(session.document().title) + "." + format,
                 bytes,
                 (ok, message) ->
                     status.setText(ok ? "Saved " + message : "Save failed: " + message));

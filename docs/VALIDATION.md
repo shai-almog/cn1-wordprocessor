@@ -4,7 +4,18 @@ See `validation.json` for the current machine-readable record. Generated artifac
 
 The Java 8 reactor tests cover persistent-tree differential edits, Unicode boundaries, session history/rollback/composition, selected paragraph properties, cached layout, split table rows, XML/DOCX/native serialization, preservation/conversion gates, PDF structure, macros/templates/previews, recovery corruption/order, and stdio MCP/path boundaries. They do not establish Wordcraft parity.
 
-The desktop UI smoke launches the real CN1 form, invokes editor callbacks on the CN1 event thread, verifies typed text/selection/undo/composition, paginates a large document, checks caret scrolling, and captures the rendered form. Physical key events, OS composition candidates, assistive technology, mobile touch, and browser interaction remain untested.
+The macOS application was built through Maven's `mac-source` target and Xcode Release,
+then launched as a ParparVM AppKit/Metal executable. The rendered sample document and
+File tab were inspected through native UI automation. Its recovery file was independently
+validated for CRC32, ZIP integrity and XML contents, exercising the master ZIP APIs.
+The original pre-Display initialization crash is fixed and covered by a regression test.
+
+Further interaction checks were interrupted by native automation errors
+(`cgWindowNotFound`, then `windowNotFoundAtPosition`). A debugger confirmed a live
+CN1MacWindow; a subsequent screenshot showed the recovered document rendered. No new
+crash report was produced. Physical typing, undo, IME and save/open dialogs are not
+certified by this run. The old callback smoke is retained as a test helper only; it is
+not native interaction evidence.
 
 A generated 1,000-paragraph, 25,000-word DOCX was opened by the pinned Wordcraft CLI and text-compared. This proves that particular textual fixture interchanges; it does not prove formatting or pagination equivalence. The two layouts have different metrics and page counts. The small macro fixture was exported to DOCX and PDF, and PDF text was independently extracted with Poppler.
 
@@ -16,9 +27,6 @@ The common CLI behavior probes use each app's corresponding commands and inspect
 
 A separate warm-import benchmark links the unmodified Wordcraft DOCX release libraries and calls each engine's actual DOCX reader plus plain-text extractor on the same in-memory fixture. Three alternating process rounds each discard 50 operations and measure 100. Extracted UTF-8 output is compared byte-for-byte; startup, file I/O, layout and rendering are outside the timed region. This isolates one simple import workload, not overall format fidelity or application performance.
 
-The local GraalVM CLI build passes 18 process-level checks against the JVM implementation:
-help/command descriptors, macro preview/apply, inspect/text, native/DOCX/TXT/HTML/Markdown/RTF/AsciiDoc
-round trips, byte-identical PDF output, invalid input, overwrite protection, unsupported PDF glyphs,
-and MCP edit/save/root confinement. Portable PDF font metrics and XML fast-path validation have
-regression tests. These are CLI checks; the GUI still uses JavaSE. Native compilation and checks
-are local only. See [startup evidence](STARTUP.md) and [runtime checks](native-validation.json).
+The GraalVM CLI experiment is retired. Historical results are retained under
+[history/graalvm-cli](history/graalvm-cli/README.md), and are not evidence for the
+ParparVM GUI. See [native startup status](STARTUP.md).

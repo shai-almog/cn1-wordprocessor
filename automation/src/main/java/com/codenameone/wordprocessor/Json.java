@@ -29,7 +29,7 @@ public final class Json {
       for (int i = 0; i < s.length(); i++) {
         char c = s.charAt(i);
         if (c == '\"' || c == '\\') b.append('\\').append(c);
-        else if (c < ' ') b.append(String.format(java.util.Locale.ROOT, "\\u%04x", (int) c));
+        else if (c < ' ') b.append("\\u" + TextUtil.padded(c, 16, 4));
         else b.append(c);
       }
       return b.append('\"').toString();

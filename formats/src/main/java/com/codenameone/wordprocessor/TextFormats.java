@@ -14,7 +14,7 @@ public final class TextFormats {
 
   public static Document read(String text, RichTextFormat format) {
     HtmlImporter.Result r = RichTextImporter.parse(text, format);
-    String[] lines = r.getText().split("\n", -1);
+    String[] lines = TextUtil.split(r.getText(), '\n');
     Sequence<Block> blocks = new Sequence<Block>();
     int offset = 0;
     for (int i = 0; i < lines.length; i++) {
@@ -84,7 +84,7 @@ public final class TextFormats {
   }
 
   private static void paragraph(final StringBuilder b, Paragraph p) {
-    String tag = p.style.matches("Heading[1-6]") ? "h" + p.style.substring(7) : "p";
+    String tag = (p.style.length() == 8 && p.style.startsWith("Heading") && p.style.charAt(7) >= '1' && p.style.charAt(7) <= '6') ? "h" + p.style.substring(7) : "p";
     b.append('<')
         .append(tag)
         .append(" style=\"white-space:pre-wrap;text-align:")
@@ -98,9 +98,9 @@ public final class TextFormats {
           b.append("<span style=\"font-size:")
               .append(s.size)
               .append("pt;color:#")
-              .append(String.format(java.util.Locale.ROOT, "%06x", s.color))
+              .append(TextUtil.padded(s.color, 16, 6))
               .append(";background-color:#")
-              .append(String.format(java.util.Locale.ROOT, "%06x", s.background))
+              .append(TextUtil.padded(s.background, 16, 6))
               .append(";font-weight:")
               .append(s.bold ? "bold" : "normal")
               .append(";font-style:")

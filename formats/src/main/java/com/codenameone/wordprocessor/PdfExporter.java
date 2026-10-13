@@ -118,7 +118,7 @@ public final class PdfExporter {
     int xref = pdf.size();
     pdf.write(ascii("xref\n0 " + (objects.size() + 1) + "\n0000000000 65535 f \n"));
     for (Integer offset : offsets)
-      pdf.write(ascii(String.format(java.util.Locale.ROOT, "%010d 00000 n \n", offset)));
+      pdf.write(ascii(TextUtil.padded(offset, 10, 10) + " 00000 n \n"));
     pdf.write(
         ascii(
             "trailer\n<< /Size "
@@ -130,7 +130,8 @@ public final class PdfExporter {
   }
 
   private static String n(float f) {
-    return String.format(java.util.Locale.ROOT, "%.3f", f);
+    long scaled = Math.round(Math.abs((double) f) * 1000);
+    return (f < 0 ? "-" : "") + scaled / 1000 + "." + TextUtil.padded(scaled % 1000, 10, 3);
   }
 
   private static String color(int c) {
@@ -168,7 +169,7 @@ public final class PdfExporter {
     for (int i = 0; i < s.length(); i++) {
       int c = winAnsi(s.charAt(i));
       if (c == '(' || c == ')' || c == '\\') b.append('\\').append((char) c);
-      else if (c > 126) b.append('\\').append(String.format(java.util.Locale.ROOT, "%03o", c));
+      else if (c > 126) b.append('\\').append(TextUtil.padded(c, 8, 3));
       else b.append((char) c);
     }
     return b.toString();

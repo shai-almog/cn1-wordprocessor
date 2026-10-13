@@ -30,11 +30,11 @@ text='''# Comparison scorecard
 text+='\n'.join('| '+name+' | '+format(x,',')+' | '+format(y,',')+' |' for name,x,y in rows)
 text+='''
 
-Counts use `cloc` and pinned `tiktoken` `o200k_base`. Source tokens include comments/whitespace, tokenize each file separately, and exclude filename/chat framing. Frameworks, dependencies, assets and generated output are excluded for both sides. Java includes the document libraries, desktop host and shared platform lifecycle. Tests, benchmarks, examples and build tooling have separate buckets in [the complete file/hash manifest](source-metrics.json).
+Counts use `cloc` and pinned `tiktoken` `o200k_base`. Source tokens include comments/whitespace, tokenize each file separately, and exclude filename/chat framing. Frameworks, dependencies, assets and generated output are excluded for both sides. Java includes the document libraries, command-line tools and shared platform lifecycle. Tests, benchmarks, examples and build tooling have separate buckets in [the complete file/hash manifest](source-metrics.json).
 
 '''
 text+=f"The Rust estimate removes {r['explicitTestItemsRemoved']} explicit inline test items and identifies external test modules. The parser cannot fully parse {len(rust['unprunedFiles'])} source files; those remain unpruned and are listed in the manifest. This estimate does not evaluate all feature configurations/macros. Separate test-source tokens above do not include tokens removed from inline test items.\n\n"
-text+='''The CN1 implementation delegates platform UI/input/storage and several text-format adapters to its framework. Wordcraft uses its own Rust dependency stack. That reuse is part of the proposed stack comparison and must be disclosed; these numbers do not count all code needed to execute either application. [Dependency hashes and artifact sizes](dependency-inventory.json) are recorded separately. The Java distribution requires an installed JVM. Its GUI/CLI ZIP and Wordcraft's CLI binary have different scopes and are not comparable package-size benchmarks.
+text+='''The CN1 implementation delegates platform UI/input/storage and several text-format adapters to its framework. Wordcraft uses its own Rust dependency stack. That reuse is part of the proposed stack comparison and must be disclosed; these numbers do not count all code needed to execute either application. [Dependency hashes and artifact sizes](dependency-inventory.json) are recorded separately. The application uses ParparVM. The separate JVM CLI and Wordcraft CLI have different scopes from the native GUI and are not comparable application-size benchmarks.
 
 ## Equivalent behavior probes
 
@@ -54,16 +54,9 @@ text+='| Metric | CN1 Java CLI | Wordcraft Rust CLI |\n| --- | ---: | ---: |\n'
 for label,key in [('Median','medianMs'),('p95','p95Ms')]:
     text+=f"| {label} | {cli['cn1'][key]:.2f} ms | {cli['wordcraft'][key]:.2f} ms |\n"
 text+='''
-The process boundary includes JVM/runtime startup and output capture, with warm filesystem caches after one discarded invocation. It measures neither typing nor rendering. Wordcraft was faster in this initial JVM CLI test. The optimized native CLI is measured separately below. Raw samples, environment and document/output hashes are in [the timing record](cli-comparison.json). Runs were collected after local build/UI work finished.
+The process boundary includes JVM/runtime startup and output capture, with warm filesystem caches after one discarded invocation. It measures neither typing nor rendering. Wordcraft was faster in this initial JVM CLI test. These historical JVM measurements do not measure the current ParparVM GUI. Raw samples, environment and document/output hashes are in [the timing record](cli-comparison.json). Runs were collected after local build/UI work finished.
 
 '''
-startup_path=a.artifacts/'startup-final/results.json'
-if startup_path.exists():
-    startup=json.loads(startup_path.read_text())
-    text+='## Optimized native CLI startup\n\nThe same Java CLI compiled locally with GraalVM Native Image, compared with the same Rust release binary. Each cell is median / p95 in milliseconds; outputs are byte-identical for every sample.\n\n| Fixture | Native Java | Wordcraft Rust | Java shell launcher | JVM fallback |\n| --- | ---: | ---: | ---: | ---: |\n'
-    for name, fixture in startup['fixtures'].items():
-        text+='| '+name+' | '+' | '.join(f"{fixture['arms'][arm]['medianMs']:.2f} / {fixture['arms'][arm]['p95Ms']:.2f}" for arm in ['native','wordcraft','launcher','jvm'])+' |\n'
-    text+='\nThese are fresh processes with warm filesystem caches, no daemon or cached output. The JVM GUI is unchanged. Native Java retains a small-document startup gap; this is not a universal startup or language win. See [diagnosis and reproduction](STARTUP.md), [raw samples and binary hashes](startup-comparison.json), and [native/JVM behavior checks](native-validation.json).\n\n'
 warm_path=a.artifacts/'warm-import.json'
 if warm_path.exists():
     warm=json.loads(warm_path.read_text())
@@ -78,9 +71,9 @@ The [CN1 model/layout timings](model-layout.json) separately exercise warmed edi
 
 | Platform | CN1 application evidence | Wordcraft evidence inspected |
 | --- | --- | --- |
-| macOS | JavaSE GUI launch/render and callback smoke; CLI/MCP tests | Release CLI built and exercised; GUI untested here |
-| Windows | Shared JavaSE target; execution untested | Declared target and workflow source; execution untested here |
-| Linux | Shared JavaSE target; execution untested | Declared target and workflow source; execution untested here |
+| macOS | ParparVM AppKit/Metal application; see current native validation | Release CLI built and exercised; GUI untested here |
+| Windows | CN1 native target; application execution untested | Declared target and workflow source; execution untested here |
+| Linux | CN1 native target; application execution untested | Declared target and workflow source; execution untested here |
 | BSD | No app support claimed | Declared target and FreeBSD workflow; execution untested here |
 | Browser | JavaScript build passed; live interaction unverified | WebAssembly target exists; not built/tested here |
 | Android | CN1 profile/lifecycle present; no device build/test | No advertised app target in inspected README/workspace |

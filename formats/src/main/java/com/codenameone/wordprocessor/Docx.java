@@ -342,19 +342,19 @@ public final class Docx {
                 .append("\"/><w:sz w:val=\"")
                 .append(Math.round(s.size * 2))
                 .append("\"/><w:color w:val=\"")
-                .append(String.format(java.util.Locale.ROOT, "%06x", s.color))
+                .append(TextUtil.padded(s.color, 16, 6))
                 .append("\"/><w:shd w:fill=\"")
-                .append(String.format(java.util.Locale.ROOT, "%06x", s.background))
+                .append(TextUtil.padded(s.background, 16, 6))
                 .append("\"/>");
             if (s.bold) b.append("<w:b/>");
             if (s.italic) b.append("<w:i/>");
             if (s.underline) b.append("<w:u w:val=\"single\"/>");
             if (s.strike) b.append("<w:strike/>");
             b.append("</w:rPr>");
-            String[] lines = text.split("\n", -1);
+            String[] lines = TextUtil.split(text, '\n');
             for (int i = 0; i < lines.length; i++) {
               if (i > 0) b.append("<w:br/>");
-              String[] tabs = lines[i].split("\t", -1);
+              String[] tabs = TextUtil.split(lines[i], '\t');
               for (int j = 0; j < tabs.length; j++) {
                 if (j > 0) b.append("<w:tab/>");
                 b.append("<w:t xml:space=\"preserve\">")

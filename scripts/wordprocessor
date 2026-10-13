@@ -1,13 +1,6 @@
 #!/usr/bin/env bash
+# JVM command-line tooling; the application is app/common's native CN1 build.
 set -euo pipefail
-script_dir="${BASH_SOURCE[0]%/*}"
-native="$script_dir/../desktop/target/native/wordprocessor"
-case "${WORDPROCESSOR_RUNTIME:-auto}" in
-  auto) if [[ -x "$native" ]]; then exec "$native" "$@"; fi;;
-  native) exec "$native" "$@";;
-  jvm) ;;
-  *) echo 'WORDPROCESSOR_RUNTIME must be auto, native or jvm' >&2; exit 1;;
-esac
-source "$script_dir/java-classpath.sh" cli
+source "${BASH_SOURCE[0]%/*}/java-classpath.sh" cli
 if [[ -z "${JAVA_HOME:-}" && -x /usr/libexec/java_home ]]; then export JAVA_HOME="$(/usr/libexec/java_home -v 1.8)"; fi
 exec "${JAVA_HOME:+$JAVA_HOME/bin/}java" -cp "$WORDPROCESSOR_CLASSPATH" com.codenameone.wordprocessor.Cli "$@"

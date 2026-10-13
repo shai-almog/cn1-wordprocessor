@@ -17,7 +17,7 @@
     <module>formats</module>
     <module>automation</module>
     <module>editor</module>
-    <module>desktop</module>
+    <module>cli</module>
     <module>benchmarks</module>  <module>app</module>
   </modules>
  <repositories>

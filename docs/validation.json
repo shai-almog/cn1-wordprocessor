@@ -1,25 +1,17 @@
 {
   "schema": 1,
-  "recordedAt": "2026-10-13T10:57:48.140380+00:00",
+  "recordedAt": "2026-10-13T12:38:18.830446+00:00",
   "implementationState": "initial implementation; approved full parity plan incomplete",
   "javaTests": {
-    "tests": 51,
+    "tests": 52,
     "failures": 0,
     "errors": 0,
     "skipped": 0,
     "suites": [
       {
-        "module": "formats",
-        "suite": "com.codenameone.wordprocessor.FormatTest",
-        "tests": 9,
-        "failures": 0,
-        "errors": 0,
-        "skipped": 0
-      },
-      {
-        "module": "formats",
-        "suite": "com.codenameone.wordprocessor.PdfTest",
-        "tests": 3,
+        "module": "document",
+        "suite": "com.codenameone.wordprocessor.DocumentTest",
+        "tests": 22,
         "failures": 0,
         "errors": 0,
         "skipped": 0
@@ -33,17 +25,17 @@
         "skipped": 0
       },
       {
-        "module": "desktop",
-        "suite": "com.codenameone.wordprocessor.McpTest",
-        "tests": 3,
+        "module": "formats",
+        "suite": "com.codenameone.wordprocessor.FormatTest",
+        "tests": 9,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "module": "document",
-        "suite": "com.codenameone.wordprocessor.DocumentTest",
-        "tests": 22,
+        "module": "formats",
+        "suite": "com.codenameone.wordprocessor.PdfTest",
+        "tests": 3,
         "failures": 0,
         "errors": 0,
         "skipped": 0
@@ -65,9 +57,17 @@
         "skipped": 0
       },
       {
-        "module": "app",
+        "module": "cli",
+        "suite": "com.codenameone.wordprocessor.McpTest",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "module": "app/common",
         "suite": "com.codenameone.wordprocessor.app.PortableFormatTest",
-        "tests": 1,
+        "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
@@ -79,17 +79,8 @@
     "failures": 0,
     "command": "python scripts/test-source-metrics.py"
   },
-  "desktop": {
-    "callbackSmoke": "passed",
-    "renderCapture": "passed",
-    "packagedLaunch": "passed",
-    "physicalKeyboardIme": "not-tested",
-    "platform": "macOS aarch64",
-    "capture": "../artifacts/package-editor.png",
-    "captureSha256": "7a90dc4e05cfed393241ce3ef8194d55b68e3145379a14faa492a1609ddc79a5"
-  },
   "web": {
-    "localJavaScriptBuild": "passed",
+    "localJavaScriptBuild": "previous revision passed; not rebuilt after native migration",
     "liveInteraction": "blocked",
     "reason": "Browser tool: Unable to load browser request-header policy. Retry the browser command."
   },
@@ -110,7 +101,7 @@
     "performanceGate": "not-evaluated",
     "sourceMetric": "o200k_base tokens in source; not agent usage",
     "sourceScopesMatched": false,
-    "startup": "Three fixtures, 100 samples per arm; see startup-comparison.json. GUI startup unmeasured."
+    "startup": "ParparVM GUI unmeasured; retired GraalVM CLI timings are not application evidence"
   },
   "checksNotRun": [
     "CI",
@@ -121,31 +112,27 @@
   ],
   "frameworkSourceChanged": false,
   "remotePublished": false,
-  "nativeCli": {
-    "checks": [
-      "help",
-      "commands",
-      "preview",
-      "text",
-      "inspect",
-      "cn1doc",
-      "txt",
-      "html",
-      "md",
-      "rtf",
-      "adoc",
-      "pdf",
-      "badDocx",
-      "mcpTools",
-      "no-overwrite",
-      "unsupported-PDF-glyph",
-      "MCP-edit-save",
-      "MCP-root-confinement"
+  "nativeApplication": {
+    "build": "passed",
+    "compiler": "Codename One Maven mac-source / ParparVM / Xcode Release",
+    "frameworkRevision": "d519cd4e6f",
+    "frameworkBranch": "master",
+    "zipApiCommit": "5eddb95098",
+    "runtimeBundleRebuilt": true,
+    "architecture": "macOS arm64",
+    "frameworks": [
+      "AppKit",
+      "Metal"
     ],
-    "passed": true,
-    "nativeSha256": "11161e621c5b85fed2a25ad81aa93f10b7de0b3b6285d2e2d05b63b02878f9ca",
-    "boundary": "local CLI processes; not GUI, physical devices or full Wordcraft parity",
-    "compiler": "GraalVM Native Image 21.0.11, macOS arm64; local only",
-    "wordcraftProbes": "4 passed; see native-parity-probes.json"
+    "jvmRequired": false,
+    "artifact": "app/common/target/mac-native/Build/Products/Release/Main.app/Contents/MacOS/Main",
+    "sha256": "578596e377e714816acec895eca34f544445b213c6d98fab69e43b89f445e9d7",
+    "launchAndRender": "passed",
+    "zipRecoveryCrcAndXml": "passed",
+    "lifecycleRegression": "passed",
+    "keyboardImeUndoFileDialogs": "not-certified",
+    "automationLimitation": "cgWindowNotFound and windowNotFoundAtPosition interrupted interaction; debugger confirmed a live CN1MacWindow and subsequent screenshot rendered the recovered document",
+    "startupTiming": "not-measured",
+    "distributionSigning": "not-configured"
   }
 }

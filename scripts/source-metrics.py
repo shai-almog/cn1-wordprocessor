@@ -102,7 +102,7 @@ def group_rust(path):
 
 def source_files(root, side):
     if side == 'java':
-        files = [p for top in ['document','layout','formats','automation','editor','desktop','app','benchmarks']
+        files = [p for top in ['document','layout','formats','automation','editor','cli','app','benchmarks']
                  for p in (root/top).rglob('*.java') if 'target' not in p.parts]
         files += list((root/'benchmarks').glob('*.rs'))
         files += list((root/'scripts').glob('*.py'))+list((root/'scripts').glob('*.sh'))
@@ -211,7 +211,7 @@ def main():
             'tokenDefinition':'Sum of separately tokenized UTF-8 file contents, including comments and whitespace; no filenames or chat framing; no minification.',
             'locDefinition':'cloc code lines excluding comments and blanks; --skip-uniqueness counts every selected source file.',
             'testPruning':'Rust AST removes explicit #[cfg(test)] and #[test] items, plus identified external test modules. Files rejected by the parser remain completely unpruned and are listed. This is a conservative test-pruned estimate, not resolution of all cfg/features or macro expansion.',
-            'scope':'Java libraries + desktop host + CN1 lifecycle glue versus Rust crates/apps source. Framework/dependency source, assets, docs, generated outputs and build artifacts excluded. Tests, examples, benchmarks, build tooling reported separately.',
+            'scope':'Java libraries + command-line tools + CN1 lifecycle glue versus Rust crates/apps source. Framework/dependency source, assets, docs, generated outputs and build artifacts excluded. Tests, examples, benchmarks, build tooling reported separately.',
             'matchedFeatureScope':False,'languageSuperiorityEstablished':False,
             'cn1Java':cn1,'wordcraftRust':rust}
     args.out.parent.mkdir(parents=True,exist_ok=True)
