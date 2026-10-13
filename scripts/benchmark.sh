@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+set -euo pipefail
+source "$(dirname "$0")/java-classpath.sh"
+if [[ -z "${JAVA_HOME:-}" && -x /usr/libexec/java_home ]]; then export JAVA_HOME="$(/usr/libexec/java_home -v 1.8)"; fi
+exec "${JAVA_HOME:+$JAVA_HOME/bin/}java" -Xms256m -Xmx1g -cp "$WORDPROCESSOR_CLASSPATH" com.codenameone.wordprocessor.Benchmark "$@"

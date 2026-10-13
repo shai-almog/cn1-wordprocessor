@@ -1,0 +1,124 @@
+{
+  "schema": 1,
+  "recordedAt": "2026-10-13T10:08:57.769808+00:00",
+  "implementationState": "initial implementation; approved full parity plan incomplete",
+  "javaTests": {
+    "tests": 49,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "suites": [
+      {
+        "module": "app",
+        "suite": "com.codenameone.wordprocessor.app.PortableFormatTest",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "module": "automation",
+        "suite": "com.codenameone.wordprocessor.AutomationTest",
+        "tests": 7,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "module": "desktop",
+        "suite": "com.codenameone.wordprocessor.McpTest",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "module": "document",
+        "suite": "com.codenameone.wordprocessor.DocumentTest",
+        "tests": 22,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "module": "editor",
+        "suite": "com.codenameone.wordprocessor.RecoveryTest",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "module": "formats",
+        "suite": "com.codenameone.wordprocessor.FormatTest",
+        "tests": 8,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "module": "formats",
+        "suite": "com.codenameone.wordprocessor.PdfTest",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "module": "layout",
+        "suite": "com.codenameone.wordprocessor.LayoutTest",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      }
+    ]
+  },
+  "measurementTests": {
+    "tests": 3,
+    "failures": 0,
+    "command": "python scripts/test-source-metrics.py"
+  },
+  "desktop": {
+    "callbackSmoke": "passed",
+    "renderCapture": "passed",
+    "packagedLaunch": "passed",
+    "physicalKeyboardIme": "not-tested",
+    "platform": "macOS aarch64",
+    "capture": "../artifacts/package-editor.png",
+    "captureSha256": "7a90dc4e05cfed393241ce3ef8194d55b68e3145379a14faa492a1609ddc79a5"
+  },
+  "web": {
+    "localJavaScriptBuild": "passed",
+    "liveInteraction": "blocked",
+    "reason": "Browser tool: Unable to load browser request-header policy. Retry the browser command."
+  },
+  "mobile": {
+    "android": "not-built-or-tested; no device connected",
+    "ios": "not-built-or-tested"
+  },
+  "interoperability": {
+    "plainTextFixture": "1000 paragraphs, identical CLI extraction output",
+    "sharedBehaviorProbes": "4 probes passed in both CLIs; zero complete catalog rows certified",
+    "pdf": "exported, inspected with pdfinfo/pdftotext and rendered with Poppler",
+    "pdfArtifactSha256": "71f428e94ff843650995929e732b884ec15c53923f2e268c7ca31d3c85266697"
+  },
+  "comparison": {
+    "wordcraftRevision": "159b84f54c74e9e82fb3109b758ae7dd6f4e3ab0",
+    "catalogEntries": 502,
+    "featureParity": "not-achieved",
+    "performanceGate": "not-evaluated",
+    "sourceMetric": "o200k_base tokens in source; not agent usage",
+    "sourceScopesMatched": false
+  },
+  "checksNotRun": [
+    "native/GraalVM",
+    "CI",
+    "Android/iOS device build",
+    "Windows/Linux execution",
+    "full DOCX fidelity corpus",
+    "input-to-present or peak-memory comparison"
+  ],
+  "frameworkSourceChanged": false,
+  "remotePublished": false
+}

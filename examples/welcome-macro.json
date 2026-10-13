@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "steps": [
+    {
+      "command": "text.insert",
+      "args": {
+        "text": "Dear {{name}},\nWelcome to a document you can automate.\n"
+      }
+    },
+    {
+      "command": "template.fill",
+      "args": {
+        "values": {
+          "name": "${recipient}"
+        }
+      }
+    },
+    {
+      "command": "selection.set",
+      "args": {
+        "block": 0,
+        "start": 0,
+        "end": 4
+      }
+    },
+    {
+      "command": "format.set",
+      "args": {
+        "property": "bold",
+        "value": "true"
+      }
+    }
+  ]
+}

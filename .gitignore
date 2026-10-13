@@ -1,0 +1,9 @@
+target/
+*.log
+.DS_Store
+.idea/
+*.iml
+.local/
+artifacts/
+__pycache__/
+*.pyc

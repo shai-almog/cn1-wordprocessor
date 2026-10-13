@@ -1,0 +1,279 @@
+{
+  "schema": 1,
+  "java": "openjdk version \"1.8.0_372\"\nOpenJDK Runtime Environment (Zulu 8.70.0.23-CA-macos-aarch64) (build 1.8.0_372-b07)\nOpenJDK 64-Bit Server VM (Zulu 8.70.0.23-CA-macos-aarch64) (build 25.372-b07, mixed mode)",
+  "rustc": "rustc 1.97.1 (8bab26f4f 2026-07-14)",
+  "javaRuntimeArtifacts": [
+    {
+      "file": "antlr-2.7.7.jar",
+      "bytes": 445288,
+      "sha256": "88fbda4b912596b9f56e8e12e580cc954bacfb51776ecfddd3e18fc1cf56dc4c",
+      "projectArtifact": false
+    },
+    {
+      "file": "codenameone-build-hint-catalog-8.0-SNAPSHOT.jar",
+      "bytes": 70600,
+      "sha256": "110e44c59dfdd8bb67abdf43bb5341c8d0f13d17e6f055c09974eef8aac46a98",
+      "projectArtifact": false
+    },
+    {
+      "file": "codenameone-core-8.0-SNAPSHOT.jar",
+      "bytes": 7146904,
+      "sha256": "793976997e81ac74101924edcc4612d591f57794df4a8e6a22791d78c01e4210",
+      "projectArtifact": false
+    },
+    {
+      "file": "codenameone-javase-8.0-SNAPSHOT.jar",
+      "bytes": 8894942,
+      "sha256": "dc1281cf0b62f0106ca55a85510fe37e14870f0f7eca77db4d3efa368620d641",
+      "projectArtifact": false
+    },
+    {
+      "file": "codenameone-project-model-8.0-SNAPSHOT.jar",
+      "bytes": 21390,
+      "sha256": "048df99fc887d9367e1754a2610184be95580cd35a211c49a0aa8e630e534ee8",
+      "projectArtifact": false
+    },
+    {
+      "file": "sqlite-jdbc-8.0-SNAPSHOT.jar",
+      "bytes": 16225471,
+      "sha256": "63dd388982e027372ffddff06a0dca4651129b9c494eccc240c08c9ef3c28196",
+      "projectArtifact": false
+    },
+    {
+      "file": "automation-0.1.0-SNAPSHOT.jar",
+      "bytes": 24165,
+      "sha256": "64fb46a8464f76047808982160c312668cba42ebf8f9deaf62483c7d19d77797",
+      "projectArtifact": true
+    },
+    {
+      "file": "document-0.1.0-SNAPSHOT.jar",
+      "bytes": 36746,
+      "sha256": "a033a15895cf67b093418c13b9b9001ede7dc78cc449f81dd3d4e47c83c73a4c",
+      "projectArtifact": true
+    },
+    {
+      "file": "editor-0.1.0-SNAPSHOT.jar",
+      "bytes": 38632,
+      "sha256": "22fc0231e11cb253530c23196fdc288325ea5420e2c1b150eb3375e148471479",
+      "projectArtifact": true
+    },
+    {
+      "file": "formats-0.1.0-SNAPSHOT.jar",
+      "bytes": 35839,
+      "sha256": "98a422eda1200a98c0db538df328f313ddd92307c4fdd92d2676c2652ca2206e",
+      "projectArtifact": true
+    },
+    {
+      "file": "layout-0.1.0-SNAPSHOT.jar",
+      "bytes": 13466,
+      "sha256": "71a98dc5e469ecbf5e0d26cf4bf637cc62a96f4dd9816d49c537e1355bdbdb6c",
+      "projectArtifact": true
+    },
+    {
+      "file": "gson-2.11.0.jar",
+      "bytes": 298435,
+      "sha256": "57928d6e5a6edeb2abd3770a8f95ba44dce45f3b23b7a9dc2b309c581552a78b",
+      "projectArtifact": false
+    },
+    {
+      "file": "error_prone_annotations-2.27.0.jar",
+      "bytes": 19370,
+      "sha256": "24c923372c58e35d0b9f16a028929bb9aedc77521867c274f2bd0735df5ba1f5",
+      "projectArtifact": false
+    },
+    {
+      "file": "filters-2.0.235-1.jar",
+      "bytes": 382939,
+      "sha256": "a37202f03eae99ab1faf2a89eeaee3665c8489f45b1aeb0d5926d78a54c613bf",
+      "projectArtifact": false
+    },
+    {
+      "file": "commons-codec-1.19.0.jar",
+      "bytes": 374716,
+      "sha256": "5c3881e4f556855e9c532927ee0c9dfde94cc66760d5805c031a59887070af5f",
+      "projectArtifact": false
+    },
+    {
+      "file": "commons-io-2.20.0.jar",
+      "bytes": 563971,
+      "sha256": "df90bba0fe3cb586b7f164e78fe8f8f4da3f2dd5c27fa645f888100ccc25dd72",
+      "projectArtifact": false
+    },
+    {
+      "file": "gluegen-rt-v2.4.0.jar",
+      "bytes": 407035,
+      "sha256": "96f23d7ab7c5d307fc658e0d959173f451afbe11e65680952bf96be8f4c8dcd3",
+      "projectArtifact": false
+    },
+    {
+      "file": "jcef-api-jcef-d3de827+cef-146.0.10+g8219561+chromium-146.0.7680.179.jar",
+      "bytes": 221967,
+      "sha256": "b0271c8817cbdeb9e2e41420804d62e21c94acdf3b4d6072577fb19d546a4b08",
+      "projectArtifact": false
+    },
+    {
+      "file": "jcefmaven-146.0.10.jar",
+      "bytes": 30936,
+      "sha256": "f8291948343e73b91af5fb7fa59001b5cd982922b2fdcfde6a28bbd3f758f5d3",
+      "projectArtifact": false
+    },
+    {
+      "file": "jogl-all-v2.4.0.jar",
+      "bytes": 5151864,
+      "sha256": "8698987f72bdc2a92ed202e4fbf46d2a7844a05b6ef877bbffaed7df57d28539",
+      "projectArtifact": false
+    },
+    {
+      "file": "commons-compress-1.28.0.jar",
+      "bytes": 1117221,
+      "sha256": "e1522945218456f3649a39bc4afd70ce4bd466221519dba7d378f2141a4642ca",
+      "projectArtifact": false
+    },
+    {
+      "file": "commons-lang3-3.18.0.jar",
+      "bytes": 702952,
+      "sha256": "4eeeae8d20c078abb64b015ec158add383ac581571cddc45c68f0c9ae0230720",
+      "projectArtifact": false
+    },
+    {
+      "file": "gluegen-rt-2.6.0-natives-android-aarch64.jar",
+      "bytes": 5348,
+      "sha256": "14b1c7a4e0cd8999bbfbb60cab95bd0e4006c0dfa4ca94cd2520b6e6f6843d29",
+      "projectArtifact": false
+    },
+    {
+      "file": "gluegen-rt-2.6.0-natives-android-x86_64.jar",
+      "bytes": 5370,
+      "sha256": "fedb619770f1982f2fe2dfbe5c37d0c8a64516209d2441ff5dcda3cbb7e065f5",
+      "projectArtifact": false
+    },
+    {
+      "file": "gluegen-rt-2.6.0-natives-freebsd-amd64.jar",
+      "bytes": 5920,
+      "sha256": "0c4686f31ff001c873820a5a38f575033f8f8fbb367840d2b4b6db2fe2e28cb6",
+      "projectArtifact": false
+    },
+    {
+      "file": "gluegen-rt-2.6.0-natives-linux-aarch64.jar",
+      "bytes": 4985,
+      "sha256": "68e4f1150a5704cb2a720ef36a6766da1c2e8fb793c391e41259f59b6c318fd1",
+      "projectArtifact": false
+    },
+    {
+      "file": "gluegen-rt-2.6.0-natives-linux-amd64.jar",
+      "bytes": 5590,
+      "sha256": "d500a38dedcbd6dfa89c5ae943a22d1051b1dbf1502f8544337bbe57d118f2c5",
+      "projectArtifact": false
+    },
+    {
+      "file": "gluegen-rt-2.6.0-natives-linux-armv6hf.jar",
+      "bytes": 4642,
+      "sha256": "a49409494f9382c0343b2285058e6f0305824aed2fe0f5981ab2ef0a7e5580c3",
+      "projectArtifact": false
+    },
+    {
+      "file": "gluegen-rt-2.6.0-natives-macosx-universal.jar",
+      "bytes": 9734,
+      "sha256": "e543d5e81bc8b8f63e5dc365ac47da009f82175b2c6eba16a24ce3b2eb031773",
+      "projectArtifact": false
+    },
+    {
+      "file": "gluegen-rt-2.6.0-natives-windows-amd64.jar",
+      "bytes": 23010,
+      "sha256": "c7c9138606858fed0b1650a2444cc1bc96599cc635a8d879979a37646e8594b1",
+      "projectArtifact": false
+    },
+    {
+      "file": "gluegen-rt-2.6.0.jar",
+      "bytes": 411363,
+      "sha256": "465bbc8d410b872a76b5b901cdb9c2c07905edd5e61a7120dc6a4d007880ec2f",
+      "projectArtifact": false
+    },
+    {
+      "file": "gluegen-rt-main-2.6.0.jar",
+      "bytes": 345,
+      "sha256": "cc114f4c0b29b2fe4d06a5c7931838814452a04cc9789e27b21ab05d3541c107",
+      "projectArtifact": false
+    },
+    {
+      "file": "jogl-all-2.6.0-natives-android-aarch64.jar",
+      "bytes": 58654,
+      "sha256": "4d675711851de95b13bc222f06596c1f6555fee90145cfd9b659558f8fcaf3db",
+      "projectArtifact": false
+    },
+    {
+      "file": "jogl-all-2.6.0-natives-android-x86_64.jar",
+      "bytes": 59432,
+      "sha256": "d0133a3678197fe6c8f4d2713f5ce35b7cb41d53e7638cf4e298c6037298da6c",
+      "projectArtifact": false
+    },
+    {
+      "file": "jogl-all-2.6.0-natives-freebsd-amd64.jar",
+      "bytes": 257025,
+      "sha256": "2865342f3cd8eb955b0ff7aba91164a4a8760a8e6d528098d52f23d6a9d448bd",
+      "projectArtifact": false
+    },
+    {
+      "file": "jogl-all-2.6.0-natives-linux-aarch64.jar",
+      "bytes": 273865,
+      "sha256": "c4887a831abf07eebc2128f7ba9879d8a0a7975371fe6bdc463669ec71cd124b",
+      "projectArtifact": false
+    },
+    {
+      "file": "jogl-all-2.6.0-natives-linux-amd64.jar",
+      "bytes": 268724,
+      "sha256": "3d0ed2674059fc207166ce1351de8d30e0b6102af12ca8b84fbf1bc3f246038a",
+      "projectArtifact": false
+    },
+    {
+      "file": "jogl-all-2.6.0-natives-linux-armv6hf.jar",
+      "bytes": 259073,
+      "sha256": "c3cb8214fa0183e77c1fca9df343183ea58c6cc93ea4e3ed5e0bd5e99c571777",
+      "projectArtifact": false
+    },
+    {
+      "file": "jogl-all-2.6.0-natives-macosx-universal.jar",
+      "bytes": 583638,
+      "sha256": "81db6a2b50f3803d4307a8bd7570a4f78c41ae0d44361208d0885a5cdf289dfa",
+      "projectArtifact": false
+    },
+    {
+      "file": "jogl-all-2.6.0-natives-windows-amd64.jar",
+      "bytes": 294752,
+      "sha256": "33081ebfac520d7d283830a614f458f728104bef4eff56b52f604ee8c5af90c8",
+      "projectArtifact": false
+    },
+    {
+      "file": "jogl-all-2.6.0.jar",
+      "bytes": 3991187,
+      "sha256": "34c919bc6073c2d9e73cbe7558c4e9de6b5c58146f3658e2bcc5f23ec3fccc9f",
+      "projectArtifact": false
+    },
+    {
+      "file": "jogl-all-main-2.6.0.jar",
+      "bytes": 345,
+      "sha256": "cc114f4c0b29b2fe4d06a5c7931838814452a04cc9789e27b21ab05d3541c107",
+      "projectArtifact": false
+    }
+  ],
+  "javaDependencyBytes": 48599003,
+  "rustLockedPackages": 554,
+  "rustExternalLockedPackages": 534,
+  "rustLockSha256": "fe4f80486570546fabaa547471883baa1913095b9c1d567014e05da4753ac90d",
+  "javaDesktopZip": {
+    "file": "cn1-wordprocessor-desktop.zip",
+    "bytes": 46892792,
+    "sha256": "cb46c1c28f77ea43e5a875b2e808729a21595df9910764519a2ccc5aa669ec3c"
+  },
+  "wordcraftCli": {
+    "file": "wordcraft-cli",
+    "bytes": 33066672,
+    "sha256": "b4085a43b5a69806c172b74ab457bf433d423b4b9bb11b463863a9d558aff2ac"
+  },
+  "comparableArtifactScope": false,
+  "notes": [
+    "Java ZIP includes GUI and CLI libraries, multiple platform native dependencies, and no JVM. Rust artifact is CLI only.",
+    "Classpath jars and lockfile packages are dependency inventories, not comparable source-LOC totals or installed app sizes.",
+    "Source metrics exclude both frameworks and dependencies. CN1 reuses platform UI/input/storage and text-format APIs; Rust reuses its Cargo dependency stack."
+  ]
+}
