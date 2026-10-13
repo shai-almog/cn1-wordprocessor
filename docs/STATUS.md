@@ -10,6 +10,7 @@ The approved target is a standalone application and reusable Java libraries, tar
 - TXT/HTML/Markdown/RTF/AsciiDoc adapters through CN1; limited selectable-text PDF output.
 - Two-slot checksummed recovery, damaged-write fallback, and revision ordering against delayed autosaves.
 - Validated command registry, compiled Java extension interface, parameterized macros with rollback/cancellation and stale-preview rejection; template filling and writing checks; stdio MCP lifecycle and rooted file access.
+- Native Java CLI on macOS arm64 via local GraalVM ahead-of-time compilation; the same commands, formats and MCP interface, checked against the JVM runtime. See [startup measurements](STARTUP.md).
 - Shared desktop/mobile/web application code, working macOS JavaSE launch, compiled JavaScript bundle.
 
 ## Remaining work required by the plan
@@ -21,7 +22,7 @@ The approved target is a standalone application and reusable Java libraries, tar
 | Typography | Shaped layout and caret geometry for Arabic/Hebrew/Indic scripts, grapheme-aware editing, bidi navigation, font fallback/embedding, tabs, justification, line-break rules, widow/orphan handling, keep-with-next and pagination fidelity. |
 | Editing | Rich table selection/editing, images/shapes/charts/equations, list UI/numbering, tabs/rulers, styles pane, rich clipboard, search in tables, print integration, touch handles, accessibility and reliable native IME on every port. |
 | Word workflows | Comments, tracked changes/review, references/citations/bibliography/TOC, mail merge, proofing, templates, forms/content controls, document comparison, protection and remaining catalog workflows. |
-| Performance | True incremental pagination after the changed suffix, large-document memory/undo accounting, startup and input-to-present latency, equivalent cold/warm layout/import/export benchmarks with matched fonts and output checks. |
+| Performance | True incremental pagination after the changed suffix, large-document memory/undo accounting, GUI startup and input-to-present latency, equivalent cold/warm layout/import/export benchmarks with matched fonts and output checks. |
 | Platforms | Browser runtime and persistence verification; Android and iOS builds and device tests; Windows/Linux desktop execution; offline/file/share behavior; signing and installable releases. |
 | Extensibility | Broader SDK surface for advanced document nodes, versioned compatibility policy, sample external extension artifact, UI extension points, comprehensive macro capability/resource controls and host integrations. |
 | Release | Reproducible dependency lock/version, complete test corpus, external format interoperability beyond the tested plain-text fixture, public license choice, distribution packaging and release documentation. |

@@ -10,12 +10,13 @@ import zipfile
 
 p=argparse.ArgumentParser(description=__doc__)
 p.add_argument('wordcraft',type=Path)
+p.add_argument('--cn1',type=Path,help='Explicit CN1 executable (defaults to the development launcher)')
 p.add_argument('--out',type=Path,required=True,help='New output directory')
 a=p.parse_args()
 a.out.mkdir(parents=True,exist_ok=False)
 a.out=a.out.resolve()
 root=Path(__file__).resolve().parent.parent
-cn1=str(root/'scripts/wordprocessor')
+cn1=str(a.cn1.resolve()) if a.cn1 else str(root/'scripts/wordprocessor')
 wc=str(a.wordcraft.resolve())
 subprocess.run([cn1,'new',str(a.out/'empty.cn1doc')],check=True)
 W='{http://schemas.openxmlformats.org/wordprocessingml/2006/main}'

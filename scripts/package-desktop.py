@@ -6,6 +6,7 @@ import zipfile
 root = Path(__file__).resolve().parent.parent
 out = root/'desktop/target/distribution'
 out.mkdir(parents=True, exist_ok=True)
+shutil.copy2(root/'notices/Adobe-AFM-MustRead.html', out/'Adobe-AFM-MustRead.html')
 lib = out/'lib'
 if lib.exists():
     shutil.rmtree(lib)

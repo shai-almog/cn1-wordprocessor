@@ -1,25 +1,33 @@
 {
   "schema": 1,
-  "recordedAt": "2026-10-13T10:08:57.769808+00:00",
+  "recordedAt": "2026-10-13T10:57:48.140380+00:00",
   "implementationState": "initial implementation; approved full parity plan incomplete",
   "javaTests": {
-    "tests": 49,
+    "tests": 51,
     "failures": 0,
     "errors": 0,
     "skipped": 0,
     "suites": [
       {
-        "module": "app",
-        "suite": "com.codenameone.wordprocessor.app.PortableFormatTest",
-        "tests": 1,
+        "module": "formats",
+        "suite": "com.codenameone.wordprocessor.FormatTest",
+        "tests": 9,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "module": "automation",
-        "suite": "com.codenameone.wordprocessor.AutomationTest",
-        "tests": 7,
+        "module": "formats",
+        "suite": "com.codenameone.wordprocessor.PdfTest",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "module": "layout",
+        "suite": "com.codenameone.wordprocessor.LayoutTest",
+        "tests": 3,
         "failures": 0,
         "errors": 0,
         "skipped": 0
@@ -41,6 +49,14 @@
         "skipped": 0
       },
       {
+        "module": "automation",
+        "suite": "com.codenameone.wordprocessor.AutomationTest",
+        "tests": 7,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
         "module": "editor",
         "suite": "com.codenameone.wordprocessor.RecoveryTest",
         "tests": 3,
@@ -49,25 +65,9 @@
         "skipped": 0
       },
       {
-        "module": "formats",
-        "suite": "com.codenameone.wordprocessor.FormatTest",
-        "tests": 8,
-        "failures": 0,
-        "errors": 0,
-        "skipped": 0
-      },
-      {
-        "module": "formats",
-        "suite": "com.codenameone.wordprocessor.PdfTest",
-        "tests": 2,
-        "failures": 0,
-        "errors": 0,
-        "skipped": 0
-      },
-      {
-        "module": "layout",
-        "suite": "com.codenameone.wordprocessor.LayoutTest",
-        "tests": 3,
+        "module": "app",
+        "suite": "com.codenameone.wordprocessor.app.PortableFormatTest",
+        "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
@@ -109,10 +109,10 @@
     "featureParity": "not-achieved",
     "performanceGate": "not-evaluated",
     "sourceMetric": "o200k_base tokens in source; not agent usage",
-    "sourceScopesMatched": false
+    "sourceScopesMatched": false,
+    "startup": "Three fixtures, 100 samples per arm; see startup-comparison.json. GUI startup unmeasured."
   },
   "checksNotRun": [
-    "native/GraalVM",
     "CI",
     "Android/iOS device build",
     "Windows/Linux execution",
@@ -120,5 +120,32 @@
     "input-to-present or peak-memory comparison"
   ],
   "frameworkSourceChanged": false,
-  "remotePublished": false
+  "remotePublished": false,
+  "nativeCli": {
+    "checks": [
+      "help",
+      "commands",
+      "preview",
+      "text",
+      "inspect",
+      "cn1doc",
+      "txt",
+      "html",
+      "md",
+      "rtf",
+      "adoc",
+      "pdf",
+      "badDocx",
+      "mcpTools",
+      "no-overwrite",
+      "unsupported-PDF-glyph",
+      "MCP-edit-save",
+      "MCP-root-confinement"
+    ],
+    "passed": true,
+    "nativeSha256": "11161e621c5b85fed2a25ad81aa93f10b7de0b3b6285d2e2d05b63b02878f9ca",
+    "boundary": "local CLI processes; not GUI, physical devices or full Wordcraft parity",
+    "compiler": "GraalVM Native Image 21.0.11, macOS arm64; local only",
+    "wordcraftProbes": "4 passed; see native-parity-probes.json"
+  }
 }

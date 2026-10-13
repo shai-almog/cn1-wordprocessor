@@ -1,0 +1,89 @@
+{
+  "schema": 1,
+  "probes": [
+    {
+      "id": "paragraph_text",
+      "boundary": "headless command execution and DOCX semantics; no UI or rendering",
+      "cn1": {
+        "passed": true,
+        "assertions": {
+          "paragraphText": true
+        },
+        "sha256": "bc0d06b73e4c8596fe36fe99c29043d83b4d2f46b8cfd1404271794ebcbd0737",
+        "artifact": "paragraph_text-cn1.docx"
+      },
+      "wordcraft": {
+        "passed": true,
+        "assertions": {
+          "paragraphText": true
+        },
+        "sha256": "2c294070822408a8f74665a7bb239902f897f61a2d22fc6163906526023b297d",
+        "artifact": "paragraph_text-wordcraft.docx"
+      }
+    },
+    {
+      "id": "bold_selection",
+      "boundary": "headless command execution and DOCX semantics; no UI or rendering",
+      "cn1": {
+        "passed": true,
+        "assertions": {
+          "paragraphText": true,
+          "boldOnlyHello": true
+        },
+        "sha256": "a60f0e4e783c0b49a52926684f114586c91bc60925ea73be6e6734d5799dd7d1",
+        "artifact": "bold_selection-cn1.docx"
+      },
+      "wordcraft": {
+        "passed": true,
+        "assertions": {
+          "paragraphText": true,
+          "boldOnlyHello": true
+        },
+        "sha256": "85a72339f771e54d0549084abc4699acbe40d73bd1be246db5db9996987c443b",
+        "artifact": "bold_selection-wordcraft.docx"
+      }
+    },
+    {
+      "id": "replace_all",
+      "boundary": "headless command execution and DOCX semantics; no UI or rendering",
+      "cn1": {
+        "passed": true,
+        "assertions": {
+          "paragraphText": true
+        },
+        "sha256": "3089c2ef452e9ec94d38d426fafabca385d8d049eb4ae23e9f071a0fb77b2a17",
+        "artifact": "replace_all-cn1.docx"
+      },
+      "wordcraft": {
+        "passed": true,
+        "assertions": {
+          "paragraphText": true
+        },
+        "sha256": "ba3e44873a8c5b9c541e25c67847bc376e6c96c22b2528c9883949c20177bbbd",
+        "artifact": "replace_all-wordcraft.docx"
+      }
+    },
+    {
+      "id": "table_grid",
+      "boundary": "headless command execution and DOCX semantics; no UI or rendering",
+      "cn1": {
+        "passed": true,
+        "assertions": {
+          "twoRowsThreeColumns": true
+        },
+        "sha256": "59f142bfcba9adf00f733ebf321887a69281def5987df19163344ceb7a6c58e1",
+        "artifact": "table_grid-cn1.docx"
+      },
+      "wordcraft": {
+        "passed": true,
+        "assertions": {
+          "twoRowsThreeColumns": true
+        },
+        "sha256": "9943bb94d205c4de75e5f4b5e13211dc1fedd8dbb23fa32fb9b6662785fdc6cd",
+        "artifact": "table_grid-wordcraft.docx"
+      }
+    }
+  ],
+  "catalogRowsCertified": 0,
+  "fullParity": false
+}

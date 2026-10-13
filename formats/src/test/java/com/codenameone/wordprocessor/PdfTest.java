@@ -21,6 +21,29 @@ public class PdfTest {
   }
 
   @Test
+  public void portableMetricsMatchPdfFacesAndEncoding() throws Exception {
+    PdfMetrics metrics = new PdfMetrics();
+    TextStyle normal = TextStyle.DEFAULT.with("size", "10");
+    // AFM advances: H=722, e=556, l=222, o=556; bold H=722,e=556,l=278,o=611.
+    assertEquals(22.78f, metrics.width("Hello", normal), .001f);
+    assertEquals(24.45f, metrics.width("Hello", normal.with("bold", "true")), .001f);
+    assertEquals(metrics.width("Hello", normal),
+        metrics.width("Hello", normal.with("italic", "true")), .001f);
+    assertEquals(5.56f, metrics.width("€", normal), .001f);
+    assertEquals(metrics.width(" ", normal), metrics.width("\t", normal), .001f);
+    Session s = new Session(Document.empty());
+    s.replace("Résumé € (PDF) and café");
+    assertTrue(new String(PdfExporter.write(s.document()), "ISO-8859-1").contains("/Helvetica"));
+    s.replace("שלום");
+    try {
+      PdfExporter.write(s.document());
+      fail("Unrepresentable text must still be rejected");
+    } catch (IOException expected) {
+      assertTrue(expected.getMessage().contains("does not cover"));
+    }
+  }
+
+  @Test
   public void pdfHasAccurateCrossReferencesAndEscapedText() throws Exception {
     Session s = new Session(Document.empty());
     s.replace("Text (with parentheses) and \\ slash");

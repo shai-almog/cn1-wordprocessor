@@ -10,6 +10,10 @@ import java.util.*;
 public final class PdfExporter {
   private PdfExporter() {}
 
+  public static byte[] write(Document document) throws IOException {
+    return write(document.page, new LayoutEngine(new PdfMetrics()).layout(document, 0));
+  }
+
   public static byte[] write(PageSpec spec, LayoutEngine.Result layout) throws IOException {
     List<byte[]> objects = new ArrayList<byte[]>();
     for (int i = 0; i < 6; i++) objects.add(null);
@@ -141,23 +145,28 @@ public final class PdfExporter {
     return s.getBytes("ISO-8859-1");
   }
 
-  private static String literal(String s) throws IOException {
+  static int winAnsi(char character) throws IOException {
     String special = "€\u0000‚ƒ„…†‡ˆ‰Š‹Œ\u0000Ž\u0000\u0000‘’“”•–—˜™š›œ\u0000žŸ";
+    int c = character;
+    if (c == '\t') c = ' ';
+    if (c > 255) {
+      int index = special.indexOf((char) c);
+      if (index < 0)
+        throw new IOException(
+            "PDF font does not cover U+"
+                + Integer.toHexString(c)
+                + ". Export DOCX or HTML to preserve this text.");
+      c = 128 + index;
+    }
+    if (c < 32 || c == 127 || c >= 128 && c < 160 && special.charAt(c - 128) == 0)
+      throw new IOException("Unsupported PDF control character");
+    return c;
+  }
+
+  private static String literal(String s) throws IOException {
     StringBuilder b = new StringBuilder();
     for (int i = 0; i < s.length(); i++) {
-      int c = s.charAt(i);
-      if (c == '\t') c = ' ';
-      if (c > 255) {
-        int index = special.indexOf((char) c);
-        if (index < 0)
-          throw new IOException(
-              "PDF font does not cover U+"
-                  + Integer.toHexString(c)
-                  + ". Export DOCX or HTML to preserve this text.");
-        c = 128 + index;
-      }
-      if (c < 32 || c == 127 || c >= 128 && c < 160 && special.charAt(c - 128) == 0)
-        throw new IOException("Unsupported PDF control character");
+      int c = winAnsi(s.charAt(i));
       if (c == '(' || c == ')' || c == '\\') b.append('\\').append((char) c);
       else if (c > 126) b.append('\\').append(String.format(java.util.Locale.ROOT, "%03o", c));
       else b.append((char) c);

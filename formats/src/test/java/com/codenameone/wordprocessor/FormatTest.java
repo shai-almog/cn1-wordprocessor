@@ -18,6 +18,21 @@ public class FormatTest {
   }
 
   @Test
+  public void xmlFastPathsPreserveEntitiesWhitespaceAndValidation() throws Exception {
+    assertEquals("text", Xml.text(Xml.parse("<étiquette_2 属性=\"ok\">text</étiquette_2>")));
+    String text = "plain\ttext\nwith whitespace";
+    assertEquals(text, Xml.text(Xml.parse("<a>" + text + "</a>")));
+    assertEquals("before & middle < after 😀", Xml.text(
+        Xml.parse("<a>before &amp; middle &lt; after &#x1f600;</a>")));
+    assertEquals("beforeinsideafter", Xml.text(Xml.parse("<a>before<b>inside</b>after</a>")));
+    assertEquals("", Xml.attr(Xml.parse("<a value=\"\"/>"), "value", "missing"));
+    for (String xml : new String[] {"<a value=\"\" value=\"second\"/>",
+        "<a>before\u0001after</a>", "<a>&amp;after\u0001</a>", "<a>&unknown;</a>"}) {
+      try { Xml.parse(xml); fail(xml); } catch (IOException expected) { }
+    }
+  }
+
+  @Test
   public void nativeRoundTripIsLossless() throws Exception {
     Document d = sample().document();
     String xml = DocumentXml.write(d);
@@ -29,12 +44,20 @@ public class FormatTest {
 
   @Test
   public void docxRoundTripPreservesTextAndFormatting() throws Exception {
-    Document d = sample().document();
+    Session session = sample();
+    session.select(0, 1, 6);
+    for (String[] property : new String[][] {{"font", "Arial"}, {"size", "15.5"},
+        {"color", "123456"}, {"background", "ffeedd"}, {"italic", "true"},
+        {"underline", "true"}, {"strike", "true"}})
+      session.format(property[0], property[1]);
+    Document d = session.document();
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     Docx.write(d, out);
     Docx.Opened next = Docx.read(new ByteArrayInputStream(out.toByteArray()));
     assertEquals(d.plainText(), next.document.plainText());
     assertTrue(next.document.paragraph(0).text.styleAt(2).bold);
+    assertEquals(d.paragraph(0).text.styleAt(2), next.document.paragraph(0).text.styleAt(2));
+    assertEquals(d.paragraph(0).text.styleAt(0), next.document.paragraph(0).text.styleAt(0));
     assertEquals(d.page.width, next.document.page.width, 0.1);
   }
 

@@ -7,11 +7,11 @@
 | Metric | Java + Codename One | Wordcraft Rust |
 | --- | ---: | ---: |
 | Application files | 33 | 281 |
-| Application LOC, before inline-test pruning | 5,134 | 138,785 |
-| Application LOC, explicit tests pruned (estimate) | 5,134 | 118,659 |
-| Application source tokens, before inline-test pruning | 45,303 | 1,980,112 |
-| Application source tokens, explicit tests pruned (estimate) | 45,303 | 1,646,847 |
-| Separate test source tokens | 8,262 | 410,496 |
+| Application LOC, before inline-test pruning | 5,177 | 138,785 |
+| Application LOC, explicit tests pruned (estimate) | 5,177 | 118,659 |
+| Application source tokens, before inline-test pruning | 47,108 | 1,980,112 |
+| Application source tokens, explicit tests pruned (estimate) | 47,108 | 1,646,847 |
+| Separate test source tokens | 10,246 | 410,496 |
 
 Counts use `cloc` and pinned `tiktoken` `o200k_base`. Source tokens include comments/whitespace, tokenize each file separately, and exclude filename/chat framing. Frameworks, dependencies, assets and generated output are excluded for both sides. Java includes the document libraries, desktop host and shared platform lifecycle. Tests, benchmarks, examples and build tooling have separate buckets in [the complete file/hash manifest](source-metrics.json).
 
@@ -32,14 +32,26 @@ These probes inspect CLI-generated DOCX paragraphs, direct bold formatting, repl
 
 ## Performance measured so far
 
-Complete fresh-process DOCX text extraction on the same 1,000-paragraph fixture, with 20 timed invocations per app and byte-identical output:
+Initial JVM baseline: complete fresh-process DOCX text extraction on the same 1,000-paragraph fixture, with 20 timed invocations per app and byte-identical output:
 
 | Metric | CN1 Java CLI | Wordcraft Rust CLI |
 | --- | ---: | ---: |
 | Median | 135.03 ms | 8.78 ms |
 | p95 | 148.02 ms | 11.86 ms |
 
-The process boundary includes JVM/runtime startup and output capture, with warm filesystem caches after one discarded invocation. It measures neither typing nor rendering. Wordcraft is faster in this startup-inclusive CLI test. Raw samples, environment and document/output hashes are in [the timing record](cli-comparison.json). Runs were collected after local build/UI work finished.
+The process boundary includes JVM/runtime startup and output capture, with warm filesystem caches after one discarded invocation. It measures neither typing nor rendering. Wordcraft was faster in this initial JVM CLI test. The optimized native CLI is measured separately below. Raw samples, environment and document/output hashes are in [the timing record](cli-comparison.json). Runs were collected after local build/UI work finished.
+
+## Optimized native CLI startup
+
+The same Java CLI compiled locally with GraalVM Native Image, compared with the same Rust release binary. Each cell is median / p95 in milliseconds; outputs are byte-identical for every sample.
+
+| Fixture | Native Java | Wordcraft Rust | Java shell launcher | JVM fallback |
+| --- | ---: | ---: | ---: | ---: |
+| 1000-paragraphs | 12.25 / 13.14 | 12.17 / 12.92 | 16.15 / 17.09 | 118.59 / 123.38 |
+| 1-paragraphs | 5.98 / 7.03 | 4.63 / 5.09 | 10.20 / 11.30 | 73.84 / 78.65 |
+| 10000-paragraphs | 18.90 / 20.72 | 22.14 / 23.26 | 22.73 / 24.47 | 130.19 / 135.41 |
+
+These are fresh processes with warm filesystem caches, no daemon or cached output. The JVM GUI is unchanged. Native Java retains a small-document startup gap; this is not a universal startup or language win. See [diagnosis and reproduction](STARTUP.md), [raw samples and binary hashes](startup-comparison.json), and [native/JVM behavior checks](native-validation.json).
 
 
 Warmed in-memory DOCX parsing plus text extraction on that same fixture (three alternating process rounds, 50 warmups and 100 measured operations per process):

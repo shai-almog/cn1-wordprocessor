@@ -66,6 +66,35 @@ Create `artifacts/` before writing into it. The UI smoke invokes editor callback
 
 The 502-entry [baseline](benchmarks/baseline.json) records Wordcraft catalog metadata at a pinned revision. Entries stay pending until equivalent workflows have evidence; catalog presence alone does not prove either implementation works. No remote repository or release has been published. A project license has not been selected; third-party notices remain in [third-party](third-party/README.md).
 
+## Fast native CLI (local build)
+
+Maven still runs on JDK 8. Set `GRAALVM_HOME` to a GraalVM JDK with `native-image`
+(tested locally on macOS arm64 with GraalVM 21.0.11), then run:
+
+```sh
+GRAALVM_HOME=/path/to/graalvm scripts/build-native.sh
+# Direct native executable: no JVM or shell launcher required.
+desktop/target/native/wordprocessor text document.docx
+# The development wrapper also selects native automatically when built.
+scripts/wordprocessor text document.docx
+WORDPROCESSOR_RUNTIME=jvm scripts/wordprocessor text document.docx
+```
+
+The native CLI includes the same commands, formats, macros and stdio MCP server.
+Its build runs the JVM suite and 18 native/JVM process checks. It uses normal GC,
+no daemon, no cached output and no benchmark-specific command implementation.
+`scripts/build.sh` invalidates an older native executable; rerun `build-native.sh`
+after source changes. The GUI remains JavaSE. Native execution on other operating
+systems is unverified. Native builds and tests are **local only**, never CI.
+
+For matched fresh-process measurements and the startup diagnosis, see
+[STARTUP](docs/STARTUP.md). Reproduce on an otherwise idle machine:
+
+```sh
+python3 scripts/benchmark-startup.py /path/to/wordcraft-cli \
+  artifacts/1000-paragraphs.docx --iterations 100 --out artifacts/startup/results.json
+```
+
 ## Source tokens and platform evidence
 
 Measurement tooling requires Python 3.11+, `cloc`, and the pinned packages below. The optional warm-import adapter also requires the Rust toolchain used to build Wordcraft.

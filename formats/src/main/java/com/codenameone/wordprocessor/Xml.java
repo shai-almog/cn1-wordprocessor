@@ -45,15 +45,21 @@ public final class Xml {
       while (pos < s.length() && Character.isWhitespace(s.charAt(pos))) pos++;
     }
 
+    boolean nameStart(char c) {
+      return c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c == '_' || c == ':'
+          || c > 127 && Character.isLetter(c);
+    }
+
     String name() throws IOException {
       int start = pos;
       if (pos >= s.length()
-          || !(Character.isLetter(s.charAt(pos)) || s.charAt(pos) == '_' || s.charAt(pos) == ':'))
+          || !nameStart(s.charAt(pos)))
         throw error("Expected XML name");
       pos++;
       while (pos < s.length()) {
         char c = s.charAt(pos);
-        if (Character.isLetterOrDigit(c) || c == '_' || c == ':' || c == '-' || c == '.') pos++;
+        if (nameStart(c) || c >= '0' && c <= '9' || c == '-' || c == '.'
+            || c > 127 && Character.isDigit(c)) pos++;
         else break;
       }
       return s.substring(start, pos);
@@ -88,7 +94,6 @@ public final class Xml {
       expect('<');
       String tag = name();
       Element e = new Element(tag);
-      Set<String> attributes = new HashSet<String>();
       while (true) {
         whitespace();
         if (s.startsWith("/>", pos)) {
@@ -100,7 +105,7 @@ public final class Xml {
           break;
         }
         String key = name();
-        if (!attributes.add(key)) throw error("Duplicate attribute");
+        if (e.getAttribute(key) != null) throw error("Duplicate attribute");
         whitespace();
         expect('=');
         whitespace();
@@ -144,15 +149,16 @@ public final class Xml {
     }
 
     String decode(String raw) throws IOException {
-      StringBuilder b = new StringBuilder();
+      StringBuilder b = null;
       for (int i = 0; i < raw.length(); i++) {
         char c = raw.charAt(i);
         if (c != '&') {
           if (c < 32 && c != '\t' && c != '\n' && c != '\r')
             throw error("Invalid XML control character");
-          b.append(c);
+          if (b != null) b.append(c);
           continue;
         }
+        if (b == null) b = new StringBuilder(raw.length()).append(raw, 0, i);
         int end = raw.indexOf(';', i + 1);
         if (end < 0) throw error("Unterminated entity");
         String entity = raw.substring(i + 1, end);
@@ -178,7 +184,7 @@ public final class Xml {
         } else throw error("Unknown entity");
         i = end;
       }
-      return b.toString();
+      return b == null ? raw : b.toString();
     }
   }
 
@@ -221,6 +227,8 @@ public final class Xml {
 
   public static String text(Element e) {
     if (e.isTextElement()) return e.getText();
+    if (e.getNumChildren() == 1 && e.getChildAt(0).isTextElement())
+      return e.getChildAt(0).getText();
     StringBuilder b = new StringBuilder();
     for (int i = 0; i < e.getNumChildren(); i++) b.append(text(e.getChildAt(i)));
     return b.toString();

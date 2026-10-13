@@ -56,6 +56,8 @@ report = {'schema': 1, 'operation': 'fresh-process DOCX text extraction',
           'binaryRevisionVerified': False,
           'java': subprocess.run([str(Path(os.environ['JAVA_HOME'])/'bin/java') if os.environ.get('JAVA_HOME') else 'java', '-version'], capture_output=True, text=True).stderr.strip(),
           'cn1': stats(results['cn1']), 'wordcraft': stats(results['wordcraft']),
+          'cn1RuntimeSelection': os.environ.get('WORDPROCESSOR_RUNTIME', 'auto'),
+          'nativeExecutablePresent': (root/'desktop/target/native/wordprocessor').is_file(),
           'renderingMeasured': False, 'typingMeasured': False, 'peakMemoryMeasured': False,
           'overallPerformanceGate': 'not-evaluated'}
 a.out.parent.mkdir(parents=True, exist_ok=True)

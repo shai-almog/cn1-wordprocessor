@@ -160,25 +160,30 @@ public final class Docx {
   }
 
   private static RichText run(Element e, Set<String> warnings) {
-    TextStyle style = TextStyle.DEFAULT;
+    TextStyle defaults = TextStyle.DEFAULT;
+    String font = defaults.font;
+    float size = defaults.size;
+    int color = defaults.color, background = defaults.background;
+    boolean bold = defaults.bold, italic = defaults.italic,
+        underline = defaults.underline, strike = defaults.strike;
     Element props = Xml.child(e, "rPr");
     if (props != null)
       for (Element p : Xml.children(props, null)) {
         String k = Xml.local(p);
-        if ("b".equals(k)) style = style.with("bold", Boolean.toString(enabled(p)));
-        else if ("i".equals(k)) style = style.with("italic", Boolean.toString(enabled(p)));
-        else if ("u".equals(k)) style = style.with("underline", Boolean.toString(enabled(p)));
-        else if ("strike".equals(k)) style = style.with("strike", Boolean.toString(enabled(p)));
-        else if ("sz".equals(k))
-          style =
-              style.with("size", Float.toString(Float.parseFloat(Xml.attr(p, "val", "24")) / 2));
+        if ("b".equals(k)) bold = enabled(p);
+        else if ("i".equals(k)) italic = enabled(p);
+        else if ("u".equals(k)) underline = enabled(p);
+        else if ("strike".equals(k)) strike = enabled(p);
+        else if ("sz".equals(k)) size = Float.parseFloat(Xml.attr(p, "val", "24")) / 2;
         else if ("color".equals(k)) {
           String v = Xml.attr(p, "val", "202833");
-          if (!"auto".equals(v)) style = style.with("color", v);
-        } else if ("rFonts".equals(k)) style = style.with("font", Xml.attr(p, "ascii", "Serif"));
-        else if ("shd".equals(k)) style = style.with("background", Xml.attr(p, "fill", "ffffff"));
+          if (!"auto".equals(v)) color = Integer.parseInt(v, 16);
+        } else if ("rFonts".equals(k)) font = Xml.attr(p, "ascii", "Serif");
+        else if ("shd".equals(k)) background = Integer.parseInt(Xml.attr(p, "fill", "ffffff"), 16);
         else warnings.add("Character feature: " + k);
       }
+    TextStyle style = new TextStyle(font, size, color, bold, italic, underline, strike,
+        background, defaults.link);
     StringBuilder b = new StringBuilder();
     for (Element c : Xml.children(e, null)) {
       String k = Xml.local(c);

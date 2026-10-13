@@ -3,13 +3,152 @@
   "wordcraftRevision": "159b84f54c74e9e82fb3109b758ae7dd6f4e3ab0",
   "definition": "Declared targets, build artifacts, and locally exercised behavior are separate; a framework target is not verified application support.",
   "platforms": [
-    {"platform":"macOS","cn1":{"declared":true,"build":"JavaSE compiled","exercise":"desktop callback smoke and render; CLI/MCP tested","evidence":["desktop/src/test/java/com/codenameone/wordprocessor/UiSmoke.java","docs/validation.json"]},"wordcraft":{"declared":true,"build":"release CLI built locally","exercise":"CLI probes and text extraction; GUI not tested","evidence":["README.md","apps/wordcraft-cli/src/main.rs"]}},
-    {"platform":"Windows","cn1":{"declared":true,"build":"shared JavaSE classes only; Windows packaging unverified","exercise":"not tested","evidence":["desktop/src/main/java/com/codenameone/wordprocessor/Desktop.java","scripts/package-desktop.py"]},"wordcraft":{"declared":true,"build":"not built locally","exercise":"not tested","evidence":["README.md",".github/workflows/release.yml",".github/workflows/windows-arm64.yml"]}},
-    {"platform":"Linux","cn1":{"declared":true,"build":"shared JavaSE classes only; Linux packaging unverified","exercise":"not tested","evidence":["desktop/src/main/java/com/codenameone/wordprocessor/Desktop.java"]},"wordcraft":{"declared":true,"build":"not built locally","exercise":"not tested","evidence":["README.md",".github/workflows/release.yml"]}},
-    {"platform":"BSD","cn1":{"declared":false,"build":"not evaluated","exercise":"not tested","evidence":[]},"wordcraft":{"declared":true,"build":"not built locally","exercise":"not tested","evidence":["README.md",".github/workflows/freebsd.yml"]}},
-    {"platform":"Browser","cn1":{"declared":true,"build":"JavaScript bundle compiled locally","exercise":"unverified; browser automation unavailable","evidence":["scripts/build-web.sh","app/common/src/main/java/com/codenameone/wordprocessor/app/Main.java","docs/validation.json"]},"wordcraft":{"declared":true,"build":"WASM target exists; not built locally","exercise":"not tested","evidence":["README.md","apps/wordcraft-web/Trunk.toml"]}},
-    {"platform":"Android","cn1":{"declared":true,"build":"CN1 lifecycle and platform profile; device binary not built","exercise":"not tested; no connected device/emulator","evidence":["app/common/pom.xml","app/common/src/main/java/com/codenameone/wordprocessor/app/Main.java"]},"wordcraft":{"declared":false,"build":"no app target advertised in inspected README/workspace","exercise":"not tested","evidence":["README.md","Cargo.toml"]}},
-    {"platform":"iOS","cn1":{"declared":true,"build":"CN1 lifecycle and platform profile; device binary not built","exercise":"not tested","evidence":["app/common/pom.xml","app/common/src/main/java/com/codenameone/wordprocessor/app/Main.java"]},"wordcraft":{"declared":false,"build":"no app target advertised in inspected README/workspace","exercise":"not tested","evidence":["README.md","Cargo.toml"]}}
+    {
+      "platform": "macOS",
+      "cn1": {
+        "declared": true,
+        "build": "JavaSE compiled; native Java CLI compiled locally with GraalVM",
+        "exercise": "desktop callback smoke and render; CLI/MCP tested",
+        "evidence": [
+          "desktop/src/test/java/com/codenameone/wordprocessor/UiSmoke.java",
+          "docs/validation.json",
+          "docs/native-validation.json"
+        ]
+      },
+      "wordcraft": {
+        "declared": true,
+        "build": "release CLI built locally",
+        "exercise": "CLI probes and text extraction; GUI not tested",
+        "evidence": [
+          "README.md",
+          "apps/wordcraft-cli/src/main.rs"
+        ]
+      }
+    },
+    {
+      "platform": "Windows",
+      "cn1": {
+        "declared": true,
+        "build": "shared JavaSE classes only; Windows packaging unverified",
+        "exercise": "not tested",
+        "evidence": [
+          "desktop/src/main/java/com/codenameone/wordprocessor/Desktop.java",
+          "scripts/package-desktop.py"
+        ]
+      },
+      "wordcraft": {
+        "declared": true,
+        "build": "not built locally",
+        "exercise": "not tested",
+        "evidence": [
+          "README.md",
+          ".github/workflows/release.yml",
+          ".github/workflows/windows-arm64.yml"
+        ]
+      }
+    },
+    {
+      "platform": "Linux",
+      "cn1": {
+        "declared": true,
+        "build": "shared JavaSE classes only; Linux packaging unverified",
+        "exercise": "not tested",
+        "evidence": [
+          "desktop/src/main/java/com/codenameone/wordprocessor/Desktop.java"
+        ]
+      },
+      "wordcraft": {
+        "declared": true,
+        "build": "not built locally",
+        "exercise": "not tested",
+        "evidence": [
+          "README.md",
+          ".github/workflows/release.yml"
+        ]
+      }
+    },
+    {
+      "platform": "BSD",
+      "cn1": {
+        "declared": false,
+        "build": "not evaluated",
+        "exercise": "not tested",
+        "evidence": []
+      },
+      "wordcraft": {
+        "declared": true,
+        "build": "not built locally",
+        "exercise": "not tested",
+        "evidence": [
+          "README.md",
+          ".github/workflows/freebsd.yml"
+        ]
+      }
+    },
+    {
+      "platform": "Browser",
+      "cn1": {
+        "declared": true,
+        "build": "JavaScript bundle compiled locally",
+        "exercise": "unverified; browser automation unavailable",
+        "evidence": [
+          "scripts/build-web.sh",
+          "app/common/src/main/java/com/codenameone/wordprocessor/app/Main.java",
+          "docs/validation.json"
+        ]
+      },
+      "wordcraft": {
+        "declared": true,
+        "build": "WASM target exists; not built locally",
+        "exercise": "not tested",
+        "evidence": [
+          "README.md",
+          "apps/wordcraft-web/Trunk.toml"
+        ]
+      }
+    },
+    {
+      "platform": "Android",
+      "cn1": {
+        "declared": true,
+        "build": "CN1 lifecycle and platform profile; device binary not built",
+        "exercise": "not tested; no connected device/emulator",
+        "evidence": [
+          "app/common/pom.xml",
+          "app/common/src/main/java/com/codenameone/wordprocessor/app/Main.java"
+        ]
+      },
+      "wordcraft": {
+        "declared": false,
+        "build": "no app target advertised in inspected README/workspace",
+        "exercise": "not tested",
+        "evidence": [
+          "README.md",
+          "Cargo.toml"
+        ]
+      }
+    },
+    {
+      "platform": "iOS",
+      "cn1": {
+        "declared": true,
+        "build": "CN1 lifecycle and platform profile; device binary not built",
+        "exercise": "not tested",
+        "evidence": [
+          "app/common/pom.xml",
+          "app/common/src/main/java/com/codenameone/wordprocessor/app/Main.java"
+        ]
+      },
+      "wordcraft": {
+        "declared": false,
+        "build": "no app target advertised in inspected README/workspace",
+        "exercise": "not tested",
+        "evidence": [
+          "README.md",
+          "Cargo.toml"
+        ]
+      }
+    }
   ],
   "countsAreNotPlatformWins": true,
   "upstreamWorkflowPresenceDoesNotVerifyExecution": true

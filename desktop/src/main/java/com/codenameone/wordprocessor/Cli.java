@@ -28,10 +28,9 @@ public final class Cli {
               + "Existing output files are not overwritten by the CLI.");
       return;
     }
-    Commands commands = new Commands();
     switch (args[0]) {
       case "commands":
-        for (Commands.Descriptor d : commands.descriptors())
+        for (Commands.Descriptor d : new Commands().descriptors())
           System.out.println(
               Json.write(
                   Json.object(
@@ -45,12 +44,11 @@ public final class Cli {
       case "text":
         require(args, 2);
         DocumentFiles.Opened opened = DocumentFiles.read(Paths.get(args[1]));
-        Session s = new Session(opened.document);
         System.out.println(
             "text".equals(args[0])
-                ? s.document().plainText()
+                ? opened.document.plainText()
                 : Json.write(
-                    Json.object("document", Commands.inspect(s), "warnings", opened.warnings)));
+                    Json.object("document", Commands.inspect(new Session(opened.document)), "warnings", opened.warnings)));
         return;
       case "convert":
         require(args, 3);
@@ -80,7 +78,7 @@ public final class Cli {
               params.put(e.getKey(), (String) e.getValue());
             }
           }
-        Macros.Preview preview = new Macros(commands).preview(session, macro, params, null);
+        Macros.Preview preview = new Macros(new Commands()).preview(session, macro, params, null);
         if (has(args, "--preview")) {
           System.out.println(
               Json.write(

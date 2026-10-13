@@ -50,7 +50,7 @@ public final class DocumentFiles {
   public static byte[] write(
       Document d, Docx.Opened source, String extension, boolean allowConversion)
       throws IOException {
-    if ("pdf".equals(extension)) return PdfExporter.write(d.page, DesktopLayout.layout(d));
+    if ("pdf".equals(extension)) return PdfExporter.write(d);
     if ("cn1doc".equals(extension)) return ProjectFile.write(d, source);
     if ("docx".equals(extension)) {
       ByteArrayOutputStream out = new ByteArrayOutputStream();
