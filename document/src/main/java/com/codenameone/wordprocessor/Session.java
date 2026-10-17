@@ -2369,6 +2369,27 @@ public final class Session {
         });
   }
 
+  /**
+   * Moves the selection to a block/offset outside it as one undoable step (drag inside the
+   * document). The target is given in pre-move coordinates.
+   */
+  public void moveSelectionTo(final int block, final int offset, final Document fragment) {
+    final Selection from = selection;
+    transact(
+        s -> {
+          int sb = from.startBlock(), eb = from.endBlock(), start = from.start(), end = from.end();
+          replace("");
+          int targetBlock = block, targetOffset = offset;
+          boolean after = block > eb || (block == eb && offset >= end);
+          if (after && block == eb) {
+            targetBlock = sb;
+            targetOffset = start + (offset - end);
+          } else if (after) targetBlock = block - (eb - sb);
+          select(targetBlock, targetOffset, targetOffset);
+          paste(fragment);
+        });
+  }
+
   public void paste(final Document fragment) {
     if (fragment == null) return;
     if (inCell() && fragment.blocks.size() == 1 && fragment.blocks.get(0) instanceof Table) {

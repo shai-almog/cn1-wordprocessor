@@ -361,6 +361,10 @@ public final class EditorSurface extends Container
     this.changed = changed;
     cellEditor = cells;
     setFocusable(true);
+    setNativeDropTarget(true);
+    setAcceptedDropMimeTypes(ACCEPTED_MIME_TYPES);
+    setAcceptedDropActions(NativeDragOperation.ACTION_COPY | NativeDragOperation.ACTION_MOVE);
+    setNativeDragSource(true);
     getSemantics()
         .setRole(AccessibilityRole.GENERIC)
         .setLabel("Document")
@@ -1239,24 +1243,40 @@ public final class EditorSurface extends Container
     repaint();
   }
 
+  static final String MIME_NATIVE = "application/x-cn1-wordprocessor+xml";
+  // Richest first: our own model, then the formats other editors put on the pasteboard.
+  static final String[] ACCEPTED_MIME_TYPES = {
+    MIME_NATIVE,
+    ClipboardContent.MIME_HTML,
+    ClipboardContent.MIME_RTF,
+    ClipboardContent.MIME_MARKDOWN,
+    ClipboardContent.MIME_PNG,
+    ClipboardContent.MIME_JPEG,
+    ClipboardContent.MIME_GIF,
+    ClipboardContent.MIME_FILE,
+    ClipboardContent.MIME_URI_LIST,
+    ClipboardContent.MIME_TEXT
+  };
+
+  /** Receives files dropped on the document that should open rather than be inserted. */
+  public interface FileDropHandler {
+    /** Returns true when the file was handled (for example opened as a new document). */
+    boolean dropped(String path);
+  }
+
+  private FileDropHandler fileDropHandler;
+
+  public void setFileDropHandler(FileDropHandler handler) {
+    fileDropHandler = handler;
+  }
+
   public void clipboard(String action) {
     session.breakTypingGroup();
     finishComposing();
     try {
       if ("paste".equals(action)) {
         ClipboardContent data = Display.getInstance().getClipboardContent();
-        Object nativeXml =
-            data == null ? null : data.getData("application/x-cn1-wordprocessor+xml");
-        Object html = data == null ? null : data.getData(ClipboardContent.MIME_HTML);
-        if (nativeXml instanceof byte[]) nativeXml = new String((byte[]) nativeXml, "UTF-8");
-        if (html instanceof byte[]) html = new String((byte[]) html, "UTF-8");
-        if (nativeXml instanceof String) {
-          session.paste(DocumentXml.read((String) nativeXml));
-          didEdit();
-        } else if (html instanceof String) {
-          session.paste(TextFormats.read((String) html, RichTextFormat.HTML));
-          didEdit();
-        } else {
+        if (!importContent(data)) {
           Object plain = Display.getInstance().getPasteDataFromClipboard();
           if (plain instanceof String) {
             session.pasteText((String) plain);
@@ -1264,14 +1284,9 @@ public final class EditorSurface extends Container
           }
         }
       } else {
-        Document fragment = session.copySelection();
-        if (fragment == null) return;
-        Display.getInstance()
-            .copyToClipboard(
-                new ClipboardContent()
-                    .setData(ClipboardContent.MIME_TEXT, session.selectedText())
-                    .setData(ClipboardContent.MIME_HTML, TextFormats.html(fragment))
-                    .setData("application/x-cn1-wordprocessor+xml", DocumentXml.write(fragment)));
+        ClipboardContent content = selectionContent();
+        if (content == null) return;
+        Display.getInstance().copyToClipboard(content);
         if ("cut".equals(action)) {
           session.replace("");
           didEdit();
@@ -1282,6 +1297,197 @@ public final class EditorSurface extends Container
     } finally {
       session.breakTypingGroup();
     }
+  }
+
+  /** The selection in every format other applications read: model XML, HTML, RTF, Markdown, text. */
+  private ClipboardContent selectionContent() {
+    Document fragment = session.copySelection();
+    if (fragment == null) return null;
+    ClipboardContent content =
+        new ClipboardContent()
+            .setData(ClipboardContent.MIME_TEXT, session.selectedText())
+            .setData(ClipboardContent.MIME_HTML, TextFormats.html(fragment))
+            .setData(MIME_NATIVE, DocumentXml.write(fragment));
+    // RTF and Markdown cannot carry pictures; HTML and the native model still do.
+    try {
+      content.setData(ClipboardContent.MIME_RTF, TextFormats.write(fragment, RichTextFormat.RTF));
+      content.setData(
+          ClipboardContent.MIME_MARKDOWN, TextFormats.write(fragment, RichTextFormat.MARKDOWN));
+    } catch (IllegalArgumentException pictures) {
+    }
+    return content;
+  }
+
+  private static String text(ClipboardContent data, String mime) throws java.io.IOException {
+    Object value = data.getData(mime);
+    if (value instanceof byte[]) return new String((byte[]) value, "UTF-8");
+    return value instanceof String ? (String) value : null;
+  }
+
+  /**
+   * Inserts clipboard or drag content at the caret using the richest format offered. Returns
+   * false when nothing usable was present.
+   */
+  boolean importContent(ClipboardContent data) throws java.io.IOException {
+    if (data == null) return false;
+    String value;
+    if ((value = text(data, MIME_NATIVE)) != null) session.paste(DocumentXml.read(value));
+    else if ((value = text(data, ClipboardContent.MIME_HTML)) != null)
+      session.paste(TextFormats.read(value, RichTextFormat.HTML));
+    else if ((value = text(data, ClipboardContent.MIME_RTF)) != null)
+      session.paste(TextFormats.read(value, RichTextFormat.RTF));
+    else if (insertImage(data)) return true;
+    else if (importFiles(data.getFiles())) return true;
+    else if ((value = text(data, ClipboardContent.MIME_MARKDOWN)) != null)
+      session.paste(TextFormats.read(value, RichTextFormat.MARKDOWN));
+    else if ((value = text(data, ClipboardContent.MIME_TEXT)) != null) session.pasteText(value);
+    else return false;
+    didEdit();
+    return true;
+  }
+
+  private boolean insertImage(ClipboardContent data) {
+    for (String mime :
+        new String[] {ClipboardContent.MIME_PNG, ClipboardContent.MIME_JPEG, ClipboardContent.MIME_GIF}) {
+      byte[] bytes = data.getBytes(mime);
+      if (bytes != null && bytes.length > 0) {
+        insertPictureBytes(bytes, "Pasted picture");
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private void insertPictureBytes(byte[] bytes, String alt) {
+    if (session.inCell()) session.leaveCell();
+    int[] size = Picture.shape(bytes);
+    if ((long) size[0] * size[1] > 16000000 || bytes.length > 20 * 1024 * 1024)
+      throw new IllegalArgumentException("Picture exceeds 16 megapixels or 20 MiB");
+    float width = Math.min(size[0] * .75f, session.activeSection().raw.page.contentWidth());
+    session.insertPicture(bytes, width, width * size[1] / size[0], alt);
+    didEdit();
+  }
+
+  /** Images are inserted inline; documents go to the host (open) or are inserted as content. */
+  private boolean importFiles(String[] files) throws java.io.IOException {
+    if (files == null || files.length == 0) return false;
+    boolean any = false;
+    for (String path : files) {
+      String lower = path.toLowerCase();
+      if (lower.endsWith(".png") || lower.endsWith(".jpg") || lower.endsWith(".jpeg")
+          || lower.endsWith(".gif")) {
+        insertPictureBytes(readFile(path), path.substring(path.lastIndexOf('/') + 1));
+        any = true;
+      } else if (fileDropHandler != null && fileDropHandler.dropped(path)) {
+        any = true;
+      } else {
+        RichTextFormat format =
+            lower.endsWith(".html") || lower.endsWith(".htm") ? RichTextFormat.HTML
+                : lower.endsWith(".rtf") ? RichTextFormat.RTF
+                : lower.endsWith(".md") ? RichTextFormat.MARKDOWN
+                : lower.endsWith(".txt") ? RichTextFormat.PLAIN_TEXT
+                : null;
+        if (format == null) continue;
+        String body = new String(readFile(path), "UTF-8");
+        if (format == RichTextFormat.PLAIN_TEXT) session.pasteText(body);
+        else session.paste(TextFormats.read(body, format));
+        any = true;
+      }
+    }
+    return any;
+  }
+
+  private static byte[] readFile(String path) throws java.io.IOException {
+    try (java.io.InputStream in =
+        com.codename1.io.FileSystemStorage.getInstance().openInputStream(path)) {
+      return com.codename1.io.Util.readInputStream(in);
+    }
+  }
+
+  // ---- Native drag and drop (OS <-> document) ----
+
+  @Override
+  protected boolean canAcceptNativeDrop(ClipboardContent content) {
+    return content != null && content.findPreferredMimeType(ACCEPTED_MIME_TYPES) != null;
+  }
+
+  @Override
+  protected void nativeDragOver(com.codename1.ui.NativeDropEvent evt) {
+    // The caret follows the pointer so the insertion point is visible before release.
+    if (!evt.isLocal() || !insideSelection(evt.getX(), evt.getY())) {
+      moveCaretTo(evt.getX(), evt.getY());
+      evt.accept(evt.isLocal() ? NativeDragOperation.ACTION_MOVE : NativeDragOperation.ACTION_COPY);
+    } else evt.reject();
+  }
+
+  @Override
+  protected void nativeDrop(com.codename1.ui.NativeDropEvent evt) {
+    boolean local = evt.isLocal();
+    if (local && insideSelection(evt.getX(), evt.getY())) {
+      evt.reject();
+      return;
+    }
+    try {
+      session.breakTypingGroup();
+      if (local) {
+        // An internal move is one undoable step: remove the source, then insert at the target.
+        Document fragment = session.copySelection();
+        int[] target = hitTest(evt.getX(), evt.getY());
+        if (fragment == null || target == null) {
+          evt.reject();
+          return;
+        }
+        session.moveSelectionTo(target[0], target[1], fragment);
+        didEdit();
+        evt.accept(NativeDragOperation.ACTION_MOVE);
+      } else {
+        moveCaretTo(evt.getX(), evt.getY());
+        if (importContent(evt.getContent())) evt.accept(NativeDragOperation.ACTION_COPY);
+        else evt.reject();
+      }
+    } catch (java.io.IOException | IllegalArgumentException e) {
+      evt.reject();
+      Dialog.show("Drop", e.getMessage(), "OK", null);
+    } finally {
+      session.breakTypingGroup();
+    }
+  }
+
+  @Override
+  protected NativeDragOperation createNativeDragOperation(int x, int y) {
+    // Only a press inside a non-empty selection starts a drag; elsewhere drag extends selection.
+    if (session.selection().collapsed() || !insideSelection(x, y)) return null;
+    ClipboardContent content = selectionContent();
+    if (content == null) return null;
+    return new NativeDragOperation(content)
+        .setAllowedActions(NativeDragOperation.ACTION_COPY | NativeDragOperation.ACTION_MOVE)
+        .setLabel(session.selectedText());
+  }
+
+  /** Block and offset under an absolute point, without changing the selection. */
+  private int[] hitTest(int x, int y) {
+    LayoutEngine.Line line = lineAt(x, y);
+    if (line == null || line.row >= 0) return null;
+    int block = editingBlock(line);
+    return block < 0 ? null : new int[] {block, offsetAt(line, x)};
+  }
+
+  private boolean insideSelection(int x, int y) {
+    Selection sel = session.selection();
+    int[] at = hitTest(x, y);
+    if (at == null || sel.collapsed()) return false;
+    int sb = sel.startBlock(), eb = sel.endBlock();
+    if (at[0] < sb || at[0] > eb) return false;
+    if (at[0] == sb && at[1] < sel.start()) return false;
+    return at[0] != eb || at[1] <= sel.end();
+  }
+
+  private void moveCaretTo(int x, int y) {
+    int[] at = hitTest(x, y);
+    if (at == null) return;
+    session.leaveCell();
+    session.select(at[0], at[1], at[1]);
+    repaint();
   }
 
   @Override
