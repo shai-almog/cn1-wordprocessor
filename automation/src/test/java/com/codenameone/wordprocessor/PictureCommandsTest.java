@@ -53,4 +53,39 @@ public class PictureCommandsTest {
     } catch (IllegalArgumentException expected) {
     }
   }
+
+  @Test
+  public void adjustmentsRoundTripThroughDocxAndNativeXml() throws Exception {
+    Session s = new Session(Document.empty());
+    s.insertPicture(png(), 200, 100, "");
+    int block = -1;
+    for (int i = 0; i < s.document().blocks.size(); i++)
+      if (s.document().blocks.get(i) instanceof Picture) block = i;
+    run(s, "picture.corrections", "block", block, "brightness", 20, "contrast", -40);
+    run(s, "picture.transparency", "block", block, "percent", 35);
+    run(s, "picture.color", "block", block, "mode", "grayscale");
+    run(s, "picture.style", "block", block, "name", "simpleFrameBlack");
+    Picture.Look k = ((Picture) s.document().blocks.get(block)).look;
+    assertEquals(20, k.brightness);
+    assertEquals(-40, k.contrast);
+    assertEquals(35, k.transparency);
+    assertEquals("grayscale", k.colorMode);
+    assertEquals(6, k.borderWidth, 0);
+
+    java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+    Docx.write(s.document(), out);
+    Docx.Opened back = Docx.read(new java.io.ByteArrayInputStream(out.toByteArray()));
+    assertTrue(back.warnings.toString(), back.warnings.isEmpty());
+    Picture.Look docx = null;
+    for (Block b : back.document.blocks) if (b instanceof Picture) docx = ((Picture) b).look;
+    assertEquals(k, docx);
+    Picture.Look xml = null;
+    for (Block b : DocumentXml.read(DocumentXml.write(s.document())).blocks)
+      if (b instanceof Picture) xml = ((Picture) b).look;
+    assertEquals(k, xml);
+
+    run(s, "picture.change", "block", block, "base64",
+        new String(com.codename1.util.Base64.encodeNoNewline(png())));
+    assertEquals(k, ((Picture) s.document().blocks.get(block)).look);
+  }
 }

@@ -46,12 +46,42 @@ public final class EditorSurface extends Container
               image.scaled(
                   Math.max(1, image.getWidth() * 2048 / longest),
                   Math.max(1, image.getHeight() * 2048 / longest));
+        if (p.look.adjusted()) image = adjusted(image, p.look);
       } catch (RuntimeException invalidImage) {
         image = null;
       }
       pictures.put(p, image);
     }
     return image;
+  }
+
+  /** Corrections, color and transparency, applied once per picture to the decoded pixels. */
+  static Image adjusted(Image image, Picture.Look look) {
+    int[] px = image.getRGB();
+    int bright = look.brightness, contrast = look.contrast;
+    if ("washout".equals(look.colorMode)) {
+      bright = 70;
+      contrast = -70;
+    }
+    float gain = 1 + contrast / 100f, offset = bright * 2.55f;
+    for (int i = 0; i < px.length; i++) {
+      int v = px[i], a = v >>> 24, r = v >> 16 & 255, g = v >> 8 & 255, b = v & 255;
+      if ("grayscale".equals(look.colorMode) || "blackWhite".equals(look.colorMode)) {
+        int l = (r * 299 + g * 587 + b * 114) / 1000;
+        if ("blackWhite".equals(look.colorMode)) l = l >= 128 ? 255 : 0;
+        r = g = b = l;
+      }
+      r = clamp((r - 128) * gain + 128 + offset);
+      g = clamp((g - 128) * gain + 128 + offset);
+      b = clamp((b - 128) * gain + 128 + offset);
+      a = a * (100 - look.transparency) / 100;
+      px[i] = a << 24 | r << 16 | g << 8 | b;
+    }
+    return Image.createImage(px, image.getWidth(), image.getHeight());
+  }
+
+  private static int clamp(float v) {
+    return v < 0 ? 0 : v > 255 ? 255 : Math.round(v);
   }
 
   private final Map<LayoutEngine.Span, String> tabLeaderPaint =

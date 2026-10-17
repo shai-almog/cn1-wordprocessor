@@ -42,6 +42,90 @@ final class PictureCommands implements Commands.Extension {
           return null;
         });
     c.register(
+        "picture.corrections",
+        "Brightness and contrast, -100 to 100 percent",
+        "block?:integer,brightness?:integer,contrast?:integer",
+        true,
+        (s, a) -> {
+          int block = block(s, a);
+          Picture.Look k = picture(s, block).look;
+          s.pictureLook(
+              block,
+              k.adjust(
+                  a.containsKey("brightness") ? Commands.integer(a, "brightness") : k.brightness,
+                  a.containsKey("contrast") ? Commands.integer(a, "contrast") : k.contrast,
+                  k.transparency,
+                  k.colorMode));
+          return null;
+        });
+    c.register(
+        "picture.color",
+        "Recolor: color, grayscale, washout or blackWhite",
+        "block?:integer,mode:string",
+        true,
+        (s, a) -> {
+          int block = block(s, a);
+          Picture.Look k = picture(s, block).look;
+          s.pictureLook(block, k.adjust(k.brightness, k.contrast, k.transparency, Commands.str(a, "mode")));
+          return null;
+        });
+    c.register(
+        "picture.transparency",
+        "Picture transparency, 0 to 100 percent",
+        "block?:integer,percent:integer",
+        true,
+        (s, a) -> {
+          int block = block(s, a);
+          Picture.Look k = picture(s, block).look;
+          s.pictureLook(block, k.adjust(k.brightness, k.contrast, Commands.integer(a, "percent"), k.colorMode));
+          return null;
+        });
+    c.register(
+        "picture.style",
+        "Picture style: simpleFrameBlack, simpleFrameWhite, thickMatteBlack, thinGray or none",
+        "block?:integer,name:string",
+        true,
+        (s, a) -> {
+          int block = block(s, a);
+          Picture.Look k = picture(s, block).look;
+          String name = Commands.str(a, "name");
+          Picture.Look next =
+              "simpleFrameBlack".equals(name)
+                  ? k.border(0x000000, 6)
+                  : "simpleFrameWhite".equals(name)
+                      ? k.border(0xffffff, 8)
+                      : "thickMatteBlack".equals(name)
+                          ? k.border(0x000000, 14)
+                          : "thinGray".equals(name)
+                              ? k.border(0x808080, 1)
+                              : "none".equals(name) ? k.border(-1, 0) : null;
+          if (next == null) throw new IllegalArgumentException("Unknown picture style: " + name);
+          s.pictureLook(block, next);
+          return null;
+        });
+    c.register(
+        "picture.change",
+        "Replace the picture's image (base64 PNG/JPEG), keeping size, look and alt text",
+        "block?:integer,base64:string",
+        true,
+        (s, a) -> {
+          int block = block(s, a);
+          Picture old = picture(s, block);
+          Picture next =
+              new Picture(
+                  old.id(),
+                  com.codename1.util.Base64.decode(Commands.str(a, "base64").getBytes()),
+                  old.width,
+                  old.height,
+                  old.alt,
+                  old.align,
+                  old.look);
+          Selection keep = s.selection();
+          s.replaceDocument(s.document().blocks(s.document().blocks.set(block, next), s.document().nextId));
+          s.selectRange(keep.anchorBlock, keep.anchor, keep.block, keep.caret);
+          return null;
+        });
+    c.register(
         "arrange.rotation",
         "Set picture rotation in degrees and flips",
         "block?:integer,degrees?:number,flipH?:boolean,flipV?:boolean",

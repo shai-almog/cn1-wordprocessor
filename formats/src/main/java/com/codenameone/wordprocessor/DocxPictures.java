@@ -108,6 +108,36 @@ final class DocxPictures {
             ? 0
             : Math.round(Float.parseFloat(Xml.attr(transform, "rot", "0")) / 60000f);
     try {
+      // Blip effects: a:lum (brightness/contrast), a:alphaModFix, a:grayscl and a:biLevel.
+      Element blip = descendant(container, "blip");
+      if (blip != null) {
+        Element lum = Xml.child(blip, "lum"), alpha = Xml.child(blip, "alphaModFix");
+        int bright = lum == null ? 0 : Math.round(Float.parseFloat(Xml.attr(lum, "bright", "0")) / 1000f);
+        int contrast = lum == null ? 0 : Math.round(Float.parseFloat(Xml.attr(lum, "contrast", "0")) / 1000f);
+        String mode =
+            Xml.child(blip, "grayscl") != null
+                ? "grayscale"
+                : Xml.child(blip, "biLevel") != null
+                    ? "blackWhite"
+                    : bright == 70 && contrast == -70 ? "washout" : "color";
+        if ("washout".equals(mode)) bright = contrast = 0;
+        int transparency =
+            alpha == null ? 0 : 100 - Math.round(Float.parseFloat(Xml.attr(alpha, "amt", "100000")) / 1000f);
+        Picture.Look base =
+            new Picture.Look(edges[0], edges[1], edges[2], edges[3], color, Math.min(72, width), rotation,
+                transform != null && "1".equals(Xml.attr(transform, "flipH", "0")),
+                transform != null && "1".equals(Xml.attr(transform, "flipV", "0")));
+        try {
+          return base.adjust(
+              Math.max(-100, Math.min(100, bright)),
+              Math.max(-100, Math.min(100, contrast)),
+              Math.max(0, Math.min(100, transparency)),
+              mode);
+        } catch (IllegalArgumentException ex) {
+          warnings.add("Picture adjustments outside the supported range were removed");
+          return base;
+        }
+      }
       return new Picture.Look(
           edges[0],
           edges[1],
@@ -154,9 +184,18 @@ final class DocxPictures {
                 + " id=\"0\" name=\"Picture\"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip"
                 + " r:embed=\"")
         .append(id)
-        .append(
-            "\"/>");
+        .append("\">");
     Picture.Look k = p.look;
+    if (k.transparency > 0)
+      b.append("<a:alphaModFix amt=\"").append((100 - k.transparency) * 1000).append("\"/>");
+    if ("grayscale".equals(k.colorMode)) b.append("<a:grayscl/>");
+    if ("blackWhite".equals(k.colorMode)) b.append("<a:biLevel thresh=\"50000\"/>");
+    if ("washout".equals(k.colorMode))
+      b.append("<a:lum bright=\"70000\" contrast=\"-70000\"/>");
+    else if (k.brightness != 0 || k.contrast != 0)
+      b.append("<a:lum bright=\"").append(k.brightness * 1000).append("\" contrast=\"")
+          .append(k.contrast * 1000).append("\"/>");
+    b.append("</a:blip>");
     if (k.cropped())
       b.append("<a:srcRect l=\"")
           .append(Math.round(k.cropLeft * 100000))

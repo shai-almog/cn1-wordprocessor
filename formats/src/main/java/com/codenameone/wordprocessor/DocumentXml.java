@@ -127,6 +127,9 @@ public final class DocumentXml {
               .append(look.flipH ? "h" : "")
               .append(look.flipV ? "v" : "")
               .append('"');
+        if (look != null && look.adjusted())
+          b.append(" adjust=\"").append(look.brightness).append(',').append(look.contrast).append(',')
+              .append(look.transparency).append(',').append(look.colorMode).append('"');
         b.append(">")
             .append(com.codename1.util.Base64.encodeNoNewline(picture.bytes()))
             .append("</picture>");
@@ -382,6 +385,13 @@ public final class DocumentXml {
         flip.indexOf('v') >= 0);
   }
 
+  private static Picture.Look pictureAdjust(Element c, Picture.Look look) {
+    String value = Xml.attr(c, "adjust", "");
+    if (value.isEmpty()) return look;
+    String[] v = TextUtil.split(value, ',');
+    return look.adjust(Integer.parseInt(v[0]), Integer.parseInt(v[1]), Integer.parseInt(v[2]), v[3]);
+  }
+
   public static Document read(String xml) throws IOException {
     Element e = Xml.parse(xml);
     if (!"document".equals(Xml.local(e)) || !"1".equals(Xml.attr(e, "version", "")))
@@ -442,7 +452,7 @@ public final class DocumentXml {
                       f(c, "height"),
                       Xml.attr(c, "alt", ""),
                       Xml.attr(c, "align", "left"),
-                      pictureLook(c)));
+                      pictureAdjust(c, pictureLook(c))));
         } else if ("bookmark".equals(Xml.local(c))) {
           Bookmark mark =
               new Bookmark(

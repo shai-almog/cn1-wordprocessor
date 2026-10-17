@@ -10,8 +10,8 @@
   "not-applicable"
  ],
  "counts": {
-  "unverified": 306,
-  "missing": 168,
+  "unverified": 311,
+  "missing": 163,
   "partial": 13,
   "certified": 0,
   "reference-stub": 15,
@@ -5028,24 +5028,24 @@
    "group": "Adjust",
    "feature": "Corrections",
    "command": "picture.corrections",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "picture.corrections",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "picture.corrections (Corrections)"
+   "notes": "picture.corrections (Corrections) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Picture Format",
    "group": "Adjust",
    "feature": "Color",
    "command": "picture.color",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "picture.color",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "picture.color (Color)"
+   "notes": "picture.color (Color) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Picture Format",
@@ -5064,12 +5064,12 @@
    "group": "Adjust",
    "feature": "Transparency",
    "command": "picture.transparency",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "picture.transparency",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "picture.transparency (Transparency)"
+   "notes": "picture.transparency (Transparency) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Picture Format",
@@ -5088,12 +5088,12 @@
    "group": "Adjust",
    "feature": "Change Picture",
    "command": "picture.change",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "picture.change",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "picture.change (Change Picture)"
+   "notes": "picture.change (Change Picture) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Picture Format",
@@ -5112,12 +5112,12 @@
    "group": "Picture Styles",
    "feature": "Picture Styles",
    "command": "picture.style",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "picture.style",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "picture.style (Picture Styles)"
+   "notes": "picture.style (Picture Styles) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Picture Format",

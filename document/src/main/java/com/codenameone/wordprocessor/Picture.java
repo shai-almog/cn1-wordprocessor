@@ -4,6 +4,9 @@ package com.codenameone.wordprocessor;
 public final class Picture implements Block {
   /** Crop, border and orientation applied on top of the picture's bytes. */
   public static final class Look {
+    public static final java.util.List<String> COLOR_MODES =
+        java.util.Arrays.asList("color", "grayscale", "washout", "blackWhite");
+
     public static final Look NONE = new Look(0, 0, 0, 0, -1, 0, 0, false, false);
 
     /** Fractions of the source cut from each edge; their sum per axis stays below 0.95. */
@@ -19,6 +22,12 @@ public final class Picture implements Block {
 
     public final boolean flipH, flipV;
 
+    /** Picture Format > Corrections, Transparency and Color. */
+    public final int brightness, contrast, transparency;
+
+    /** color, grayscale, washout or blackWhite. */
+    public final String colorMode;
+
     public Look(
         float cropLeft,
         float cropTop,
@@ -29,6 +38,30 @@ public final class Picture implements Block {
         int rotation,
         boolean flipH,
         boolean flipV) {
+      this(cropLeft, cropTop, cropRight, cropBottom, borderColor, borderWidth, rotation, flipH, flipV, 0, 0, 0, "color");
+    }
+
+    public Look(
+        float cropLeft,
+        float cropTop,
+        float cropRight,
+        float cropBottom,
+        int borderColor,
+        float borderWidth,
+        int rotation,
+        boolean flipH,
+        boolean flipV,
+        int brightness,
+        int contrast,
+        int transparency,
+        String colorMode) {
+      if (brightness < -100 || brightness > 100 || contrast < -100 || contrast > 100
+          || transparency < 0 || transparency > 100 || !COLOR_MODES.contains(colorMode))
+        throw new IllegalArgumentException("Invalid picture adjustment");
+      this.brightness = brightness;
+      this.contrast = contrast;
+      this.transparency = transparency;
+      this.colorMode = colorMode;
       for (float f : new float[] {cropLeft, cropTop, cropRight, cropBottom})
         if (!(f >= 0 && f < .95f)) throw new IllegalArgumentException("Crop must be 0-95%");
       if (cropLeft + cropRight >= .95f || cropTop + cropBottom >= .95f)
@@ -51,15 +84,24 @@ public final class Picture implements Block {
     }
 
     public Look crop(float l, float t, float r, float b) {
-      return new Look(l, t, r, b, borderColor, borderWidth, rotation, flipH, flipV);
+      return new Look(l, t, r, b, borderColor, borderWidth, rotation, flipH, flipV, brightness, contrast, transparency, colorMode);
     }
 
     public Look border(int color, float width) {
-      return new Look(cropLeft, cropTop, cropRight, cropBottom, color, width, rotation, flipH, flipV);
+      return new Look(cropLeft, cropTop, cropRight, cropBottom, color, width, rotation, flipH, flipV, brightness, contrast, transparency, colorMode);
     }
 
     public Look rotate(int degrees, boolean h, boolean v) {
-      return new Look(cropLeft, cropTop, cropRight, cropBottom, borderColor, borderWidth, degrees, h, v);
+      return new Look(cropLeft, cropTop, cropRight, cropBottom, borderColor, borderWidth, degrees, h, v, brightness, contrast, transparency, colorMode);
+    }
+
+    /** Brightness and contrast -100..100, transparency 0..100 percent. */
+    public Look adjust(int brightness, int contrast, int transparency, String colorMode) {
+      return new Look(cropLeft, cropTop, cropRight, cropBottom, borderColor, borderWidth, rotation, flipH, flipV, brightness, contrast, transparency, colorMode);
+    }
+
+    public boolean adjusted() {
+      return brightness != 0 || contrast != 0 || transparency != 0 || !"color".equals(colorMode);
     }
 
     @Override
@@ -74,7 +116,11 @@ public final class Picture implements Block {
           && borderWidth == k.borderWidth
           && rotation == k.rotation
           && flipH == k.flipH
-          && flipV == k.flipV;
+          && flipV == k.flipV
+          && brightness == k.brightness
+          && contrast == k.contrast
+          && transparency == k.transparency
+          && colorMode.equals(k.colorMode);
     }
 
     @Override
@@ -83,7 +129,8 @@ public final class Picture implements Block {
           ^ borderColor
           ^ rotation << 20
           ^ (flipH ? 1 << 29 : 0)
-          ^ (flipV ? 1 << 30 : 0);
+          ^ (flipV ? 1 << 30 : 0)
+          ^ brightness * 31 ^ contrast * 131 ^ transparency * 7 ^ colorMode.hashCode();
     }
   }
 
