@@ -18,7 +18,19 @@ public final class DocumentProperties {
   private final String[] values;
   public final String protection;
 
+  /**
+   * Application settings saved with the document (theme, hyphenation, grid, autocorrect, macros
+   * and similar); keys are ASCII identifiers with dots, values are bounded strings.
+   */
+  private final java.util.TreeMap<String, String> settings;
+
   private DocumentProperties(String[] values, String protection) {
+    this(values, protection, new java.util.TreeMap<String, String>());
+  }
+
+  private DocumentProperties(
+      String[] values, String protection, java.util.TreeMap<String, String> settings) {
+    this.settings = settings;
     if (!PROTECTION.contains(protection)) throw new IllegalArgumentException("Invalid protection");
     this.values = values.clone();
     for (int i = 0; i < this.values.length; i++) {
@@ -40,22 +52,48 @@ public final class DocumentProperties {
     if (i < 0) throw new IllegalArgumentException("Unknown property: " + key);
     String[] next = values.clone();
     next[i] = value;
-    return new DocumentProperties(next, protection);
+    return new DocumentProperties(next, protection, settings);
   }
 
   public DocumentProperties protection(String value) {
-    return new DocumentProperties(values, value);
+    return new DocumentProperties(values, value, settings);
+  }
+
+  public String setting(String key, String fallback) {
+    String v = settings.get(key);
+    return v == null ? fallback : v;
+  }
+
+  public java.util.Map<String, String> settings() {
+    return java.util.Collections.unmodifiableMap(settings);
+  }
+
+  /** Sets or (with null/empty) removes a saved setting. */
+  public DocumentProperties withSetting(String key, String value) {
+    if (key == null || key.isEmpty() || key.length() > 64)
+      throw new IllegalArgumentException("Invalid setting");
+    for (int i = 0; i < key.length(); i++) {
+      char c = key.charAt(i);
+      if (c > 127 || !(Character.isLetterOrDigit(c) || c == '.' || c == '_'))
+        throw new IllegalArgumentException("Invalid setting: " + key);
+    }
+    if (value != null && value.length() > 65536) throw new IllegalArgumentException("Setting too long");
+    java.util.TreeMap<String, String> next = new java.util.TreeMap<String, String>(settings);
+    if (value == null || value.isEmpty()) next.remove(key);
+    else next.put(key, value);
+    return new DocumentProperties(values, protection, next);
   }
 
   @Override
   public boolean equals(Object o) {
     return o instanceof DocumentProperties
         && Arrays.equals(values, ((DocumentProperties) o).values)
-        && protection.equals(((DocumentProperties) o).protection);
+        && protection.equals(((DocumentProperties) o).protection)
+        && settings.equals(((DocumentProperties) o).settings);
   }
 
   @Override
   public int hashCode() {
-    return Arrays.hashCode(values) * 31 + protection.hashCode();
+    return Arrays.hashCode(values) * 31 + protection.hashCode() + settings.hashCode() * 7;
   }
 }

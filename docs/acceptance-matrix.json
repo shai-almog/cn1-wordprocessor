@@ -10,8 +10,8 @@
   "not-applicable"
  ],
  "counts": {
-  "unverified": 403,
-  "missing": 84,
+  "unverified": 420,
+  "missing": 67,
   "partial": 0,
   "certified": 0,
   "reference-stub": 15,
@@ -1152,12 +1152,12 @@
    "group": "Paragraph",
    "feature": "Paragraph Dialog",
    "command": "para.dialog",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "para.dialog",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "para.dialog (Paragraph Settings)"
+   "notes": "para.dialog (Paragraph Settings) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Home",
@@ -1248,36 +1248,36 @@
    "group": "Paragraph",
    "feature": "Right-to-Left Text Direction",
    "command": "para.rtl",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "para.rtl",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "para.rtl (Right-to-Left Text Direction)"
+   "notes": "para.rtl (Right-to-Left Text Direction) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Home",
    "group": "Paragraph",
    "feature": "Left-to-Right Text Direction",
    "command": "para.ltr",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "para.ltr",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "para.ltr (Left-to-Right Text Direction)"
+   "notes": "para.ltr (Left-to-Right Text Direction) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Home",
    "group": "Paragraph",
    "feature": "Asian Typography",
    "command": "para.asianTypography",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "para.asianTypography",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "para.asianTypography (Asian Typography)"
+   "notes": "para.asianTypography (Asian Typography) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Home",
@@ -2364,84 +2364,84 @@
    "group": "Document Formatting",
    "feature": "Themes",
    "command": "design.theme",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "design.theme",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "design.theme (Themes)"
+   "notes": "design.theme (Themes) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Design",
    "group": "Document Formatting",
    "feature": "Style Set",
    "command": "design.styleSet",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "design.styleSet",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "design.styleSet (Style Set)"
+   "notes": "design.styleSet (Style Set) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Design",
    "group": "Document Formatting",
    "feature": "Colors",
    "command": "design.themeColors",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "design.themeColors",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "design.themeColors (Colors)"
+   "notes": "design.themeColors (Colors) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Design",
    "group": "Document Formatting",
    "feature": "Fonts",
    "command": "design.themeFonts",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "design.themeFonts",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "design.themeFonts (Fonts)"
+   "notes": "design.themeFonts (Fonts) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Design",
    "group": "Document Formatting",
    "feature": "Paragraph Spacing",
    "command": "design.paragraphSpacing",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "design.paragraphSpacing",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "design.paragraphSpacing (Paragraph Spacing)"
+   "notes": "design.paragraphSpacing (Paragraph Spacing) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Design",
    "group": "Document Formatting",
    "feature": "Effects",
    "command": "design.effects",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "design.effects",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "design.effects (Effects)"
+   "notes": "design.effects (Effects) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Design",
    "group": "Document Formatting",
    "feature": "Set as Default",
    "command": "design.setDefault",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "design.setDefault",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "design.setDefault (Set as Default)"
+   "notes": "design.setDefault (Set as Default) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Design",
@@ -2556,72 +2556,72 @@
    "group": "Page Setup",
    "feature": "Hyphenation",
    "command": "layout.hyphenation",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "layout.hyphenation",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "layout.hyphenation (Hyphenation)"
+   "notes": "layout.hyphenation (Hyphenation) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Layout",
    "group": "Page Setup",
    "feature": "Page Setup Dialog",
    "command": "layout.pageSetup",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "layout.pageSetup",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "layout.pageSetup (Page Setup)"
+   "notes": "layout.pageSetup (Page Setup) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Layout",
    "group": "Page Setup",
    "feature": "Vertical Alignment",
    "command": "layout.verticalAlign",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "layout.verticalAlign",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "layout.verticalAlign (Vertical Alignment)"
+   "notes": "layout.verticalAlign (Vertical Alignment) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Layout",
    "group": "Page Setup",
    "feature": "Document Grid",
    "command": "layout.documentGrid",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "layout.documentGrid",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "layout.documentGrid (Document Grid)"
+   "notes": "layout.documentGrid (Document Grid) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Layout",
    "group": "Page Setup",
    "feature": "Section Direction",
    "command": "layout.sectionRtl",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "layout.sectionRtl",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "layout.sectionRtl (Right-to-Left Section)"
+   "notes": "layout.sectionRtl (Right-to-Left Section) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Layout",
    "group": "Page Setup",
    "feature": "Text Direction",
    "command": "layout.textDirection",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "layout.textDirection",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "layout.textDirection (Text Direction)"
+   "notes": "layout.textDirection (Text Direction) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Layout",

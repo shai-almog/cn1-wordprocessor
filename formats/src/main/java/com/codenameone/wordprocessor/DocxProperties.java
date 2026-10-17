@@ -59,8 +59,22 @@ final class DocxProperties {
       if (!Xml.attr(protect, "hash", "").isEmpty() || !Xml.attr(protect, "hashValue", "").isEmpty())
         warnings.add("Protection password is not kept");
     }
+    Element vars = settings == null ? null : Xml.child(settings, "docVars");
+    if (vars != null)
+      for (Element v : Xml.children(vars, "docVar")) {
+        String name = Xml.attr(v, "name", "");
+        if (name.startsWith(VAR) && name.length() > VAR.length())
+          try {
+            p = p.withSetting(name.substring(VAR.length()), Xml.attr(v, "val", ""));
+          } catch (IllegalArgumentException ex) {
+            warnings.add("Ignored invalid document setting");
+          }
+      }
     return p;
   }
+
+  /** Prefix of the w:docVar names that carry {@link DocumentProperties#settings()}. */
+  static final String VAR = "cn1.";
 
   static void write(Map<String, byte[]> parts, DocumentProperties p) throws IOException {
     for (String part : new String[] {CORE, APP}) {
@@ -128,6 +142,40 @@ final class DocxProperties {
       if (!settings.getChildAt(i).isTextElement()
           && "documentProtection".equals(Xml.local(settings.getChildAt(i))))
         settings.removeChildAt(i);
+    Element vars = Xml.child(settings, "docVars");
+    if (vars != null)
+      for (int i = vars.getNumChildren() - 1; i >= 0; i--)
+        if (Xml.attr(vars.getChildAt(i), "name", "").startsWith(VAR)) vars.removeChildAt(i);
+    if (!p.settings().isEmpty()) {
+      StringBuilder b = new StringBuilder("<w:docVars xmlns:w=\"" + w + "\">");
+      for (Map.Entry<String, String> e : p.settings().entrySet())
+        b.append("<w:docVar w:name=\"").append(VAR).append(Xml.escape(e.getKey()))
+            .append("\" w:val=\"").append(Xml.escape(e.getValue())).append("\"/>");
+      Element fresh = Xml.parse(b.append("</w:docVars>").toString());
+      if (vars == null) {
+        // CT_Settings is a sequence: docVars precedes rsids and every later element.
+        java.util.List<String> later =
+            java.util.Arrays.asList(
+                "rsids", "mathPr", "attachedSchema", "themeFontLang", "clrSchemeMapping",
+                "doNotIncludeSubdocsInStats", "doNotAutoCompressPictures", "forceUpgrade",
+                "captions", "readModeInkLockDown", "smartTagType", "schemaLibrary",
+                "shapeDefaults", "doNotEmbedSmartTags", "decimalSymbol", "listSeparator");
+        int at = settings.getNumChildren();
+        for (int i = 0; i < settings.getNumChildren(); i++)
+          if (!settings.getChildAt(i).isTextElement()
+              && later.contains(Xml.local(settings.getChildAt(i)))) {
+            at = i;
+            break;
+          }
+        settings.insertChildAt(fresh, at);
+      }
+      else
+        while (fresh.getNumChildren() > 0) {
+          Element c = fresh.getChildAt(0);
+          fresh.removeChildAt(0);
+          vars.addChild(c);
+        }
+    } else if (vars != null && vars.getNumChildren() == 0) settings.removeChildAt(settings.getChildIndex(vars));
     if (!"none".equals(p.protection))
       settings.addChild(
           Xml.parse(

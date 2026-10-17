@@ -24,7 +24,11 @@ public final class DocumentXml {
       for (String key : DocumentProperties.KEYS)
         if (!d.properties.get(key).isEmpty())
           b.append(' ').append(key).append("=\"").append(Xml.escape(d.properties.get(key))).append('"');
-      b.append("/>");
+      b.append(">");
+      for (Map.Entry<String, String> e : d.properties.settings().entrySet())
+        b.append("<setting key=\"").append(Xml.escape(e.getKey())).append("\" value=\"")
+            .append(Xml.escape(e.getValue())).append("\"/>");
+      b.append("</properties>");
     }
     PageSpec p = d.page;
     page(b, p);
@@ -292,6 +296,8 @@ public final class DocumentXml {
         .append(p.format.outlineLevel)
         .append("\"");
     if (p.format.columnBreak) b.append(" columnBreak=\"true\"");
+    if (p.format.rtl) b.append(" rtl=\"true\"");
+    if (!p.format.asianOff.isEmpty()) b.append(" asianOff=\"").append(p.format.asianOff).append('"');
     if (!p.format.borders.isEmpty())
       b.append(" borders=\"").append(p.format.borders.encode()).append('"');
     if (p.format.shading >= 0)
@@ -652,7 +658,9 @@ public final class DocumentXml {
                     ParagraphBorders.decode(Xml.attr(e, "borders", "")),
                     Xml.attr(e, "shading", "").isEmpty()
                         ? -1
-                        : Integer.parseInt(Xml.attr(e, "shading", ""), 16)))
+                        : Integer.parseInt(Xml.attr(e, "shading", ""), 16),
+                    flag(e, "rtl"),
+                    Xml.attr(e, "asianOff", "")))
             .breakRevision(RevisionFormats.nativeRead(e, "break-"));
     Revision change = RevisionFormats.nativeRead(e, "format-");
     if (change != null) {
@@ -680,6 +688,8 @@ public final class DocumentXml {
     if (e == null) return DocumentProperties.EMPTY;
     DocumentProperties p = DocumentProperties.EMPTY.protection(Xml.attr(e, "protection", "none"));
     for (String key : DocumentProperties.KEYS) p = p.with(key, Xml.attr(e, key, ""));
+    for (Element s : Xml.children(e, "setting"))
+      p = p.withSetting(Xml.attr(s, "key", ""), Xml.attr(s, "value", ""));
     return p;
   }
 
@@ -690,14 +700,17 @@ public final class DocumentXml {
         .append("\" borders=\"").append(Xml.escape(d.borders.encode()))
         .append("\" numberFormat=\"").append(d.numberFormat)
         .append("\" lineCountBy=\"").append(d.lineCountBy)
-        .append("\" lineRestart=\"").append(d.lineRestart).append("\"/>");
+        .append("\" lineRestart=\"").append(d.lineRestart).append('"');
+    for (Map.Entry<String, String> e : d.layout().entrySet())
+      b.append(' ').append(e.getKey()).append("=\"").append(Xml.escape(e.getValue())).append('"');
+    b.append("/>");
   }
 
   private static PageDecor readDecor(Element parent) throws IOException {
     Element e = Xml.child(parent, "decor");
     if (e == null) return PageDecor.NONE;
     try {
-      return new PageDecor(
+      PageDecor d = new PageDecor(
           Integer.parseInt(Xml.attr(e, "pageColor", "-1")),
           Xml.attr(e, "watermark", ""),
           Integer.parseInt(Xml.attr(e, "watermarkColor", "12632256")),
@@ -705,6 +718,8 @@ public final class DocumentXml {
           Xml.attr(e, "numberFormat", "decimal"),
           Integer.parseInt(Xml.attr(e, "lineCountBy", "0")),
           Xml.attr(e, "lineRestart", "page"));
+      for (String key : PageDecor.LAYOUT_KEYS) d = d.withLayout(key, Xml.attr(e, key, ""));
+      return d;
     } catch (IllegalArgumentException ex) {
       throw new IOException("Invalid page decoration", ex);
     }

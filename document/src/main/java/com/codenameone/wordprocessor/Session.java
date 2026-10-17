@@ -1444,6 +1444,21 @@ public final class Session {
     return blocks;
   }
 
+  /** Rewrites each selected paragraph (one undo step); per-paragraph values such as swaps. */
+  public interface ParagraphMap {
+    Paragraph map(Paragraph p);
+  }
+
+  public void mapParagraphs(final ParagraphMap f) {
+    transact(
+        s -> {
+          Sequence<Block> blocks = document.blocks;
+          for (int i = selection.startBlock(); i <= selection.endBlock(); i++)
+            if (blocks.get(i) instanceof Paragraph) blocks = blocks.set(i, f.map((Paragraph) blocks.get(i)));
+          document = document.blocks(blocks, document.nextId);
+        });
+  }
+
   public void paragraph(final String key, final String value) {
     if (cells != null) {
       editCells(x -> x.paragraph(key, value), true);
@@ -1805,11 +1820,11 @@ public final class Session {
         || captionLabel.indexOf('\n') >= 0
         || captionLabel.indexOf('\r') >= 0)
       throw new IllegalArgumentException(
-          "Use a caption label of 1–40 characters without quotes or backslashes");
+          "Use a caption label of 1\u201340 characters without quotes or backslashes");
     if (!Arrays.asList("ARABIC", "roman", "ROMAN", "alphabetic", "ALPHABETIC").contains(format)
         || chapter < 0
         || chapter > 9
-        || !Arrays.asList("-", ".", ":", "—", "–").contains(separator))
+        || !Arrays.asList("-", ".", ":", "\u2014", "\u2013").contains(separator))
       throw new IllegalArgumentException("Invalid caption numbering options");
     final int target = inCell() ? cell.block : selection.block;
     leaveCell();

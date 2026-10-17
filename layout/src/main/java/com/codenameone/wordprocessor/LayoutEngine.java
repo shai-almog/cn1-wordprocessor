@@ -187,6 +187,40 @@ public final class LayoutEngine {
     }
   }
 
+  /** Section vertical alignment: moves a page's body content down by dy points. */
+  private static List<Line> shiftLines(List<Line> lines, float dy) {
+    List<Line> out = new ArrayList<Line>();
+    for (Line line : lines) {
+      RawLine raw = new RawLine();
+      raw.start = line.start;
+      raw.end = line.end;
+      raw.width = line.width;
+      raw.height = line.height;
+      raw.clipped = line.clipped;
+      raw.markerOffset = line.markerOffset;
+      raw.spans.addAll(line.spans);
+      raw.barTabs = line.barTabs;
+      out.add(
+          new Line(line.block, line.row, line.column, line.paragraphId, line.page, line.x,
+              line.y + dy, raw, line.marker, line.clipHeight));
+    }
+    return out;
+  }
+
+  private static List<Box> shiftBoxes(List<Box> boxes, float dy) {
+    List<Box> out = new ArrayList<Box>();
+    for (Box b : boxes)
+      out.add(new Box(b.block, b.row, b.column, b.page, b.x, b.y + dy, b.width, b.height, b.format));
+    return out;
+  }
+
+  private static List<PlacedPicture> shiftPictures(List<PlacedPicture> pictures, float dy) {
+    List<PlacedPicture> out = new ArrayList<PlacedPicture>();
+    for (PlacedPicture p : pictures)
+      out.add(new PlacedPicture(p.picture, p.block, p.page, p.x, p.y + dy, p.width, p.height));
+    return out;
+  }
+
   public static final class Page {
     public final PageSpec spec;
     public final int section, sectionPage, number;
@@ -826,15 +860,25 @@ public final class LayoutEngine {
       Page page = b.pages.get(i);
       Document context = contexts.get(page.section);
       PageSpec body = bodies[page.section];
+      String vAlign = ranges.get(page.section).resolved.decor.layout("verticalAlign", "top");
+      float dy = 0;
+      if ("center".equals(vAlign) || "bottom".equals(vAlign)) {
+        float bottom = page.spec.top;
+        for (Line l : page.lines) bottom = Math.max(bottom, l.y + l.height);
+        for (Box x : page.boxes) bottom = Math.max(bottom, x.y + x.height);
+        for (PlacedPicture x : page.pictures) bottom = Math.max(bottom, x.y + x.height);
+        float free = page.spec.height - page.spec.bottom - bottom;
+        if (free > 0) dy = "center".equals(vAlign) ? free / 2 : free;
+      }
       Page rebuilt =
           new Page(
               page.spec,
               page.section,
               page.sectionPage,
               page.number,
-              page.lines,
-              page.boxes,
-              page.pictures,
+              dy == 0 ? page.lines : shiftLines(page.lines, dy),
+              dy == 0 ? page.boxes : shiftBoxes(page.boxes, dy),
+              dy == 0 ? page.pictures : shiftPictures(page.pictures, dy),
               furnitureLines(
                   context,
                   false,
@@ -855,7 +899,11 @@ public final class LayoutEngine {
                   warnings),
               page.notes);
       rebuilt.columnRules.addAll(page.columnRules);
-      rebuilt.frames.addAll(page.frames);
+      for (Frame f : page.frames)
+        rebuilt.frames.add(
+            dy == 0
+                ? f
+                : new Frame(f.x, f.top + dy, f.width, f.bottom + dy, f.borders, f.shading, f.first, f.last));
       rebuilt.decor = ranges.get(page.section).resolved.decor;
       PageDecor numbering = rebuilt.decor;
       if (numbering.lineCountBy > 0) {
@@ -1122,7 +1170,15 @@ public final class LayoutEngine {
       }
     }
 
+    /** Document grid line pitch in points for the current section, or 0. */
+    float gridPitch;
+
     void beginSection(int index, Section value, PageSpec body) {
+      String grid = value.decor.layout("grid", "default");
+      gridPitch =
+          "default".equals(grid) || "snapToChars".equals(grid)
+              ? 0
+              : Float.parseFloat(value.decor.layout("gridPitch", "18"));
       if (spec == null) {
         noteOptions = value.notes;
         spec = body;
@@ -1272,6 +1328,23 @@ public final class LayoutEngine {
                     spec.left + wrapLeft);
       }
       List<RawLine> ls = lines(p, spec.contentWidth());
+      if (gridPitch > 0 && index >= 0) {
+        // Snap each line to whole grid pitches; copies keep the measured cache unchanged.
+        List<RawLine> snapped = new ArrayList<RawLine>();
+        for (RawLine l : ls) {
+          RawLine c = new RawLine();
+          c.spans.addAll(l.spans);
+          c.barTabs = l.barTabs;
+          c.start = l.start;
+          c.end = l.end;
+          c.width = l.width;
+          c.markerOffset = l.markerOffset;
+          c.clipped = l.clipped;
+          c.height = (float) Math.ceil(l.height / gridPitch - .01f) * gridPitch;
+          snapped.add(c);
+        }
+        ls = snapped;
+      }
       float pageHeight = spec.height - spec.top - spec.bottom;
       if (p.keepNext && following != null && !following.pageBreak) {
         List<RawLine> next = lines(following, spec.contentWidth());

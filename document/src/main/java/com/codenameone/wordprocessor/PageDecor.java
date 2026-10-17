@@ -30,6 +30,19 @@ public final class PageDecor {
   /** Page border sides; each side's space is its distance from the page edge in points. */
   public final ParagraphBorders borders;
 
+  /** Section layout keys: vertical alignment, direction, text flow and the document grid. */
+  public static final java.util.List<String> LAYOUT_KEYS =
+      java.util.Arrays.asList("verticalAlign", "rtl", "textDirection", "grid", "gridPitch", "charPitch");
+
+  public static final java.util.List<String> VERTICAL_ALIGN =
+      java.util.Arrays.asList("top", "center", "both", "bottom");
+  public static final java.util.List<String> TEXT_DIRECTIONS =
+      java.util.Arrays.asList("lrTb", "tbRl", "btLr", "lrTbV", "tbRlV", "tbLrV");
+  public static final java.util.List<String> GRIDS =
+      java.util.Arrays.asList("default", "lines", "linesAndChars", "snapToChars");
+
+  private final java.util.TreeMap<String, String> layout;
+
   public PageDecor(int pageColor, String watermark, int watermarkColor, ParagraphBorders borders) {
     this(pageColor, watermark, watermarkColor, borders, "decimal", 0, "page");
   }
@@ -42,6 +55,20 @@ public final class PageDecor {
       String numberFormat,
       int lineCountBy,
       String lineRestart) {
+    this(pageColor, watermark, watermarkColor, borders, numberFormat, lineCountBy, lineRestart,
+        new java.util.TreeMap<String, String>());
+  }
+
+  private PageDecor(
+      int pageColor,
+      String watermark,
+      int watermarkColor,
+      ParagraphBorders borders,
+      String numberFormat,
+      int lineCountBy,
+      String lineRestart,
+      java.util.TreeMap<String, String> layout) {
+    this.layout = layout;
     if (!NUMBER_FORMATS.contains(numberFormat)
         || lineCountBy < 0
         || lineCountBy > 100
@@ -64,23 +91,53 @@ public final class PageDecor {
   }
 
   public PageDecor pageColor(int value) {
-    return new PageDecor(value, watermark, watermarkColor, borders, numberFormat, lineCountBy, lineRestart);
+    return new PageDecor(value, watermark, watermarkColor, borders, numberFormat, lineCountBy, lineRestart, layout);
   }
 
   public PageDecor watermark(String text, int color) {
-    return new PageDecor(pageColor, text, color, borders, numberFormat, lineCountBy, lineRestart);
+    return new PageDecor(pageColor, text, color, borders, numberFormat, lineCountBy, lineRestart, layout);
   }
 
   public PageDecor borders(ParagraphBorders value) {
-    return new PageDecor(pageColor, watermark, watermarkColor, value, numberFormat, lineCountBy, lineRestart);
+    return new PageDecor(pageColor, watermark, watermarkColor, value, numberFormat, lineCountBy, lineRestart, layout);
   }
 
   public PageDecor numberFormat(String value) {
-    return new PageDecor(pageColor, watermark, watermarkColor, borders, value, lineCountBy, lineRestart);
+    return new PageDecor(pageColor, watermark, watermarkColor, borders, value, lineCountBy, lineRestart, layout);
   }
 
   public PageDecor lineNumbers(int countBy, String restart) {
-    return new PageDecor(pageColor, watermark, watermarkColor, borders, numberFormat, countBy, restart);
+    return new PageDecor(pageColor, watermark, watermarkColor, borders, numberFormat, countBy, restart, layout);
+  }
+
+  public String layout(String key, String fallback) {
+    String v = layout.get(key);
+    return v == null ? fallback : v;
+  }
+
+  public java.util.Map<String, String> layout() {
+    return java.util.Collections.unmodifiableMap(layout);
+  }
+
+  /** Sets (or with an empty value clears) one of {@link #LAYOUT_KEYS}. */
+  public PageDecor withLayout(String key, String value) {
+    if (!LAYOUT_KEYS.contains(key)) throw new IllegalArgumentException("Unknown section layout: " + key);
+    if (value != null && !value.isEmpty()) {
+      if ("verticalAlign".equals(key) && !VERTICAL_ALIGN.contains(value)
+          || "textDirection".equals(key) && !TEXT_DIRECTIONS.contains(value)
+          || "grid".equals(key) && !GRIDS.contains(value)
+          || "rtl".equals(key) && !"true".equals(value) && !"false".equals(value))
+        throw new IllegalArgumentException("Invalid " + key + ": " + value);
+      if (key.endsWith("Pitch")) {
+        float f = Float.parseFloat(value);
+        if (!(f >= 1 && f <= 200)) throw new IllegalArgumentException("Invalid " + key);
+      }
+    }
+    java.util.TreeMap<String, String> next = new java.util.TreeMap<String, String>(layout);
+    if (value == null || value.isEmpty() || "top".equals(value) && "verticalAlign".equals(key)
+        || "false".equals(value) || "lrTb".equals(value) || "default".equals(value)) next.remove(key);
+    else next.put(key, value);
+    return new PageDecor(pageColor, watermark, watermarkColor, borders, numberFormat, lineCountBy, lineRestart, next);
   }
 
   @Override
@@ -93,7 +150,8 @@ public final class PageDecor {
         && borders.equals(d.borders)
         && numberFormat.equals(d.numberFormat)
         && lineCountBy == d.lineCountBy
-        && lineRestart.equals(d.lineRestart);
+        && lineRestart.equals(d.lineRestart)
+        && layout.equals(d.layout);
   }
 
   @Override

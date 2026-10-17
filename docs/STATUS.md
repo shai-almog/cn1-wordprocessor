@@ -388,3 +388,14 @@ Limits:
 
 ## Character decorations
 `format.shading`, `format.border`, `format.phonetic`, `format.enclose`, `format.textEffects` and `review.language` are undoable and render on the canvas. Limitations: the phonetic guide is drawn above the base text without reserving line height, there is no spell checker to consume the language tag, and the DOCX/PDF gaps listed in FORMATS.md apply.
+
+## Paragraph direction, section layout and Design tab
+- `para.rtl`/`para.ltr` set `w:bidi`, mirror left/right alignment and swap the left/right indents. Limitation: there is no Unicode bidi reordering in our layout; glyph order inside a run is whatever the platform's text drawing does.
+- `para.asianTypography` stores kinsoku, word-wrap, hanging-punctuation and auto-spacing switches (`w:kinsoku` etc.). Limitation: line breaking does not yet apply kinsoku rules.
+- `para.dialog` sets alignment, indents, spacing, line rule, outline level and pagination flags in one undo step.
+- `layout.verticalAlign` (center/bottom) moves body content on every page of the section. `both` (justified) is stored and exported but lays out as top.
+- `layout.documentGrid` with `lines`/`linesAndChars` snaps body line heights to the line pitch. Character pitch is stored and exported, not applied.
+- `layout.sectionRtl` and `layout.textDirection` round-trip as `w:bidi`/`w:textDirection`. Limitation: columns are not mirrored and vertical text flow is not rendered.
+- `layout.pageSetup` sets size, orientation, margins and vertical alignment together.
+- `layout.hyphenation` stores mode, zone, limit and caps as a document setting (DOCX `w:docVar`). Limitation: the layout engine does not hyphenate yet.
+- The Design tab commands (`design.theme`, `design.themeColors`, `design.themeFonts`, `design.styleSet`, `design.paragraphSpacing`) restyle the heading, title and body styles. `design.effects` sets shadow/glow on drawings. `design.setDefault` remembers the choices for new documents, for this app run only. The chosen names are saved as document settings.

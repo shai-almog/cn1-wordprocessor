@@ -2,6 +2,8 @@ package com.codenameone.wordprocessor;
 
 /** Immutable paragraph layout options, in typographic points. */
 public final class ParagraphFormat {
+  public static final java.util.List<String> ASIAN =
+      java.util.Arrays.asList("kinsoku", "wordWrap", "overflowPunct", "autoSpaceDE", "autoSpaceDN");
   public static final ParagraphFormat DEFAULT = new ParagraphFormat(0, 0, 36, false, true);
   public final float rightIndent, firstIndent, tabInterval;
   public final boolean keepLines, widowControl;
@@ -21,6 +23,13 @@ public final class ParagraphFormat {
 
   /** Paragraph shading RRGGBB, or -1 for none. */
   public final int shading;
+
+  /** Right-to-left paragraph direction (w:bidi): mirrors alignment and indents. */
+  public final boolean rtl;
+
+  /** Asian typography options switched off, from {@link #ASIAN}, comma separated. */
+  public final String asianOff;
+
 
   public ParagraphFormat(float right, float first, float tab, boolean keep, boolean widow) {
     this(right, first, tab, keep, widow, java.util.Collections.<TabStop>emptyList());
@@ -84,6 +93,32 @@ public final class ParagraphFormat {
       boolean columnBreak,
       ParagraphBorders borders,
       int shading) {
+    this(right, first, tab, keep, widow, tabs, outlineLevel, lineRule, columnBreak, borders, shading, false, "");
+  }
+
+  public ParagraphFormat(
+      float right,
+      float first,
+      float tab,
+      boolean keep,
+      boolean widow,
+      java.util.List<TabStop> tabs,
+      int outlineLevel,
+      String lineRule,
+      boolean columnBreak,
+      ParagraphBorders borders,
+      int shading,
+      boolean rtl,
+      String asianOff) {
+    StringBuilder off = new StringBuilder();
+    for (String a : ASIAN)
+      if (("," + asianOff + ",").contains("," + a + ","))
+        off.append(off.length() == 0 ? "" : ",").append(a);
+    for (String a : asianOff.split(","))
+      if (!a.trim().isEmpty() && !ASIAN.contains(a.trim()))
+        throw new IllegalArgumentException("Unknown Asian typography option: " + a);
+    this.rtl = rtl;
+    this.asianOff = off.toString();
     if (borders == null || shading < -1 || shading > 0xffffff)
       throw new IllegalArgumentException("Invalid paragraph borders or shading");
     this.borders = borders;
@@ -121,6 +156,12 @@ public final class ParagraphFormat {
         "lineRule".equals(key) ? value : lineRule,
         "columnBreak".equals(key) ? Boolean.parseBoolean(value) : columnBreak,
         "borders".equals(key) ? ParagraphBorders.decode(value) : borders,
-        "shading".equals(key) ? (value.isEmpty() ? -1 : Integer.parseInt(value, 16)) : shading);
+        "shading".equals(key) ? (value.isEmpty() ? -1 : Integer.parseInt(value, 16)) : shading,
+        "rtl".equals(key) ? Boolean.parseBoolean(value) : rtl,
+        "asianOff".equals(key) ? value : asianOff);
+  }
+
+  public boolean asian(String option) {
+    return !("," + asianOff + ",").contains("," + option + ",");
   }
 }

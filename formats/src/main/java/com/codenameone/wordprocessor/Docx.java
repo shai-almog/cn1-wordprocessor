@@ -308,6 +308,12 @@ static final char COLUMN_BREAK = '\u000B';
         layout = layout.with("keepLines", String.valueOf(enabled(p)));
       else if ("widowControl".equals(kind))
         layout = layout.with("widowControl", String.valueOf(enabled(p)));
+      else if ("bidi".equals(kind)) layout = layout.with("rtl", String.valueOf(enabled(p)));
+      else if (ParagraphFormat.ASIAN.contains(kind)) {
+        String off = layout.asianOff;
+        if (!enabled(p)) off = off.isEmpty() ? kind : off + "," + kind;
+        layout = layout.with("asianOff", off);
+      }
       else if ("outlineLvl".equals(kind)) {
         int level = Integer.parseInt(Xml.attr(p, "val", "9"));
         if (level < 0 || level > 9)
@@ -818,6 +824,21 @@ static final char COLUMN_BREAK = '\u000B';
         b.append("</w:cols>");
       }
     }
+    String vAlign = decor.layout("verticalAlign", "top");
+    if (!"top".equals(vAlign)) b.append("<w:vAlign w:val=\"").append(vAlign).append("\"/>");
+    String flow = decor.layout("textDirection", "lrTb");
+    if (!"lrTb".equals(flow)) b.append("<w:textDirection w:val=\"").append(flow).append("\"/>");
+    if ("true".equals(decor.layout("rtl", ""))) b.append("<w:bidi/>");
+    String grid = decor.layout("grid", "default");
+    if (!"default".equals(grid)) {
+      b.append("<w:docGrid w:type=\"").append(grid).append('"');
+      String pitch = decor.layout("gridPitch", "");
+      if (!pitch.isEmpty()) b.append(" w:linePitch=\"").append(Math.round(Float.parseFloat(pitch) * 20)).append('"');
+      String chars = decor.layout("charPitch", "");
+      if (!chars.isEmpty())
+        b.append(" w:charSpace=\"").append(Math.round(Float.parseFloat(chars) * 4096)).append('"');
+      b.append("/>");
+    }
     return b.append("</w:sectPr>").toString();
   }
 
@@ -921,6 +942,28 @@ static final char COLUMN_BREAK = '\u000B';
       }
     }
     decor = decor.numberFormat(numberFormat);
+    if (e != null) {
+      try {
+        Element v = Xml.child(e, "vAlign");
+        if (v != null) decor = decor.withLayout("verticalAlign", Xml.attr(v, "val", "top"));
+        Element flow = Xml.child(e, "textDirection");
+        if (flow != null) decor = decor.withLayout("textDirection", Xml.attr(flow, "val", "lrTb"));
+        Element bidi = Xml.child(e, "bidi");
+        if (bidi != null) decor = decor.withLayout("rtl", String.valueOf(enabled(bidi)));
+        Element grid = Xml.child(e, "docGrid");
+        if (grid != null) {
+          decor = decor.withLayout("grid", Xml.attr(grid, "type", "default"));
+          String pitch = Xml.attr(grid, "linePitch", "");
+          if (!pitch.isEmpty() && !"default".equals(decor.layout("grid", "default")))
+            decor = decor.withLayout("gridPitch", String.valueOf(Integer.parseInt(pitch) / 20f));
+          String chars = Xml.attr(grid, "charSpace", "");
+          if (!chars.isEmpty() && Integer.parseInt(chars) > 0 && !"lines".equals(decor.layout("grid", "")))
+            decor = decor.withLayout("charPitch", String.valueOf(Integer.parseInt(chars) / 4096f));
+        }
+      } catch (RuntimeException ex) {
+        warnings.add("Invalid section layout options");
+      }
+    }
     Element lines = e == null ? null : Xml.child(e, "lnNumType");
     if (lines != null) {
       try {
@@ -1004,6 +1047,9 @@ static final char COLUMN_BREAK = '\u000B';
           .append("\"/>");
     b.append(p.format.keepLines ? "<w:keepLines/>" : "<w:keepLines w:val=\"0\"/>");
     b.append(p.format.widowControl ? "<w:widowControl/>" : "<w:widowControl w:val=\"0\"/>");
+    for (String option : ParagraphFormat.ASIAN)
+      if (!p.format.asian(option)) b.append("<w:").append(option).append(" w:val=\"0\"/>");
+    if (p.format.rtl) b.append("<w:bidi/>");
     DocxBorders.write(b, p.format);
     tabs.write(b, p);
     if (p.breakRevision != null) {
