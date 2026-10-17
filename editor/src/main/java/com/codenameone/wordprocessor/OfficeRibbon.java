@@ -1,6 +1,7 @@
 package com.codenameone.wordprocessor;
 
 import com.codename1.ui.*;
+import com.codename1.ui.accessibility.*;
 import com.codename1.ui.layouts.*;
 import com.codename1.ui.plaf.Border;
 import java.util.ArrayList;
@@ -77,6 +78,8 @@ final class OfficeRibbon extends Container {
     OfficeTheme.space(b, 6, 6, 9, 9);
     b.getAllStyles().setFont(OfficeTheme.font(13, false));
     b.addActionListener(e -> select(index));
+    b.getSemantics().setRole(AccessibilityRole.TAB).setSelected(Boolean.FALSE);
+    tabs.getSemantics().setRole(AccessibilityRole.TAB_LIST).setLabel("Ribbon tabs");
     buttons.add(b);
     tabs.add(b);
   }
@@ -137,6 +140,7 @@ final class OfficeRibbon extends Container {
     for (int i = 0; i < buttons.size(); i++) {
       Button b = buttons.get(i);
       boolean selected = i == index;
+      b.getSemantics().setSelected(Boolean.valueOf(selected));
       b.getUnselectedStyle().setFgColor(selected ? OfficeTheme.BLUE : OfficeTheme.INK);
       b.getUnselectedStyle().setFont(OfficeTheme.font(13, selected));
       b.getUnselectedStyle()

@@ -233,9 +233,12 @@ public final class EditorSurface extends Container
             new AccessibilityNode(id)
                 .setRole(AccessibilityRole.TEXT_FIELD)
                 .setLabel(
-                    line.row < 0
-                        ? "Paragraph " + (line.block + 1)
-                        : "Table row " + (line.row + 1) + ", column " + (line.column + 1))
+                    line.row >= 0
+                        ? "Table row " + (line.row + 1) + ", column " + (line.column + 1)
+                        : headingLevel(p) > 0
+                            ? "Heading " + headingLevel(p)
+                            : "Paragraph " + (line.block + 1))
+                .setHeadingLevel(line.row < 0 ? headingLevel(p) : -1)
                 .setValue(p.text.plainText())
                 .setMultiline(true)
                 .setReadOnly(false)
@@ -648,7 +651,7 @@ public final class EditorSurface extends Container
           pw = Math.round(page.spec.width * scale),
           ph = Math.round(page.spec.height * scale);
       if (y + ph < g.getClipY() || y > g.getClipY() + g.getClipHeight()) continue;
-      g.setColor(0xd1d9e2);
+      g.setColor(OfficeTheme.chrome(0xd1d9e2));
       g.fillRect(x + 3, y + 4, pw, ph);
       g.setColor(0xffffff);
       g.fillRect(x, y, pw, ph);
@@ -1140,6 +1143,17 @@ public final class EditorSurface extends Container
     touchSelecting = true;
     startInput();
     refresh();
+  }
+
+  /** Outline level announced to screen readers for Heading1..Heading6 / Title styles. */
+  private static int headingLevel(Paragraph p) {
+    String style = p.style == null ? "" : p.style;
+    if ("Title".equals(style)) return 1;
+    if (style.startsWith("Heading") && style.length() == 8) {
+      int level = style.charAt(7) - '0';
+      if (level >= 1 && level <= 6) return level;
+    }
+    return -1;
   }
 
   // Character.isLetter/isLetterOrDigit are not in the Codename One class library. Cased

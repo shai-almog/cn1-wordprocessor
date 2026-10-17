@@ -177,6 +177,7 @@ public class WordProcessor {
     footer.add(BorderLayout.CENTER, status);
     zoomSlider = new Slider();
     zoomSlider.setEditable(true);
+    zoomSlider.setAccessibilityText("Zoom");
     zoomSlider.setMinValue(35);
     zoomSlider.setMaxValue(250);
     zoomSlider.setProgress(100);
@@ -266,7 +267,21 @@ public class WordProcessor {
               });
     }
     configureMobileViewport();
+    OfficeTheme.refreshAppearance();
+    OfficeTheme.applyAppearance(form);
+    OfficeTheme.applyPopupAppearance();
     form.show();
+    // No appearance-change callback exists, so follow the OS setting with a cheap poll.
+    new UITimer(
+            () -> {
+              boolean changed = OfficeTheme.refreshAppearance();
+              if (!changed && !OfficeTheme.mapped()) return;
+              // While mapped, also catch chrome created or restyled since the last pass.
+              OfficeTheme.applyAppearance(form);
+              if (changed) OfficeTheme.applyPopupAppearance();
+              form.repaint();
+            })
+        .schedule(500, true, form);
     startAgentDebugging();
     editor.fitWidth();
     updateStatus();
@@ -376,7 +391,7 @@ public class WordProcessor {
     OfficeTheme.space(renderer, 2, 2, 4, 4);
     combo.setRenderer(renderer);
     Style arrow = new Style();
-    arrow.setFgColor(0x454545);
+    arrow.setFgColor(OfficeTheme.chrome(0x454545));
     arrow.setBgTransparency(0);
     combo.setComboBoxImage(
         FontImage.createMaterial(FontImage.MATERIAL_ARROW_DROP_DOWN, arrow)
@@ -486,6 +501,7 @@ public class WordProcessor {
   }
 
   private void showOfficeDialog(Dialog dialog) {
+    OfficeTheme.applyAppearance(dialog);
     // A phone keyboard can consume a centered dialog's entire content area. Give mobile
     // forms the full safe viewport; bottom-padding editing keeps actions above the keyboard.
     if (OfficeTheme.mobile()) dialog.show(0, 0, 0, 0, true, true);

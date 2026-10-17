@@ -29,11 +29,11 @@ final class PageRuler extends Component {
         y = getY() + OfficeTheme.px(5),
         h = OfficeTheme.px(17),
         w = Math.round(p.width * scale);
-    g.setColor(0xd1d1d1);
+    g.setColor(OfficeTheme.chrome(0xd1d1d1));
     g.fillRect(x, y, w, h);
-    g.setColor(0xffffff);
+    g.setColor(OfficeTheme.chrome(0xffffff));
     g.fillRect(x + Math.round(p.left * scale), y, Math.round(p.contentWidth() * scale), h);
-    g.setColor(0x646464);
+    g.setColor(OfficeTheme.chrome(0x646464));
     g.setFont(OfficeTheme.font(9, false));
     for (int eighth = 0; eighth * 9 < p.contentWidth(); eighth++) {
       int tx = x + Math.round((p.left + eighth * 9) * scale);
@@ -41,7 +41,7 @@ final class PageRuler extends Component {
       else g.drawLine(tx, y + h - OfficeTheme.px(eighth % 4 == 0 ? 7 : 4), tx, y + h);
     }
     int left = x + Math.round(p.left * scale), right = x + Math.round((p.width - p.right) * scale);
-    g.setColor(OfficeTheme.BLUE);
+    g.setColor(OfficeTheme.chrome(OfficeTheme.BLUE));
     int d = OfficeTheme.px(4);
     g.fillTriangle(left - d, y + h, left + d, y + h, left, y + h + d);
     g.fillTriangle(right - d, y + h, right + d, y + h, right, y + h + d);

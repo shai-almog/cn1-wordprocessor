@@ -29,6 +29,7 @@ final class OfficeTheme {
   }
 
   static void install() {
+    refreshAppearance();
     // Keep the native theme's desktop title/menu contract.
     Display.getInstance().installNativeTheme();
     Toolbar.setGlobalToolbar(true);
@@ -99,12 +100,20 @@ final class OfficeTheme {
     b.getPressedStyle().setBgTransparency(255);
   }
 
+  private static final String ICON = "officeTheme.icon";
+
   static void icon(Button b, char glyph, int size, int color) {
+    // Remember the light-theme glyph so applyAppearance can redraw it for dark/contrast.
+    b.putClientProperty(ICON, new int[] {glyph, size, color, chrome(color)});
+    b.setIcon(glyph(glyph, size, chrome(color)));
+    b.setGap(px(5));
+  }
+
+  private static Image glyph(int glyph, int size, int color) {
     Style s = new Style();
     s.setFgColor(color);
     s.setBgTransparency(0);
-    b.setIcon(FontImage.createMaterial(glyph, s).scaled(px(size), px(size)));
-    b.setGap(px(5));
+    return FontImage.createMaterial((char) glyph, s).scaled(px(size), px(size));
   }
 
   static Container row(Component... children) {
@@ -206,5 +215,126 @@ final class OfficeTheme {
     surface(c, 0xfafafa);
     c.getAllStyles().setBorder(Border.createLineBorder(1, 0xbebebe));
     c.setPreferredW(px(width));
+  }
+
+  // ---- Appearance (light/dark/high contrast) ----
+  //
+  // The chrome is styled imperatively with light colors. Rather than duplicating every
+  // literal, each style's original light colors are remembered on the component and mapped
+  // through chrome(int) for the active appearance, so the OS setting can flip live. The
+  // document page is paper and keeps its print colors in every appearance.
+
+  private static final String LIGHT_COLORS = "officeTheme.light";
+  private static boolean dark, contrast;
+
+  static boolean dark() {
+    return dark;
+  }
+
+  /** True when the chrome needs mapping (anything other than the default light theme). */
+  static boolean mapped() {
+    return dark || contrast;
+  }
+
+  /** Reads the OS appearance; returns true when it changed since the last call. */
+  static boolean refreshAppearance() {
+    Boolean os = CN.isDarkMode();
+    boolean d = os != null && os.booleanValue();
+    boolean c = Display.getInstance().isHighContrastEnabled();
+    if (d == dark && c == contrast) return false;
+    dark = d;
+    contrast = c;
+    return true;
+  }
+
+  /** Maps a light-theme chrome color to the active appearance. */
+  static int chrome(int light) {
+    if (!dark && !contrast) return light;
+    int r = (light >> 16) & 0xff, g = (light >> 8) & 0xff, b = light & 0xff;
+    int max = Math.max(r, Math.max(g, b)), min = Math.min(r, Math.min(g, b));
+    float l = (max + min) / 510f;
+    if (!dark) {
+      // High contrast light: push neutrals to the extremes, keep accents.
+      if (max - min > 24) return light;
+      return l > .5f ? 0xffffff : 0x000000;
+    }
+    // Invert lightness, keep hue; leave a little headroom so surfaces stay distinguishable.
+    float target = contrast ? (l > .5f ? 0f : 1f) : .08f + (1 - l) * .84f;
+    if (max == min) {
+      int v = Math.round(target * 255);
+      return (v << 16) | (v << 8) | v;
+    }
+    float d = (max - min) / 255f;
+    float sat = l > .5f ? d / (2 - 2 * l) : d / (2 * l);
+    float hue;
+    if (max == r) hue = ((g - b) / 255f) / d + (g < b ? 6 : 0);
+    else if (max == g) hue = ((b - r) / 255f) / d + 2;
+    else hue = ((r - g) / 255f) / d + 4;
+    hue /= 6;
+    float q = target < .5f ? target * (1 + sat) : target + sat - target * sat;
+    float pp = 2 * target - q;
+    return (channel(pp, q, hue + 1f / 3) << 16) | (channel(pp, q, hue) << 8)
+        | channel(pp, q, hue - 1f / 3);
+  }
+
+  private static int channel(float p, float q, float t) {
+    if (t < 0) t += 1;
+    if (t > 1) t -= 1;
+    float v = t < 1f / 6 ? p + (q - p) * 6 * t : t < .5f ? q : t < 2f / 3 ? p + (q - p) * (2f / 3 - t) * 6 : p;
+    return Math.max(0, Math.min(255, Math.round(v * 255)));
+  }
+
+  /**
+   * Recolors a chrome tree for the active appearance. Components that paint the document
+   * (and anything inside the page, such as cell editors) keep their own background only.
+   */
+  static void applyAppearance(Component root) {
+    Style[] styles = {
+      root.getUnselectedStyle(), root.getSelectedStyle(), root.getPressedStyle(),
+      root.getDisabledStyle()
+    };
+    // [light fg, light bg, applied fg, applied bg] per style. A color that differs from what
+    // this pass applied was set by the app since (a toggle, hover, new state) and becomes the
+    // new light original.
+    int[] colors = (int[]) root.getClientProperty(LIGHT_COLORS);
+    if (colors == null) {
+      colors = new int[styles.length * 4];
+      for (int i = 0; i < styles.length; i++) {
+        colors[i * 4] = colors[i * 4 + 2] = styles[i].getFgColor();
+        colors[i * 4 + 1] = colors[i * 4 + 3] = styles[i].getBgColor();
+      }
+      root.putClientProperty(LIGHT_COLORS, colors);
+    }
+    for (int i = 0; i < styles.length; i++) {
+      int fg = styles[i].getFgColor(), bg = styles[i].getBgColor();
+      if (fg != colors[i * 4 + 2]) colors[i * 4] = fg;
+      if (bg != colors[i * 4 + 3]) colors[i * 4 + 1] = bg;
+      colors[i * 4 + 2] = chrome(colors[i * 4]);
+      colors[i * 4 + 3] = chrome(colors[i * 4 + 1]);
+      if (fg != colors[i * 4 + 2]) styles[i].setFgColor(colors[i * 4 + 2]);
+      if (bg != colors[i * 4 + 3]) styles[i].setBgColor(colors[i * 4 + 3]);
+    }
+    int[] icon = (int[]) root.getClientProperty(ICON);
+    if (icon != null && icon[3] != chrome(icon[2]) && root instanceof Button) {
+      icon[3] = chrome(icon[2]);
+      ((Button) root).setIcon(glyph(icon[0], icon[1], icon[3]));
+    }
+    if (root instanceof ComboBox && ((ComboBox) root).getRenderer() instanceof Component)
+      applyAppearance((Component) ((ComboBox) root).getRenderer());
+    if (root instanceof EditorSurface || !(root instanceof Container)) return;
+    Container c = (Container) root;
+    for (int i = 0; i < c.getComponentCount(); i++) applyAppearance(c.getComponentAt(i));
+  }
+
+  /** Native popups (combo lists, menus) follow the same appearance as the chrome. */
+  static void applyPopupAppearance() {
+    java.util.Hashtable<String, Object> props = new java.util.Hashtable<String, Object>();
+    String bg = Integer.toHexString(0x1000000 | chrome(PAPER)).substring(1);
+    String fg = Integer.toHexString(0x1000000 | chrome(INK)).substring(1);
+    for (String id : new String[] {"ComboBoxPopup", "PopupContentPane", "ComboBoxList", "ComboBoxItem"}) {
+      props.put(id + ".bgColor", bg);
+      props.put(id + ".fgColor", fg);
+    }
+    UIManager.getInstance().addThemeProps(props);
   }
 }
