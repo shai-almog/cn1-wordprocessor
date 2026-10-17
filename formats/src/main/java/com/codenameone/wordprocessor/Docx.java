@@ -122,7 +122,8 @@ public final class Docx {
     document =
         document
             .notes(NoteFormats.read(settings, warnings))
-            .bibliography(BibliographyFormats.read(parts, warnings));
+            .bibliography(BibliographyFormats.read(parts, warnings))
+            .properties(DocxProperties.read(parts, settings, warnings));
     Element tracking = settings == null ? null : Xml.child(settings, "trackRevisions");
     document =
         RevisionFormats.reserveIds(document.trackChanges(tracking != null && enabled(tracking)));
@@ -561,6 +562,7 @@ static final char COLUMN_BREAK = '\u000B';
       for (DocxFurniture part : furniture) part.packageParts(parts, lists, tabs);
       links.notes.packageParts(parts, lists, tabs);
       BibliographyFormats.write(parts, d.bibliography);
+      DocxProperties.write(parts, d.properties);
     }
     ZipOutputStream zip = new ZipOutputStream(out);
     for (Map.Entry<String, byte[]> e : parts.entrySet()) {

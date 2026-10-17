@@ -1731,8 +1731,18 @@ public final class EditorSurface extends Container
     repaint();
   }
 
+  /**
+   * True when document protection rejects text edits (read-only or comments only). Input is
+   * dropped here so the platform keyboard never sees a failed edit; navigation still works.
+   */
+  public boolean readOnly() {
+    String mode = session.document().properties.protection;
+    return "readOnly".equals(mode) || "comments".equals(mode);
+  }
+
   @Override
   public void commitText(String text) {
+    if (readOnly()) return;
     if (session.isComposing()) {
       session.compose(text, text.length());
       session.finishComposition();
@@ -1744,6 +1754,7 @@ public final class EditorSurface extends Container
 
   @Override
   public void setComposingText(String text, int relativeCaret) {
+    if (readOnly()) return;
     if (!session.isComposing()) composingStart = session.selection().start();
     session.compose(text, relativeCaret);
     composingEnd = composingStart + text.length();
@@ -1761,6 +1772,7 @@ public final class EditorSurface extends Container
 
   @Override
   public void deleteSurroundingText(int before, int after) {
+    if (readOnly()) return;
     finishComposing();
     Selection x = session.selection();
     if (session.cellSelection() != null || !x.collapsed()) {
@@ -1833,6 +1845,8 @@ public final class EditorSurface extends Container
     Selection x = session.selection();
     Paragraph p = session.editingDocument().paragraph(x.block);
     boolean extend = (modifiers & MOD_SHIFT) != 0;
+    if (readOnly() && (command == KEY_BACKSPACE || command == KEY_DELETE || command == KEY_TAB))
+      return;
     if (moveCellSelection(command, extend)) return;
     boolean word = (modifiers & (MOD_CTRL | MOD_ALT)) != 0;
     boolean paragraphMove = word && (command == KEY_UP || command == KEY_DOWN);
@@ -2129,6 +2143,7 @@ public final class EditorSurface extends Container
 
   @Override
   public void replaceRange(int a, int b, String text) {
+    if (readOnly()) return;
     if (matchesCellSelection(a, b)) {
       commitText(text);
       return;

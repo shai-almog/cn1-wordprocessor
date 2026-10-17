@@ -472,6 +472,7 @@ public final class Session {
       cells = noteCells;
       insertionStyle = noteStyle;
       reanchorComments(before.doc);
+      enforceProtection(before.doc);
       if (document != before.doc || mergeData != before.merge) {
         if (!mergingTyping) {
           undo.add(before);
@@ -487,6 +488,33 @@ public final class Session {
     } finally {
       transactionDepth--;
     }
+  }
+
+  /**
+   * Rejects edits a protected document does not allow. Changing the protection mode itself is
+   * always allowed (there is no password support), so it is the one way out.
+   */
+  private void enforceProtection(Document b) {
+    String mode = b.properties.protection;
+    if ("none".equals(mode) || !mode.equals(document.properties.protection)) return;
+    if ("trackedChanges".equals(mode)) {
+      if (!document.trackChanges)
+        throw new IllegalStateException("Protected: changes must be tracked");
+      return;
+    }
+    boolean content =
+        document.blocks != b.blocks
+            || document.sections != b.sections
+            || document.styles != b.styles
+            || document.furniture != b.furniture
+            || document.page != b.page
+            || !document.lastSection.columns.equals(b.lastSection.columns)
+            || !document.lastSection.decor.equals(b.lastSection.decor)
+            || document.trackChanges != b.trackChanges
+            || !document.title.equals(b.title);
+    if (content || "readOnly".equals(mode) && document.comments != b.comments)
+      throw new IllegalStateException(
+          "readOnly".equals(mode) ? "Protected: the document is read-only" : "Protected: only comments are allowed");
   }
 
   private void reanchorComments(Document before) {

@@ -19,6 +19,13 @@ public final class DocumentXml {
             .append(d.trackChanges)
             .append("\">");
     BibliographyFormats.nativeWrite(b, d.bibliography);
+    if (!d.properties.equals(DocumentProperties.EMPTY)) {
+      b.append("<properties protection=\"").append(d.properties.protection).append('"');
+      for (String key : DocumentProperties.KEYS)
+        if (!d.properties.get(key).isEmpty())
+          b.append(' ').append(key).append("=\"").append(Xml.escape(d.properties.get(key))).append('"');
+      b.append("/>");
+    }
     PageSpec p = d.page;
     page(b, p);
     furniture(b, d.furniture);
@@ -462,7 +469,8 @@ public final class DocumentXml {
           furniture = readFurniture(c, ids);
         } else if ("sections".equals(Xml.local(c))
             || "noteOptions".equals(Xml.local(c))
-            || "bibliography".equals(Xml.local(c))) {
+            || "bibliography".equals(Xml.local(c))
+            || "properties".equals(Xml.local(c))) {
           // Read after body IDs have been collected.
         } else if ("styles".equals(Xml.local(c))) {
           for (Element style : Xml.children(c, "style")) {
@@ -483,7 +491,8 @@ public final class DocumentXml {
               .furniture(furniture)
               .bookmarks(bookmarks)
               .notes(NoteFormats.read(Xml.child(e, "noteOptions"), null))
-              .bibliography(BibliographyFormats.nativeRead(Xml.child(e, "bibliography")));
+              .bibliography(BibliographyFormats.nativeRead(Xml.child(e, "bibliography")))
+              .properties(readProperties(Xml.child(e, "properties")));
       Element sectionRoot = Xml.child(e, "sections");
       if (sectionRoot != null) {
         Map<String, Section> sections = new LinkedHashMap<String, Section>();
@@ -647,6 +656,13 @@ public final class DocumentXml {
     for (int i = 0; i < w.length; i += 2)
       b.append("<col width=\"").append(w[i]).append("\" space=\"").append(w[i + 1]).append("\"/>");
     b.append("</columns>");
+  }
+
+  private static DocumentProperties readProperties(Element e) {
+    if (e == null) return DocumentProperties.EMPTY;
+    DocumentProperties p = DocumentProperties.EMPTY.protection(Xml.attr(e, "protection", "none"));
+    for (String key : DocumentProperties.KEYS) p = p.with(key, Xml.attr(e, key, ""));
+    return p;
   }
 
   private static void decor(StringBuilder b, PageDecor d) {

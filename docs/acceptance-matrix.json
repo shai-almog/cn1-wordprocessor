@@ -10,8 +10,8 @@
   "not-applicable"
  ],
  "counts": {
-  "unverified": 280,
-  "missing": 194,
+  "unverified": 288,
+  "missing": 186,
   "partial": 13,
   "certified": 0,
   "reference-stub": 15,
@@ -120,24 +120,24 @@
    "group": "Backstage",
    "feature": "Properties",
    "command": "file.properties",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "file.properties",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "file.properties (Properties)"
+   "notes": "file.properties (Properties) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "File",
    "group": "Backstage",
    "feature": "Export PDF",
    "command": "file.exportPdf",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "file.exportPdf",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "file.exportPdf (Export PDF)"
+   "notes": "file.exportPdf (Export PDF) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "File",
@@ -192,48 +192,48 @@
    "group": "Backstage",
    "feature": "Protect Document",
    "command": "file.protect",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "file.protect",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "file.protect (Protect Document)"
+   "notes": "file.protect (Protect Document) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "File",
    "group": "Backstage",
    "feature": "Inspect Document",
    "command": "file.inspect",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "file.inspect",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "file.inspect (Inspect Document)"
+   "notes": "file.inspect (Inspect Document) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "File",
    "group": "Backstage",
    "feature": "Check Accessibility",
    "command": "file.accessibility",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "file.accessibility",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "file.accessibility (Check Accessibility)"
+   "notes": "file.accessibility (Check Accessibility) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "File",
    "group": "Backstage",
    "feature": "Check Compatibility",
    "command": "file.compatibility",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "file.compatibility",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "file.compatibility (Check Compatibility)"
+   "notes": "file.compatibility (Check Compatibility) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "File",
@@ -3300,12 +3300,12 @@
    "group": "Accessibility",
    "feature": "Check Accessibility",
    "command": "file.accessibility",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "file.accessibility",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "file.accessibility (Check Accessibility)"
+   "notes": "file.accessibility (Check Accessibility) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Review",
@@ -3960,12 +3960,12 @@
    "group": "SharePoint",
    "feature": "Properties",
    "command": "file.properties",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "file.properties",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "file.properties (Properties)"
+   "notes": "file.properties (Properties) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Developer",

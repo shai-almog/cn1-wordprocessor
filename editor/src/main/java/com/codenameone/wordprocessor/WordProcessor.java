@@ -3637,6 +3637,22 @@ public class WordProcessor {
     } else if ("Info".equals(section)) {
       content.add(OfficeTheme.label(session.document().title, 20, OfficeTheme.INK));
       content.add(button("Rename document", this::rename));
+      content.add(button("Properties", this::propertiesDialog));
+      content.add(
+          button(
+              "Protect document ("
+                  + session.document().properties.protection
+                  + ")",
+              this::protectDialog));
+      content.add(button("Inspect document", this::inspectDialog));
+      content.add(
+          button(
+              "Check accessibility",
+              () -> report("Accessibility", "file.accessibility")));
+      content.add(
+          button(
+              "Check compatibility",
+              () -> report("Compatibility", "file.compatibility")));
       content.add(OfficeTheme.label(statistics.words(session.document()) + " words", 14, 0x555555));
       content.add(OfficeTheme.label(editor.layout().pages.size() + " pages", 14, 0x555555));
       content.add(
@@ -3742,6 +3758,89 @@ public class WordProcessor {
     dialog.add(BorderLayout.SOUTH, actions);
     styleDialogBody(dialog.getContentPane());
     showOfficeDialog(dialog);
+  }
+
+  private void propertiesDialog() {
+    editor.stopInput();
+    Container form = new Container(BoxLayout.y());
+    Map<String, EditField> fields = new java.util.LinkedHashMap<String, EditField>();
+    for (String key : DocumentProperties.KEYS) {
+      EditField f = field(session.document().properties.get(key));
+      String label = Character.toUpperCase(key.charAt(0)) + key.substring(1);
+      f.setAccessibilityText(label);
+      form.add(OfficeTheme.label(label, 12, 0x555555));
+      form.add(f);
+      fields.put(key, f);
+    }
+    if (showDialog("Properties", form, "Apply", "Cancel")) {
+      Map<String, Object> args = new java.util.LinkedHashMap<String, Object>();
+      for (Map.Entry<String, EditField> e : fields.entrySet()) args.put(e.getKey(), e.getValue().getText());
+      run("file.properties", args);
+    }
+  }
+
+  private void protectDialog() {
+    editor.stopInput();
+    String[][] modes = {
+      {"none", "No restrictions"},
+      {"readOnly", "Read-only"},
+      {"comments", "Comments only"},
+      {"trackedChanges", "Tracked changes only"}
+    };
+    Container list = new Container(BoxLayout.y());
+    final Dialog[] shown = new Dialog[1];
+    for (String[] mode : modes) {
+      Button b =
+          button(
+              (mode[0].equals(session.document().properties.protection) ? "\u2713 " : "") + mode[1],
+              () -> {
+                if (shown[0] != null) shown[0].dispose();
+                run("file.protect", Json.object("mode", mode[0]));
+                closeBackstage();
+              });
+      list.add(b);
+    }
+    Dialog d = officeDialog("Restrict editing");
+    shown[0] = d;
+    d.setLayout(new BorderLayout());
+    d.add(BorderLayout.CENTER, list);
+    d.add(BorderLayout.SOUTH, button("Cancel", d::dispose));
+    d.show();
+  }
+
+  private void inspectDialog() {
+    editor.stopInput();
+    Object found = commands.execute(session, "file.inspect", Json.object());
+    Map<?, ?> counts = (Map<?, ?>) ((Map<?, ?>) found).get("found");
+    StringBuilder text = new StringBuilder();
+    for (Map.Entry<?, ?> e : counts.entrySet())
+      text.append(e.getKey()).append(": ").append(e.getValue()).append('\n');
+    com.codename1.ui.TextArea area = new com.codename1.ui.TextArea(text.toString());
+    area.setEditable(false);
+    if (showDialog("Inspect document", area, "Remove comments, hidden text and properties", "Close"))
+      run(
+          "file.inspect",
+          Json.object(
+              "remove", java.util.Arrays.<Object>asList("comments", "hidden", "properties")));
+  }
+
+  private void report(String title, String id) {
+    editor.stopInput();
+    Map<?, ?> r = (Map<?, ?>) commands.execute(session, id, Json.object());
+    StringBuilder text = new StringBuilder();
+    for (Object o : (java.util.List<?>) r.get("issues")) {
+      if (o instanceof Map) {
+        Map<?, ?> i = (Map<?, ?>) o;
+        text.append(i.get("severity")).append(": ").append(i.get("message"));
+        if (((Number) i.get("block")).intValue() >= 0)
+          text.append(" (paragraph ").append(((Number) i.get("block")).intValue() + 1).append(')');
+      } else text.append(o);
+      text.append('\n');
+    }
+    if (text.length() == 0) text.append("No issues found.");
+    com.codename1.ui.TextArea area = new com.codename1.ui.TextArea(text.toString());
+    area.setEditable(false);
+    showDialog(title, area, "Close", null);
   }
 
   private void rename() {

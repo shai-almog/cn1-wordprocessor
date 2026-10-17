@@ -312,3 +312,29 @@ written; Word's page color is document-wide, so the last section's color is the 
 page borders and borders measured from text are approximated; the watermark is fixed 54pt diagonal
 text, and the PDF lightens it instead of using transparency. Header/footer commands (`insert.header`/`insert.footer`, `layout.linkToPrevious`,
 `hf.position`) edit section furniture directly.
+
+## File: properties, protection, inspector and checkers
+
+- `file.properties` keeps title, author, subject, keywords, description, category, company and
+  manager. They round-trip through `docProps/core.xml` and `docProps/app.xml` and native XML.
+- `file.protect` sets `readOnly`, `comments` or `trackedChanges`. `Session.transact` rejects
+  disallowed edits, and the editor drops text input under read-only or comments-only protection.
+  DOCX uses `w:documentProtection` with enforcement. **Limitation:** there are no passwords.
+  Changing the mode is always allowed, and a protection hash read from Word is dropped (with a
+  warning).
+- `file.inspect` reports comments, revisions, hidden text, properties, headers/footers, bookmarks
+  and watermark. It can remove comments, hidden text and properties. Revisions are reported, not
+  removed.
+- `file.accessibility` checks for:
+  - pictures without alt text;
+  - skipped heading levels and empty headings;
+  - tables without a header row;
+  - text contrast below WCAG 4.5:1 against the page or shading color;
+  - a missing title;
+  - vague link text;
+  - repeated blanks used for layout.
+- `file.compatibility` writes and re-reads DOCX and lists the import warnings, plus a note when
+  a watermark would be dropped.
+- `file.exportPdf` returns the PDF as base64.
+- **Not yet implemented:** PNG export, version history, encryption, autosave/recover commands
+  and templates.

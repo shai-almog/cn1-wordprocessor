@@ -17,6 +17,7 @@ public final class Document {
   public final Map<String, ParagraphStyle> styles;
   public final Map<String, Bookmark> bookmarks;
   public final Bibliography bibliography;
+  public final DocumentProperties properties;
 
   public Document(Sequence<Block> blocks, PageSpec page, String title, long nextId) {
     this(
@@ -35,7 +36,7 @@ public final class Document {
         NoteOptions.DEFAULT,
         Collections.<String, Section>emptyMap(),
         false,
-        Collections.<String, Bookmark>emptyMap(), Bibliography.EMPTY);
+        Collections.<String, Bookmark>emptyMap(), Bibliography.EMPTY, DocumentProperties.EMPTY);
   }
 
   public Document(
@@ -60,7 +61,7 @@ public final class Document {
         NoteOptions.DEFAULT,
         Collections.<String, Section>emptyMap(),
         false,
-        Collections.<String, Bookmark>emptyMap(), Bibliography.EMPTY);
+        Collections.<String, Bookmark>emptyMap(), Bibliography.EMPTY, DocumentProperties.EMPTY);
   }
 
   private Document(
@@ -79,8 +80,10 @@ public final class Document {
       NoteOptions notes,
       Map<String, Section> sections,
       boolean trackChanges,
-      Map<String, Bookmark> bookmarks, Bibliography bibliography) {
+      Map<String, Bookmark> bookmarks, Bibliography bibliography, DocumentProperties properties) {
     if (bibliography == null) throw new NullPointerException("bibliography");
+    if (properties == null) throw new NullPointerException("properties");
+    this.properties = properties;
     this.bibliography = bibliography;
     this.notes = notes.resolve(NoteOptions.DEFAULT);
     this.bookmarks = bookmarks;
@@ -115,7 +118,7 @@ public final class Document {
         notes,
         sections,
         enabled,
-        bookmarks, bibliography);
+        bookmarks, bibliography, properties);
   }
 
   public static Document empty() {
@@ -153,7 +156,7 @@ public final class Document {
         notes,
         kept,
         trackChanges,
-        bookmarks, bibliography);
+        bookmarks, bibliography, properties);
   }
 
   public Document page(PageSpec p) {
@@ -173,7 +176,7 @@ public final class Document {
         notes,
         sections,
         trackChanges,
-        bookmarks, bibliography);
+        bookmarks, bibliography, properties);
   }
 
   public Document title(String t) {
@@ -193,7 +196,7 @@ public final class Document {
         notes,
         sections,
         trackChanges,
-        bookmarks, bibliography);
+        bookmarks, bibliography, properties);
   }
 
   public Document comments(List<ReviewComment> value) {
@@ -213,7 +216,7 @@ public final class Document {
         notes,
         sections,
         trackChanges,
-        bookmarks, bibliography);
+        bookmarks, bibliography, properties);
   }
 
   public Document bookmarks(Map<String, Bookmark> value) {
@@ -240,7 +243,7 @@ public final class Document {
         notes,
         sections,
         trackChanges,
-        Collections.unmodifiableMap(new LinkedHashMap<String, Bookmark>(value)), bibliography);
+        Collections.unmodifiableMap(new LinkedHashMap<String, Bookmark>(value)), bibliography, properties);
   }
 
   public Document styles(Map<String, ParagraphStyle> value) {
@@ -265,7 +268,7 @@ public final class Document {
         notes,
         sections,
         trackChanges,
-        bookmarks, bibliography);
+        bookmarks, bibliography, properties);
   }
 
   public Document furniture(PageFurniture value) {
@@ -288,7 +291,7 @@ public final class Document {
         notes,
             sections,
             trackChanges,
-            bookmarks, bibliography);
+            bookmarks, bibliography, properties);
   }
 
   public Document sections(Map<String, Section> value, Section last) {
@@ -313,7 +316,7 @@ public final class Document {
         notes,
         Collections.unmodifiableMap(new LinkedHashMap<String, Section>(value)),
         trackChanges,
-        bookmarks, bibliography);
+        bookmarks, bibliography, properties);
   }
 
   public List<Section.Range> sectionRanges() {
@@ -350,12 +353,17 @@ public final class Document {
 
   public Document notes(NoteOptions value) {
     return new Document(blocks, page, title, nextId, comments, styles, furniture, lastSection.start,
-        lastSection.pageStart, lastSection.notes, lastSection.columns, lastSection.decor, value, sections, trackChanges, bookmarks, bibliography);
+        lastSection.pageStart, lastSection.notes, lastSection.columns, lastSection.decor, value, sections, trackChanges, bookmarks, bibliography, properties);
   }
 
   public Document bibliography(Bibliography value) {
     return new Document(blocks, page, title, nextId, comments, styles, furniture, lastSection.start,
-        lastSection.pageStart, lastSection.notes, lastSection.columns, lastSection.decor, notes, sections, trackChanges, bookmarks, value);
+        lastSection.pageStart, lastSection.notes, lastSection.columns, lastSection.decor, notes, sections, trackChanges, bookmarks, value, properties);
+  }
+
+  public Document properties(DocumentProperties value) {
+    return new Document(blocks, page, title, nextId, comments, styles, furniture, lastSection.start,
+        lastSection.pageStart, lastSection.notes, lastSection.columns, lastSection.decor, notes, sections, trackChanges, bookmarks, bibliography, value);
   }
 
   public String plainText() {

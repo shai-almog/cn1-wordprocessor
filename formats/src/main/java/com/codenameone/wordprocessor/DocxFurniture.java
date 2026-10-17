@@ -210,6 +210,7 @@ final class DocxFurniture {
     if (document.trackChanges)
       settings.addChild(Xml.parse("<w:trackRevisions xmlns:w=\"" + W + "\"/>"));
     NoteFormats.settings(settings, document.notes);
+    DocxProperties.settings(settings, document.properties, W);
     tabs.settings(settings);
     parts.put(settingsPath, Xml.write(settings).getBytes("UTF-8"));
     String rels = new String(parts.get(REL), "UTF-8");
