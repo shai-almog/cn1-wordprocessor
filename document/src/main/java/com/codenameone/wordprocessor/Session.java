@@ -780,6 +780,39 @@ public final class Session {
         });
   }
 
+  /** Replaces summary properties and settings, keeping the selection (one undo step). */
+  public void documentProperties(final DocumentProperties value) {
+    transact(
+        s -> {
+          int block = cellBlock(), row = cellRow(), column = cellColumn();
+          Selection selected = selection;
+          if (block >= 0) leaveCell();
+          document = document.properties(value);
+          if (block >= 0) enterCell(block, row, column);
+          else selection = selected;
+        });
+  }
+
+  /**
+   * Replaces block contents without changing the block count, keeping the caret and any cell
+   * position (restyling, re-applied table styles, drawing effects).
+   */
+  public void updateBlocks(final Sequence<Block> value) {
+    transact(
+        s -> {
+          int block = cellBlock(), row = cellRow(), column = cellColumn();
+          Selection selected = selection;
+          if (block >= 0) leaveCell();
+          if (value.size() != document.blocks.size())
+            throw new IllegalArgumentException("updateBlocks keeps the block count");
+          document = document.blocks(value, document.nextId);
+          if (block >= 0 && document.blocks.get(block) instanceof Table) {
+            Table t = (Table) document.blocks.get(block);
+            enterCell(block, Math.min(row, t.rows() - 1), Math.min(column, t.columns() - 1));
+          } else selection = selected;
+        });
+  }
+
   public void bibliography(final Bibliography value) {
     transact(
         s -> {

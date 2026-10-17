@@ -10,6 +10,8 @@ final class TableFormats {
     if (!f.title.isEmpty()) b.append(" title=\"").append(Xml.attribute(f.title)).append("\"");
     if (!f.description.isEmpty())
       b.append(" description=\"").append(Xml.attribute(f.description)).append("\"");
+    for (Map.Entry<String, String> e : f.props().entrySet())
+      b.append(" opt-").append(e.getKey()).append("=\"").append(Xml.attribute(e.getValue())).append('"');
     TableFormat.Sizing size = f.sizing;
     if (!"percent".equals(size.unit)
         || size.width != 100
@@ -101,11 +103,13 @@ final class TableFormats {
                 Xml.attr(props, "align", "left"),
                 number(props, "indent", 0),
                 !"false".equals(Xml.attr(props, "fixed", "true"))));
+    for (String key : TableFormat.PROPS) f = f.withProp(key, Xml.attr(props, "opt-" + key, ""));
     return f.headerRows(Integer.parseInt(Xml.attr(props, "headers", "0")))
         .altText(Xml.attr(props, "title", ""), Xml.attr(props, "description", ""));
   }
 
   static void sizingXml(StringBuilder b, TableFormat f) {
+    if ("true".equals(f.prop("rtl", ""))) b.append("<w:bidiVisual/>");
     TableFormat.Sizing size = f.sizing;
     b.append("<w:tblW w:type=\"")
         .append("points".equals(size.unit) ? "dxa" : "percent".equals(size.unit) ? "pct" : "auto")
@@ -135,6 +139,20 @@ final class TableFormats {
   }
 
   static void alternativeXml(StringBuilder b, TableFormat format) {
+    if (format.props().containsKey("look")) {
+      String look = "," + format.prop("look", "") + ",";
+      String[][] attrs = {
+        {"headerRow", "firstRow"}, {"lastRow", "lastRow"}, {"firstColumn", "firstColumn"},
+        {"lastColumn", "lastColumn"}, {"bandedRows", "noHBand"}, {"bandedColumns", "noVBand"}
+      };
+      b.append("<w:tblLook");
+      for (String[] a : attrs) {
+        boolean on = look.contains("," + a[0] + ",");
+        if (a[1].startsWith("no")) on = !on;
+        b.append(" w:").append(a[1]).append("=\"").append(on ? 1 : 0).append('"');
+      }
+      b.append("/>");
+    }
     if (!format.title.isEmpty())
       b.append("<w:tblCaption w:val=\"").append(Xml.attribute(format.title)).append("\"/>");
     if (!format.description.isEmpty())
@@ -214,6 +232,30 @@ final class TableFormats {
               title == null ? "" : Xml.attr(title, "val", ""),
               description == null ? "" : Xml.attr(description, "val", ""));
       base = readCell(props, base, "tblBorders", "tblCellMar", warnings);
+      Element bidi = Xml.child(props, "bidiVisual"), look = Xml.child(props, "tblLook");
+      if (bidi != null && !"0".equals(Xml.attr(bidi, "val", "1")) && !"false".equals(Xml.attr(bidi, "val", "1")))
+        f = f.withProp("rtl", "true");
+      if (look != null) {
+        int bits = 0;
+        try {
+          bits = Integer.parseInt(Xml.attr(look, "val", "0"), 16);
+        } catch (NumberFormatException ignored) {
+        }
+        String[][] attrs = {
+          {"headerRow", "firstRow", "0020"}, {"lastRow", "lastRow", "0040"},
+          {"firstColumn", "firstColumn", "0080"}, {"lastColumn", "lastColumn", "0100"},
+          {"bandedRows", "noHBand", "0200"}, {"bandedColumns", "noVBand", "0400"}
+        };
+        StringBuilder on = new StringBuilder();
+        for (String[] a : attrs) {
+          String v = Xml.attr(look, a[1], "");
+          boolean set =
+              v.isEmpty() ? (bits & Integer.parseInt(a[2], 16)) != 0 : "1".equals(v) || "true".equals(v);
+          if (a[1].startsWith("no")) set = !set;
+          if (set) on.append(on.length() == 0 ? "" : ",").append(a[0]);
+        }
+        f = f.withProp("look", on.toString());
+      }
       for (Element prop : Xml.children(props, null)) {
         String name = Xml.local(prop);
         if (!"tblW".equals(name)
@@ -223,7 +265,10 @@ final class TableFormats {
             && !"jc".equals(name)
             && !"tblInd".equals(name)
             && !"tblCaption".equals(name)
-            && !"tblDescription".equals(name))
+            && !"tblDescription".equals(name)
+            && !"tblLook".equals(name)
+            && !"bidiVisual".equals(name)
+            && !"tblStyle".equals(name))
           warnings.add("Table property requires conversion: " + name);
       }
       Element width = Xml.child(props, "tblW");
@@ -317,6 +362,12 @@ final class TableFormats {
         int count = span == null ? 1 : Integer.parseInt(Xml.attr(span, "val", "1"));
         TableFormat.Cell value =
             cp == null ? base : readCell(cp, base, "tcBorders", "tcMar", warnings);
+        Element flow = cp == null ? null : Xml.child(cp, "textDirection");
+        if (flow != null && c < f.columns()) {
+          String dir = Xml.attr(flow, "val", "lrTb");
+          if ("tbRl".equals(dir) || "btLr".equals(dir)) f = f.direction(r, c, dir);
+          else if (!"lrTb".equals(dir)) warnings.add("Cell text direction " + dir + " shown horizontally");
+        }
         for (int i = 0; i < count && c < f.columns(); i++) f = f.cell(r, c++, value);
       }
       r++;

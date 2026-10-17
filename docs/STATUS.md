@@ -399,3 +399,11 @@ Limits:
 - `layout.pageSetup` sets size, orientation, margins and vertical alignment together.
 - `layout.hyphenation` stores mode, zone, limit and caps as a document setting (DOCX `w:docVar`). Limitation: the layout engine does not hyphenate yet.
 - The Design tab commands (`design.theme`, `design.themeColors`, `design.themeFonts`, `design.styleSet`, `design.paragraphSpacing`) restyle the heading, title and body styles. `design.effects` sets shadow/glow on drawings. `design.setDefault` remembers the choices for new documents, for this app run only. The chosen names are saved as document settings.
+
+## Table styles, look, pens and direction
+- `table.style` applies built-in or custom styles according to the table's look options. `table.look` toggles the header row, first/last column, total row and banded rows/columns, and re-applies the style. The applied style name and look are stored on the table (DOCX `w:tblLook`).
+- `table.newStyle`/`table.modifyStyle`/`table.deleteStyle` manage custom table styles: header and band fills, border color, width and sides. They are stored as document settings. Modifying a style re-applies it to every table that uses it. Limitation: styles are materialized as direct cell formatting, so DOCX does not carry a `w:style` table style definition.
+- `table.borderPainter` paints a pen (color, width, sides) onto the selected cells. `table.draw` splits a cell with a vertical line or adds a row with a horizontal line; outside a table it inserts a 1x1 table. `table.eraser` merges a cell with its right or lower neighbor. Limitation: these are command-driven; there is no freehand pointer drawing of table lines yet.
+- `table.rtl` (`w:bidiVisual`) mirrors column positions in layout.
+- `table.textDirection` stores per-cell `w:textDirection`. Limitation: rotated cell text is not rendered yet, and the per-cell direction keys do not follow inserted or deleted rows.
+- `table.viewGridlines` (editor) shows dotted guides on cell edges without borders. They are never printed or exported.

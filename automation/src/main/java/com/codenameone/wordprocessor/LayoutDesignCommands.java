@@ -246,7 +246,7 @@ final class LayoutDesignCommands implements Commands.Extension {
           if (a.containsKey("zone")) p = p.withSetting("hyphenation.zone", num(a, "zone"));
           if (a.containsKey("limit")) p = p.withSetting("hyphenation.limit", String.valueOf(((Number) a.get("limit")).intValue()));
           if (a.containsKey("caps")) p = p.withSetting("hyphenation.caps", Boolean.TRUE.equals(a.get("caps")) ? "" : "false");
-          s.replaceDocument(s.document().properties(p));
+          s.documentProperties(p);
           return p.setting("hyphenation", "none");
         });
 
@@ -338,7 +338,8 @@ final class LayoutDesignCommands implements Commands.Extension {
                   blocks.set(
                       i, pic.drawing(pic.drawing.with("shadow", shadow ? "true" : "").with("glow", glow)));
             }
-          s.replaceDocument(d.blocks(blocks, d.nextId).properties(d.properties.withSetting("design.effects", name)));
+          s.updateBlocks(blocks);
+          s.documentProperties(s.document().properties.withSetting("design.effects", name));
           return name;
         });
     c.register(
@@ -455,7 +456,7 @@ final class LayoutDesignCommands implements Commands.Extension {
   private static void settings(Session s, String... kv) {
     DocumentProperties p = s.document().properties;
     for (int i = 0; i < kv.length; i += 2) p = p.withSetting(kv[i], kv[i + 1]);
-    s.replaceDocument(s.document().properties(p));
+    s.documentProperties(p);
   }
 
   private static float f(Map<String, Object> a, String k, float fallback) {

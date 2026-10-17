@@ -1495,8 +1495,12 @@ public final class LayoutEngine {
       CellLayout(Table t, int row, int col, float[] edges) {
         span = t.span(row, col);
         format = t.format.cell(row, col);
-        left = edges[col];
-        this.width = edges[col + span.columns] - left;
+        // A right-to-left table (bidiVisual) mirrors column positions within the table.
+        left =
+            "true".equals(t.format.prop("rtl", ""))
+                ? edges[0] + edges[t.columns()] - edges[col + span.columns]
+                : edges[col];
+        this.width = edges[col + span.columns] - edges[col];
         height = format.verticalPadding;
         float width = Math.max(1, this.width - 2 * format.horizontalPadding);
         ListNumbers numbers = new ListNumbers();

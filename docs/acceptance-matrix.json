@@ -10,8 +10,8 @@
   "not-applicable"
  ],
  "counts": {
-  "unverified": 420,
-  "missing": 67,
+  "unverified": 431,
+  "missing": 56,
   "partial": 0,
   "certified": 0,
   "reference-stub": 15,
@@ -1644,12 +1644,12 @@
    "group": "Tables",
    "feature": "Draw Table",
    "command": "table.draw",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "table.draw",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "table.draw (Draw Table)"
+   "notes": "table.draw (Draw Table) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Insert",
@@ -4104,12 +4104,12 @@
    "group": "Table Style Options",
    "feature": "Table Style Options",
    "command": "table.look",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "table.look",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "table.look (Table Style Options)"
+   "notes": "table.look (Table Style Options) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Table Design",
@@ -4128,36 +4128,36 @@
    "group": "Table Styles",
    "feature": "New Table Style",
    "command": "table.newStyle",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "table.newStyle",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "table.newStyle (New Table Style)"
+   "notes": "table.newStyle (New Table Style) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Table Design",
    "group": "Table Styles",
    "feature": "Modify Table Style",
    "command": "table.modifyStyle",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "table.modifyStyle",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "table.modifyStyle (Modify Table Style)"
+   "notes": "table.modifyStyle (Modify Table Style) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Table Design",
    "group": "Table Styles",
    "feature": "Delete Table Style",
    "command": "table.deleteStyle",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "table.deleteStyle",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "table.deleteStyle (Delete Table Style)"
+   "notes": "table.deleteStyle (Delete Table Style) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Table Design",
@@ -4188,12 +4188,12 @@
    "group": "Borders",
    "feature": "Border Painter",
    "command": "table.borderPainter",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "table.borderPainter",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "table.borderPainter (Border Painter)"
+   "notes": "table.borderPainter (Border Painter) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Table Layout",
@@ -4248,12 +4248,12 @@
    "group": "Table",
    "feature": "View Gridlines",
    "command": "table.viewGridlines",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "table.viewGridlines",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "table.viewGridlines (View Gridlines)"
+   "notes": "Editor command (registered by WordProcessor, not the headless registry); needs native acceptance evidence."
   },
   {
    "tab": "Table Layout",
@@ -4284,36 +4284,36 @@
    "group": "Table",
    "feature": "Table Direction",
    "command": "table.rtl",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "table.rtl",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "table.rtl (Right-to-Left Table)"
+   "notes": "table.rtl (Right-to-Left Table) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Table Layout",
    "group": "Draw",
    "feature": "Draw Table",
    "command": "table.draw",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "table.draw",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "table.draw (Draw Table)"
+   "notes": "table.draw (Draw Table) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Table Layout",
    "group": "Draw",
    "feature": "Eraser",
    "command": "table.eraser",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "table.eraser",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "table.eraser (Eraser)"
+   "notes": "table.eraser (Eraser) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Table Layout",
@@ -4524,12 +4524,12 @@
    "group": "Alignment",
    "feature": "Text Direction",
    "command": "table.textDirection",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "table.textDirection",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "table.textDirection (Text Direction)"
+   "notes": "table.textDirection (Text Direction) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Table Layout",

@@ -105,10 +105,10 @@ public class WordProcessor {
         new Form(new BorderLayout()) {
           @Override
           public String getTitle() {
-            return session.document().title + (OfficeTheme.mobile() ? "" : " — CN1 Word Processor");
+            return session.document().title + (OfficeTheme.mobile() ? "" : " \u2014 CN1 Word Processor");
           }
         };
-    form.setTitle(session.document().title + (OfficeTheme.mobile() ? "" : " — CN1 Word Processor"));
+    form.setTitle(session.document().title + (OfficeTheme.mobile() ? "" : " \u2014 CN1 Word Processor"));
     if (Display.getInstance().isDesktop()) Display.getInstance().refreshNativeTitle();
     editor = new EditorSurface(session, commands, this::edited, this::editCell);
     editor.setPictureEditor(this::editPicture);
@@ -219,7 +219,7 @@ public class WordProcessor {
     footer.add(
         BorderLayout.EAST,
         OfficeTheme.row(
-            button("−", () -> zoom(-.1f)), zoomSlider, button("+", () -> zoom(.1f)), zoomValue));
+            button("\u2212", () -> zoom(-.1f)), zoomSlider, button("+", () -> zoom(.1f)), zoomValue));
     if (OfficeTheme.mobile()) {
       footer.removeAll();
       footer.add(BorderLayout.NORTH, status);
@@ -323,7 +323,7 @@ public class WordProcessor {
         new Container(new BorderLayout(BorderLayout.CENTER_BEHAVIOR_CENTER_ABSOLUTE));
     OfficeTheme.space(header, 0, 0, 0, 0);
     header.add(BorderLayout.WEST, OfficeTheme.row(save, quickUndo, quickRedo));
-    documentTitle = button(session.document().title + " ▾", this::rename);
+    documentTitle = button(session.document().title + " \u25be", this::rename);
     documentTitle.setAccessibilityText("Document name");
     documentTitle.getAllStyles().setFont(OfficeTheme.font(12, true));
     header.add(BorderLayout.CENTER, documentTitle);
@@ -645,8 +645,8 @@ public class WordProcessor {
             fontChoice,
             sizeChoice,
             button("A+", () -> changeSize(1)),
-            button("A−", () -> changeSize(-1)),
-            button("Aa ▾", this::changeCase),
+            button("A\u2212", () -> changeSize(-1)),
+            button("Aa \u25be", this::changeCase),
             iconButton("", FontImage.MATERIAL_FORMAT_CLEAR, this::clearFormatting, false));
     Container fontBottom =
         OfficeTheme.row(
@@ -654,8 +654,8 @@ public class WordProcessor {
             toggle("Italic", FontImage.MATERIAL_FORMAT_ITALIC, "italic"),
             toggle("Underline", FontImage.MATERIAL_FORMAT_UNDERLINED, "underline"),
             toggle("Strikethrough", FontImage.MATERIAL_STRIKETHROUGH_S, "strike"),
-            scriptButton("x²", "Superscript", "superscript"),
-            scriptButton("x₂", "Subscript", "subscript"),
+            scriptButton("x\u00b2", "Superscript", "superscript"),
+            scriptButton("x\u2082", "Subscript", "subscript"),
             iconButton("", FontImage.MATERIAL_FORMAT_COLOR_FILL, () -> color("background"), false),
             iconButton("", FontImage.MATERIAL_FORMAT_COLOR_TEXT, () -> color("color"), false));
     Container paragraphTop =
@@ -683,7 +683,7 @@ public class WordProcessor {
                 FontImage.MATERIAL_FORMAT_ALIGN_JUSTIFY,
                 () -> paragraph("align", "both"),
                 false),
-            button("¶…", this::paragraphDialog),
+            button("\u00b6\u2026", this::paragraphDialog),
             iconButton("", FontImage.MATERIAL_FORMAT_LINE_SPACING, this::lineSpacingDialog, false),
             iconButton("", FontImage.MATERIAL_BORDER_OUTER, this::bordersDialog, false),
             toggleMarks());
@@ -698,7 +698,7 @@ public class WordProcessor {
     styles.setPreferredW(OfficeTheme.px(180));
     styles.setScrollableX(true);
     styles.setScrollVisible(false);
-    Button moreStyles = button("▾", this::moreStyles);
+    Button moreStyles = button("\u25be", this::moreStyles);
     moreStyles.setAccessibilityText("More styles");
     Container editing =
         BoxLayout.encloseY(
@@ -791,13 +791,13 @@ public class WordProcessor {
                   edited();
                 }),
             button(
-                "New style from selection…",
+                "New style from selection\u2026",
                 () -> {
                   editStyle(null);
                   refreshStylesPane();
                 }),
             button(
-                "Modify…",
+                "Modify\u2026",
                 () -> {
                   editStyle(
                       session.document().styles.get(definitions.get(names.getSelectedIndex()).id));
@@ -1009,8 +1009,8 @@ public class WordProcessor {
             OfficeTheme.row(
                 iconButton("Table", FontImage.MATERIAL_GRID_ON, this::insertTable, true),
                 BoxLayout.encloseY(
-                    button("Quick Tables…", this::quickTables),
-                    button("Table layout…", this::tableLayout)))),
+                    button("Quick Tables\u2026", this::quickTables),
+                    button("Table layout\u2026", this::tableLayout)))),
         OfficeTheme.group(
             "Illustrations",
             OfficeTheme.row(
@@ -1034,8 +1034,8 @@ public class WordProcessor {
             "Header & Footer",
             OfficeTheme.row(
                 BoxLayout.encloseY(
-                    button("Header…", () -> editFurniture(false)),
-                    button("Footer…", () -> editFurniture(true))))),
+                    button("Header\u2026", () -> editFurniture(false)),
+                    button("Footer\u2026", () -> editFurniture(true))))),
         OfficeTheme.group(
             "Text",
             OfficeTheme.row(
@@ -1046,7 +1046,7 @@ public class WordProcessor {
                     true),
                 BoxLayout.encloseY(
                     button("Date & time", () -> fieldDialog(false, "DATE \\@ \"yyyy-MM-dd\"")),
-                    button("Edit field…", () -> fieldDialog(true, "PAGE")),
+                    button("Edit field\u2026", () -> fieldDialog(true, "PAGE")),
                     button(
                         "Update fields",
                         () -> {
@@ -1494,13 +1494,13 @@ public class WordProcessor {
                     button("Column break", () -> run("layout.columnBreak", Json.object())),
                     button("A4", () -> setPage(595.28f, 841.89f)),
                     button("Letter", () -> setPage(612, 792)),
-                    button("Section break…", this::sectionBreakDialog),
-                    button("Section settings…", this::sectionSettings)))),
+                    button("Section break\u2026", this::sectionBreakDialog),
+                    button("Section settings\u2026", this::sectionSettings)))),
         OfficeTheme.group(
             "Paragraph",
             BoxLayout.encloseY(
                 OfficeTheme.row(
-                    button("Indent +", () -> indent(18)), button("Indent −", () -> indent(-18))),
+                    button("Indent +", () -> indent(18)), button("Indent \u2212", () -> indent(-18))),
                 button(
                     "Space before / after",
                     () -> {
@@ -1547,7 +1547,7 @@ public class WordProcessor {
     for (int i = 0; i < labels.length; i++) {
       Note note = notes.get(i);
       String preview = note.plainText().replace('\n', ' ');
-      if (preview.length() > 36) preview = preview.substring(0, 36) + "…";
+      if (preview.length() > 36) preview = preview.substring(0, 36) + "\u2026";
       labels[i] =
           ("footnote".equals(note.kind) ? "Footnote " : "Endnote ") + note.label + ": " + preview;
     }
@@ -1581,8 +1581,8 @@ public class WordProcessor {
             "A, B, C",
             "01, 02, 03",
             "1st, 2nd, 3rd",
-            "1, 2, … A, B",
-            "*, †, ‡, §",
+            "1, 2, \u2026 A, B",
+            "*, \u2020, \u2021, \u00a7",
             "- 1 -, - 2 -",
             "No number");
     EditField start = field("1");
@@ -1854,7 +1854,7 @@ public class WordProcessor {
         OfficeTheme.group(
             "Fields",
             OfficeTheme.row(
-                button("Insert field…", () -> fieldDialog(false, "PAGE")),
+                button("Insert field\u2026", () -> fieldDialog(false, "PAGE")),
                 button(
                     "Update fields",
                     () -> {
@@ -2113,7 +2113,7 @@ public class WordProcessor {
                   ? "No source recipients"
                   : "Source recipients "
                       + (start + 1)
-                      + "–"
+                      + "\u2013"
                       + end
                       + " of "
                       + data.sourceRows.size());
@@ -2212,9 +2212,9 @@ public class WordProcessor {
   private String recipientSummary(MergeData data, int index) {
     StringBuilder text = new StringBuilder("" + (index + 1) + ". ");
     for (int i = 0; i < Math.min(OfficeTheme.mobile() ? 1 : 3, data.fields.size()); i++) {
-      if (i > 0) text.append(" · ");
+      if (i > 0) text.append(" \u00b7 ");
       String cell = data.sourceRows.get(index).get(i).replace('\n', ' ').replace('\r', ' ');
-      text.append(cell.length() > 24 ? cell.substring(0, 24) + "…" : cell);
+      text.append(cell.length() > 24 ? cell.substring(0, 24) + "\u2026" : cell);
     }
     return text.toString();
   }
@@ -2402,7 +2402,7 @@ public class WordProcessor {
     String[] labels = new String[Math.max(1, sources.size())];
     if (sources.isEmpty()) labels[0] = "No sources";
     for (int i = 0; i < sources.size(); i++)
-      labels[i] = sources.get(i).tag() + " — " + sources.get(i).get("title");
+      labels[i] = sources.get(i).tag() + " \u2014 " + sources.get(i).get("title");
     ComboBox<String> source = new ComboBox<String>(labels);
     ComboBox<String> action =
         new ComboBox<String>(
@@ -2444,7 +2444,7 @@ public class WordProcessor {
     String[] choices = new String[sources.size() + 1];
     choices[0] = "Add new source";
     for (int i = 0; i < sources.size(); i++)
-      choices[i + 1] = sources.get(i).tag() + " — " + sources.get(i).get("title");
+      choices[i + 1] = sources.get(i).tag() + " \u2014 " + sources.get(i).get("title");
     ComboBox<String> source = new ComboBox<String>(choices);
     if (!sources.isEmpty()) source.setSelectedIndex(1);
     EditField pages = field("");
@@ -2646,7 +2646,7 @@ public class WordProcessor {
               outlines,
               marked,
               formRow("Entry identifier (blank for all)", identifier),
-              button("Style levels…", () -> contentsStyleDialog(styleLevels))));
+              button("Style levels\u2026", () -> contentsStyleDialog(styleLevels))));
     if (!showDialog(
         caption == null ? "Table of contents" : "Table of figures", body, "Insert", "Cancel"))
       return;
@@ -2879,7 +2879,7 @@ public class WordProcessor {
             "Heading 7",
             "Heading 8",
             "Heading 9");
-    ComboBox<String> separator = new ComboBox<String>("-", ".", ":", "—", "–");
+    ComboBox<String> separator = new ComboBox<String>("-", ".", ":", "\u2014", "\u2013");
     CheckBox exclude = new CheckBox("Exclude label from caption");
     Container body =
         BoxLayout.encloseY(
@@ -2958,7 +2958,7 @@ public class WordProcessor {
       Container row =
           BoxLayout.encloseY(
               OfficeTheme.label(
-                  change.revision.author + " · " + change.revision.kind, 13, OfficeTheme.INK),
+                  change.revision.author + " \u00b7 " + change.revision.kind, 13, OfficeTheme.INK),
               OfficeTheme.label(change.revision.date, 10, 0x666666),
               new SpanLabelCompat(change.text),
               OfficeTheme.row(
@@ -3092,7 +3092,7 @@ public class WordProcessor {
                 trackingButton,
                 BoxLayout.encloseY(
                     button("Reviewing Pane", this::revisionsPane),
-                    button("Tracking options…", this::trackingOptions)))),
+                    button("Tracking options\u2026", this::trackingOptions)))),
         OfficeTheme.group(
             "Compare",
             OfficeTheme.row(
@@ -3265,7 +3265,7 @@ public class WordProcessor {
     for (ReviewComment c : session.document().comments) {
       Container row = new Container(BoxLayout.y());
       OfficeTheme.space(row, 6, 6, 8, 8);
-      row.add(new Label(c.author + (c.resolved ? " · Resolved" : "")));
+      row.add(new Label(c.author + (c.resolved ? " \u00b7 Resolved" : "")));
       row.add(new SpanLabelCompat(c.text));
       for (int replyIndex = 0; replyIndex < c.replies.size(); replyIndex++) {
         final int index = replyIndex;
@@ -3438,6 +3438,8 @@ public class WordProcessor {
         editor.setDarkPage(a.containsKey("value") ? (Boolean) a.get("value") : !editor.isDarkPage()));
     view("view.gridlines", "Show or hide 18pt gridlines", "value?:boolean", a ->
         editor.setGridlines(a.containsKey("value") ? (Boolean) a.get("value") : !editor.isGridlines()));
+    view("table.viewGridlines", "Show or hide dotted table gridlines on borderless cell edges", "value?:boolean", a ->
+        editor.setTableGridlines(a.containsKey("value") ? (Boolean) a.get("value") : !editor.isTableGridlines()));
     view("view.focus", "Focus mode: hide the ribbon and status bar", "value?:boolean", a ->
         focus(a.containsKey("value") ? (Boolean) a.get("value") : !ribbon.isHidden()));
     view("view.readMode", "Read mode: full screen, pages side by side, no editing", "value?:boolean", a -> {
@@ -3582,14 +3584,14 @@ public class WordProcessor {
     OfficeTheme.space(page, 12, 12, OfficeTheme.mobile() ? 12 : 32, 12);
     page.setScrollableY(true);
     String[] labels = {
-      "‹ Back to document", "New", "Open", "Info", "Save", "Save As", "Print", "Export"
+      "\u2039 Back to document", "New", "Open", "Info", "Save", "Save As", "Print", "Export"
     };
     for (String label : labels) {
       Button item =
           button(
               label,
               () -> {
-                if (label.startsWith("‹")) {
+                if (label.startsWith("\u2039")) {
                   closeBackstage();
                   return;
                 }
@@ -3789,7 +3791,7 @@ public class WordProcessor {
     dialog.add(
         BorderLayout.CENTER,
         new SpanLabelCompat(
-            "Save changes to “" + session.document().title + "” before continuing?"));
+            "Save changes to \u201c" + session.document().title + "\u201d before continuing?"));
     Container actions = new Container(new FlowLayout(Component.RIGHT));
     actions.add(button("Cancel", dialog::dispose));
     actions.add(
@@ -3920,18 +3922,18 @@ public class WordProcessor {
     int primary = Command.DESKTOP_SHORTCUT_MODIFIER_PRIMARY,
         shift = primary | Command.DESKTOP_SHORTCUT_MODIFIER_SHIFT;
     menu("File", "New", 'n', primary, this::newDocument);
-    menu("File", "Open…", 'o', primary, this::open);
+    menu("File", "Open\u2026", 'o', primary, this::open);
     menu("File", "Save", 's', primary, () -> saveDocument(false));
-    menu("File", "Save As…", 's', shift, () -> saveDocument(true));
-    menu("File", "Print…", 'p', primary, this::printDocument);
-    menu("File", "Export Word Document…", (char) 0, 0, () -> save("docx"));
-    menu("File", "Export PDF…", (char) 0, 0, () -> save("pdf"));
-    menu("File", "Rename…", (char) 0, 0, this::rename);
+    menu("File", "Save As\u2026", 's', shift, () -> saveDocument(true));
+    menu("File", "Print\u2026", 'p', primary, this::printDocument);
+    menu("File", "Export Word Document\u2026", (char) 0, 0, () -> save("docx"));
+    menu("File", "Export PDF\u2026", (char) 0, 0, () -> save("pdf"));
+    menu("File", "Rename\u2026", (char) 0, 0, this::rename);
     // Undo/Redo/Cut/Copy/Paste/Select All are supplied by the native Mac Edit menu
     // and reach this editor through TextInputClient. Do not add duplicate items.
-    menu("Edit", "Find and Replace…", 'f', primary, this::find);
-    menu("Insert", "Comment…", (char) 0, 0, this::newComment);
-    menu("Tools", "Comments…", (char) 0, 0, this::comments);
+    menu("Edit", "Find and Replace\u2026", 'f', primary, this::find);
+    menu("Insert", "Comment\u2026", (char) 0, 0, this::newComment);
+    menu("Tools", "Comments\u2026", (char) 0, 0, this::comments);
     menu(
         "Tools",
         "Track Changes",
@@ -3944,21 +3946,21 @@ public class WordProcessor {
     menu("Tools", "Reviewing Pane", (char) 0, 0, this::revisionsPane);
     menu("Tools", "Accept Change", (char) 0, 0, () -> revisionAction(true, false));
     menu("Tools", "Reject Change", (char) 0, 0, () -> revisionAction(false, false));
-    menu("Insert", "Table…", (char) 0, 0, this::insertTable);
-    menu("Insert", "Quick Tables…", (char) 0, 0, this::quickTables);
-    menu("Insert", "Picture…", (char) 0, 0, this::insertPicture);
-    menu("Insert", "Mark Contents Entry…", (char) 0, 0, this::markContentsDialog);
-    menu("Insert", "Table of Contents…", (char) 0, 0, this::contentsDialog);
-    menu("Insert", "Table of Figures…", (char) 0, 0, () -> contentsDialog("Figure"));
-    menu("Insert", "Footnote…", (char) 0, 0, () -> noteDialog(null, "footnote"));
-    menu("Insert", "Endnote…", (char) 0, 0, () -> noteDialog(null, "endnote"));
-    menu("Insert", "Show Notes…", (char) 0, 0, this::showNotes);
-    menu("Format", "Footnote and Endnote…", (char) 0, 0, this::noteOptionsDialog);
-    menu("Insert", "Caption…", (char) 0, 0, this::captionDialog);
-    menu("Insert", "Bookmark…", (char) 0, 0, this::bookmarkDialog);
-    menu("Insert", "Cross-reference…", (char) 0, 0, this::crossReferenceDialog);
-    menu("Format", "Styles…", (char) 0, 0, this::moreStyles);
-    menu("Format", "Table layout…", (char) 0, 0, this::tableLayout);
+    menu("Insert", "Table\u2026", (char) 0, 0, this::insertTable);
+    menu("Insert", "Quick Tables\u2026", (char) 0, 0, this::quickTables);
+    menu("Insert", "Picture\u2026", (char) 0, 0, this::insertPicture);
+    menu("Insert", "Mark Contents Entry\u2026", (char) 0, 0, this::markContentsDialog);
+    menu("Insert", "Table of Contents\u2026", (char) 0, 0, this::contentsDialog);
+    menu("Insert", "Table of Figures\u2026", (char) 0, 0, () -> contentsDialog("Figure"));
+    menu("Insert", "Footnote\u2026", (char) 0, 0, () -> noteDialog(null, "footnote"));
+    menu("Insert", "Endnote\u2026", (char) 0, 0, () -> noteDialog(null, "endnote"));
+    menu("Insert", "Show Notes\u2026", (char) 0, 0, this::showNotes);
+    menu("Format", "Footnote and Endnote\u2026", (char) 0, 0, this::noteOptionsDialog);
+    menu("Insert", "Caption\u2026", (char) 0, 0, this::captionDialog);
+    menu("Insert", "Bookmark\u2026", (char) 0, 0, this::bookmarkDialog);
+    menu("Insert", "Cross-reference\u2026", (char) 0, 0, this::crossReferenceDialog);
+    menu("Format", "Styles\u2026", (char) 0, 0, this::moreStyles);
+    menu("Format", "Table layout\u2026", (char) 0, 0, this::tableLayout);
     menu(
         "Insert",
         "Page Break",
@@ -3972,8 +3974,8 @@ public class WordProcessor {
     menu("Format", "Italic", 'i', primary, () -> format("italic"));
     menu("Format", "Underline", 'u', primary, () -> format("underline"));
     menu("Format", "Normal", (char) 0, 0, () -> heading(0));
-    menu("Format", "Font…", (char) 0, 0, this::fontDialog);
-    menu("Format", "Paragraph…", (char) 0, 0, this::paragraphDialog);
+    menu("Format", "Font\u2026", (char) 0, 0, this::fontDialog);
+    menu("Format", "Paragraph\u2026", (char) 0, 0, this::paragraphDialog);
     menu("Format", "Heading 1", (char) 0, 0, () -> heading(1));
     menu("Format", "Heading 2", (char) 0, 0, () -> heading(2));
     menu(
@@ -3988,11 +3990,11 @@ public class WordProcessor {
                     !session.editingDocument().paragraph(session.selection().block).keepNext)));
     menu(
         "Format",
-        "Restart Numbering…",
+        "Restart Numbering\u2026",
         (char) 0,
         0,
         () -> prompt("Start at", "1", v -> paragraph("listStart", v)));
-    menu("Format", "Number Format…", (char) 0, 0, () -> chooseNumberFormat());
+    menu("Format", "Number Format\u2026", (char) 0, 0, () -> chooseNumberFormat());
     menu(
         "View",
         "Actual Size",
@@ -4019,7 +4021,7 @@ public class WordProcessor {
         (char) 0,
         0,
         () -> showText("Word count", statistics.words(session.document()) + " words"));
-    menu("Tools", "Commands…", (char) 0, 0, this::commandDialog);
+    menu("Tools", "Commands\u2026", (char) 0, 0, this::commandDialog);
   }
 
   private void zoom(float delta) {
@@ -4586,7 +4588,7 @@ public class WordProcessor {
     page.setSelected(p.pageBreak);
     body.addAll(keep, widow, next, page);
     final java.util.List<TabStop>[] tabs = new java.util.List[] {p.format.tabs};
-    body.add(button("Tabs…", () -> editTabs(tabs)));
+    body.add(button("Tabs\u2026", () -> editTabs(tabs)));
     if (!showDialog("Paragraph", body, "Apply", "Cancel")) return;
     session.transact(
         s -> {
@@ -4615,7 +4617,7 @@ public class WordProcessor {
           for (TabStop stop : stops)
             existing
                 .getModel()
-                .addItem(stop.position + " pt · " + stop.alignment + " · " + stop.leader);
+                .addItem(stop.position + " pt \u00b7 " + stop.alignment + " \u00b7 " + stop.leader);
         };
     reload.run();
     existing.addActionListener(
@@ -4762,7 +4764,7 @@ public class WordProcessor {
                 + " of "
                 + merge.rows.size());
     lastEdit = System.currentTimeMillis();
-    form.setTitle(session.document().title + (OfficeTheme.mobile() ? "" : " — CN1 Word Processor"));
+    form.setTitle(session.document().title + (OfficeTheme.mobile() ? "" : " \u2014 CN1 Word Processor"));
     if (Display.getInstance().isDesktop()) Display.getInstance().refreshNativeTitle();
     editor.revealSelection();
     updateOutline();
@@ -4842,11 +4844,11 @@ public class WordProcessor {
       String title =
           session.document().title
               + (filePath != null && fileDocument == session.document()
-                  ? " — Saved"
+                  ? " \u2014 Saved"
                   : savedRevision == session.revision()
-                      ? " — Recovery saved"
-                      : " — Unsaved changes")
-              + " ▾";
+                      ? " \u2014 Recovery saved"
+                      : " \u2014 Unsaved changes")
+              + " \u25be";
       if (!title.equals(documentTitle.getText())) {
         documentTitle.setText(title);
         documentTitle.getParent().revalidate();
@@ -4930,13 +4932,13 @@ public class WordProcessor {
         OfficeTheme.group(
             "Cells",
             BoxLayout.encloseY(
-                button("Select range…", this::selectCellRange),
+                button("Select range\u2026", this::selectCellRange),
                 button("Clear Cell Contents", () -> tableCommand("clearCells")),
                 button("Merge Selected Cells", () -> tableCommand("mergeSelected")))),
         OfficeTheme.group(
             "Split",
             BoxLayout.encloseY(
-                button("Split Cells…", this::splitCells),
+                button("Split Cells\u2026", this::splitCells),
                 button("Split Table", () -> tableCommand("splitTable")))),
         OfficeTheme.group(
             "Insert",
@@ -4950,7 +4952,7 @@ public class WordProcessor {
         OfficeTheme.group(
             "Cell Size",
             BoxLayout.encloseY(
-                button("Row height…", this::tableRowHeight),
+                button("Row height\u2026", this::tableRowHeight),
                 button("Distribute Rows", () -> tableCommand("distributeRows")),
                 button("Distribute Columns", () -> tableCommand("distributeColumns")))),
         OfficeTheme.group(
@@ -4967,7 +4969,7 @@ public class WordProcessor {
         OfficeTheme.group(
             "Data",
             BoxLayout.encloseY(
-                button("Formula…", this::tableFormula),
+                button("Formula\u2026", this::tableFormula),
                 button(
                     "Update Formulas",
                     () -> {
@@ -4984,13 +4986,13 @@ public class WordProcessor {
             "Table",
             BoxLayout.encloseY(
                 button(
-                    "Table properties…",
+                    "Table properties\u2026",
                     () -> {
                       if (!session.inCell())
                         throw new IllegalArgumentException("Click inside a table first");
                       tableProperties(session.cellBlock(), session.cellRow(), session.cellColumn());
                     }),
-                button("Rows and Columns…", this::tableLayout))));
+                button("Rows and Columns\u2026", this::tableLayout))));
   }
 
   private void tableRowHeight() {
@@ -5139,7 +5141,7 @@ public class WordProcessor {
   private void editCell(int block, int row, int col) {
     editor.stopInput();
     Table t = (Table) session.document().blocks.get(block);
-    Dialog dialog = officeDialog("Table · row " + (row + 1) + ", column " + (col + 1));
+    Dialog dialog = officeDialog("Table \u00b7 row " + (row + 1) + ", column " + (col + 1));
     dialog.setLayout(new BorderLayout());
     Container actions = new Container(new GridLayout(OfficeTheme.mobile() ? 2 : 3));
     for (String action : new String[] {"insertRow", "deleteRow", "insertColumn", "deleteColumn"}) {
@@ -5162,14 +5164,14 @@ public class WordProcessor {
     }
     actions.add(
         button(
-            "Table properties…",
+            "Table properties\u2026",
             () -> {
               dialog.dispose();
               tableProperties(block, row, col);
             }));
     actions.add(
         button(
-            "Merge cells…",
+            "Merge cells\u2026",
             () -> {
               EditField rows = field("1"), columns = field("2");
               rows.setAccessibilityText("Rows to merge");
@@ -5200,7 +5202,7 @@ public class WordProcessor {
               }));
     actions.add(
         button(
-            "Sort…",
+            "Sort\u2026",
             () -> {
               ComboBox<String> order = new ComboBox<String>("Ascending", "Descending");
               CheckBox header = new CheckBox("Keep first row as header"),
@@ -5390,7 +5392,7 @@ public class WordProcessor {
     EditField args = field("{}", 5, 45);
     StringBuilder available = new StringBuilder();
     for (Commands.Descriptor d : commands.descriptors())
-      available.append(d.id).append(" — ").append(d.description).append('\n');
+      available.append(d.id).append(" \u2014 ").append(d.description).append('\n');
     if (showDialog(
         "Execute command",
         BoxLayout.encloseY(command, args, new SpanLabelCompat(available.toString())),
@@ -5431,7 +5433,7 @@ public class WordProcessor {
         new Macros(commands).preview(session, macro, Collections.<String, String>emptyMap(), null);
     EditField after = field(join(p.changes) + "\n" + p.after, 12, 55);
     after.setEditable(false);
-    if (showDialog("Proposed document — one undo step", after, "Apply", "Cancel")) {
+    if (showDialog("Proposed document \u2014 one undo step", after, "Apply", "Cancel")) {
       p.apply(session);
       edited();
     }
@@ -5566,7 +5568,7 @@ public class WordProcessor {
             + System.currentTimeMillis()
             + ".pdf";
     printing = true;
-    status.setText("Preparing print preview…");
+    status.setText("Preparing print preview\u2026");
     Display.getInstance()
         .scheduleBackgroundTask(
             () -> {
@@ -5697,7 +5699,7 @@ public class WordProcessor {
 
   private static String join(java.util.List<String> list) {
     StringBuilder b = new StringBuilder();
-    for (String s : list) b.append("• ").append(s).append('\n');
+    for (String s : list) b.append("\u2022 ").append(s).append('\n');
     return b.toString();
   }
 

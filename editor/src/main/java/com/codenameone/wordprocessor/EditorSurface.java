@@ -600,6 +600,18 @@ public final class EditorSurface extends Container
     repaint();
   }
 
+  /** Table View Gridlines (on by default, like Word): screen-only cell edge guides. */
+  private boolean tableGridlines = true;
+
+  public void setTableGridlines(boolean value) {
+    tableGridlines = value;
+    repaint();
+  }
+
+  public boolean isTableGridlines() {
+    return tableGridlines;
+  }
+
   public boolean isGridlines() {
     return gridlines;
   }
@@ -1112,6 +1124,16 @@ public final class EditorSurface extends Container
           if (box.format.side(TableFormat.Cell.LEFT)) g.fillRect(bx, by, stroke, bh);
           if (box.format.side(TableFormat.Cell.RIGHT)) g.fillRect(bx + bw - stroke, by, stroke, bh);
         }
+        if (tableGridlines) {
+          // View Gridlines: dotted guides on cell edges that have no printed border.
+          g.setColor(0x7fa7d9);
+          for (int i = 0; i < Math.max(bw, bh); i += 4) {
+            if (i < bw && !box.format.side(TableFormat.Cell.TOP)) g.fillRect(bx + i, by, 1, 1);
+            if (i < bw && !box.format.side(TableFormat.Cell.BOTTOM)) g.fillRect(bx + i, by + bh - 1, 1, 1);
+            if (i < bh && !box.format.side(TableFormat.Cell.LEFT)) g.fillRect(bx, by + i, 1, 1);
+            if (i < bh && !box.format.side(TableFormat.Cell.RIGHT)) g.fillRect(bx + bw - 1, by + i, 1, 1);
+          }
+        }
       }
       for (LayoutEngine.Frame frame : page.frames) paintFrame(g, frame, x, y, scale);
       if (!page.lineNumbers.isEmpty()) {
@@ -1207,7 +1229,7 @@ public final class EditorSurface extends Container
             revised = true;
             g.setFont(font(TextStyle.DEFAULT, zoom));
             g.setColor(paragraph.breakRevision.inserted() ? 0x1261a0 : 0xb32222);
-            g.drawString("¶", lx + Math.round(line.width * scale), ly);
+            g.drawString("\u00b6", lx + Math.round(line.width * scale), ly);
           }
         }
         if (revised) {

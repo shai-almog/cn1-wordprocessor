@@ -81,6 +81,7 @@ public final class Commands {
     new DrawingCommands().register(this);
     new DeveloperCommands().register(this);
     new LayoutDesignCommands().register(this);
+    new TableStyleCommands().register(this);
   }
 
   /** Bind automation to the host's print layout, independent of viewport reflow. */

@@ -500,31 +500,7 @@ final class CatalogNavigationCommands implements Commands.Extension {
 
   /** Built-in table styles as direct cell formatting (no linked style is kept). */
   private static void tableStyle(Session s, String style) {
-    Table t = table(s);
-    TableFormat f = t.format;
-    for (int r = 0; r < t.rows(); r++)
-      for (int c = 0; c < t.columns(); c++) {
-        TableFormat.Cell cell = f.cell(r, c);
-        TableFormat.Cell next;
-        if ("TableGrid".equals(style)) next = cell.background(0xffffff).borders(0, .5f, TableFormat.Cell.ALL);
-        else if ("PlainTable".equals(style))
-          next = cell.background(0xffffff).borders(0, 0, TableFormat.Cell.ALL);
-        else if ("GridTableLight".equals(style))
-          next = cell.background(0xffffff).borders(0xbfbfbf, .5f, TableFormat.Cell.ALL);
-        else if ("ListTable".equals(style))
-          next =
-              cell.background(r % 2 == 1 ? 0xf2f2f2 : 0xffffff)
-                  .borders(0x7f7f7f, .5f, TableFormat.Cell.TOP | TableFormat.Cell.BOTTOM);
-        else if ("GridTableAccent1".equals(style))
-          next =
-              cell.background(r == 0 ? 0x4472c4 : r % 2 == 0 ? 0xd9e2f3 : 0xffffff)
-                  .borders(0x8eaadb, .5f, TableFormat.Cell.ALL);
-        else
-          throw new IllegalArgumentException(
-              "Styles: TableGrid, PlainTable, GridTableLight, ListTable, GridTableAccent1");
-        f = f.cell(r, c, next);
-      }
-    s.formatTable(s.cellBlock(), "GridTableAccent1".equals(style) ? f.headerRows(Math.max(1, f.headerRows)) : f);
+    TableStyleCommands.applyStyle(s, style);
   }
 
   private interface Target {

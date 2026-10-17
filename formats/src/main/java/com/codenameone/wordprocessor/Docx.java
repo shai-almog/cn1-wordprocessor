@@ -747,6 +747,8 @@ static final char COLUMN_BREAK = '\u000B';
             for (int column = c; column < c + span.columns; column++)
               cellWidth += tableWidth * t.format.columnFraction(column);
             TableFormats.cellXml(b, t.format.cell(span.row, span.column), cellWidth);
+            String flow = t.format.direction(span.row, span.column);
+            if (!"lrTb".equals(flow)) b.append("<w:textDirection w:val=\"").append(flow).append("\"/>");
             if (span.columns > 1)
               b.append("<w:gridSpan w:val=\"").append(span.columns).append("\"/>");
             if (span.rows > 1)

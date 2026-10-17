@@ -115,6 +115,13 @@ public final class TableFormat {
   public final int headerRows;
   public final String title, description;
 
+  /** Table options: style (applied style name), look (comma list of {@link #LOOK}), rtl, directions. */
+  private final java.util.TreeMap<String, String> props;
+
+  public static final java.util.List<String> LOOK =
+      java.util.Arrays.asList("headerRow", "firstColumn", "lastRow", "lastColumn", "bandedRows", "bandedColumns");
+  public static final java.util.List<String> PROPS = java.util.Arrays.asList("style", "look", "rtl", "directions");
+
   public TableFormat(int rows, int columns) {
     if (rows < 1 || rows > 1000 || columns < 1 || columns > 100)
       throw new IllegalArgumentException("Invalid table size");
@@ -125,6 +132,7 @@ public final class TableFormat {
     headerRows = 0;
     title = description = "";
     sizing = Sizing.DEFAULT;
+    props = new java.util.TreeMap<String, String>();
     Arrays.fill(this.columns, 1);
     for (Cell[] row : cells) Arrays.fill(row, Cell.DEFAULT);
   }
@@ -136,7 +144,9 @@ public final class TableFormat {
       int headers,
       String title,
       String description,
-      Sizing sizing) {
+      Sizing sizing,
+      java.util.TreeMap<String, String> props) {
+    this.props = props;
     this.cells = cells;
     this.columns = columns;
     this.heights = heights;
@@ -148,7 +158,7 @@ public final class TableFormat {
 
   // Arrays are newly allocated by the package's geometry operations and never exposed.
   static TableFormat geometry(Cell[][] cells, float[] columns, Row[] heights, int headers) {
-    return new TableFormat(cells, columns, heights, headers, "", "", Sizing.DEFAULT);
+    return new TableFormat(cells, columns, heights, headers, "", "", Sizing.DEFAULT, new java.util.TreeMap<String, String>());
   }
 
   /** Empty or whitespace-only strings clear metadata; null is not accepted. */
@@ -156,12 +166,12 @@ public final class TableFormat {
     if (title == null || description == null)
       throw new IllegalArgumentException("Missing table alternative text");
     return new TableFormat(
-        cells, columns, heights, headerRows, alt(title), alt(description), sizing);
+        cells, columns, heights, headerRows, alt(title), alt(description), sizing, props);
   }
 
   public TableFormat sizing(Sizing value) {
     if (value == null) throw new IllegalArgumentException("Missing table sizing");
-    return new TableFormat(cells, columns, heights, headerRows, title, description, value);
+    return new TableFormat(cells, columns, heights, headerRows, title, description, value, props);
   }
 
   /** Preferred total width before content-driven adjustment. */
@@ -220,14 +230,14 @@ public final class TableFormat {
     Cell[][] copy = cells.clone();
     copy[row] = cells[row].clone();
     copy[row][column] = value;
-    return new TableFormat(copy, columns, heights, headerRows, title, description, sizing);
+    return new TableFormat(copy, columns, heights, headerRows, title, description, sizing, props);
   }
 
   public TableFormat column(int column, float weight) {
     if (!valid(weight, .000001f, 10000)) throw new IllegalArgumentException("Invalid column width");
     float[] copy = columns.clone();
     copy[column] = weight;
-    return new TableFormat(cells, copy, heights, headerRows, title, description, sizing);
+    return new TableFormat(cells, copy, heights, headerRows, title, description, sizing, props);
   }
 
   public TableFormat columnFraction(int column, float fraction) {
@@ -240,7 +250,7 @@ public final class TableFormat {
     for (int c = 0; c < columns(); c++)
       copy[c] =
           total * (c == column ? fraction : columnFraction(c) * (1 - fraction) / (1 - previous));
-    return new TableFormat(cells, copy, heights, headerRows, title, description, sizing);
+    return new TableFormat(cells, copy, heights, headerRows, title, description, sizing, props);
   }
 
   public TableFormat minHeight(int row, float height) {
@@ -251,7 +261,7 @@ public final class TableFormat {
     if (value == null) throw new IllegalArgumentException("Missing row formatting");
     Row[] copy = heights.clone();
     copy[row] = value;
-    return new TableFormat(cells, columns, copy, headerRows, title, description, sizing);
+    return new TableFormat(cells, columns, copy, headerRows, title, description, sizing, props);
   }
 
   public TableFormat distributeColumns() {
@@ -259,7 +269,7 @@ public final class TableFormat {
     float total = 0;
     for (float width : columns) total += width;
     Arrays.fill(equal, total / columns.length);
-    return new TableFormat(cells, equal, heights, headerRows, title, description, sizing);
+    return new TableFormat(cells, equal, heights, headerRows, title, description, sizing, props);
   }
 
   public TableFormat distributeRows() {
@@ -270,12 +280,12 @@ public final class TableFormat {
       equal[r] =
           new Row(
               height, "exact".equals(heights[r].rule) ? "exact" : "atLeast", heights[r].allowBreak);
-    return new TableFormat(cells, columns, equal, headerRows, title, description, sizing);
+    return new TableFormat(cells, columns, equal, headerRows, title, description, sizing, props);
   }
 
   public TableFormat headerRows(int count) {
     if (count < 0 || count > rows()) throw new IllegalArgumentException("Invalid header row count");
-    return new TableFormat(cells, columns, heights, count, title, description, sizing);
+    return new TableFormat(cells, columns, heights, count, title, description, sizing, props);
   }
 
   TableFormat change(boolean row, int at, boolean insert) {
@@ -296,7 +306,52 @@ public final class TableFormat {
     }
     int headers = headerRows;
     if (row && at < headers) headers += insert ? 1 : -1;
-    return out.headerRows(Math.min(headers, nr)).altText(title, description).sizing(sizing);
+    return out.headerRows(Math.min(headers, nr)).altText(title, description).sizing(sizing).props(props);
+  }
+
+  private TableFormat props(java.util.TreeMap<String, String> value) {
+    return new TableFormat(cells, columns, heights, headerRows, title, description, sizing, value);
+  }
+
+  public String prop(String key, String fallback) {
+    String v = props.get(key);
+    return v == null ? fallback : v;
+  }
+
+  public java.util.Map<String, String> props() {
+    return java.util.Collections.unmodifiableMap(props);
+  }
+
+  /** Sets or clears (empty) a table option from {@link #PROPS}. */
+  public TableFormat withProp(String key, String value) {
+    if (!PROPS.contains(key)) throw new IllegalArgumentException("Unknown table option: " + key);
+    if ("look".equals(key) && value != null)
+      for (String v : value.split(","))
+        if (!v.isEmpty() && !"none".equals(v) && !LOOK.contains(v)) throw new IllegalArgumentException("Unknown table look: " + v);
+    if (value != null && value.length() > 4096) throw new IllegalArgumentException("Table option too long");
+    java.util.TreeMap<String, String> next = new java.util.TreeMap<String, String>(props);
+    if (value == null || value.isEmpty() || "rtl".equals(key) && "false".equals(value)) next.remove(key);
+    else next.put(key, value);
+    return props(next);
+  }
+
+  /** Cell text direction (lrTb, tbRl or btLr) from the "directions" option, encoded r:c=dir;... */
+  public String direction(int row, int column) {
+    String key = row + ":" + column + "=";
+    for (String part : prop("directions", "").split(";"))
+      if (part.startsWith(key)) return part.substring(key.length());
+    return "lrTb";
+  }
+
+  public TableFormat direction(int row, int column, String dir) {
+    if (!"lrTb".equals(dir) && !"tbRl".equals(dir) && !"btLr".equals(dir))
+      throw new IllegalArgumentException("Text direction is lrTb, tbRl or btLr");
+    StringBuilder b = new StringBuilder();
+    String key = row + ":" + column + "=";
+    for (String part : prop("directions", "").split(";"))
+      if (!part.isEmpty() && !part.startsWith(key)) b.append(b.length() == 0 ? "" : ";").append(part);
+    if (!"lrTb".equals(dir)) b.append(b.length() == 0 ? "" : ";").append(key).append(dir);
+    return withProp("directions", b.toString());
   }
 
   TableFormat reorder(int[] order) {
@@ -306,7 +361,7 @@ public final class TableFormat {
       copy[r] = cells[order[r]];
       h[r] = heights[order[r]];
     }
-    return new TableFormat(copy, columns, h, headerRows, title, description, sizing);
+    return new TableFormat(copy, columns, h, headerRows, title, description, sizing, props);
   }
 
   private static int original(int n, int at, boolean insert) {
