@@ -293,6 +293,10 @@ final class OfficeTheme {
       root.getUnselectedStyle(), root.getSelectedStyle(), root.getPressedStyle(),
       root.getDisabledStyle()
     };
+    if (nativeChrome(root, styles)) {
+      recurse(root);
+      return;
+    }
     // [light fg, light bg, applied fg, applied bg] per style. A color that differs from what
     // this pass applied was set by the app since (a toggle, hover, new state) and becomes the
     // new light original.
@@ -321,9 +325,34 @@ final class OfficeTheme {
     }
     if (root instanceof ComboBox && ((ComboBox) root).getRenderer() instanceof Component)
       applyAppearance((Component) ((ComboBox) root).getRenderer());
+    recurse(root);
+  }
+
+  private static void recurse(Component root) {
     if (root instanceof EditorSurface || !(root instanceof Container)) return;
     Container c = (Container) root;
     for (int i = 0; i < c.getComponentCount(); i++) applyAppearance(c.getComponentAt(i));
+  }
+
+  /**
+   * The native theme paints the toolbar and status bar with images and gradients and
+   * re-themes them itself on appearance changes, which a color mapping cannot follow. Paint
+   * them as flat Office surfaces in every appearance instead.
+   */
+  private static boolean nativeChrome(Component c, Style[] styles) {
+    String id = c.getUIID();
+    if (!"TitleArea".equals(id) && !"Toolbar".equals(id) && !"StatusBar".equals(id)
+        && !"Title".equals(id) && !"TitleCommand".equals(id) && !"BackCommand".equals(id))
+      return false;
+    for (Style st : styles) {
+      st.setBgImage(null);
+      st.setBackgroundType(Style.BACKGROUND_NONE);
+      st.setBgTransparency(255);
+      st.setBorder(Border.createEmpty());
+      st.setBgColor(chrome(0xf7f7f7));
+      st.setFgColor(chrome(INK));
+    }
+    return true;
   }
 
   /** Native popups (combo lists, menus) follow the same appearance as the chrome. */
