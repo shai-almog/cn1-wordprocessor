@@ -46,6 +46,21 @@ final class OfficeCommands implements Commands.Extension {
   private static final Map<Session, List<Version>> VERSIONS = new WeakHashMap<Session, List<Version>>();
   private static final Map<Session, List<Object>> RECORDING = new WeakHashMap<Session, List<Object>>();
   private static final Map<Session, int[]> READING = new WeakHashMap<Session, int[]>();
+  private static final Map<Session, String> PASSWORDS = new WeakHashMap<Session, String>();
+
+  /** The password Word documents saved from this session are encrypted with, or null. */
+  public static String password(Session s) {
+    synchronized (PASSWORDS) {
+      return PASSWORDS.get(s);
+    }
+  }
+
+  public static void password(Session s, String password) {
+    synchronized (PASSWORDS) {
+      if (password == null || password.isEmpty()) PASSWORDS.remove(s);
+      else PASSWORDS.put(s, password);
+    }
+  }
 
   public static void research(Research provider) {
     research = provider;
@@ -97,6 +112,17 @@ final class OfficeCommands implements Commands.Extension {
 
   public void register(final Commands c) {
     registerDropCap(c);
+    c.register(
+        "file.encrypt",
+        "Encrypt with Password: Word documents saved from now on are AES-256 encrypted (ECMA-376 agile); an empty password removes it",
+        "password?:string",
+        false,
+        (s, a) -> {
+          String pw = a.containsKey("password") ? Commands.str(a, "password") : "";
+          if (pw.length() > 255) throw new IllegalArgumentException("Passwords are at most 255 characters");
+          password(s, pw);
+          return Json.object("encrypted", password(s) != null);
+        });
     c.register(
         "file.options",
         "Word Options: list all, or set one option (user name, units, AutoSave, numerals, proofing, AutoCorrect)",
@@ -185,6 +211,7 @@ final class OfficeCommands implements Commands.Extension {
               ByteArrayOutputStream out = new ByteArrayOutputStream();
               Docx.write(s.document(), out);
               data = out.toByteArray();
+              if (password(s) != null) data = OfficeCrypto.encrypt(data, password(s));
               mime = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
             } else throw new IllegalArgumentException("Share format is docx or pdf");
           } catch (IOException e) {

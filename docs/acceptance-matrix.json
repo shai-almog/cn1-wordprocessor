@@ -10,8 +10,8 @@
   "not-applicable"
  ],
  "counts": {
-  "unverified": 486,
-  "missing": 1,
+  "unverified": 487,
+  "missing": 0,
   "partial": 0,
   "certified": 0,
   "reference-stub": 15,
@@ -6024,12 +6024,12 @@
    "group": "Protection",
    "feature": "Encrypt with Password",
    "command": "file.encrypt",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "file.encrypt",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "file.encrypt (Encrypt with Password)"
+   "notes": "file.encrypt (Encrypt with Password) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Tools",

@@ -5795,8 +5795,15 @@ public class WordProcessor {
                 () -> {
                   try {
                     Document document;
+                    String password = null;
                     if (name.toLowerCase().endsWith(".docx")) {
-                      Docx.Opened opened = Docx.read(new ByteArrayInputStream(bytes));
+                      byte[] plain = bytes;
+                      if (OfficeCrypto.isEncrypted(bytes)) {
+                        password = askPassword(name);
+                        if (password == null) return;
+                        plain = OfficeCrypto.decrypt(bytes, password);
+                      }
+                      Docx.Opened opened = Docx.read(new ByteArrayInputStream(plain));
                       if (!opened.warnings.isEmpty()
                           && !showDialog(
                               "Compatibility report",
@@ -5826,6 +5833,8 @@ public class WordProcessor {
                     }
                     forgetFile();
                     session.loadDocument(document);
+                    // An encrypted original stays encrypted when saved back.
+                    OfficeCommands.password(session, password);
                     fileDocument = document;
                     if (name.toLowerCase().endsWith(".cn1doc")
                         || name.toLowerCase().endsWith(".docx")) {
@@ -5843,6 +5852,13 @@ public class WordProcessor {
 
   private void save(String format) {
     save(format, true, false);
+  }
+
+  /** Prompts for an encrypted document's password; null when cancelled. */
+  private String askPassword(String name) {
+    TextField field = new TextField("", "Password", 20, TextArea.PASSWORD);
+    field.setAccessibilityText("Password");
+    return showDialog("\"" + name + "\" is protected", field, "Open", "Cancel") ? field.getText() : null;
   }
 
   private void save(String format, boolean asNew, boolean workingFile) {
@@ -5951,6 +5967,8 @@ public class WordProcessor {
               ByteArrayOutputStream out = new ByteArrayOutputStream();
               Docx.write(snapshot, source, out, allow);
               bytes = out.toByteArray();
+              String password = OfficeCommands.password(session);
+              if (password != null) bytes = OfficeCrypto.encrypt(bytes, password);
             } else if ("pdf".equals(format))
               bytes = PdfExporter.write(snapshot.page, editor.printLayout(), DocumentFonts.PDF);
             else if ("cn1doc".equals(format)) bytes = ProjectFile.write(snapshot, source);

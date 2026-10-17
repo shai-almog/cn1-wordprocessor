@@ -426,4 +426,6 @@ Limits:
   - Combine accepts both copies' pending changes before comparing, so previously tracked revisions become the base text.
   - Read Aloud walks and selects sentences at a rate; Codename One has no speech API, so audio needs a native interface.
   - Editor: Close Header and Footer, New Window (a second synchronized view pane sharing one selection; Codename One has no multi-window API), Export page as PNG, the Custom ribbon tab with hide/show tabs, and custom keyboard shortcuts installed as desktop menu shortcuts.
-- Matrix: 486 unverified, 1 missing (`file.encrypt`, in progress), 0 partial.
+- Matrix: 487 unverified, 0 missing, 0 partial.
+
+- Encryption: `file.encrypt` saves and shares Word documents with ECMA-376 agile encryption (AES-256-CBC, SHA-512, 100000 spins, HMAC integrity). Encrypted .docx files prompt for a password on open and stay encrypted when saved back. Pure Java (SHA-512, AES, HMAC, compound file). Not yet cross-checked by Word or msoffcrypto. Randomness is seeded `java.util.Random` mixed through SHA-512, which is weaker than OS entropy. Reading supports only SHA-512 agile files with the password key encryptor (no SHA-1/SHA-256, RC4 or Standard encryption).

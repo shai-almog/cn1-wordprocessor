@@ -1288,6 +1288,19 @@ public final class EditorSurface extends Container
               Math.max(1, Math.round((offsetX(line, b) - offsetX(line, a)) * scale)),
               Math.round(line.height * scale));
         }
+        if (!exporting && line.block >= 0 && AppOptions.flag("checkSpelling")) {
+          // Proofing marks: red wavy for spelling, blue for grammar.
+          int base = ly + Math.round(line.height * scale) - 2;
+          for (Proofing.Issue issue : proofIssues(lineParagraph(line))) {
+            if ("grammar".equals(issue.kind) && !AppOptions.flag("checkGrammar")) continue;
+            int a = Math.max(issue.start, line.start), b = Math.min(issue.end, line.end);
+            if (a >= b) continue;
+            int x0 = lx + Math.round(offsetX(line, a) * scale), x1 = lx + Math.round(offsetX(line, b) * scale);
+            g.setColor("spelling".equals(issue.kind) ? 0xd13438 : 0x2b579a);
+            for (int wx = x0; wx < x1; wx += 2)
+              g.drawLine(wx, base + (wx - x0) / 2 % 2, Math.min(x1, wx + 2), base + ((wx - x0) / 2 + 1) % 2);
+          }
+        }
         boolean revised = false;
         for (LayoutEngine.Span span : line.spans)
           revised |= span.style.revision != null || span.style.formatRevision != null;
@@ -1493,6 +1506,33 @@ public final class EditorSurface extends Container
     for (int i = 0; i < d.blocks.size(); i++)
       if (d.paragraph(i).id.equals(line.paragraphId)) return i;
     return -1;
+  }
+
+  private DocumentProperties proofSource;
+
+  private Proofing.Options proofOptions;
+
+  private final Map<Paragraph, java.util.List<Proofing.Issue>> proofCache =
+      new LinkedHashMap<Paragraph, java.util.List<Proofing.Issue>>(64, .75f, true) {
+        protected boolean removeEldestEntry(Map.Entry<Paragraph, java.util.List<Proofing.Issue>> e) {
+          return size() > 1024;
+        }
+      };
+
+  /** Spelling and grammar issues of a paragraph, checked once per paragraph value. */
+  private java.util.List<Proofing.Issue> proofIssues(Paragraph p) {
+    DocumentProperties props = session.document().properties;
+    if (props != proofSource) {
+      proofSource = props;
+      proofOptions = Proofing.Options.of(props);
+      proofCache.clear();
+    }
+    java.util.List<Proofing.Issue> issues = proofCache.get(p);
+    if (issues == null) {
+      issues = Proofing.check(p.text.plainText(), proofOptions);
+      proofCache.put(p, issues);
+    }
+    return issues;
   }
 
   private Paragraph lineParagraph(LayoutEngine.Line line) {

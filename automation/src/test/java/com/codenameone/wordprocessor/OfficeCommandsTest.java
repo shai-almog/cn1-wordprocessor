@@ -208,4 +208,17 @@ public class OfficeCommandsTest {
     assertTrue((Integer) share.get("bytes") > 100);
     assertEquals(Boolean.FALSE, ((Map<?, ?>) run(s, "review.comments", "value", false)).get("shown"));
   }
+
+  @Test
+  public void encryptedShareDecryptsWithThePassword() throws Exception {
+    Session s = new Session(Document.empty());
+    s.replace("secret text");
+    assertEquals(Boolean.TRUE, ((Map<?, ?>) run(s, "file.encrypt", "password", "pa55")).get("encrypted"));
+    byte[] data = com.codename1.util.Base64.decode(((String) ((Map<?, ?>) run(s, "file.share")).get("base64")).getBytes("UTF-8"));
+    assertTrue(OfficeCrypto.isEncrypted(data));
+    Document d = Docx.read(new java.io.ByteArrayInputStream(OfficeCrypto.decrypt(data, "pa55"))).document;
+    assertEquals("secret text", d.plainText().trim());
+    run(s, "file.encrypt", "password", "");
+    assertFalse(OfficeCrypto.isEncrypted(com.codename1.util.Base64.decode(((String) ((Map<?, ?>) run(s, "file.share")).get("base64")).getBytes("UTF-8"))));
+  }
 }
