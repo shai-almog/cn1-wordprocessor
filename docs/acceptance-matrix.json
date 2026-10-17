@@ -10,8 +10,8 @@
   "not-applicable"
  ],
  "counts": {
-  "unverified": 140,
-  "missing": 334,
+  "unverified": 191,
+  "missing": 283,
   "partial": 13,
   "certified": 0,
   "reference-stub": 15,
@@ -360,7 +360,7 @@
    "group": "Clipboard",
    "feature": "Paste",
    "command": "edit.paste",
-   "appCommand": null,
+   "appCommand": "edit.paste",
    "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
@@ -408,7 +408,7 @@
    "group": "Clipboard",
    "feature": "Cut",
    "command": "edit.cut",
-   "appCommand": null,
+   "appCommand": "edit.cut",
    "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
@@ -420,7 +420,7 @@
    "group": "Clipboard",
    "feature": "Copy",
    "command": "edit.copy",
-   "appCommand": null,
+   "appCommand": "edit.copy",
    "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
@@ -480,7 +480,7 @@
    "group": "Font",
    "feature": "Font",
    "command": "format.font",
-   "appCommand": null,
+   "appCommand": "format.font",
    "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
@@ -492,36 +492,36 @@
    "group": "Font",
    "feature": "Font Size",
    "command": "format.size",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "format.size",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "format.size (Font Size)"
+   "notes": "format.size (Font Size) Catalog id registered (CatalogCommands/runtime registry); needs native evidence."
   },
   {
    "tab": "Home",
    "group": "Font",
    "feature": "Increase Font Size",
    "command": "format.growFont",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "format.growFont",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "format.growFont (Increase Font Size)"
+   "notes": "format.growFont (Increase Font Size) Catalog id registered (CatalogCommands/runtime registry); needs native evidence."
   },
   {
    "tab": "Home",
    "group": "Font",
    "feature": "Decrease Font Size",
    "command": "format.shrinkFont",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "format.shrinkFont",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "format.shrinkFont (Decrease Font Size)"
+   "notes": "format.shrinkFont (Decrease Font Size) Catalog id registered (CatalogCommands/runtime registry); needs native evidence."
   },
   {
    "tab": "Home",
@@ -540,19 +540,19 @@
    "group": "Font",
    "feature": "Clear All Formatting",
    "command": "format.clear",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "format.clear",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "format.clear (Clear All Formatting)"
+   "notes": "format.clear (Clear All Formatting) Catalog id registered (CatalogCommands/runtime registry); needs native evidence."
   },
   {
    "tab": "Home",
    "group": "Font",
    "feature": "Bold",
    "command": "format.bold",
-   "appCommand": null,
+   "appCommand": "format.bold",
    "status": "partial",
    "referenceBehavior": "implemented",
    "missing": [],
@@ -564,7 +564,7 @@
    "group": "Font",
    "feature": "Italic",
    "command": "format.italic",
-   "appCommand": null,
+   "appCommand": "format.italic",
    "status": "partial",
    "referenceBehavior": "implemented",
    "missing": [],
@@ -576,7 +576,7 @@
    "group": "Font",
    "feature": "Underline",
    "command": "format.underline",
-   "appCommand": null,
+   "appCommand": "format.underline",
    "status": "partial",
    "referenceBehavior": "implemented",
    "missing": [],
@@ -588,7 +588,7 @@
    "group": "Font",
    "feature": "Double Underline",
    "command": "format.doubleUnderline",
-   "appCommand": null,
+   "appCommand": "format.doubleUnderline",
    "status": "partial",
    "referenceBehavior": "implemented",
    "missing": [],
@@ -600,7 +600,7 @@
    "group": "Font",
    "feature": "Strikethrough",
    "command": "format.strikethrough",
-   "appCommand": null,
+   "appCommand": "format.strikethrough",
    "status": "partial",
    "referenceBehavior": "implemented",
    "missing": [],
@@ -612,7 +612,7 @@
    "group": "Font",
    "feature": "Subscript",
    "command": "format.subscript",
-   "appCommand": null,
+   "appCommand": "format.subscript",
    "status": "partial",
    "referenceBehavior": "implemented",
    "missing": [],
@@ -624,7 +624,7 @@
    "group": "Font",
    "feature": "Superscript",
    "command": "format.superscript",
-   "appCommand": null,
+   "appCommand": "format.superscript",
    "status": "partial",
    "referenceBehavior": "implemented",
    "missing": [],
@@ -636,7 +636,7 @@
    "group": "Font",
    "feature": "Text Effects Outline",
    "command": "format.outline",
-   "appCommand": null,
+   "appCommand": "format.outline",
    "status": "partial",
    "referenceBehavior": "implemented",
    "missing": [],
@@ -648,7 +648,7 @@
    "group": "Font",
    "feature": "Text Effects Shadow",
    "command": "format.shadow",
-   "appCommand": null,
+   "appCommand": "format.shadow",
    "status": "partial",
    "referenceBehavior": "implemented",
    "missing": [],
@@ -672,7 +672,7 @@
    "group": "Font",
    "feature": "Text Highlight Color",
    "command": "format.highlight",
-   "appCommand": null,
+   "appCommand": "format.highlight",
    "status": "partial",
    "referenceBehavior": "implemented",
    "missing": [],
@@ -684,7 +684,7 @@
    "group": "Font",
    "feature": "Font Color",
    "command": "format.color",
-   "appCommand": null,
+   "appCommand": "format.color",
    "status": "partial",
    "referenceBehavior": "implemented",
    "missing": [],
@@ -720,55 +720,55 @@
    "group": "Font",
    "feature": "Double Strikethrough",
    "command": "format.doubleStrikethrough",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "format.doubleStrikethrough",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "format.doubleStrikethrough (Double Strikethrough)"
+   "notes": "format.doubleStrikethrough (Double Strikethrough) Catalog id registered (CatalogCommands/runtime registry); needs native evidence."
   },
   {
    "tab": "Home",
    "group": "Font",
    "feature": "Small Caps",
    "command": "format.smallCaps",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "format.smallCaps",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "format.smallCaps (Small Caps)"
+   "notes": "format.smallCaps (Small Caps) Catalog id registered (CatalogCommands/runtime registry); needs native evidence."
   },
   {
    "tab": "Home",
    "group": "Font",
    "feature": "All Caps",
    "command": "format.allCaps",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "format.allCaps",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "format.allCaps (All Caps)"
+   "notes": "format.allCaps (All Caps) Catalog id registered (CatalogCommands/runtime registry); needs native evidence."
   },
   {
    "tab": "Home",
    "group": "Font",
    "feature": "Hidden",
    "command": "format.hidden",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "format.hidden",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "format.hidden (Hidden)"
+   "notes": "format.hidden (Hidden) Catalog id registered (CatalogCommands/runtime registry); needs native evidence."
   },
   {
    "tab": "Home",
    "group": "Font",
    "feature": "Emboss",
    "command": "format.emboss",
-   "appCommand": null,
+   "appCommand": "format.emboss",
    "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
@@ -780,7 +780,7 @@
    "group": "Font",
    "feature": "Engrave",
    "command": "format.engrave",
-   "appCommand": null,
+   "appCommand": "format.engrave",
    "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
@@ -792,36 +792,36 @@
    "group": "Font",
    "feature": "Character Spacing",
    "command": "format.spacing",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "format.spacing",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "format.spacing (Character Spacing)"
+   "notes": "format.spacing (Character Spacing) Catalog id registered (CatalogCommands/runtime registry); needs native evidence."
   },
   {
    "tab": "Home",
    "group": "Font",
    "feature": "Character Scale",
    "command": "format.scale",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "format.scale",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "format.scale (Character Scale)"
+   "notes": "format.scale (Character Scale) Catalog id registered (CatalogCommands/runtime registry); needs native evidence."
   },
   {
    "tab": "Home",
    "group": "Font",
    "feature": "Character Position",
    "command": "format.position",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "format.position",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "format.position (Character Position)"
+   "notes": "format.position (Character Position) Catalog id registered (CatalogCommands/runtime registry); needs native evidence."
   },
   {
    "tab": "Home",
@@ -864,7 +864,7 @@
    "group": "Paragraph",
    "feature": "Bullets",
    "command": "para.bullets",
-   "appCommand": null,
+   "appCommand": "para.bullets",
    "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
@@ -876,7 +876,7 @@
    "group": "Paragraph",
    "feature": "Numbering",
    "command": "para.numbering",
-   "appCommand": null,
+   "appCommand": "para.numbering",
    "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
@@ -912,24 +912,24 @@
    "group": "Paragraph",
    "feature": "Change List Level",
    "command": "para.listLevel",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "para.listLevel",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "para.listLevel (Change List Level)"
+   "notes": "para.listLevel (Change List Level) Catalog id registered (CatalogCommands/runtime registry); needs native evidence."
   },
   {
    "tab": "Home",
    "group": "Paragraph",
    "feature": "Restart Numbering",
    "command": "para.restartNumbering",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "para.restartNumbering",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "para.restartNumbering (Restart at 1)"
+   "notes": "para.restartNumbering (Restart at 1) Catalog id registered (CatalogCommands/runtime registry); needs native evidence."
   },
   {
    "tab": "Home",
@@ -960,36 +960,36 @@
    "group": "Paragraph",
    "feature": "Set Numbering Value",
    "command": "para.setNumberingValue",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "para.setNumberingValue",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "para.setNumberingValue (Set Numbering Value)"
+   "notes": "para.setNumberingValue (Set Numbering Value) Catalog id registered (CatalogCommands/runtime registry); needs native evidence."
   },
   {
    "tab": "Home",
    "group": "Paragraph",
    "feature": "Decrease Indent",
    "command": "para.outdent",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "para.outdent",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "para.outdent (Decrease Indent)"
+   "notes": "para.outdent (Decrease Indent) Catalog id registered (CatalogCommands/runtime registry); needs native evidence."
   },
   {
    "tab": "Home",
    "group": "Paragraph",
    "feature": "Increase Indent",
    "command": "para.indent",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "para.indent",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "para.indent (Increase Indent)"
+   "notes": "para.indent (Increase Indent) Catalog id registered (CatalogCommands/runtime registry); needs native evidence."
   },
   {
    "tab": "Home",
@@ -1020,19 +1020,19 @@
    "group": "Paragraph",
    "feature": "Align Left",
    "command": "para.alignLeft",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "para.alignLeft",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "para.alignLeft (Align Left)"
+   "notes": "para.alignLeft (Align Left) Catalog id registered (CatalogCommands/runtime registry); needs native evidence."
   },
   {
    "tab": "Home",
    "group": "Paragraph",
    "feature": "Center",
    "command": "para.alignCenter",
-   "appCommand": null,
+   "appCommand": "para.alignCenter",
    "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
@@ -1044,19 +1044,19 @@
    "group": "Paragraph",
    "feature": "Align Right",
    "command": "para.alignRight",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "para.alignRight",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "para.alignRight (Align Right)"
+   "notes": "para.alignRight (Align Right) Catalog id registered (CatalogCommands/runtime registry); needs native evidence."
   },
   {
    "tab": "Home",
    "group": "Paragraph",
    "feature": "Justify",
    "command": "para.justify",
-   "appCommand": null,
+   "appCommand": "para.justify",
    "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
@@ -1080,36 +1080,36 @@
    "group": "Paragraph",
    "feature": "Line Spacing",
    "command": "para.lineSpacing",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "para.lineSpacing",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "para.lineSpacing (Line and Paragraph Spacing)"
+   "notes": "para.lineSpacing (Line and Paragraph Spacing) Catalog id registered (CatalogCommands/runtime registry); needs native evidence."
   },
   {
    "tab": "Home",
    "group": "Paragraph",
    "feature": "Add Space Before",
    "command": "para.addSpaceBefore",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "para.addSpaceBefore",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "para.addSpaceBefore (Add Space Before Paragraph)"
+   "notes": "para.addSpaceBefore (Add Space Before Paragraph) Catalog id registered (CatalogCommands/runtime registry); needs native evidence."
   },
   {
    "tab": "Home",
    "group": "Paragraph",
    "feature": "Remove Space After",
    "command": "para.removeSpaceAfter",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "para.removeSpaceAfter",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "para.removeSpaceAfter (Remove Space After Paragraph)"
+   "notes": "para.removeSpaceAfter (Remove Space After Paragraph) Catalog id registered (CatalogCommands/runtime registry); needs native evidence."
   },
   {
    "tab": "Home",
@@ -1176,7 +1176,7 @@
    "group": "Paragraph",
    "feature": "Keep with Next",
    "command": "para.keepNext",
-   "appCommand": null,
+   "appCommand": "para.keepNext",
    "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
@@ -1188,60 +1188,60 @@
    "group": "Paragraph",
    "feature": "Keep Lines Together",
    "command": "para.keepLines",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "para.keepLines",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "para.keepLines (Keep Lines Together)"
+   "notes": "para.keepLines (Keep Lines Together) Catalog id registered (CatalogCommands/runtime registry); needs native evidence."
   },
   {
    "tab": "Home",
    "group": "Paragraph",
    "feature": "Page Break Before",
    "command": "para.pageBreakBefore",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "para.pageBreakBefore",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "para.pageBreakBefore (Page Break Before)"
+   "notes": "para.pageBreakBefore (Page Break Before) Catalog id registered (CatalogCommands/runtime registry); needs native evidence."
   },
   {
    "tab": "Home",
    "group": "Paragraph",
    "feature": "Widow/Orphan Control",
    "command": "para.widowControl",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "para.widowControl",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "para.widowControl (Widow/Orphan Control)"
+   "notes": "para.widowControl (Widow/Orphan Control) Catalog id registered (CatalogCommands/runtime registry); needs native evidence."
   },
   {
    "tab": "Home",
    "group": "Paragraph",
    "feature": "Outline Level",
    "command": "para.outlineLevel",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "para.outlineLevel",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "para.outlineLevel (Outline Level)"
+   "notes": "para.outlineLevel (Outline Level) Catalog id registered (CatalogCommands/runtime registry); needs native evidence."
   },
   {
    "tab": "Home",
    "group": "Paragraph",
    "feature": "Hanging Indent",
    "command": "para.hangingIndent",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "para.hangingIndent",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "para.hangingIndent (Hanging Indent)"
+   "notes": "para.hangingIndent (Hanging Indent) Catalog id registered (CatalogCommands/runtime registry); needs native evidence."
   },
   {
    "tab": "Home",
@@ -1284,19 +1284,19 @@
    "group": "Styles",
    "feature": "Styles Gallery",
    "command": "para.style",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "para.style",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "para.style (Apply Style)"
+   "notes": "para.style (Apply Style) Catalog id registered (CatalogCommands/runtime registry); needs native evidence."
   },
   {
    "tab": "Home",
    "group": "Styles",
    "feature": "Normal",
    "command": "para.normal",
-   "appCommand": null,
+   "appCommand": "para.normal",
    "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
@@ -1308,36 +1308,36 @@
    "group": "Styles",
    "feature": "Heading 1",
    "command": "para.heading1",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "para.heading1",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "para.heading1 (Heading 1)"
+   "notes": "para.heading1 (Heading 1) Catalog id registered (CatalogCommands/runtime registry); needs native evidence."
   },
   {
    "tab": "Home",
    "group": "Styles",
    "feature": "Heading 2",
    "command": "para.heading2",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "para.heading2",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "para.heading2 (Heading 2)"
+   "notes": "para.heading2 (Heading 2) Catalog id registered (CatalogCommands/runtime registry); needs native evidence."
   },
   {
    "tab": "Home",
    "group": "Styles",
    "feature": "Heading 3",
    "command": "para.heading3",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "para.heading3",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "para.heading3 (Heading 3)"
+   "notes": "para.heading3 (Heading 3) Catalog id registered (CatalogCommands/runtime registry); needs native evidence."
   },
   {
    "tab": "Home",
@@ -1536,12 +1536,12 @@
    "group": "Editing",
    "feature": "Select All",
    "command": "select.all",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "select.all",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "select.all (Select All)"
+   "notes": "select.all (Select All) Catalog id registered (CatalogCommands/runtime registry); needs native evidence."
   },
   {
    "tab": "Home",
@@ -1620,7 +1620,7 @@
    "group": "Pages",
    "feature": "Page Break",
    "command": "insert.pageBreak",
-   "appCommand": null,
+   "appCommand": "insert.pageBreak",
    "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
@@ -1873,11 +1873,11 @@
    "feature": "Comment",
    "command": "review.newComment",
    "appCommand": null,
-   "status": "unverified",
+   "status": "missing",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "UI label \"Comment\" in WordProcessor"
+   "notes": "review.newComment (New Comment)"
   },
   {
    "tab": "Insert",
@@ -2196,36 +2196,36 @@
    "group": "Symbols",
    "feature": "Nonbreaking Space",
    "command": "text.nbsp",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "text.nbsp",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "text.nbsp (Nonbreaking Space)"
+   "notes": "text.nbsp (Nonbreaking Space) Catalog id registered (CatalogCommands/runtime registry); needs native evidence."
   },
   {
    "tab": "Insert",
    "group": "Symbols",
    "feature": "Nonbreaking Hyphen",
    "command": "text.nbHyphen",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "text.nbHyphen",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "text.nbHyphen (Nonbreaking Hyphen)"
+   "notes": "text.nbHyphen (Nonbreaking Hyphen) Catalog id registered (CatalogCommands/runtime registry); needs native evidence."
   },
   {
    "tab": "Insert",
    "group": "Symbols",
    "feature": "Optional Hyphen",
    "command": "text.optionalHyphen",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "text.optionalHyphen",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "text.optionalHyphen (Optional Hyphen)"
+   "notes": "text.optionalHyphen (Optional Hyphen) Catalog id registered (CatalogCommands/runtime registry); needs native evidence."
   },
   {
    "tab": "Draw",
@@ -2520,7 +2520,7 @@
    "group": "Page Setup",
    "feature": "Columns",
    "command": "layout.columns",
-   "appCommand": null,
+   "appCommand": "layout.columns",
    "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
@@ -2628,24 +2628,24 @@
    "group": "Paragraph",
    "feature": "Indent",
    "command": "para.indents",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "para.indents",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "para.indents (Indents)"
+   "notes": "para.indents (Indents) Catalog id registered (CatalogCommands/runtime registry); needs native evidence."
   },
   {
    "tab": "Layout",
    "group": "Paragraph",
    "feature": "Spacing",
    "command": "para.spacing",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "para.spacing",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "para.spacing (Paragraph Spacing)"
+   "notes": "para.spacing (Paragraph Spacing) Catalog id registered (CatalogCommands/runtime registry); needs native evidence."
   },
   {
    "tab": "Layout",
@@ -2796,7 +2796,7 @@
    "group": "Footnotes",
    "feature": "Insert Footnote",
    "command": "references.footnote",
-   "appCommand": null,
+   "appCommand": "references.footnote",
    "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
@@ -2808,7 +2808,7 @@
    "group": "Footnotes",
    "feature": "Insert Endnote",
    "command": "references.endnote",
-   "appCommand": null,
+   "appCommand": "references.endnote",
    "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
@@ -4200,7 +4200,7 @@
    "group": "Table",
    "feature": "Select Table",
    "command": "table.selectTable",
-   "appCommand": null,
+   "appCommand": "table.selectTable",
    "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
@@ -4212,7 +4212,7 @@
    "group": "Table",
    "feature": "Select Row",
    "command": "table.selectRow",
-   "appCommand": null,
+   "appCommand": "table.selectRow",
    "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
@@ -4224,7 +4224,7 @@
    "group": "Table",
    "feature": "Select Column",
    "command": "table.selectColumn",
-   "appCommand": null,
+   "appCommand": "table.selectColumn",
    "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
@@ -4236,7 +4236,7 @@
    "group": "Table",
    "feature": "Select Cell",
    "command": "table.selectCell",
-   "appCommand": null,
+   "appCommand": "table.selectCell",
    "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
@@ -4332,43 +4332,43 @@
    "group": "Rows & Columns",
    "feature": "Delete Rows",
    "command": "table.deleteRow",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "table.deleteRow",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "table.deleteRow (Delete Rows)"
+   "notes": "table.deleteRow (Delete Rows) Catalog id registered (CatalogCommands/runtime registry); needs native evidence."
   },
   {
    "tab": "Table Layout",
    "group": "Rows & Columns",
    "feature": "Delete Columns",
    "command": "table.deleteColumn",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "table.deleteColumn",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "table.deleteColumn (Delete Columns)"
+   "notes": "table.deleteColumn (Delete Columns) Catalog id registered (CatalogCommands/runtime registry); needs native evidence."
   },
   {
    "tab": "Table Layout",
    "group": "Rows & Columns",
    "feature": "Delete Table",
    "command": "table.deleteTable",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "table.deleteTable",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "table.deleteTable (Delete Table)"
+   "notes": "table.deleteTable (Delete Table) Catalog id registered (CatalogCommands/runtime registry); needs native evidence."
   },
   {
    "tab": "Table Layout",
    "group": "Rows & Columns",
    "feature": "Insert Above",
    "command": "table.insertRowAbove",
-   "appCommand": null,
+   "appCommand": "table.insertRowAbove",
    "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
@@ -4380,7 +4380,7 @@
    "group": "Rows & Columns",
    "feature": "Insert Below",
    "command": "table.insertRowBelow",
-   "appCommand": null,
+   "appCommand": "table.insertRowBelow",
    "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
@@ -4392,7 +4392,7 @@
    "group": "Rows & Columns",
    "feature": "Insert Left",
    "command": "table.insertColumnLeft",
-   "appCommand": null,
+   "appCommand": "table.insertColumnLeft",
    "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
@@ -4404,7 +4404,7 @@
    "group": "Rows & Columns",
    "feature": "Insert Right",
    "command": "table.insertColumnRight",
-   "appCommand": null,
+   "appCommand": "table.insertColumnRight",
    "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
@@ -4681,11 +4681,11 @@
    "feature": "Fraction",
    "command": "equation.insertStructure",
    "appCommand": null,
-   "status": "missing",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "equation.insertStructure (Insert Structure)"
+   "notes": "UI label \"Matrix\" in WordProcessor"
   },
   {
    "tab": "Equation",
@@ -4693,11 +4693,11 @@
    "feature": "Script",
    "command": "equation.insertStructure",
    "appCommand": null,
-   "status": "missing",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "equation.insertStructure (Insert Structure)"
+   "notes": "UI label \"Matrix\" in WordProcessor"
   },
   {
    "tab": "Equation",
@@ -4705,11 +4705,11 @@
    "feature": "Radical",
    "command": "equation.insertStructure",
    "appCommand": null,
-   "status": "missing",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "equation.insertStructure (Insert Structure)"
+   "notes": "UI label \"Matrix\" in WordProcessor"
   },
   {
    "tab": "Equation",
@@ -4717,11 +4717,11 @@
    "feature": "Integral",
    "command": "equation.insertStructure",
    "appCommand": null,
-   "status": "missing",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "equation.insertStructure (Insert Structure)"
+   "notes": "UI label \"Matrix\" in WordProcessor"
   },
   {
    "tab": "Equation",
@@ -4729,11 +4729,11 @@
    "feature": "Large Operator",
    "command": "equation.insertStructure",
    "appCommand": null,
-   "status": "missing",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "equation.insertStructure (Insert Structure)"
+   "notes": "UI label \"Matrix\" in WordProcessor"
   },
   {
    "tab": "Equation",
@@ -4741,11 +4741,11 @@
    "feature": "Bracket",
    "command": "equation.insertStructure",
    "appCommand": null,
-   "status": "missing",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "equation.insertStructure (Insert Structure)"
+   "notes": "UI label \"Matrix\" in WordProcessor"
   },
   {
    "tab": "Equation",
@@ -4753,11 +4753,11 @@
    "feature": "Function",
    "command": "equation.insertStructure",
    "appCommand": null,
-   "status": "missing",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "equation.insertStructure (Insert Structure)"
+   "notes": "UI label \"Matrix\" in WordProcessor"
   },
   {
    "tab": "Equation",
@@ -4765,11 +4765,11 @@
    "feature": "Accent",
    "command": "equation.insertStructure",
    "appCommand": null,
-   "status": "missing",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "equation.insertStructure (Insert Structure)"
+   "notes": "UI label \"Matrix\" in WordProcessor"
   },
   {
    "tab": "Equation",
@@ -4777,11 +4777,11 @@
    "feature": "Limit and Log",
    "command": "equation.insertStructure",
    "appCommand": null,
-   "status": "missing",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "equation.insertStructure (Insert Structure)"
+   "notes": "UI label \"Matrix\" in WordProcessor"
   },
   {
    "tab": "Equation",
@@ -4789,11 +4789,11 @@
    "feature": "Operator",
    "command": "equation.insertStructure",
    "appCommand": null,
-   "status": "missing",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "equation.insertStructure (Insert Structure)"
+   "notes": "UI label \"Matrix\" in WordProcessor"
   },
   {
    "tab": "Equation",
@@ -5532,12 +5532,12 @@
    "group": "Keyboard",
    "feature": "New Paragraph",
    "command": "text.newParagraph",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "text.newParagraph",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "text.newParagraph (New Paragraph)"
+   "notes": "text.newParagraph (New Paragraph) Catalog id registered (CatalogCommands/runtime registry); needs native evidence."
   },
   {
    "tab": "Editing",
@@ -5556,24 +5556,24 @@
    "group": "Keyboard",
    "feature": "Column Break",
    "command": "text.columnBreak",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "text.columnBreak",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "text.columnBreak (Column Break)"
+   "notes": "text.columnBreak (Column Break) Catalog id registered (CatalogCommands/runtime registry); needs native evidence."
   },
   {
    "tab": "Editing",
    "group": "Keyboard",
    "feature": "Tab",
    "command": "text.tab",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "text.tab",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "text.tab (Tab)"
+   "notes": "text.tab (Tab) Catalog id registered (CatalogCommands/runtime registry); needs native evidence."
   },
   {
    "tab": "Editing",
@@ -5592,7 +5592,7 @@
    "group": "Keyboard",
    "feature": "Delete",
    "command": "text.delete",
-   "appCommand": null,
+   "appCommand": "text.delete",
    "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
@@ -6043,6 +6043,5 @@
    "evidence": [],
    "notes": "tools.templates (Templates and Add-ins)"
   }
- ],
- "triageNote": "2026-10-17 automated triage: Wordcraft handlers by grep; app status by automation command ids and ribbon labels. 'missing' over-counts features reached through dialogs or icon-only buttons (for example Small Caps, Line Spacing). Rows become 'certified' only with reproducible evidence paths."
+ ]
 }

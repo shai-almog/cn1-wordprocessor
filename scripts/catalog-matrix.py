@@ -30,6 +30,16 @@ def catalog_rows(wordcraft):
 
 
 def app_command_ids():
+    """Ids registered at runtime (`Cli commands`), so composed ids are counted too."""
+    try:
+        cp = subprocess.check_output(
+            ["bash", "-c", 'source "$0" cli && printf %s "$WORDPROCESSOR_CLASSPATH"',
+             os.path.join(ROOT, "scripts", "java-classpath.sh")], text=True)
+        out = subprocess.check_output(
+            ["java", "-cp", cp, "com.codenameone.wordprocessor.Cli", "commands"], text=True)
+        return {json.loads(line)["id"] for line in out.splitlines() if line.startswith("{")}
+    except (subprocess.CalledProcessError, OSError):
+        print("warning: Cli unavailable, scanning sources for command ids")
     ids = set()
     pattern = re.compile(r'"([a-z]+\.[a-zA-Z]+)"')
     for module in ("automation", "editor", "cli", "app"):
