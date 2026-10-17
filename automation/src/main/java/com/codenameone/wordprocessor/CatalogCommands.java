@@ -289,6 +289,8 @@ final class CatalogCommands implements Commands.Extension {
           Paragraph p = current(s);
           s.select(s.selection().block, p.text.length(), p.text.length());
           s.enterParagraph();
+          // The rule and the paragraph after it start plain, without the caret paragraph's fill.
+          s.paragraph("shading", "");
           s.paragraph(
               "borders",
               new ParagraphBorders(
@@ -299,6 +301,7 @@ final class CatalogCommands implements Commands.Extension {
                   .encode());
           s.enterParagraph();
           s.paragraph("borders", "");
+          s.paragraph("shading", "");
           return null;
         });
 

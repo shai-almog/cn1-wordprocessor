@@ -887,10 +887,10 @@ public final class EditorSurface extends Container
         if (box.format.borderWidth > 0) {
           g.setColor(box.format.borderColor);
           int stroke = Math.max(1, Math.round(box.format.borderWidth * scale));
-          g.fillRect(bx, by, bw, stroke);
-          g.fillRect(bx, by + bh - stroke, bw, stroke);
-          g.fillRect(bx, by, stroke, bh);
-          g.fillRect(bx + bw - stroke, by, stroke, bh);
+          if (box.format.side(TableFormat.Cell.TOP)) g.fillRect(bx, by, bw, stroke);
+          if (box.format.side(TableFormat.Cell.BOTTOM)) g.fillRect(bx, by + bh - stroke, bw, stroke);
+          if (box.format.side(TableFormat.Cell.LEFT)) g.fillRect(bx, by, stroke, bh);
+          if (box.format.side(TableFormat.Cell.RIGHT)) g.fillRect(bx + bw - stroke, by, stroke, bh);
         }
       }
       for (LayoutEngine.Frame frame : page.frames) paintFrame(g, frame, x, y, scale);

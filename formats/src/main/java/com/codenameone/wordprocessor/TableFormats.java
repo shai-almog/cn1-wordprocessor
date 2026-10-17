@@ -43,6 +43,7 @@ final class TableFormats {
             .append(hex(v.borderColor))
             .append("\" borderWidth=\"")
             .append(v.borderWidth)
+            .append(v.sides == TableFormat.Cell.ALL ? "" : "\" sides=\"" + v.sides)
             .append("\" horizontalPadding=\"")
             .append(v.horizontalPadding)
             .append("\" verticalPadding=\"")
@@ -88,7 +89,8 @@ final class TableFormats {
                     number(cell, "borderWidth", .5f),
                     number(cell, "horizontalPadding", 6),
                     number(cell, "verticalPadding", 4),
-                    Xml.attr(cell, "vertical", "top")));
+                    Xml.attr(cell, "vertical", "top"),
+                    Integer.parseInt(Xml.attr(cell, "sides", "15"))));
       r++;
     }
     f =
@@ -176,11 +178,13 @@ final class TableFormats {
                       * 20))
           .append("\" w:type=\"dxa\"/>");
     b.append("</w:tcMar><w:tcBorders>");
-    for (String side : new String[] {"top", "bottom", "left", "right"})
+    int[] masks = {TableFormat.Cell.TOP, TableFormat.Cell.BOTTOM, TableFormat.Cell.LEFT, TableFormat.Cell.RIGHT};
+    String[] names = {"top", "bottom", "left", "right"};
+    for (int i = 0; i < 4; i++)
       b.append("<w:")
-          .append(side)
+          .append(names[i])
           .append(" w:val=\"")
-          .append(v.borderWidth == 0 ? "nil" : "single")
+          .append(v.side(masks[i]) ? "single" : "nil")
           .append("\" w:sz=\"")
           .append(Math.round(v.borderWidth * 8))
           .append("\" w:color=\"")
@@ -338,6 +342,7 @@ final class TableFormats {
         margins = Xml.child(props, marginName);
     int background = shade == null ? base.background : color(shade, "fill", base.background),
         border = base.borderColor;
+    int sides = base.sides;
     float stroke = base.borderWidth,
         horizontal = base.horizontalPadding,
         vertical = base.verticalPadding;
@@ -350,10 +355,26 @@ final class TableFormats {
       warnings.add("Theme table shading uses its fallback color");
     if (borders != null) {
       String first = null;
+      boolean any = false;
       for (Element edge : Xml.children(borders, null)) {
-        String type = Xml.attr(edge, "val", "single");
+        String type = Xml.attr(edge, "val", "single"), name = Xml.local(edge);
         float width = "nil".equals(type) || "none".equals(type) ? 0 : number(edge, "sz", 4) / 8;
         int color = color(edge, "color", 0);
+        int mask =
+            "top".equals(name)
+                ? TableFormat.Cell.TOP
+                : "bottom".equals(name)
+                    ? TableFormat.Cell.BOTTOM
+                    : "left".equals(name) || "start".equals(name)
+                        ? TableFormat.Cell.LEFT
+                        : "right".equals(name) || "end".equals(name) ? TableFormat.Cell.RIGHT : 0;
+        if (mask != 0) {
+          if (!any) sides = 0;
+          any = true;
+          // Absent sides become a side mask; present sides share one color and width.
+          if (width == 0) continue;
+          sides |= mask;
+        } else if (width == 0) continue;
         String signature = width + ":" + color;
         if (first == null) {
           first = signature;
@@ -385,7 +406,9 @@ final class TableFormats {
       warnings.add("Unsupported vertical cell alignment: " + valign);
       valign = "top";
     }
-    return new TableFormat.Cell(background, border, stroke, horizontal, vertical, valign);
+    if (sides == 0) stroke = 0;
+    return new TableFormat.Cell(
+        background, border, stroke, horizontal, vertical, valign, sides == 0 ? TableFormat.Cell.ALL : sides);
   }
 
   static String css(TableFormat.Cell cell) {

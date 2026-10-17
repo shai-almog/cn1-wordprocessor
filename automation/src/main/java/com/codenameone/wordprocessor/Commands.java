@@ -1249,7 +1249,8 @@ public final class Commands {
                       a.containsKey("verticalPadding")
                           ? ((Number) a.get("verticalPadding")).floatValue()
                           : old.verticalPadding,
-                      a.containsKey("vertical") ? str(a, "vertical") : old.vertical));
+                      a.containsKey("vertical") ? str(a, "vertical") : old.vertical,
+                      old.sides));
           if (a.containsKey("columnPercent"))
             f = f.columnFraction(column, ((Number) a.get("columnPercent")).floatValue() / 100);
           if (a.containsKey("minHeight"))

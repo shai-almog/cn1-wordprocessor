@@ -96,4 +96,32 @@ public class CatalogNavigationCommandsTest {
     assertEquals(9, t.format.cell(0, 1).horizontalPadding, .01);
     assertEquals(0xffffff, t.format.cell(0, 0).background);
   }
+
+  @Test
+  public void tableBorderGalleryAndStyles() {
+    Session s = new Session(Document.empty());
+    run(s, "insert.table", "rows", 3, "cols", 3);
+    int block = -1;
+    for (int i = 0; i < s.document().blocks.size(); i++)
+      if (s.document().blocks.get(i) instanceof Table) block = i;
+    s.enterCell(block, 0, 0);
+    s.selectCells(block, 0, 0, 2, 2);
+    run(s, "table.borders", "kind", "none");
+    run(s, "table.borders", "kind", "outside", "color", "ff0000", "width", 1.5);
+    TableFormat f = ((Table) s.document().blocks.get(block)).format;
+    assertTrue(f.cell(0, 0).side(TableFormat.Cell.TOP));
+    assertTrue(f.cell(0, 0).side(TableFormat.Cell.LEFT));
+    assertFalse(f.cell(0, 0).side(TableFormat.Cell.RIGHT));
+    assertFalse(f.cell(1, 1).side(TableFormat.Cell.TOP));
+    assertTrue(f.cell(2, 2).side(TableFormat.Cell.BOTTOM));
+    assertEquals(0xff0000, f.cell(2, 2).borderColor);
+    run(s, "table.borders", "kind", "insideH");
+    f = ((Table) s.document().blocks.get(block)).format;
+    assertTrue(f.cell(1, 1).side(TableFormat.Cell.TOP));
+    assertFalse(f.cell(1, 1).side(TableFormat.Cell.LEFT));
+    run(s, "table.style", "style", "GridTableAccent1");
+    f = ((Table) s.document().blocks.get(block)).format;
+    assertEquals(0x4472c4, f.cell(0, 1).background);
+    assertEquals(1, f.headerRows);
+  }
 }

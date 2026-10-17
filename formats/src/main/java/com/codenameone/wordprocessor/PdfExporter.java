@@ -335,7 +335,30 @@ public final class PdfExporter {
             .append(n(b.width))
             .append(' ')
             .append(n(b.height))
-            .append(b.format.borderWidth > 0 ? " re B\n" : " re f\n");
+            .append(
+                b.format.borderWidth > 0 && b.format.sides == TableFormat.Cell.ALL
+                    ? " re B\n"
+                    : " re f\n");
+        if (b.format.borderWidth > 0 && b.format.sides != TableFormat.Cell.ALL) {
+          float x0 = b.x, x1 = b.x + b.width, y0 = spec.height - b.y, y1 = y0 - b.height;
+          float[][] edges = {
+            {TableFormat.Cell.TOP, x0, y0, x1, y0},
+            {TableFormat.Cell.BOTTOM, x0, y1, x1, y1},
+            {TableFormat.Cell.LEFT, x0, y0, x0, y1},
+            {TableFormat.Cell.RIGHT, x1, y0, x1, y1}
+          };
+          for (float[] e : edges)
+            if (b.format.side((int) e[0]))
+              content
+                  .append(n(e[1]))
+                  .append(' ')
+                  .append(n(e[2]))
+                  .append(" m ")
+                  .append(n(e[3]))
+                  .append(' ')
+                  .append(n(e[4]))
+                  .append(" l S\n");
+        }
       }
       for (LayoutEngine.Line area : page.noteAreas()) {
         float y = spec.height - area.y + 6;

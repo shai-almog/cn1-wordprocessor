@@ -10,6 +10,11 @@ public final class TableFormat {
     public final float borderWidth, horizontalPadding, verticalPadding;
     public final String vertical;
 
+    /** Bit set of the drawn border sides; one color and width applies to all of them. */
+    public static final int TOP = 1, LEFT = 2, BOTTOM = 4, RIGHT = 8, ALL = 15;
+
+    public final int sides;
+
     public Cell(
         int background,
         int borderColor,
@@ -17,6 +22,18 @@ public final class TableFormat {
         float horizontalPadding,
         float verticalPadding,
         String vertical) {
+      this(background, borderColor, borderWidth, horizontalPadding, verticalPadding, vertical, ALL);
+    }
+
+    public Cell(
+        int background,
+        int borderColor,
+        float borderWidth,
+        float horizontalPadding,
+        float verticalPadding,
+        String vertical,
+        int sides) {
+      this.sides = sides & ALL;
       if (!valid(borderWidth, 0, 12)
           || !valid(horizontalPadding, 0, 72)
           || !valid(verticalPadding, 0, 72)
@@ -28,6 +45,22 @@ public final class TableFormat {
       this.horizontalPadding = horizontalPadding;
       this.verticalPadding = verticalPadding;
       this.vertical = vertical;
+    }
+
+    public boolean side(int side) {
+      return borderWidth > 0 && (sides & side) != 0;
+    }
+
+    public Cell borders(int color, float width, int sides) {
+      return new Cell(background, color, width, horizontalPadding, verticalPadding, vertical, sides);
+    }
+
+    public Cell background(int color) {
+      return new Cell(color, borderColor, borderWidth, horizontalPadding, verticalPadding, vertical, sides);
+    }
+
+    public Cell padding(float horizontal, float vertical) {
+      return new Cell(background, borderColor, borderWidth, horizontal, vertical, this.vertical, sides);
     }
   }
 

@@ -10,8 +10,8 @@
   "not-applicable"
  ],
  "counts": {
-  "unverified": 255,
-  "missing": 219,
+  "unverified": 257,
+  "missing": 217,
   "partial": 13,
   "certified": 0,
   "reference-stub": 15,
@@ -1121,7 +1121,7 @@
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "para.shading (Shading) Catalog id registered (runtime registry); needs native evidence."
+   "notes": "para.shading (Shading) Catalog id registered (runtime registry); needs native evidence. Rendered on native Mac 2026-10-17 (double box + shading + rule)."
   },
   {
    "tab": "Home",
@@ -1133,7 +1133,7 @@
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "para.borders (Borders) Catalog id registered (runtime registry); needs native evidence."
+   "notes": "para.borders (Borders) Catalog id registered (runtime registry); needs native evidence. Rendered on native Mac 2026-10-17 (double box + shading + rule)."
   },
   {
    "tab": "Home",
@@ -1145,7 +1145,7 @@
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "insert.horizontalLine (Horizontal Line) Catalog id registered (runtime registry); needs native evidence."
+   "notes": "insert.horizontalLine (Horizontal Line) Catalog id registered (runtime registry); needs native evidence. Rendered on native Mac 2026-10-17 (double box + shading + rule)."
   },
   {
    "tab": "Home",
@@ -4116,12 +4116,12 @@
    "group": "Table Styles",
    "feature": "Table Styles",
    "command": "table.style",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "table.style",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "table.style (Table Styles)"
+   "notes": "table.style (Table Styles) Catalog id registered (runtime registry); needs native evidence."
   },
   {
    "tab": "Table Design",
@@ -4176,12 +4176,12 @@
    "group": "Borders",
    "feature": "Borders",
    "command": "table.borders",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "table.borders",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "table.borders (Borders)"
+   "notes": "table.borders (Borders) Catalog id registered (runtime registry); needs native evidence."
   },
   {
    "tab": "Table Design",

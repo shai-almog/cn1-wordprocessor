@@ -329,6 +329,28 @@ final class CatalogNavigationCommands implements Commands.Extension {
           return null;
         });
     c.register(
+        "table.borders",
+        "Borders on the selected cells: all, none, outside, inside, insideH, insideV, top, bottom, left, right",
+        "kind:string,color?:string,width?:number",
+        true,
+        (s, a) -> {
+          tableBorders(
+              s,
+              Commands.str(a, "kind"),
+              a.containsKey("color") ? Integer.parseInt(hex(Commands.str(a, "color")), 16) : 0,
+              a.containsKey("width") ? ((Number) a.get("width")).floatValue() : .5f);
+          return null;
+        });
+    c.register(
+        "table.style",
+        "Apply a built-in table style",
+        "style:string",
+        true,
+        (s, a) -> {
+          tableStyle(s, Commands.str(a, "style"));
+          return null;
+        });
+    c.register(
         "table.cellMargins",
         "Cell padding in points for the selected cells",
         "horizontal?:number,vertical?:number",
@@ -348,6 +370,86 @@ final class CatalogNavigationCommands implements Commands.Extension {
                       vt == null ? cell.verticalPadding : vt));
           return null;
         });
+  }
+
+  /** Word's table border gallery over the selected cells (or the caret cell). */
+  private static void tableBorders(Session s, String kind, int color, float width) {
+    Table t = table(s);
+    CellSelection range = s.cellSelection();
+    int r0 = range == null ? s.cellRow() : range.firstRow,
+        r1 = range == null ? s.cellRow() : range.lastRow,
+        c0 = range == null ? s.cellColumn() : range.firstColumn,
+        c1 = range == null ? s.cellColumn() : range.lastColumn;
+    if ("all".equals(kind) || "none".equals(kind) || "outside".equals(kind) || "inside".equals(kind)
+        || "insideH".equals(kind) || "insideV".equals(kind) || "top".equals(kind)
+        || "bottom".equals(kind) || "left".equals(kind) || "right".equals(kind)) {
+      TableFormat f = t.format;
+      for (int r = r0; r <= r1; r++)
+        for (int c = c0; c <= c1; c++) {
+          TableFormat.Cell cell = f.cell(r, c);
+          int sides = cell.borderWidth > 0 ? cell.sides : 0, edge = 0;
+          int outer =
+              (r == r0 ? TableFormat.Cell.TOP : 0)
+                  | (r == r1 ? TableFormat.Cell.BOTTOM : 0)
+                  | (c == c0 ? TableFormat.Cell.LEFT : 0)
+                  | (c == c1 ? TableFormat.Cell.RIGHT : 0);
+          int insideH = (r > r0 ? TableFormat.Cell.TOP : 0) | (r < r1 ? TableFormat.Cell.BOTTOM : 0);
+          int insideV = (c > c0 ? TableFormat.Cell.LEFT : 0) | (c < c1 ? TableFormat.Cell.RIGHT : 0);
+          if ("all".equals(kind)) sides = TableFormat.Cell.ALL;
+          else if ("none".equals(kind)) sides = 0;
+          else if ("outside".equals(kind)) sides |= outer;
+          else if ("inside".equals(kind)) sides |= insideH | insideV;
+          else if ("insideH".equals(kind)) sides |= insideH;
+          else if ("insideV".equals(kind)) sides |= insideV;
+          else {
+            edge =
+                outer
+                    & ("top".equals(kind)
+                        ? TableFormat.Cell.TOP
+                        : "bottom".equals(kind)
+                            ? TableFormat.Cell.BOTTOM
+                            : "left".equals(kind) ? TableFormat.Cell.LEFT : TableFormat.Cell.RIGHT);
+            sides |= edge;
+          }
+          f =
+              f.cell(
+                  r,
+                  c,
+                  sides == 0
+                      ? cell.borders(cell.borderColor, 0, TableFormat.Cell.ALL)
+                      : cell.borders(color, width, sides));
+        }
+      s.formatTable(s.cellBlock(), f);
+    } else throw new IllegalArgumentException("Unknown border kind " + kind);
+  }
+
+  /** Built-in table styles as direct cell formatting (no linked style is kept). */
+  private static void tableStyle(Session s, String style) {
+    Table t = table(s);
+    TableFormat f = t.format;
+    for (int r = 0; r < t.rows(); r++)
+      for (int c = 0; c < t.columns(); c++) {
+        TableFormat.Cell cell = f.cell(r, c);
+        TableFormat.Cell next;
+        if ("TableGrid".equals(style)) next = cell.background(0xffffff).borders(0, .5f, TableFormat.Cell.ALL);
+        else if ("PlainTable".equals(style))
+          next = cell.background(0xffffff).borders(0, 0, TableFormat.Cell.ALL);
+        else if ("GridTableLight".equals(style))
+          next = cell.background(0xffffff).borders(0xbfbfbf, .5f, TableFormat.Cell.ALL);
+        else if ("ListTable".equals(style))
+          next =
+              cell.background(r % 2 == 1 ? 0xf2f2f2 : 0xffffff)
+                  .borders(0x7f7f7f, .5f, TableFormat.Cell.TOP | TableFormat.Cell.BOTTOM);
+        else if ("GridTableAccent1".equals(style))
+          next =
+              cell.background(r == 0 ? 0x4472c4 : r % 2 == 0 ? 0xd9e2f3 : 0xffffff)
+                  .borders(0x8eaadb, .5f, TableFormat.Cell.ALL);
+        else
+          throw new IllegalArgumentException(
+              "Styles: TableGrid, PlainTable, GridTableLight, ListTable, GridTableAccent1");
+        f = f.cell(r, c, next);
+      }
+    s.formatTable(s.cellBlock(), "GridTableAccent1".equals(style) ? f.headerRows(Math.max(1, f.headerRows)) : f);
   }
 
   private interface Target {
@@ -518,7 +620,7 @@ final class CatalogNavigationCommands implements Commands.Extension {
   }
 
   private static TableFormat.Cell cell(TableFormat.Cell c, int background, float h, float v) {
-    return new TableFormat.Cell(background, c.borderColor, c.borderWidth, h, v, c.vertical);
+    return c.background(background).padding(h, v);
   }
 
   private static String hex(String v) {

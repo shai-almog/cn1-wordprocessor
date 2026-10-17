@@ -5133,7 +5133,8 @@ public class WordProcessor {
               Float.parseFloat(stroke.getText()),
               Float.parseFloat(horizontal.getText()),
               Float.parseFloat(vertical.getText()),
-              alignment.getSelectedItem());
+              alignment.getSelectedItem(),
+              t.format.cell(row, column).sides);
       TableFormat format =
           t.format
               .columnFraction(column, Float.parseFloat(width.getText()) / 100)

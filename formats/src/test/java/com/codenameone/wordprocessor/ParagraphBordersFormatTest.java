@@ -55,4 +55,27 @@ public class ParagraphBordersFormatTest {
     assertTrue(pdf.contains(" re f"));
     assertTrue(pdf.contains("[4.000 2.000] 0 d") || pdf.contains("[4 2] 0 d"));
   }
+
+  @Test
+  public void tableCellSideMaskRoundTrips() throws Exception {
+    Session s = new Session(Document.empty());
+    s.insertTable(2, 2);
+    int block = -1;
+    for (int i = 0; i < s.document().blocks.size(); i++)
+      if (s.document().blocks.get(i) instanceof Table) block = i;
+    Table t = (Table) s.document().blocks.get(block);
+    int sides = TableFormat.Cell.TOP | TableFormat.Cell.BOTTOM;
+    s.formatTable(block, t.format.cell(0, 0, t.format.cell(0, 0).borders(0x123456, 1, sides)));
+    Document d = s.document();
+    Table back = (Table) DocumentXml.read(DocumentXml.write(d)).blocks.get(block);
+    assertEquals(sides, back.format.cell(0, 0).sides);
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    Docx.write(d, out);
+    Docx.Opened opened = Docx.read(new ByteArrayInputStream(out.toByteArray()));
+    Table docx = null;
+    for (Block b : opened.document.blocks) if (b instanceof Table) docx = (Table) b;
+    assertEquals(sides, docx.format.cell(0, 0).sides);
+    assertEquals(0x123456, docx.format.cell(0, 0).borderColor);
+    assertEquals(TableFormat.Cell.ALL, docx.format.cell(1, 1).sides);
+  }
 }

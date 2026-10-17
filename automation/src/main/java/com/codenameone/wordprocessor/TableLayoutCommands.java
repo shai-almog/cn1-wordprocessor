@@ -261,7 +261,8 @@ public final class TableLayoutCommands implements Commands.Extension {
                           cell.borderWidth,
                           cell.horizontalPadding,
                           cell.verticalPadding,
-                          vertical));
+                          vertical,
+                          cell.sides));
             }
           s.formatTable(block, format);
           s.paragraph("align", horizontal);
