@@ -68,6 +68,7 @@ public final class Commands {
     new TableLayoutCommands().register(this);
     new ComparisonCommands().register(this);
     new CatalogCommands().register(this);
+    new CatalogNavigationCommands().register(this);
   }
 
   /** Bind automation to the host's print layout, independent of viewport reflow. */

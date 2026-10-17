@@ -10,8 +10,8 @@
   "not-applicable"
  ],
  "counts": {
-  "unverified": 191,
-  "missing": 283,
+  "unverified": 235,
+  "missing": 239,
   "partial": 13,
   "certified": 0,
   "reference-stub": 15,
@@ -300,12 +300,12 @@
    "group": "Toolbar",
    "feature": "Undo List",
    "command": "edit.undoTo",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "edit.undoTo",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "edit.undoTo (Undo Actions)"
+   "notes": "edit.undoTo (Undo Actions) Catalog id registered (CatalogCommands/runtime registry); needs native evidence."
   },
   {
    "tab": "Quick Access",
@@ -1464,24 +1464,24 @@
    "group": "Editing",
    "feature": "Find Next",
    "command": "edit.findNext",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "edit.findNext",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "edit.findNext (Find Next)"
+   "notes": "edit.findNext (Find Next) Catalog id registered (CatalogCommands/runtime registry); needs native evidence."
   },
   {
    "tab": "Home",
    "group": "Editing",
    "feature": "Find Previous",
    "command": "edit.findPrevious",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "edit.findPrevious",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "edit.findPrevious (Find Previous)"
+   "notes": "edit.findPrevious (Find Previous) Catalog id registered (CatalogCommands/runtime registry); needs native evidence."
   },
   {
    "tab": "Home",
@@ -1512,12 +1512,12 @@
    "group": "Editing",
    "feature": "Replace All",
    "command": "edit.replaceAll",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "edit.replaceAll",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "edit.replaceAll (Replace All)"
+   "notes": "edit.replaceAll (Replace All) Catalog id registered (CatalogCommands/runtime registry); needs native evidence."
   },
   {
    "tab": "Home",
@@ -1632,12 +1632,12 @@
    "group": "Tables",
    "feature": "Insert Table",
    "command": "insert.table",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "insert.table",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "insert.table (Table)"
+   "notes": "insert.table (Table) Catalog id registered (CatalogCommands/runtime registry); needs native evidence."
   },
   {
    "tab": "Insert",
@@ -1836,12 +1836,12 @@
    "group": "Links",
    "feature": "Remove Link",
    "command": "insert.removeLink",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "insert.removeLink",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "insert.removeLink (Remove Hyperlink)"
+   "notes": "insert.removeLink (Remove Hyperlink) Catalog id registered (CatalogCommands/runtime registry); needs native evidence."
   },
   {
    "tab": "Insert",
@@ -1872,12 +1872,12 @@
    "group": "Comments",
    "feature": "Comment",
    "command": "review.newComment",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "review.newComment",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "review.newComment (New Comment)"
+   "notes": "review.newComment (New Comment) Catalog id registered (CatalogCommands/runtime registry); needs native evidence."
   },
   {
    "tab": "Insert",
@@ -1908,12 +1908,12 @@
    "group": "Header & Footer",
    "feature": "Page Number",
    "command": "insert.pageNumber",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "insert.pageNumber",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "insert.pageNumber (Page Number)"
+   "notes": "insert.pageNumber (Page Number) Catalog id registered (CatalogCommands/runtime registry); needs native evidence."
   },
   {
    "tab": "Insert",
@@ -1992,24 +1992,24 @@
    "group": "Header & Footer",
    "feature": "Different First Page",
    "command": "layout.differentFirstPage",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "layout.differentFirstPage",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "layout.differentFirstPage (Different First Page)"
+   "notes": "layout.differentFirstPage (Different First Page) Catalog id registered (CatalogCommands/runtime registry); needs native evidence."
   },
   {
    "tab": "Insert",
    "group": "Header & Footer",
    "feature": "Different Odd & Even",
    "command": "layout.differentOddEven",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "layout.differentOddEven",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "layout.differentOddEven (Different Odd & Even Pages)"
+   "notes": "layout.differentOddEven (Different Odd & Even Pages) Catalog id registered (CatalogCommands/runtime registry); needs native evidence."
   },
   {
    "tab": "Insert",
@@ -2124,12 +2124,12 @@
    "group": "Text",
    "feature": "Date & Time",
    "command": "insert.dateTime",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "insert.dateTime",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "insert.dateTime (Date & Time)"
+   "notes": "insert.dateTime (Date & Time) Catalog id registered (CatalogCommands/runtime registry); needs native evidence."
   },
   {
    "tab": "Insert",
@@ -2184,12 +2184,12 @@
    "group": "Symbols",
    "feature": "Symbol",
    "command": "insert.symbol",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "insert.symbol",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "insert.symbol (Symbol)"
+   "notes": "insert.symbol (Symbol) Catalog id registered (CatalogCommands/runtime registry); needs native evidence."
   },
   {
    "tab": "Insert",
@@ -2508,12 +2508,12 @@
    "group": "Page Setup",
    "feature": "Size",
    "command": "layout.size",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "layout.size",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "layout.size (Size)"
+   "notes": "layout.size (Size) Catalog id registered (CatalogCommands/runtime registry); needs native evidence."
   },
   {
    "tab": "Layout",
@@ -3348,12 +3348,12 @@
    "group": "Comments",
    "feature": "New Comment",
    "command": "review.newComment",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "review.newComment",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "review.newComment (New Comment)"
+   "notes": "review.newComment (New Comment) Catalog id registered (CatalogCommands/runtime registry); needs native evidence."
   },
   {
    "tab": "Review",
@@ -3372,24 +3372,24 @@
    "group": "Comments",
    "feature": "Previous",
    "command": "review.previousComment",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "review.previousComment",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "review.previousComment (Previous)"
+   "notes": "review.previousComment (Previous) Catalog id registered (CatalogCommands/runtime registry); needs native evidence."
   },
   {
    "tab": "Review",
    "group": "Comments",
    "feature": "Next",
    "command": "review.nextComment",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "review.nextComment",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "review.nextComment (Next)"
+   "notes": "review.nextComment (Next) Catalog id registered (CatalogCommands/runtime registry); needs native evidence."
   },
   {
    "tab": "Review",
@@ -4164,12 +4164,12 @@
    "group": "Table Styles",
    "feature": "Shading",
    "command": "table.shading",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "table.shading",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "table.shading (Shading)"
+   "notes": "table.shading (Shading) Catalog id registered (CatalogCommands/runtime registry); needs native evidence."
   },
   {
    "tab": "Table Design",
@@ -4536,12 +4536,12 @@
    "group": "Alignment",
    "feature": "Cell Margins",
    "command": "table.cellMargins",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "table.cellMargins",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "table.cellMargins (Cell Margins)"
+   "notes": "table.cellMargins (Cell Margins) Catalog id registered (CatalogCommands/runtime registry); needs native evidence."
   },
   {
    "tab": "Table Layout",
@@ -4560,12 +4560,12 @@
    "group": "Data",
    "feature": "Repeat Header Rows",
    "command": "table.repeatHeader",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "table.repeatHeader",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "table.repeatHeader (Repeat Header Rows)"
+   "notes": "table.repeatHeader (Repeat Header Rows) Catalog id registered (CatalogCommands/runtime registry); needs native evidence."
   },
   {
    "tab": "Table Layout",
@@ -4860,60 +4860,60 @@
    "group": "Outline Tools",
    "feature": "Promote to Heading 1",
    "command": "outline.promoteToHeading1",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "outline.promoteToHeading1",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "outline.promoteToHeading1 (Promote to Heading 1)"
+   "notes": "outline.promoteToHeading1 (Promote to Heading 1) Catalog id registered (CatalogCommands/runtime registry); needs native evidence."
   },
   {
    "tab": "Outlining",
    "group": "Outline Tools",
    "feature": "Promote",
    "command": "outline.promote",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "outline.promote",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "outline.promote (Promote)"
+   "notes": "outline.promote (Promote) Catalog id registered (CatalogCommands/runtime registry); needs native evidence."
   },
   {
    "tab": "Outlining",
    "group": "Outline Tools",
    "feature": "Outline Level",
    "command": "outline.level",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "outline.level",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "outline.level (Outline Level)"
+   "notes": "outline.level (Outline Level) Catalog id registered (CatalogCommands/runtime registry); needs native evidence."
   },
   {
    "tab": "Outlining",
    "group": "Outline Tools",
    "feature": "Demote",
    "command": "outline.demote",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "outline.demote",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "outline.demote (Demote)"
+   "notes": "outline.demote (Demote) Catalog id registered (CatalogCommands/runtime registry); needs native evidence."
   },
   {
    "tab": "Outlining",
    "group": "Outline Tools",
    "feature": "Demote to Body Text",
    "command": "outline.demoteToBody",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "outline.demoteToBody",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "outline.demoteToBody (Demote to Body Text)"
+   "notes": "outline.demoteToBody (Demote to Body Text) Catalog id registered (CatalogCommands/runtime registry); needs native evidence."
   },
   {
    "tab": "Outlining",
@@ -5544,12 +5544,12 @@
    "group": "Keyboard",
    "feature": "Line Break",
    "command": "text.lineBreak",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "text.lineBreak",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "text.lineBreak (Line Break)"
+   "notes": "text.lineBreak (Line Break) Catalog id registered (CatalogCommands/runtime registry); needs native evidence."
   },
   {
    "tab": "Editing",
@@ -5604,24 +5604,24 @@
    "group": "Keyboard",
    "feature": "Delete Previous Word",
    "command": "text.deleteWordBack",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "text.deleteWordBack",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "text.deleteWordBack (Delete Previous Word)"
+   "notes": "text.deleteWordBack (Delete Previous Word) Catalog id registered (CatalogCommands/runtime registry); needs native evidence."
   },
   {
    "tab": "Editing",
    "group": "Keyboard",
    "feature": "Delete Next Word",
    "command": "text.deleteWordForward",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "text.deleteWordForward",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "text.deleteWordForward (Delete Next Word)"
+   "notes": "text.deleteWordForward (Delete Next Word) Catalog id registered (CatalogCommands/runtime registry); needs native evidence."
   },
   {
    "tab": "Editing",
@@ -5652,24 +5652,24 @@
    "group": "Keyboard",
    "feature": "Promote",
    "command": "para.promote",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "para.promote",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "para.promote (Promote)"
+   "notes": "para.promote (Promote) Catalog id registered (CatalogCommands/runtime registry); needs native evidence."
   },
   {
    "tab": "Editing",
    "group": "Keyboard",
    "feature": "Demote",
    "command": "para.demote",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "para.demote",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "para.demote (Demote)"
+   "notes": "para.demote (Demote) Catalog id registered (CatalogCommands/runtime registry); needs native evidence."
   },
   {
    "tab": "Editing",
@@ -5688,24 +5688,24 @@
    "group": "Navigation",
    "feature": "Word Left",
    "command": "caret.wordLeft",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "caret.wordLeft",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "caret.wordLeft (Word Left)"
+   "notes": "caret.wordLeft (Word Left) Catalog id registered (CatalogCommands/runtime registry); needs native evidence."
   },
   {
    "tab": "Editing",
    "group": "Navigation",
    "feature": "Word Right",
    "command": "caret.wordRight",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "caret.wordRight",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "caret.wordRight (Word Right)"
+   "notes": "caret.wordRight (Word Right) Catalog id registered (CatalogCommands/runtime registry); needs native evidence."
   },
   {
    "tab": "Editing",
@@ -5736,48 +5736,48 @@
    "group": "Navigation",
    "feature": "Paragraph Up",
    "command": "caret.paraUp",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "caret.paraUp",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "caret.paraUp (Paragraph Up)"
+   "notes": "caret.paraUp (Paragraph Up) Catalog id registered (CatalogCommands/runtime registry); needs native evidence."
   },
   {
    "tab": "Editing",
    "group": "Navigation",
    "feature": "Paragraph Down",
    "command": "caret.paraDown",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "caret.paraDown",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "caret.paraDown (Paragraph Down)"
+   "notes": "caret.paraDown (Paragraph Down) Catalog id registered (CatalogCommands/runtime registry); needs native evidence."
   },
   {
    "tab": "Editing",
    "group": "Navigation",
    "feature": "Document Start",
    "command": "caret.docStart",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "caret.docStart",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "caret.docStart (Document Start)"
+   "notes": "caret.docStart (Document Start) Catalog id registered (CatalogCommands/runtime registry); needs native evidence."
   },
   {
    "tab": "Editing",
    "group": "Navigation",
    "feature": "Document End",
    "command": "caret.docEnd",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "caret.docEnd",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "caret.docEnd (Document End)"
+   "notes": "caret.docEnd (Document End) Catalog id registered (CatalogCommands/runtime registry); needs native evidence."
   },
   {
    "tab": "Editing",
@@ -5820,36 +5820,36 @@
    "group": "Selection",
    "feature": "Select Word",
    "command": "select.word",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "select.word",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "select.word (Select Word)"
+   "notes": "select.word (Select Word) Catalog id registered (CatalogCommands/runtime registry); needs native evidence."
   },
   {
    "tab": "Editing",
    "group": "Selection",
    "feature": "Select Sentence",
    "command": "select.sentence",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "select.sentence",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "select.sentence (Select Sentence)"
+   "notes": "select.sentence (Select Sentence) Catalog id registered (CatalogCommands/runtime registry); needs native evidence."
   },
   {
    "tab": "Editing",
    "group": "Selection",
    "feature": "Select Paragraph",
    "command": "select.paragraph",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "select.paragraph",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "select.paragraph (Select Paragraph)"
+   "notes": "select.paragraph (Select Paragraph) Catalog id registered (CatalogCommands/runtime registry); needs native evidence."
   },
   {
    "tab": "Editing",
@@ -5892,12 +5892,12 @@
    "group": "Fields",
    "feature": "Toggle Field Codes",
    "command": "fields.toggleCode",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "fields.toggleCode",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "fields.toggleCode (Toggle Field Codes)"
+   "notes": "fields.toggleCode (Toggle Field Codes) Catalog id registered (CatalogCommands/runtime registry); needs native evidence."
   },
   {
    "tab": "Editing",
@@ -5916,60 +5916,60 @@
    "group": "Fields",
    "feature": "Unlink Fields",
    "command": "fields.unlink",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "fields.unlink",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "fields.unlink (Unlink Fields)"
+   "notes": "fields.unlink (Unlink Fields) Catalog id registered (CatalogCommands/runtime registry); needs native evidence."
   },
   {
    "tab": "Editing",
    "group": "Fields",
    "feature": "Lock Fields",
    "command": "fields.lock",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "fields.lock",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "fields.lock (Lock Fields)"
+   "notes": "fields.lock (Lock Fields) Catalog id registered (CatalogCommands/runtime registry); needs native evidence."
   },
   {
    "tab": "Editing",
    "group": "Fields",
    "feature": "Unlock Fields",
    "command": "fields.unlock",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "fields.unlock",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "fields.unlock (Unlock Fields)"
+   "notes": "fields.unlock (Unlock Fields) Catalog id registered (CatalogCommands/runtime registry); needs native evidence."
   },
   {
    "tab": "Editing",
    "group": "Fields",
    "feature": "Next Field",
    "command": "fields.next",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "fields.next",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "fields.next (Next Field)"
+   "notes": "fields.next (Next Field) Catalog id registered (CatalogCommands/runtime registry); needs native evidence."
   },
   {
    "tab": "Editing",
    "group": "Fields",
    "feature": "Previous Field",
    "command": "fields.previous",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "fields.previous",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "fields.previous (Previous Field)"
+   "notes": "fields.previous (Previous Field) Catalog id registered (CatalogCommands/runtime registry); needs native evidence."
   },
   {
    "tab": "Tools",
