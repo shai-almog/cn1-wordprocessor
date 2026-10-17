@@ -10,8 +10,8 @@
   "not-applicable"
  ],
  "counts": {
-  "unverified": 299,
-  "missing": 175,
+  "unverified": 302,
+  "missing": 172,
   "partial": 13,
   "certified": 0,
   "reference-stub": 15,
@@ -1656,12 +1656,12 @@
    "group": "Tables",
    "feature": "Convert Text to Table",
    "command": "table.fromText",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "table.fromText",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "table.fromText (Convert Text to Table)"
+   "notes": "table.fromText (Convert Text to Table) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Insert",
@@ -4320,12 +4320,12 @@
    "group": "Rows & Columns",
    "feature": "Delete Cells",
    "command": "table.deleteCells",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "table.deleteCells",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "table.deleteCells (Delete Cells)"
+   "notes": "table.deleteCells (Delete Cells) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Table Layout",
@@ -4476,12 +4476,12 @@
    "group": "Cell Size",
    "feature": "Column Width",
    "command": "table.columnWidth",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "table.columnWidth",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "table.columnWidth (Table Column Width)"
+   "notes": "table.columnWidth (Table Column Width) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Table Layout",

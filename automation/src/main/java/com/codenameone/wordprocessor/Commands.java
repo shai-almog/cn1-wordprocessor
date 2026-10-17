@@ -77,6 +77,7 @@ public final class Commands {
     new PictureCommands().register(this);
     new CatalogEditingCommands().register(this);
     new FileCommands().register(this);
+    new TableTextCommands().register(this);
   }
 
   /** Bind automation to the host's print layout, independent of viewport reflow. */
