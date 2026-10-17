@@ -100,6 +100,19 @@ public final class Docx {
       sections.put(
           sectionEntry.getKey(), readSection(parts, sectionEntry.getValue(), id, warnings, styles));
     Section last = readSection(parts, Xml.child(body, "sectPr"), id, warnings, styles);
+    Element background = Xml.child(root, "background");
+    if (background != null) {
+      String fill = Xml.attr(background, "color", "auto");
+      if (fill.length() == 6 && fill.matches("[0-9A-Fa-f]{6}")) {
+        // Word's page color is document-wide; the model stores it per section.
+        int rgb = Integer.parseInt(fill, 16);
+        for (Map.Entry<String, Section> sec : sections.entrySet())
+          sec.setValue(sec.getValue().decor(sec.getValue().decor.pageColor(rgb)));
+        last = last.decor(last.decor.pageColor(rgb));
+      }
+      if (Xml.children(background, null).size() > 0)
+        warnings.add("Page background fill effects shown as a solid color");
+    }
     Document document =
         new Document(blocks, last.page, "Imported document", id[0]).sections(sections, last);
     document = document.comments(comments.read(document, warnings));
@@ -647,7 +660,12 @@ static final char COLUMN_BREAK = '\u000B';
         new StringBuilder("<?xml version=\"1.0\" encoding=\"UTF-8\"?><w:document xmlns:w=\"")
             .append(W)
             .append(
-                "\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\"><w:body>");
+                "\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\">");
+    if (d.lastSection.decor.pageColor >= 0)
+      b.append("<w:background w:color=\"")
+          .append(DocxBorders.hex(d.lastSection.decor.pageColor))
+          .append("\"/>");
+    b.append("<w:body>");
     int sectionIndex = 0;
     List<Section.Range> sections = d.sectionRanges();
     List<int[]> contentsRanges = TableContents.ranges(d);
@@ -771,6 +789,7 @@ static final char COLUMN_BREAK = '\u000B';
         .append("\" w:footer=\"")
         .append(Math.round(section.furniture.footerDistance * 20))
         .append("\"/>");
+    DocxBorders.page(b, section.decor.borders);
     if (section.pageStart > 0)
       b.append("<w:pgNumType w:start=\"").append(section.pageStart).append("\"/>");
     Columns c = section.columns;
@@ -860,6 +879,7 @@ static final char COLUMN_BREAK = '\u000B';
                 "type",
                 "pgNumType",
                 "cols",
+                "pgBorders",
                 "titlePg",
                 "headerReference",
                 "footerReference",
@@ -875,7 +895,17 @@ static final char COLUMN_BREAK = '\u000B';
             warnings,
             DocxLists.read(parts.get("word/numbering.xml"), warnings),
             styles);
-    return new Section(page, furniture, start, pageStart, NoteFormats.read(e, warnings), columns);
+    PageDecor decor = PageDecor.NONE;
+    Element pageBorders = e == null ? null : Xml.child(e, "pgBorders");
+    if (pageBorders != null) {
+      try {
+        decor = decor.borders(DocxBorders.readPage(pageBorders, warnings));
+      } catch (RuntimeException ex) {
+        warnings.add("Invalid page borders");
+      }
+    }
+    return new Section(
+        page, furniture, start, pageStart, NoteFormats.read(e, warnings), columns, decor);
   }
 
   static void writeParagraph(

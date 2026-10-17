@@ -45,9 +45,28 @@ final class DocxBorders {
   }
 
   static void write(StringBuilder b, ParagraphFormat f) {
-    if (!f.borders.isEmpty()) {
-      b.append("<w:pBdr>");
-      ParagraphBorders.Side[] sides = {f.borders.top, f.borders.left, f.borders.bottom, f.borders.right};
+    sides(b, "w:pBdr", "", f.borders);
+    if (f.shading >= 0)
+      b.append("<w:shd w:val=\"clear\" w:color=\"auto\" w:fill=\"").append(hex(f.shading)).append("\"/>");
+  }
+
+  /** Page borders; space is measured from the page edge. */
+  static void page(StringBuilder b, ParagraphBorders borders) {
+    sides(b, "w:pgBorders", " w:offsetFrom=\"page\"", borders);
+  }
+
+  static ParagraphBorders readPage(Element pgBorders, Set<String> warnings) {
+    if (!"page".equals(Xml.attr(pgBorders, "offsetFrom", "text")))
+      warnings.add("Page borders measured from text are placed from the page edge");
+    if (Xml.child(pgBorders, "top") != null && !Xml.attr(Xml.child(pgBorders, "top"), "id", "").isEmpty())
+      warnings.add("Art page borders shown as lines");
+    return read(pgBorders, warnings);
+  }
+
+  private static void sides(StringBuilder b, String tag, String attrs, ParagraphBorders borders) {
+    if (!borders.isEmpty()) {
+      b.append("<").append(tag).append(attrs).append(">");
+      ParagraphBorders.Side[] sides = {borders.top, borders.left, borders.bottom, borders.right};
       for (int i = 0; i < 4; i++)
         if (sides[i].present())
           b.append("<w:")
@@ -61,13 +80,11 @@ final class DocxBorders {
               .append("\" w:color=\"")
               .append(hex(sides[i].color))
               .append("\"/>");
-      b.append("</w:pBdr>");
+      b.append("</").append(tag).append(">");
     }
-    if (f.shading >= 0)
-      b.append("<w:shd w:val=\"clear\" w:color=\"auto\" w:fill=\"").append(hex(f.shading)).append("\"/>");
   }
 
-  private static String hex(int rgb) {
+  static String hex(int rgb) {
     return Integer.toHexString(0x1000000 | rgb).substring(1).toUpperCase();
   }
 }

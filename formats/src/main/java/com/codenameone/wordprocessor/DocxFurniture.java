@@ -196,6 +196,12 @@ final class DocxFurniture {
       if (!settings.getChildAt(i).isTextElement()
           && "evenAndOddHeaders".equals(Xml.local(settings.getChildAt(i))))
         settings.removeChildAt(i);
+    for (int i = settings.getNumChildren() - 1; i >= 0; i--)
+      if (!settings.getChildAt(i).isTextElement()
+          && "displayBackgroundShape".equals(Xml.local(settings.getChildAt(i))))
+        settings.removeChildAt(i);
+    if (document.lastSection.decor.pageColor >= 0)
+      settings.addChild(Xml.parse("<w:displayBackgroundShape xmlns:w=\"" + W + "\"/>"));
     if (document.furniture.differentEven)
       settings.addChild(Xml.parse("<w:evenAndOddHeaders xmlns:w=\"" + W + "\"/>"));
     for (int i = settings.getNumChildren() - 1; i >= 0; i--)

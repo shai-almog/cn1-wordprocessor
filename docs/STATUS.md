@@ -305,8 +305,10 @@ Sections carry 1-12 columns, with spacing, an optional separator rule and unequa
 ## Design tab page decoration
 
 `design.pageColor`, `design.watermark` and `design.pageBorders` store a per-section `PageDecor`
-(native XML `<decor>`), which the editor paints. Limitations: there is no DOCX mapping yet for
-`w:background`, `w:pgBorders` or watermark header shapes, so these settings are lost on DOCX save.
-They are also not drawn in PDF export. The watermark is plain diagonal text in a fixed 54pt
-size. Header/footer commands (`insert.header`/`insert.footer`, `layout.linkToPrevious`,
+(native XML `<decor>`), painted by the editor and PDF export. DOCX maps page borders to
+`w:pgBorders` (`offsetFrom="page"`) and page color to `w:background` plus
+`displayBackgroundShape`. Limitations: the DOCX watermark (a VML header shape) is neither read nor
+written; Word's page color is document-wide, so the last section's color is the one saved; art
+page borders and borders measured from text are approximated; the watermark is fixed 54pt diagonal
+text, and the PDF lightens it instead of using transparency. Header/footer commands (`insert.header`/`insert.footer`, `layout.linkToPrevious`,
 `hf.position`) edit section furniture directly.

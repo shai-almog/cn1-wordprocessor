@@ -16,6 +16,32 @@ public final class PdfExporter {
     byte[] bytes(String name) throws IOException;
   }
 
+  /** Page color, a lightened diagonal watermark and page borders, under the body. */
+  private static void decor(StringBuilder c, PageDecor d, PageSpec spec) throws IOException {
+    if (d.pageColor >= 0)
+      c.append(color(d.pageColor)).append(" rg 0 0 ").append(n(spec.width)).append(' ')
+          .append(n(spec.height)).append(" re f\n");
+    if (!d.watermark.isEmpty()) {
+      int r = d.watermarkColor >> 16 & 255, g = d.watermarkColor >> 8 & 255, b = d.watermarkColor & 255;
+      int light = (r + (255 - r) * 5 / 8) << 16 | (g + (255 - g) * 5 / 8) << 8 | (b + (255 - b) * 5 / 8);
+      float size = 54, k = (float) Math.sqrt(.5), half = d.watermark.length() * size * .28f;
+      float cx = spec.width / 2 - k * half, cy = spec.height / 2 - k * half;
+      c.append("q ").append(color(light)).append(" rg BT /F0 ").append(n(size)).append(" Tf ")
+          .append(n(k)).append(' ').append(n(k)).append(' ').append(n(-k)).append(' ').append(n(k))
+          .append(' ').append(n(cx)).append(' ').append(n(cy)).append(" Tm (")
+          .append(literal(d.watermark)).append(") Tj ET Q\n");
+    }
+    if (!d.borders.isEmpty()) {
+      ParagraphBorders b = d.borders;
+      frame(
+          c,
+          new LayoutEngine.Frame(
+              b.left.space, b.top.space, spec.width - b.left.space - b.right.space,
+              spec.height - b.bottom.space, b, -1, true, true),
+          spec.height);
+    }
+  }
+
   private static void frame(StringBuilder c, LayoutEngine.Frame f, float pageHeight) {
     float top = pageHeight - f.top, bottom = pageHeight - f.bottom;
     if (f.shading >= 0)
@@ -309,6 +335,7 @@ public final class PdfExporter {
             .append(' ')
             .append(n(spec.height - rule[2]))
             .append(" l S Q\n");
+      decor(content, page.decor, spec);
       for (LayoutEngine.Frame frame : page.frames) frame(content, frame, spec.height);
       for (LayoutEngine.PlacedPicture pic : page.pictures) {
         String name = "Im" + (imageIndex++);
