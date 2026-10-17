@@ -155,3 +155,19 @@ Advanced character formatting retains small/all caps, double underline/strike, h
 
 
 Underline modes and color, outline/shadow/emboss/engrave now persist in native XML and DOCX, including prior tracked values. Standard OOXML underline variants share screen/PDF paths; legacy single/double underline values remain compatible. PDF outline uses transparent stroked glyphs and canvas outlines preserve the underlying highlight. HTML effects are approximate CSS. Seven additional heavy/long underline variants are preserved locally; the pinned reference normalizes some of those variants, so they are not claimed as reciprocal equivalence. See [current font acceptance](CHARACTER-FORMATTING.md).
+
+## Drawn objects (2026-10-17)
+
+Shapes, text boxes, WordArt, charts, SmartArt, equations, ink/canvases, icons, signature lines and object placeholders are block-level `Drawing`s carried by pictures.
+
+- Native XML stores the drawing encoding exactly.
+- DOCX writes shapes and text boxes as Word shapes (`wps:wsp`, preset geometry, `txbx`). Equations are Office Math paragraphs. All other kinds are a group of custom-geometry shapes, so Word shows the same vector picture. Every drawing also carries its exact encoding in a `wp:docPr` extension, so this app round-trips it unchanged.
+- Limits in Word: charts are not native Word charts, SmartArt is not editable as SmartArt, and ink is not Word ink. Equation numbers are kept inside the math zone.
+- Importing foreign Word shapes and text boxes reads geometry, fill, outline, text and anchoring. Foreign charts, SmartArt and groups produce conversion warnings.
+- Equations read from foreign DOCX keep their text but not their structure.
+- PDF draws vector paths with base-font text. Partial transparency is blended against white, and characters outside WinAnsi print as "?".
+- HTML exports inline SVG.
+- Text wrapping is block-granular:
+  - Square/tight wrap narrows whole paragraphs that start beside a left- or right-aligned object.
+  - Behind/in-front objects take no space.
+  - There is no free positioning or per-line contour wrapping.

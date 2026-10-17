@@ -2067,6 +2067,33 @@ public final class Session {
         });
   }
 
+  /** Inserts a prepared picture or drawing at the selection; returns its block index. */
+  public int insertPicture(final Picture input) {
+    if (inCell())
+      throw new IllegalArgumentException("Pictures inside table cells are not supported yet");
+    final int[] at = {0};
+    transact(
+        s -> {
+          // An empty caret paragraph stays after the object instead of being split again.
+          boolean empty =
+              selection.collapsed() && document.paragraph(selection.block).text.length() == 0;
+          if (!empty) replace("\n");
+          at[0] = selection.block;
+          long id = document.nextId;
+          document = document.blocks(document.blocks.insert(at[0], input.copy("i" + id)), id + 1);
+          selection = new Selection(at[0] + 1, 0, 0);
+        });
+    return at[0];
+  }
+
+  /** Replaces the picture at {@code block} (same id) as one undo step, keeping the selection. */
+  public void replacePicture(final int block, final Picture next) {
+    if (!(document.blocks.get(block) instanceof Picture))
+      throw new IllegalArgumentException("Select a picture");
+    leaveCell();
+    transact(s -> document = document.blocks(document.blocks.set(block, next), document.nextId));
+  }
+
   /** Replace a picture's crop, border and orientation as one undo step. */
   public void pictureLook(final int block, final Picture.Look look) {
     if (!(document.blocks.get(block) instanceof Picture))

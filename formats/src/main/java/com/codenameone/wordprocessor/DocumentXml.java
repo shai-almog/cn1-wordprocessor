@@ -130,6 +130,8 @@ public final class DocumentXml {
         if (look != null && look.adjusted())
           b.append(" adjust=\"").append(look.brightness).append(',').append(look.contrast).append(',')
               .append(look.transparency).append(',').append(look.colorMode).append('"');
+        if (picture.drawing != null)
+          b.append(" drawing=\"").append(Xml.attribute(picture.drawing.encode())).append('"');
         b.append(">")
             .append(com.codename1.util.Base64.encodeNoNewline(picture.bytes()))
             .append("</picture>");
@@ -453,6 +455,12 @@ public final class DocumentXml {
                       Xml.attr(c, "alt", ""),
                       Xml.attr(c, "align", "left"),
                       pictureAdjust(c, pictureLook(c))));
+          if (!Xml.attr(c, "drawing", "").isEmpty()) {
+            Picture last = (Picture) blocks.get(blocks.size() - 1);
+            blocks =
+                blocks.set(
+                    blocks.size() - 1, last.drawing(Drawing.decode(Xml.attr(c, "drawing", ""))));
+          }
         } else if ("bookmark".equals(Xml.local(c))) {
           Bookmark mark =
               new Bookmark(

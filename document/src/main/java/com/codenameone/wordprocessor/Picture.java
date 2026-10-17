@@ -140,9 +140,17 @@ public final class Picture implements Block {
   public final float width, height;
   public final int pixelWidth, pixelHeight, channels;
   public final Look look;
+  /** Vector content drawn instead of the (placeholder) image, or null for a raster picture. */
+  public final Drawing drawing;
 
   public Picture(String id, byte[] data, float width, float height, String alt, String align) {
     this(id, data, width, height, alt, align, Look.NONE, true);
+  }
+
+  public static Picture drawing(
+      String id, Drawing drawing, float width, float height, String alt, String align) {
+    if (drawing == null) throw new IllegalArgumentException("Invalid drawing");
+    return new Picture(id, Drawing.PLACEHOLDER, width, height, alt, align, Look.NONE, drawing, false);
   }
 
   public Picture(
@@ -158,6 +166,19 @@ public final class Picture implements Block {
       String alt,
       String align,
       Look look,
+      boolean copy) {
+    this(id, data, width, height, alt, align, look, null, copy);
+  }
+
+  private Picture(
+      String id,
+      byte[] data,
+      float width,
+      float height,
+      String alt,
+      String align,
+      Look look,
+      Drawing drawing,
       boolean copy) {
     if (id == null
         || data == null
@@ -187,6 +208,7 @@ public final class Picture implements Block {
     this.alt = alt;
     this.align = align;
     this.look = look;
+    this.drawing = drawing;
   }
 
   private boolean finite(float n) {
@@ -202,15 +224,20 @@ public final class Picture implements Block {
   }
 
   public Picture copy(String id) {
-    return new Picture(id, data, width, height, alt, align, look, false);
+    return new Picture(id, data, width, height, alt, align, look, drawing, false);
   }
 
   public Picture resize(float width, float height, String alt, String align) {
-    return new Picture(id, data, width, height, alt, align, look, false);
+    return new Picture(id, data, width, height, alt, align, look, drawing, false);
   }
 
   public Picture look(Look value) {
-    return new Picture(id, data, width, height, alt, align, value, false);
+    return new Picture(id, data, width, height, alt, align, value, drawing, false);
+  }
+
+  public Picture drawing(Drawing value) {
+    if (value == null) throw new IllegalArgumentException("Invalid drawing");
+    return new Picture(id, data, width, height, alt, align, look, value, false);
   }
 
   public static int[] shape(byte[] b) {

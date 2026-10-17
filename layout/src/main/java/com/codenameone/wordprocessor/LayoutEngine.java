@@ -117,6 +117,32 @@ public final class LayoutEngine {
     }
   }
 
+  /**
+   * Pictures in paint order: by drawing z, then document order. {@code front} selects the
+   * in-front-of-text drawings painted after text; otherwise everything else.
+   */
+  public static List<PlacedPicture> byDepth(List<PlacedPicture> pictures, boolean front) {
+    List<PlacedPicture> out = new ArrayList<PlacedPicture>();
+    for (PlacedPicture p : pictures) {
+      Drawing d = p.picture.drawing;
+      if (front == (d != null && "front".equals(d.get("wrap", "inline")))) out.add(p);
+    }
+    java.util.Collections.sort(
+        out,
+        new java.util.Comparator<PlacedPicture>() {
+          public int compare(PlacedPicture a, PlacedPicture b) {
+            return Float.compare(z(a), z(b));
+          }
+        });
+    return out;
+  }
+
+  private static float z(PlacedPicture p) {
+    Drawing d = p.picture.drawing;
+    if (d == null) return 0;
+    return d.num("z", 0) + ("behind".equals(d.get("wrap", "inline")) ? -10000 : 0);
+  }
+
   public static final class PlacedPicture {
     public final Picture picture;
     public final int block, page;
@@ -1236,6 +1262,15 @@ public final class LayoutEngine {
       float indent = p.indent + (p.list.isEmpty() ? 0 : 18 * (p.listLevel + 1));
       if (p.pageBreak && y > spec.top) newPage();
       else if (p.format.columnBreak && index >= 0) nextColumn();
+      PageSpec unwrapped = null, wrapped = null;
+      if (inWrap()) {
+        unwrapped = spec;
+        spec =
+            wrapped =
+                new PageSpec(
+                    spec.width, spec.height, spec.top, spec.right + wrapRight, spec.bottom,
+                    spec.left + wrapLeft);
+      }
       List<RawLine> ls = lines(p, spec.contentWidth());
       float pageHeight = spec.height - spec.top - spec.bottom;
       if (p.keepNext && following != null && !following.pageBreak) {
@@ -1308,6 +1343,7 @@ public final class LayoutEngine {
             frame(p, indent, segLeft, segWidth, segTop, segBottom + bottomPad, segFirst, true));
       }
       y += p.after;
+      if (wrapped != null && spec == wrapped) spec = unwrapped;
     }
 
     /** The border box spans the indented text width plus each side's distance and width. */
@@ -1320,8 +1356,27 @@ public final class LayoutEngine {
       return new Frame(x, top, right - x, bottom, p.format, first, last);
     }
 
+    /** A square/tight-wrapped object narrows paragraphs beside it until this y on its page. */
+    float wrapBottom, wrapLeft, wrapRight;
+    int wrapPage = -1, wrapColumn;
+
+    boolean inWrap() {
+      return wrapPage == pages.size() && wrapColumn == column && y < wrapBottom;
+    }
+
+    /** Tables and inline objects start below a wrapped object rather than beside it. */
+    void clearWrap() {
+      if (inWrap()) y = wrapBottom;
+      wrapPage = -1;
+    }
+
     void picture(Picture p, int index) {
       numbering.reset();
+      String wrap = p.drawing == null ? "inline" : p.drawing.get("wrap", "inline");
+      boolean floating = "behind".equals(wrap) || "front".equals(wrap);
+      boolean around =
+          ("square".equals(wrap) || "tight".equals(wrap)) && !"center".equals(p.align);
+      if (!floating) clearWrap();
       float scale =
           Math.min(
               1,
@@ -1336,10 +1391,21 @@ public final class LayoutEngine {
                   ? (spec.contentWidth() - width) / 2
                   : "right".equals(p.align) ? spec.contentWidth() - width : 0);
       pictures.add(new PlacedPicture(p, index, pages.size(), x, y, width, height));
+      if (floating) return;
+      if (around && width < spec.contentWidth() * .75f) {
+        float cut = width + ("tight".equals(wrap) ? 6 : 12);
+        wrapPage = pages.size();
+        wrapColumn = column;
+        wrapBottom = y + height + 6;
+        wrapLeft = "right".equals(p.align) ? 0 : cut;
+        wrapRight = "right".equals(p.align) ? cut : 0;
+        return;
+      }
       y += height + 6;
     }
 
     void table(Table t, int index) {
+      clearWrap();
       mergedTable(t, index);
     }
 

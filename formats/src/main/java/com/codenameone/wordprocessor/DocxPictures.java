@@ -55,6 +55,20 @@ final class DocxPictures {
         if (container == null) throw new IllegalArgumentException("Unknown drawing container");
         if (anchor != null)
           warnings.add("Floating picture placement converted to a separate paragraph");
+        Element extent0 = Xml.child(container, "extent"), props0 = Xml.child(container, "docPr");
+        Drawing drawing = DocxDrawings.extension(container);
+        if (drawing == null) drawing = DocxDrawings.shape(container, warnings);
+        if (drawing != null && extent0 != null) {
+          result.add(
+              Picture.drawing(
+                  "i" + id[0]++,
+                  drawing,
+                  Math.max(1, Float.parseFloat(Xml.attr(extent0, "cx", "0")) / 12700f),
+                  Math.max(1, Float.parseFloat(Xml.attr(extent0, "cy", "0")) / 12700f),
+                  props0 == null ? "" : Xml.attr(props0, "descr", ""),
+                  "left"));
+          return;
+        }
         Element blip = descendant(container, "blip"),
             extent = Xml.child(container, "extent"),
             props = Xml.child(container, "docPr");
@@ -75,6 +89,10 @@ final class DocxPictures {
       } catch (RuntimeException ex) {
         warnings.add("Picture requires conversion: " + ex.getMessage());
       }
+      return;
+    }
+    if ("oMathPara".equals(Xml.local(e)) || "oMath".equals(Xml.local(e))) {
+      result.add(Picture.drawing("i" + id[0]++, DocxDrawings.math(e), 468, 36, "", "left"));
       return;
     }
     for (Element child : Xml.children(e, null)) collect(child, result, id, warnings);
@@ -154,7 +172,13 @@ final class DocxPictures {
     }
   }
 
+  private int drawings;
+
   void write(StringBuilder b, Picture p) {
+    if (p.drawing != null) {
+      DocxDrawings.write(b, p, 1000 + ++drawings);
+      return;
+    }
     String id = output.get(p);
     if (id == null) {
       id = "cn1Picture" + (output.size() + 1);

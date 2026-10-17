@@ -367,3 +367,21 @@ DOCX writes the numFmt and lvlText for each level and reads custom lvlText back 
 ## Review markup display
 
 `review.markup {mode}` switches the canvas between all markup, simple/no markup (every revision previewed as accepted) and original (every revision previewed as rejected); `review.showMarkup` toggles all/none. Previews are read-only on the canvas. Simple markup does not yet differ from no markup (Word adds change bars only). `review.restrict` is the same as `file.protect`. `insert.editHeader`/`insert.editFooter` open the header/footer editor dialog; there is no in-page header editing mode yet. Dark page mode inverts lightness while preserving hue.
+
+## Drawn objects
+
+The following are model-level objects with full undo:
+- Insert shape (21 geometries), text box (with linking), WordArt (styles, fill, outline, transforms), icon, signature line, embedded-object placeholder and canvas.
+- Charts (column, bar, line, pie and area; data, title, legend and labels).
+- SmartArt (list, process, cycle, hierarchy, pyramid and matrix; text pane, add, promote/demote, colors and reset).
+- Equations (linear and professional, symbols, structures, display/inline, justification and numbering).
+- Ink (pen, pencil and highlighter, pen presets, eraser, lasso, ink-to-shape and replay).
+- Arrange: align, wrap, z-order, selection pane, group/ungroup.
+
+They render identically on the canvas, in PDF and in HTML from shared geometry.
+
+Limits:
+- Objects are block-level. Wrapping narrows whole paragraphs, and there is no drag positioning.
+- Ink strokes are entered as point lists through commands; there is no freehand pointer capture on the canvas yet.
+- Equation structures are entered and shown in linear format with Unicode symbol and script substitution, not a 2-D math layout.
+- Chart data is edited as CSV text.

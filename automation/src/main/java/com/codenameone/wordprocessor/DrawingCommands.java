@@ -1,0 +1,1017 @@
+package com.codenameone.wordprocessor;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * Insert and format vector objects: shapes, text boxes, WordArt, icons, signature lines, charts,
+ * SmartArt, equations, ink, canvases and embedded-object placeholders. Every object is a {@link
+ * Picture} carrying a {@link Drawing}, so selection, size, alignment, alt text, undo and save
+ * behave like pictures. Commands that format an object take {@code block}; without it they use the
+ * object at the caret or the one just before it.
+ */
+final class DrawingCommands implements Commands.Extension {
+  /** Pen presets added with draw.addPen, in order. */
+  private final List<String> pens = new ArrayList<String>();
+
+  public void register(final Commands c) {
+    pens.add("pen,000000,1");
+    pens.add("pencil,404040,1");
+    pens.add("highlighter,ffff00,4");
+
+    c.register(
+        "insert.shape",
+        "Insert a shape: " + DrawingOps.SHAPES,
+        "shape?:string,width?:number,height?:number,text?:string,fill?:string,line?:string",
+        true,
+        (s, a) -> {
+          String shape = a.containsKey("shape") ? Commands.str(a, "shape") : "rect";
+          if (!DrawingOps.SHAPES.contains(shape)) throw new IllegalArgumentException("Unknown shape: " + shape);
+          Drawing d = Drawing.of("shape").with("shape", shape);
+          d = copy(a, d, "text", "fill", "line");
+          boolean line = "line".equals(shape) || "arrowLine".equals(shape);
+          return insert(s, d, f(a, "width", 144), f(a, "height", line ? 12 : 96), "Shape: " + shape);
+        });
+    c.register(
+        "insert.textBox",
+        "Insert a text box",
+        "text?:string,width?:number,height?:number",
+        true,
+        (s, a) ->
+            insert(
+                s,
+                Drawing.of("textBox").with("text", a.containsKey("text") ? Commands.str(a, "text") : "Type here").with("valign", "top"),
+                f(a, "width", 180),
+                f(a, "height", 72),
+                "Text box"));
+    c.register(
+        "insert.wordArt",
+        "Insert WordArt text",
+        "text?:string,style?:integer",
+        true,
+        (s, a) -> {
+          String text = a.containsKey("text") ? Commands.str(a, "text") : "Your text here";
+          Drawing d = wordArtStyle(Drawing.of("wordArt").with("text", text), a.containsKey("style") ? Commands.integer(a, "style") : 1);
+          return insert(s, d, Math.min(468, Math.max(120, text.length() * 26)), 60, text);
+        });
+    c.register(
+        "insert.icon",
+        "Insert an icon: " + DrawingOps.ICONS,
+        "icon:string,color?:string,size?:number",
+        true,
+        (s, a) -> {
+          String icon = Commands.str(a, "icon");
+          if (!DrawingOps.ICONS.contains(icon)) throw new IllegalArgumentException("Unknown icon: " + icon);
+          Drawing d = Drawing.of("icon").with("icon", icon);
+          if (a.containsKey("color")) d = d.with("fill", Commands.str(a, "color"));
+          float size = f(a, "size", 48);
+          return insert(s, d, size, size, icon + " icon");
+        });
+    c.register(
+        "insert.signatureLine",
+        "Insert a signature line with the suggested signer and title",
+        "signer?:string,title?:string",
+        true,
+        (s, a) -> {
+          Drawing d = copy(a, Drawing.of("signature"), "signer");
+          if (a.containsKey("title")) d = d.with("signerTitle", Commands.str(a, "title"));
+          return insert(s, d, 216, 72, "Signature line" + (a.containsKey("signer") ? ": " + Commands.str(a, "signer") : ""));
+        });
+    c.register(
+        "insert.object",
+        "Embed a file as an object (shown as an icon with its name)",
+        "name:string,base64?:string",
+        true,
+        (s, a) -> {
+          String name = Commands.str(a, "name");
+          if (name.isEmpty() || name.length() > 200) throw new IllegalArgumentException("Invalid object name");
+          Drawing d = Drawing.of("object").with("name", name);
+          if (a.containsKey("base64")) {
+            String data = Commands.str(a, "base64");
+            com.codename1.util.Base64.decode(data.getBytes());
+            d = d.with("data", data);
+          }
+          return insert(s, d, 72, 72, name);
+        });
+    c.register(
+        "insert.canvas",
+        "Insert a drawing canvas for ink and shapes",
+        "width?:number,height?:number",
+        true,
+        (s, a) -> insert(s, Drawing.of("canvas"), f(a, "width", 432), f(a, "height", 216), "Drawing canvas"));
+
+    // ---------------------------------------------------------------- shape formatting
+    c.register(
+        "shape.fill",
+        "Set the shape or text box fill color (hex or none) and transparency (0-100)",
+        "block?:integer,color?:string,transparency?:number",
+        true,
+        (s, a) -> {
+          Drawing d = drawing(s, a);
+          if (a.containsKey("color")) d = d.with("fill", color(Commands.str(a, "color")));
+          if (a.containsKey("transparency"))
+            d = d.with("transparency", String.valueOf(clamp(f(a, "transparency", 0), 0, 100)));
+          return update(s, a, d);
+        });
+    c.register(
+        "shape.outline",
+        "Set the shape outline color (hex or none) and width in points",
+        "block?:integer,color?:string,width?:number",
+        true,
+        (s, a) -> {
+          Drawing d = drawing(s, a);
+          if (a.containsKey("color")) d = d.with("line", color(Commands.str(a, "color")));
+          if (a.containsKey("width")) d = d.with("lineWidth", String.valueOf(clamp(f(a, "width", 1), 0, 72)));
+          return update(s, a, d);
+        });
+    c.register(
+        "shape.effects",
+        "Shadow and glow effects for an object",
+        "block?:integer,shadow?:boolean,glow?:string",
+        true,
+        (s, a) -> {
+          Drawing d = drawing(s, a);
+          if (a.containsKey("shadow")) d = d.with("shadow", String.valueOf(a.get("shadow")));
+          if (a.containsKey("glow")) d = d.with("glow", color(Commands.str(a, "glow")));
+          return update(s, a, d);
+        });
+    c.register(
+        "shape.text",
+        "Set the text inside a shape or text box",
+        "block?:integer,text:string,size?:number,color?:string,bold?:boolean,align?:string",
+        true,
+        (s, a) -> {
+          Drawing d = drawing(s, a).with("text", Commands.str(a, "text"));
+          if (a.containsKey("size")) d = d.with("fontSize", String.valueOf(clamp(f(a, "size", 11), 1, 400)));
+          if (a.containsKey("color")) d = d.with("textColor", color(Commands.str(a, "color")));
+          if (a.containsKey("bold")) d = d.with("bold", String.valueOf(a.get("bold")));
+          if (a.containsKey("align")) d = d.with("align", oneOf(Commands.str(a, "align"), "left", "center", "right"));
+          return update(s, a, d);
+        });
+    c.register(
+        "shape.textDirection",
+        "Text direction in a shape: horizontal, rotate90, rotate270 or stacked",
+        "block?:integer,direction:string",
+        true,
+        (s, a) ->
+            update(s, a, drawing(s, a).with("textDirection",
+                oneOf(Commands.str(a, "direction"), "horizontal", "rotate90", "rotate270", "stacked"))));
+    c.register(
+        "shape.alignText",
+        "Vertical text alignment in a shape: top, middle or bottom",
+        "block?:integer,align:string",
+        true,
+        (s, a) -> update(s, a, drawing(s, a).with("valign", oneOf(Commands.str(a, "align"), "top", "middle", "bottom"))));
+    c.register(
+        "shape.change",
+        "Change the geometry of a shape",
+        "block?:integer,shape:string",
+        true,
+        (s, a) -> {
+          String shape = Commands.str(a, "shape");
+          if (!DrawingOps.SHAPES.contains(shape)) throw new IllegalArgumentException("Unknown shape: " + shape);
+          return update(s, a, drawing(s, a).with("shape", shape));
+        });
+    c.register(
+        "shape.link",
+        "Link a text box to another so overflowing text continues there",
+        "block?:integer,target:integer",
+        true,
+        (s, a) -> {
+          int from = block(s, a), to = Commands.integer(a, "target");
+          Picture source = picture(s, from), target = picture(s, to);
+          if (from == to || source.drawing == null || target.drawing == null
+              || !"textBox".equals(source.drawing.kind) || !"textBox".equals(target.drawing.kind))
+            throw new IllegalArgumentException("Link two different text boxes");
+          Drawing d = source.drawing;
+          String text = d.get("text", "") + (target.drawing.get("text", "").isEmpty() ? "" : "\n" + target.drawing.get("text", ""));
+          float size = d.num("fontSize", 11), inset = d.num("inset", 7.2f);
+          List<String> lines = DrawingOps.wrap(text, source.width - 2 * inset, size, d.flag("bold"));
+          int fits = Math.max(1, (int) ((source.height - 2 * inset) / (size * 1.2f)));
+          StringBuilder first = new StringBuilder(), rest = new StringBuilder();
+          for (int i = 0; i < lines.size(); i++) {
+            StringBuilder into = i < fits ? first : rest;
+            if (into.length() > 0) into.append(i < fits || into.length() > 0 ? " " : "");
+            into.append(lines.get(i));
+          }
+          Selection keep = s.selection();
+          Sequence<Block> blocks = s.document().blocks;
+          blocks = blocks.set(from, source.drawing(d.with("text", first.toString()).with("linkNext", target.id())));
+          blocks = blocks.set(to, target.drawing(target.drawing.with("text", rest.toString())));
+          s.replaceDocument(s.document().blocks(blocks, s.document().nextId));
+          s.selectRange(keep.anchorBlock, keep.anchor, keep.block, keep.caret);
+          return Json.object("moved", rest.length());
+        });
+
+    // ---------------------------------------------------------------- WordArt
+    c.register(
+        "wordArt.style",
+        "Apply a WordArt style (1-6)",
+        "block?:integer,style:integer",
+        true,
+        (s, a) -> update(s, a, wordArtStyle(drawing(s, a), Commands.integer(a, "style"))));
+    c.register(
+        "wordArt.textFill",
+        "WordArt text fill color",
+        "block?:integer,color:string",
+        true,
+        (s, a) -> update(s, a, drawing(s, a).with("textFill", color(Commands.str(a, "color")))));
+    c.register(
+        "wordArt.textOutline",
+        "WordArt text outline color (or none)",
+        "block?:integer,color:string",
+        true,
+        (s, a) -> update(s, a, drawing(s, a).with("textOutline", color(Commands.str(a, "color")))));
+    c.register(
+        "wordArt.transform",
+        "WordArt transform: " + DrawingOps.WORD_ART,
+        "block?:integer,transform:string",
+        true,
+        (s, a) -> {
+          String t = Commands.str(a, "transform");
+          if (!DrawingOps.WORD_ART.contains(t)) throw new IllegalArgumentException("Unknown transform: " + t);
+          return update(s, a, drawing(s, a).with("transform", t));
+        });
+
+    // ---------------------------------------------------------------- charts
+    c.register(
+        "insert.chart",
+        "Insert a chart: " + DrawingOps.CHARTS + "; data is CSV (header row, then categories)",
+        "type?:string,data?:string,title?:string",
+        true,
+        (s, a) -> {
+          String type = a.containsKey("type") ? Commands.str(a, "type") : "column";
+          if (!DrawingOps.CHARTS.contains(type)) throw new IllegalArgumentException("Unknown chart type: " + type);
+          Drawing d = Drawing.of("chart").with("chartType", type).with("data", DrawingOps.SAMPLE_CHART);
+          if (a.containsKey("data")) d = d.with("data", chartData(Commands.str(a, "data")));
+          if (a.containsKey("title")) d = d.with("title", Commands.str(a, "title")).with("titleSet", "true");
+          return insert(s, d, 360, 216, "Chart");
+        });
+    c.register(
+        "chart.type",
+        "Change chart type",
+        "block?:integer,type:string",
+        true,
+        (s, a) -> {
+          String type = Commands.str(a, "type");
+          if (!DrawingOps.CHARTS.contains(type)) throw new IllegalArgumentException("Unknown chart type: " + type);
+          return update(s, a, chart(s, a).with("chartType", type));
+        });
+    c.register(
+        "chart.editData",
+        "Read or replace chart data (CSV: header row, then one row per category)",
+        "block?:integer,data?:string",
+        true,
+        (s, a) -> {
+          Drawing d = chart(s, a);
+          if (a.containsKey("data")) update(s, a, d = d.with("data", chartData(Commands.str(a, "data"))));
+          return d.get("data", DrawingOps.SAMPLE_CHART);
+        });
+    c.register(
+        "chart.title",
+        "Set or remove the chart title",
+        "block?:integer,title:string",
+        true,
+        (s, a) -> update(s, a, chart(s, a).with("title", Commands.str(a, "title")).with("titleSet", "true")));
+    c.register(
+        "chart.legend",
+        "Show or hide the chart legend",
+        "block?:integer,value?:boolean",
+        true,
+        (s, a) -> {
+          Drawing d = chart(s, a);
+          boolean on = a.containsKey("value") ? (Boolean) a.get("value") : "false".equals(d.get("legend", "true"));
+          return update(s, a, d.with("legend", String.valueOf(on)));
+        });
+    c.register(
+        "chart.dataLabels",
+        "Show or hide data labels",
+        "block?:integer,value?:boolean",
+        true,
+        (s, a) -> {
+          Drawing d = chart(s, a);
+          boolean on = a.containsKey("value") ? (Boolean) a.get("value") : !d.flag("dataLabels");
+          return update(s, a, d.with("dataLabels", String.valueOf(on)));
+        });
+
+    // ---------------------------------------------------------------- SmartArt
+    c.register(
+        "insert.smartArt",
+        "Insert SmartArt: " + DrawingOps.SMART_ART + "; nodes are lines, tab-indented for levels",
+        "layout?:string,nodes?:string",
+        true,
+        (s, a) -> {
+          String layout = a.containsKey("layout") ? Commands.str(a, "layout") : "list";
+          if (!DrawingOps.SMART_ART.contains(layout)) throw new IllegalArgumentException("Unknown layout: " + layout);
+          Drawing d = Drawing.of("smartArt").with("layout", layout).with("nodes", "Text\nText\nText");
+          if (a.containsKey("nodes")) d = d.with("nodes", nodes(Commands.str(a, "nodes")));
+          return insert(s, d, 432, 216, "SmartArt " + layout);
+        });
+    c.register(
+        "smartArt.textPane",
+        "Read or replace SmartArt text (one node per line, tab-indented for levels)",
+        "block?:integer,nodes?:string",
+        true,
+        (s, a) -> {
+          Drawing d = smart(s, a);
+          if (a.containsKey("nodes")) update(s, a, d = d.with("nodes", nodes(Commands.str(a, "nodes"))));
+          return d.get("nodes", "");
+        });
+    c.register(
+        "smartArt.addShape",
+        "Add a SmartArt node after the given node (default last)",
+        "block?:integer,text?:string,after?:integer,below?:boolean",
+        true,
+        (s, a) -> {
+          Drawing d = smart(s, a);
+          List<String> lines = lines(d);
+          int after = a.containsKey("after") ? Commands.integer(a, "after") : lines.size() - 1;
+          if (after < -1 || after >= lines.size()) throw new IllegalArgumentException("Node out of range");
+          String indent = after < 0 ? "" : tabs(lines.get(after));
+          if (a.containsKey("below") && (Boolean) a.get("below")) indent += "\t";
+          lines.add(after + 1, indent + (a.containsKey("text") ? Commands.str(a, "text") : "Text"));
+          return update(s, a, d.with("nodes", join(lines)));
+        });
+    c.register("smartArt.promote", "Promote a SmartArt node one level", "block?:integer,node:integer", true,
+        (s, a) -> level(s, a, -1));
+    c.register("smartArt.demote", "Demote a SmartArt node one level", "block?:integer,node:integer", true,
+        (s, a) -> level(s, a, 1));
+    c.register(
+        "smartArt.layout",
+        "Change SmartArt layout: " + DrawingOps.SMART_ART,
+        "block?:integer,layout:string",
+        true,
+        (s, a) -> {
+          String layout = Commands.str(a, "layout");
+          if (!DrawingOps.SMART_ART.contains(layout)) throw new IllegalArgumentException("Unknown layout: " + layout);
+          return update(s, a, smart(s, a).with("layout", layout));
+        });
+    c.register(
+        "smartArt.colors",
+        "SmartArt colors: colorful or accent1..accent6",
+        "block?:integer,colors:string",
+        true,
+        (s, a) -> {
+          String v = Commands.str(a, "colors");
+          if (!"colorful".equals(v) && !(v.startsWith("accent") && v.length() == 7 && v.charAt(6) >= '1' && v.charAt(6) <= '6'))
+            throw new IllegalArgumentException("colors: colorful or accent1..accent6");
+          return update(s, a, smart(s, a).with("colors", v));
+        });
+    c.register(
+        "smartArt.reset",
+        "Reset SmartArt colors and styles, keeping text and layout",
+        "block?:integer",
+        true,
+        (s, a) -> {
+          Drawing d = smart(s, a);
+          return update(s, a, Drawing.of("smartArt").with("layout", d.get("layout", "list")).with("nodes", d.get("nodes", "")));
+        });
+
+    // ---------------------------------------------------------------- equations
+    c.register(
+        "insert.equation",
+        "Insert an equation in linear format (\\\\alpha, x^2, (a)/(b) ...)",
+        "text?:string,display?:boolean",
+        true,
+        (s, a) -> {
+          Drawing d = Drawing.of("equation").with("text", a.containsKey("text") ? Commands.str(a, "text") : "");
+          boolean display = !a.containsKey("display") || (Boolean) a.get("display");
+          float width = display ? s.activeSection().resolved.page.contentWidth() : 160;
+          return insert(s, d.with("display", String.valueOf(display)), width, 30, "Equation");
+        });
+    c.register(
+        "equation.inputFormat",
+        "Show the equation in professional (built-up) or linear form",
+        "block?:integer,format:string",
+        true,
+        (s, a) -> update(s, a, equation(s, a).with("format", oneOf(Commands.str(a, "format"), "professional", "linear"))));
+    c.register(
+        "equation.convert",
+        "Toggle the equation between professional and linear form",
+        "block?:integer",
+        true,
+        (s, a) -> {
+          Drawing d = equation(s, a);
+          return update(s, a, d.with("format", "linear".equals(d.get("format", "professional")) ? "professional" : "linear"));
+        });
+    c.register(
+        "equation.normalText",
+        "Toggle upright normal text in the equation",
+        "block?:integer,value?:boolean",
+        true,
+        (s, a) -> {
+          Drawing d = equation(s, a);
+          boolean on = a.containsKey("value") ? (Boolean) a.get("value") : !d.flag("normalText");
+          return update(s, a, d.with("normalText", String.valueOf(on)));
+        });
+    c.register(
+        "equation.insertSymbol",
+        "Append a math symbol by control word (alpha, pm, infty, sum ...)",
+        "block?:integer,name:string",
+        true,
+        (s, a) -> {
+          String name = Commands.str(a, "name");
+          String word = name.startsWith("\\") ? name : "\\" + name;
+          boolean known = false;
+          for (String[] sym : DrawingOps.symbols()) known |= sym[0].equals(word);
+          if (!known) throw new IllegalArgumentException("Unknown symbol: " + name);
+          Drawing d = equation(s, a);
+          return update(s, a, d.with("text", d.get("text", "") + word + " "));
+        });
+    c.register(
+        "equation.structure",
+        "Append a structure: fraction, script, subscript, radical, integral, sum, bracket, function, accent, limit, matrix",
+        "block?:integer,kind:string",
+        true,
+        (s, a) -> {
+          String kind = Commands.str(a, "kind");
+          String snippet =
+              "fraction".equals(kind) ? "(a)/(b)"
+                  : "script".equals(kind) ? "x^2"
+                  : "subscript".equals(kind) ? "x_1"
+                  : "radical".equals(kind) ? "\\sqrt (x)"
+                  : "integral".equals(kind) ? "\\int _0^1 f(x)dx"
+                  : "sum".equals(kind) ? "\\sum _(i=1)^n i"
+                  : "bracket".equals(kind) ? "(x)"
+                  : "function".equals(kind) ? "sin(x)"
+                  : "accent".equals(kind) ? "x\u0302"
+                  : "limit".equals(kind) ? "lim_(n\\rightarrow \\infty ) a_n"
+                  : "matrix".equals(kind) ? "[(1&0@0&1)]" : null;
+          if (snippet == null) throw new IllegalArgumentException("Unknown structure: " + kind);
+          Drawing d = equation(s, a);
+          return update(s, a, d.with("text", d.get("text", "") + snippet));
+        });
+    c.register(
+        "equation.display",
+        "Change the equation to display (own line, full width) or inline",
+        "block?:integer,display?:boolean",
+        true,
+        (s, a) -> {
+          int block = block(s, a);
+          Picture p = picture(s, block);
+          Drawing d = equation(s, a);
+          boolean display = a.containsKey("display") ? (Boolean) a.get("display") : !"true".equals(d.get("display", "true"));
+          float width = display ? s.activeSection().resolved.page.contentWidth() : Math.max(60, d.get("text", "").length() * 7f);
+          s.replacePicture(block, p.drawing(d.with("display", String.valueOf(display))).resize(width, p.height, p.alt, p.align));
+          return display;
+        });
+    c.register(
+        "equation.justify",
+        "Equation justification: left, center or right",
+        "block?:integer,justify:string",
+        true,
+        (s, a) -> update(s, a, equation(s, a).with("justify", oneOf(Commands.str(a, "justify"), "left", "center", "right"))));
+    c.register(
+        "equation.number",
+        "Number the equation; numbers count display equations in document order",
+        "block?:integer,value?:boolean",
+        true,
+        (s, a) -> {
+          int block = block(s, a);
+          Drawing d = equation(s, a);
+          boolean on = a.containsKey("value") ? (Boolean) a.get("value") : d.get("number", "").isEmpty();
+          s.replacePicture(block, picture(s, block).drawing(d.with("number", on ? "#" : "")));
+          return renumber(s);
+        });
+
+    // ---------------------------------------------------------------- ink
+    for (final String tool : new String[] {"pen", "pencil", "highlighter"})
+      c.register(
+          "draw." + tool,
+          "Draw a " + tool + " stroke on the canvas or ink at the caret (points: x,y x,y ... in points)",
+          "block?:integer,points:string,color?:string,width?:number",
+          true,
+          (s, a) -> {
+            String color = a.containsKey("color") ? color(Commands.str(a, "color")) : defaultPen(tool)[1];
+            if ("none".equals(color)) throw new IllegalArgumentException("Choose an ink color");
+            float width = clamp(f(a, "width", Float.parseFloat(defaultPen(tool)[2])), .25f, 72);
+            String points = points(Commands.str(a, "points"));
+            String stroke = tool + "," + color + "," + width + ":" + points;
+            int block = inkTarget(s, a);
+            Picture p = picture(s, block);
+            String strokes = p.drawing.get("strokes", "");
+            s.replacePicture(block, p.drawing(p.drawing.with("strokes", strokes.isEmpty() ? stroke : strokes + "|" + stroke)));
+            return Json.object("block", block, "strokes", count(p.drawing.get("strokes", "")) + 1);
+          });
+    c.register(
+        "draw.addPen",
+        "Add a pen preset (tool pen|pencil|highlighter, color, width) to the pen gallery",
+        "tool:string,color:string,width?:number",
+        false,
+        (s, a) -> {
+          String tool = oneOf(Commands.str(a, "tool"), "pen", "pencil", "highlighter");
+          String color = color(Commands.str(a, "color"));
+          if ("none".equals(color)) throw new IllegalArgumentException("Choose an ink color");
+          pens.add(tool + "," + color + "," + clamp(f(a, "width", 1), .25f, 72));
+          return new ArrayList<Object>(pens);
+        });
+    c.register(
+        "draw.eraser",
+        "Erase ink strokes passing near a point (x, y in points within the object)",
+        "block?:integer,x:number,y:number,radius?:number",
+        true,
+        (s, a) -> {
+          int block = block(s, a);
+          Picture p = ink(s, block);
+          String before = p.drawing.get("strokes", "");
+          String after = DrawingOps.erase(before, f(a, "x", 0), f(a, "y", 0), f(a, "radius", 6));
+          if (!after.equals(before)) s.replacePicture(block, p.drawing(p.drawing.with("strokes", after)));
+          return count(before) - count(after);
+        });
+    c.register(
+        "draw.lasso",
+        "Lasso select: report the ink strokes whose points fall inside a rectangle",
+        "block?:integer,x:number,y:number,width:number,height:number",
+        false,
+        (s, a) -> {
+          Picture p = ink(s, block(s, a));
+          float x = f(a, "x", 0), y = f(a, "y", 0), w = f(a, "width", 0), h = f(a, "height", 0);
+          List<Object> hits = new ArrayList<Object>();
+          List<String> strokes = DrawingOps.split(p.drawing.get("strokes", ""), '|');
+          for (int i = 0; i < strokes.size(); i++) {
+            float[] box = bounds(strokes.get(i));
+            if (box != null && box[0] >= x && box[1] >= y && box[2] <= x + w && box[3] <= y + h) hits.add(i);
+          }
+          return hits;
+        });
+    c.register(
+        "draw.inkToShape",
+        "Convert the last ink stroke to the closest shape (line, rectangle, ellipse or triangle)",
+        "block?:integer",
+        true,
+        (s, a) -> {
+          int block = block(s, a);
+          Picture p = ink(s, block);
+          List<String> strokes = DrawingOps.split(p.drawing.get("strokes", ""), '|');
+          if (strokes.isEmpty() || strokes.get(0).isEmpty()) throw new IllegalArgumentException("No ink to convert");
+          String last = strokes.remove(strokes.size() - 1);
+          float[] box = bounds(last);
+          String shape = recognize(last, box);
+          float w = Math.max(4, box[2] - box[0]), h = Math.max(4, box[3] - box[1]);
+          String head = last.substring(0, last.indexOf(':'));
+          List<String> parts = DrawingOps.split(head, ',');
+          Drawing d =
+              Drawing.of("shape").with("shape", shape).with("fill", "none")
+                  .with("line", parts.size() > 1 ? parts.get(1) : "000000").with("lineWidth", parts.size() > 2 ? parts.get(2) : "1");
+          Selection keep = s.selection();
+          Sequence<Block> blocks = s.document().blocks;
+          long id = s.document().nextId;
+          blocks = blocks.set(block, p.drawing(p.drawing.with("strokes", join(strokes, '|'))));
+          blocks = blocks.insert(block + 1, Picture.drawing("i" + id, d, w, "line".equals(shape) ? 12 : h, "Shape: " + shape, p.align));
+          s.replaceDocument(s.document().blocks(blocks, id + 1));
+          near(s, keep.block > block ? keep.block + 1 : keep.block);
+          return shape;
+        });
+    c.register(
+        "draw.replay",
+        "Ink replay: the strokes of an ink object in drawing order",
+        "block?:integer",
+        false,
+        (s, a) -> {
+          List<Object> out = new ArrayList<Object>();
+          for (String stroke : DrawingOps.split(ink(s, block(s, a)).drawing.get("strokes", ""), '|'))
+            if (!stroke.isEmpty()) out.add(stroke);
+          return out;
+        });
+
+    // ---------------------------------------------------------------- arrange
+    c.register(
+        "arrange.align",
+        "Align the object left, center or right",
+        "block?:integer,align:string",
+        true,
+        (s, a) -> {
+          int block = block(s, a);
+          Picture p = picture(s, block);
+          s.updatePicture(block, p.width, p.height, p.alt, oneOf(Commands.str(a, "align"), "left", "center", "right"), false);
+          return null;
+        });
+    c.register(
+        "arrange.wrap",
+        "Text wrapping: inline, square, tight, topBottom, behind or front",
+        "block?:integer,wrap:string",
+        true,
+        (s, a) -> {
+          int block = block(s, a);
+          Picture p = picture(s, block);
+          String wrap = oneOf(Commands.str(a, "wrap"), "inline", "square", "tight", "topBottom", "behind", "front");
+          Drawing d = p.drawing == null ? null : p.drawing.with("wrap", wrap);
+          if (d == null) throw new IllegalArgumentException("Wrapping applies to shapes and other drawn objects");
+          s.replacePicture(block, p.drawing(d));
+          return wrap;
+        });
+    c.register(
+        "arrange.bringForward",
+        "Bring the object forward (or to front with all)",
+        "block?:integer,all?:boolean",
+        true,
+        (s, a) -> z(s, a, 1));
+    c.register(
+        "arrange.sendBackward",
+        "Send the object backward (or to back with all)",
+        "block?:integer,all?:boolean",
+        true,
+        (s, a) -> z(s, a, -1));
+    c.register(
+        "arrange.selectionPane",
+        "Selection pane: list objects, rename one or hide/show it",
+        "block?:integer,name?:string,visible?:boolean",
+        true,
+        (s, a) -> {
+          if (a.containsKey("name") || a.containsKey("visible")) {
+            int block = block(s, a);
+            Picture p = picture(s, block);
+            Drawing d = p.drawing == null ? Drawing.of("object") : p.drawing;
+            if (p.drawing == null) throw new IllegalArgumentException("Select a drawn object");
+            if (a.containsKey("name")) d = d.with("objectName", Commands.str(a, "name"));
+            if (a.containsKey("visible")) d = d.with("hidden", String.valueOf(!(Boolean) a.get("visible")));
+            s.replacePicture(block, p.drawing(d));
+          }
+          return objects(s.document());
+        });
+    c.register(
+        "select.objects",
+        "List every picture and drawn object (block, kind, name)",
+        "",
+        false,
+        (s, a) -> objects(s.document()));
+    c.register(
+        "arrange.group",
+        "Group the drawn objects in blocks from..to into one canvas, or ungroup a group",
+        "block?:integer,from?:integer,to?:integer,ungroup?:boolean",
+        true,
+        (s, a) -> group(s, a));
+  }
+
+  // ---------------------------------------------------------------- helpers
+
+  /** Puts the caret at the start of the first paragraph at or after {@code block}. */
+  private static void near(Session s, int block) {
+    Document d = s.document();
+    for (int i = Math.max(0, Math.min(block, d.blocks.size() - 1)); i < d.blocks.size(); i++)
+      if (d.blocks.get(i) instanceof Paragraph) {
+        s.select(i, 0, 0);
+        return;
+      }
+    for (int i = d.blocks.size() - 1; i >= 0; i--)
+      if (d.blocks.get(i) instanceof Paragraph) {
+        s.select(i, 0, 0);
+        return;
+      }
+  }
+
+  private static Object insert(Session s, Drawing d, float w, float h, String alt) {
+    int at = s.insertPicture(Picture.drawing("pending", d, w, h, alt, "left"));
+    return Json.object("block", at);
+  }
+
+  private static int block(Session s, Map<String, Object> a) {
+    if (a.containsKey("block")) return Commands.integer(a, "block");
+    Document d = s.document();
+    int b = s.selection().block;
+    if (b < d.blocks.size() && d.blocks.get(b) instanceof Picture) return b;
+    for (int i = b - 1; i >= 0 && i >= b - 2; i--) if (d.blocks.get(i) instanceof Picture) return i;
+    throw new IllegalArgumentException("Select an object");
+  }
+
+  private static Picture picture(Session s, int block) {
+    if (block < 0 || block >= s.document().blocks.size() || !(s.document().blocks.get(block) instanceof Picture))
+      throw new IllegalArgumentException("Select an object");
+    return (Picture) s.document().blocks.get(block);
+  }
+
+  private static Drawing drawing(Session s, Map<String, Object> a) {
+    Picture p = picture(s, block(s, a));
+    if (p.drawing == null) throw new IllegalArgumentException("Select a shape or drawn object");
+    return p.drawing;
+  }
+
+  private static Drawing kind(Session s, Map<String, Object> a, String kind, String label) {
+    Drawing d = drawing(s, a);
+    if (!kind.equals(d.kind)) throw new IllegalArgumentException("Select " + label);
+    return d;
+  }
+
+  private static Drawing chart(Session s, Map<String, Object> a) {
+    return kind(s, a, "chart", "a chart");
+  }
+
+  private static Drawing smart(Session s, Map<String, Object> a) {
+    return kind(s, a, "smartArt", "a SmartArt graphic");
+  }
+
+  private static Drawing equation(Session s, Map<String, Object> a) {
+    return kind(s, a, "equation", "an equation");
+  }
+
+  private static Object update(Session s, Map<String, Object> a, Drawing d) {
+    int block = block(s, a);
+    s.replacePicture(block, picture(s, block).drawing(d));
+    return null;
+  }
+
+  private static Drawing copy(Map<String, Object> a, Drawing d, String... keys) {
+    for (String k : keys)
+      if (a.containsKey(k)) {
+        String v = Commands.str(a, k);
+        d = d.with(k, "fill".equals(k) || "line".equals(k) ? color(v) : v);
+      }
+    return d;
+  }
+
+  static String color(String v) {
+    if ("none".equals(v)) return "none";
+    String h = v.startsWith("#") ? v.substring(1) : v;
+    if (h.length() != 6 || !TextUtil.hex(h, 6)) throw new IllegalArgumentException("Color must be RRGGBB or none");
+    return h.toLowerCase();
+  }
+
+  private static String oneOf(String v, String... allowed) {
+    for (String x : allowed) if (x.equals(v)) return v;
+    StringBuilder b = new StringBuilder();
+    for (String x : allowed) b.append(b.length() == 0 ? "" : ", ").append(x);
+    throw new IllegalArgumentException("Expected one of " + b + ": " + v);
+  }
+
+  private static float f(Map<String, Object> a, String k, float fallback) {
+    return a.containsKey(k) ? ((Number) a.get(k)).floatValue() : fallback;
+  }
+
+  private static float clamp(float v, float lo, float hi) {
+    return Math.max(lo, Math.min(hi, v));
+  }
+
+  private static Drawing wordArtStyle(Drawing d, int style) {
+    int[][] styles = {
+      {0x4472c4, -1, 0}, {0x000000, -1, 1}, {0xed7d31, 0xffffff, 0}, {0xffffff, 0x4472c4, 1},
+      {0x70ad47, 0x375623, 1}, {0xffc000, 0x7f6000, 0}
+    };
+    if (style < 1 || style > styles.length) throw new IllegalArgumentException("WordArt style 1-6");
+    int[] st = styles[style - 1];
+    return d.with("textFill", hex(st[0])).with("textOutline", st[1] < 0 ? "none" : hex(st[1]))
+        .with("shadow", String.valueOf(st[2] == 1)).with("wordArtStyle", String.valueOf(style));
+  }
+
+  private static String hex(int rgb) {
+    return Integer.toHexString(0x1000000 | rgb).substring(1);
+  }
+
+  private static String chartData(String data) {
+    List<String[]> rows = DrawingOps.table(data);
+    if (rows.size() < 2 || rows.get(0).length < 2) throw new IllegalArgumentException("Chart data needs a header row and one category");
+    if (rows.size() > 200 || rows.get(0).length > 30) throw new IllegalArgumentException("Chart data is too large");
+    return data.trim();
+  }
+
+  private static String nodes(String text) {
+    if (DrawingOps.nodes(text).isEmpty()) throw new IllegalArgumentException("SmartArt needs at least one node");
+    return text;
+  }
+
+  private static List<String> lines(Drawing d) {
+    List<String> out = new ArrayList<String>();
+    for (String line : DrawingOps.split(d.get("nodes", ""), '\n')) if (!line.trim().isEmpty()) out.add(line);
+    return out;
+  }
+
+  private static String tabs(String line) {
+    int n = 0;
+    while (n < line.length() && line.charAt(n) == '\t') n++;
+    return line.substring(0, n);
+  }
+
+  private static String join(List<String> lines) {
+    return join(lines, '\n');
+  }
+
+  private static String join(List<String> parts, char sep) {
+    StringBuilder b = new StringBuilder();
+    for (String p : parts) {
+      if (b.length() > 0) b.append(sep);
+      b.append(p);
+    }
+    return b.toString();
+  }
+
+  private static Object level(Session s, Map<String, Object> a, int delta) {
+    Drawing d = smart(s, a);
+    List<String> lines = lines(d);
+    int node = Commands.integer(a, "node");
+    if (node < 0 || node >= lines.size()) throw new IllegalArgumentException("Node out of range");
+    String line = lines.get(node), indent = tabs(line);
+    if (delta < 0 && indent.isEmpty()) return false;
+    if (delta > 0 && (node == 0 || indent.length() >= tabs(lines.get(node - 1)).length() + 1 || indent.length() >= 8))
+      return false;
+    lines.set(node, delta < 0 ? line.substring(1) : "\t" + line);
+    update(s, a, d.with("nodes", join(lines)));
+    return true;
+  }
+
+  /** Numbers every numbered equation 1, 2, 3 in document order; returns the count. */
+  private static int renumber(Session s) {
+    Document doc = s.document();
+    Sequence<Block> blocks = doc.blocks;
+    int n = 0;
+    for (int i = 0; i < blocks.size(); i++) {
+      if (!(blocks.get(i) instanceof Picture)) continue;
+      Picture p = (Picture) blocks.get(i);
+      if (p.drawing == null || !"equation".equals(p.drawing.kind) || p.drawing.get("number", "").isEmpty()) continue;
+      String next = String.valueOf(++n);
+      if (!next.equals(p.drawing.get("number", ""))) blocks = blocks.set(i, p.drawing(p.drawing.with("number", next)));
+    }
+    if (blocks != doc.blocks) {
+      Selection keep = s.selection();
+      s.replaceDocument(doc.blocks(blocks, doc.nextId));
+      s.selectRange(keep.anchorBlock, keep.anchor, keep.block, keep.caret);
+    }
+    return n;
+  }
+
+  private String[] defaultPen(String tool) {
+    for (int i = pens.size() - 1; i >= 0; i--)
+      if (pens.get(i).startsWith(tool + ",")) return pens.get(i).split(",");
+    return new String[] {tool, "000000", "1"};
+  }
+
+  private static String points(String text) {
+    StringBuilder b = new StringBuilder();
+    int n = 0;
+    for (String pt : DrawingOps.split(text.trim(), ' ')) {
+      if (pt.isEmpty()) continue;
+      int comma = pt.indexOf(',');
+      if (comma < 0) throw new IllegalArgumentException("Points are x,y pairs separated by spaces");
+      float x = Float.parseFloat(pt.substring(0, comma)), y = Float.parseFloat(pt.substring(comma + 1));
+      if (Float.isNaN(x) || Float.isNaN(y) || Math.abs(x) > 10000 || Math.abs(y) > 10000)
+        throw new IllegalArgumentException("Point out of range");
+      b.append(n++ == 0 ? "" : " ").append(x).append(',').append(y);
+    }
+    if (n == 0 || n > 5000) throw new IllegalArgumentException("A stroke needs 1 to 5000 points");
+    return b.toString();
+  }
+
+  private static int count(String strokes) {
+    int n = 0;
+    for (String st : DrawingOps.split(strokes, '|')) if (!st.isEmpty()) n++;
+    return n;
+  }
+
+  private static Picture ink(Session s, int block) {
+    Picture p = picture(s, block);
+    if (p.drawing == null || !("ink".equals(p.drawing.kind) || "canvas".equals(p.drawing.kind)))
+      throw new IllegalArgumentException("Select ink or a drawing canvas");
+    return p;
+  }
+
+  /** The canvas/ink object at the caret, or a new ink object inserted for this stroke. */
+  private static int inkTarget(Session s, Map<String, Object> a) {
+    try {
+      int block = block(s, a);
+      Picture p = picture(s, block);
+      if (p.drawing != null && ("ink".equals(p.drawing.kind) || "canvas".equals(p.drawing.kind))) return block;
+    } catch (IllegalArgumentException none) {
+      // fall through and create ink
+    }
+    if (a.containsKey("block")) throw new IllegalArgumentException("Select ink or a drawing canvas");
+    return s.insertPicture(Picture.drawing("pending", Drawing.of("ink"), s.activeSection().resolved.page.contentWidth(), 144, "Ink", "left"));
+  }
+
+  static float[] bounds(String stroke) {
+    int colon = stroke.indexOf(':');
+    if (colon < 0) return null;
+    float[] box = {Float.MAX_VALUE, Float.MAX_VALUE, -Float.MAX_VALUE, -Float.MAX_VALUE};
+    for (String pt : DrawingOps.split(stroke.substring(colon + 1).trim(), ' ')) {
+      int comma = pt.indexOf(',');
+      if (comma < 0) continue;
+      float x = Float.parseFloat(pt.substring(0, comma)), y = Float.parseFloat(pt.substring(comma + 1));
+      box[0] = Math.min(box[0], x);
+      box[1] = Math.min(box[1], y);
+      box[2] = Math.max(box[2], x);
+      box[3] = Math.max(box[3], y);
+    }
+    return box[0] > box[2] ? null : box;
+  }
+
+  /**
+   * Classifies a stroke by how far its points sit from the bounding box edges and from the inscribed
+   * ellipse, plus straightness for lines and corner count for triangles.
+   */
+  static String recognize(String stroke, float[] box) {
+    float w = box[2] - box[0], h = box[3] - box[1];
+    if (Math.min(w, h) < Math.max(w, h) * .15f) return "line";
+    List<float[]> pts = new ArrayList<float[]>();
+    for (String pt : DrawingOps.split(stroke.substring(stroke.indexOf(':') + 1).trim(), ' ')) {
+      int comma = pt.indexOf(',');
+      if (comma > 0) pts.add(new float[] {Float.parseFloat(pt.substring(0, comma)), Float.parseFloat(pt.substring(comma + 1))});
+    }
+    float edge = 0, ring = 0;
+    float cx = (box[0] + box[2]) / 2, cy = (box[1] + box[3]) / 2;
+    for (float[] p : pts) {
+      float dx = Math.min(Math.abs(p[0] - box[0]), Math.abs(p[0] - box[2])) / w;
+      float dy = Math.min(Math.abs(p[1] - box[1]), Math.abs(p[1] - box[3])) / h;
+      edge += Math.min(dx, dy);
+      double r = Math.sqrt(Math.pow((p[0] - cx) / (w / 2), 2) + Math.pow((p[1] - cy) / (h / 2), 2));
+      ring += Math.abs(r - 1);
+    }
+    edge /= pts.size();
+    ring /= pts.size();
+    // Triangle: top half narrower than the bottom half.
+    float topSpan = 0, bottomSpan = 0;
+    float topMin = Float.MAX_VALUE, topMax = -Float.MAX_VALUE, botMin = Float.MAX_VALUE, botMax = -Float.MAX_VALUE;
+    for (float[] p : pts) {
+      if (p[1] < box[1] + h * .25f) {
+        topMin = Math.min(topMin, p[0]);
+        topMax = Math.max(topMax, p[0]);
+      } else if (p[1] > box[1] + h * .75f) {
+        botMin = Math.min(botMin, p[0]);
+        botMax = Math.max(botMax, p[0]);
+      }
+    }
+    topSpan = topMax > topMin ? topMax - topMin : 0;
+    bottomSpan = botMax > botMin ? botMax - botMin : 0;
+    if (bottomSpan > w * .7f && topSpan < w * .35f) return "triangle";
+    return edge < ring * .6f ? "rect" : "ellipse";
+  }
+
+  private static Object z(Session s, Map<String, Object> a, int delta) {
+    int block = block(s, a);
+    Picture p = picture(s, block);
+    if (p.drawing == null) throw new IllegalArgumentException("Select a shape or drawn object");
+    int z = Math.round(p.drawing.num("z", 0));
+    boolean all = a.containsKey("all") && (Boolean) a.get("all");
+    int next = all ? (delta > 0 ? 1000 : -1000) : Math.max(-1000, Math.min(1000, z + delta));
+    s.replacePicture(block, p.drawing(p.drawing.with("z", String.valueOf(next))));
+    return next;
+  }
+
+  private static List<Object> objects(Document d) {
+    List<Object> out = new ArrayList<Object>();
+    for (int i = 0; i < d.blocks.size(); i++) {
+      if (!(d.blocks.get(i) instanceof Picture)) continue;
+      Picture p = (Picture) d.blocks.get(i);
+      String kind = p.drawing == null ? "picture" : p.drawing.kind;
+      String name = p.drawing == null ? "" : p.drawing.get("objectName", "");
+      out.add(
+          Json.object(
+              "block", i, "kind", kind, "name", name.isEmpty() ? (p.alt.isEmpty() ? kind : p.alt) : name,
+              "visible", p.drawing == null || !p.drawing.flag("hidden"),
+              "wrap", p.drawing == null ? "inline" : p.drawing.get("wrap", "inline"),
+              "z", p.drawing == null ? 0 : Math.round(p.drawing.num("z", 0))));
+    }
+    return out;
+  }
+
+  private static final char ITEM = '\u001e', FIELD = '\u001f';
+
+  /** Canvas children: x, y, w, h and the child's encoding, one record each. */
+  private static Object group(Session s, Map<String, Object> a) {
+    Document doc = s.document();
+    Selection keep = s.selection();
+    if (a.containsKey("ungroup") && (Boolean) a.get("ungroup")) {
+      int block = block(s, a);
+      Picture p = picture(s, block);
+      if (p.drawing == null || !"canvas".equals(p.drawing.kind) || p.drawing.get("items", "").isEmpty())
+        throw new IllegalArgumentException("Select a group");
+      Sequence<Block> blocks = doc.blocks.remove(block);
+      long id = doc.nextId;
+      int at = block, n = 0;
+      for (String item : DrawingOps.split(p.drawing.get("items", ""), ITEM)) {
+        List<String> f = DrawingOps.split(item, FIELD);
+        if (f.size() != 5) continue;
+        blocks = blocks.insert(at++, Picture.drawing("i" + id++, Drawing.decode(f.get(4)),
+            Float.parseFloat(f.get(2)), Float.parseFloat(f.get(3)), "", p.align));
+        n++;
+      }
+      s.replaceDocument(doc.blocks(blocks, id));
+      near(s, keep.block > block ? keep.block + n - 1 : keep.block);
+      return n;
+    }
+    int from = Commands.integer(a, "from"), to = Commands.integer(a, "to");
+    if (from < 0 || to >= doc.blocks.size() || to <= from) throw new IllegalArgumentException("Group needs a block range of two or more");
+    StringBuilder items = new StringBuilder();
+    float y = 0, width = 0;
+    for (int i = from; i <= to; i++) {
+      Block b = doc.blocks.get(i);
+      if (!(b instanceof Picture) || ((Picture) b).drawing == null)
+        throw new IllegalArgumentException("Only adjacent drawn objects can be grouped");
+      Picture p = (Picture) b;
+      if (items.length() > 0) items.append(ITEM);
+      items.append(0).append(FIELD).append(y).append(FIELD).append(p.width).append(FIELD).append(p.height)
+          .append(FIELD).append(p.drawing.encode());
+      y += p.height + 6;
+      width = Math.max(width, p.width);
+    }
+    Sequence<Block> blocks = doc.blocks;
+    for (int i = to; i > from; i--) blocks = blocks.remove(i);
+    Picture first = (Picture) doc.blocks.get(from);
+    Drawing canvas = Drawing.of("canvas").with("items", items.toString()).with("line", "none");
+    blocks = blocks.set(from, Picture.drawing(first.id(), canvas, width, y - 6, "Group", first.align));
+    s.replaceDocument(doc.blocks(blocks, doc.nextId));
+    for (int i = from + 1; i < blocks.size(); i++)
+      if (blocks.get(i) instanceof Paragraph) {
+        s.select(i, 0, 0);
+        break;
+      }
+    return Json.object("block", from, "items", to - from + 1);
+  }
+}

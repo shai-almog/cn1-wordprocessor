@@ -67,6 +67,12 @@ public final class TextFormats {
       if (block instanceof Paragraph) paragraph(b, (Paragraph) block);
       else if (block instanceof Picture) {
         Picture pic = (Picture) block;
+        if (pic.drawing != null) {
+          b.append("<p style=\"text-align:").append(pic.align).append("\">");
+          svg(b, pic);
+          b.append("</p>");
+          continue;
+        }
         b.append("<p style=\"text-align:")
             .append(pic.align)
             .append("\"><img alt=\"")
@@ -254,5 +260,41 @@ public final class TextFormats {
                   + " CN1 document.");
     String html = html(d);
     return format == RichTextFormat.HTML ? html : RichTextImporter.fromHtml(html, format);
+  }
+
+  /** Inline SVG for a drawing, from the same primitives the canvas and PDF paint. */
+  static void svg(StringBuilder b, Picture pic) {
+    DrawingOps.Ops ops = DrawingOps.build(pic.drawing, pic.width, pic.height);
+    b.append("<svg xmlns=\"http://www.w3.org/2000/svg\" role=\"img\" aria-label=\"")
+        .append(Xml.attribute(pic.alt)).append("\" width=\"").append(pic.width).append("pt\" height=\"")
+        .append(pic.height).append("pt\" viewBox=\"0 0 ").append(pic.width).append(' ').append(pic.height)
+        .append("\">");
+    for (DrawingOps.Path p : ops.paths) {
+      b.append(p.closed ? "<polygon" : "<polyline").append(" points=\"");
+      for (int i = 0; i < p.points.length; i += 2)
+        b.append(i == 0 ? "" : " ").append(p.points[i]).append(',').append(p.points[i + 1]);
+      b.append("\" fill=\"").append(p.closed && p.fill >= 0 ? css(p.fill) : "none").append("\" stroke=\"")
+          .append(p.stroke >= 0 ? css(p.stroke) : "none").append("\" stroke-width=\"").append(p.width)
+          .append("\" stroke-linejoin=\"round\" stroke-linecap=\"round\"");
+      if (p.alpha < 255) b.append(" opacity=\"").append(p.alpha / 255f).append('"');
+      b.append("/>");
+    }
+    for (DrawingOps.Text t : ops.texts) {
+      String anchor = "center".equals(t.align) ? "middle" : "right".equals(t.align) ? "end" : "start";
+      float x = "center".equals(t.align) ? t.x + t.width / 2 : "right".equals(t.align) ? t.x + t.width : t.x;
+      b.append("<text x=\"").append(x).append("\" y=\"").append(t.y + t.size).append("\" font-size=\"")
+          .append(t.size).append("\" text-anchor=\"").append(anchor).append("\" fill=\"").append(css(t.color)).append('"');
+      if (t.bold) b.append(" font-weight=\"bold\"");
+      if (t.italic) b.append(" font-style=\"italic\"");
+      if (t.outline >= 0) b.append(" stroke=\"").append(css(t.outline)).append("\" stroke-width=\"0.75\"");
+      if (t.rotation != 0)
+        b.append(" transform=\"rotate(").append(t.rotation).append(' ').append(t.x).append(' ').append(t.y).append(")\"");
+      b.append('>').append(Xml.escape(t.text)).append("</text>");
+    }
+    b.append("</svg>");
+  }
+
+  private static String css(int rgb) {
+    return "#" + Integer.toHexString(0x1000000 | (rgb & 0xffffff)).substring(1);
   }
 }

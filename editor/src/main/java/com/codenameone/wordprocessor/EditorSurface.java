@@ -55,6 +55,72 @@ public final class EditorSurface extends Container
     return image;
   }
 
+  /** Paints a vector drawing from the primitives shared with PDF and HTML export. */
+  private void paintDrawing(Graphics g, LayoutEngine.PlacedPicture pic, int px, int py, float scale) {
+    DrawingOps.Ops ops = DrawingOps.build(pic.picture.drawing, pic.width, pic.height);
+    boolean shapes = g.isShapeSupported();
+    boolean aa = g.isAntiAliased();
+    g.setAntiAliased(true);
+    int alpha = g.getAlpha();
+    for (DrawingOps.Path p : ops.paths) {
+      int n = p.points.length / 2;
+      if (n < 2) continue;
+      int[] xs = new int[n], ys = new int[n];
+      GeneralPath path = new GeneralPath();
+      for (int i = 0; i < n; i++) {
+        float fx = px + p.points[i * 2] * scale, fy = py + p.points[i * 2 + 1] * scale;
+        xs[i] = Math.round(fx);
+        ys[i] = Math.round(fy);
+        if (i == 0) path.moveTo(fx, fy);
+        else path.lineTo(fx, fy);
+      }
+      if (p.closed) path.closePath();
+      g.setAlpha(p.alpha * alpha / 255);
+      if (p.closed && p.fill >= 0) {
+        g.setColor(p.fill);
+        if (shapes) g.fillShape(path);
+        else g.fillPolygon(xs, ys, n);
+      }
+      if (p.stroke >= 0 && p.width > 0) {
+        g.setColor(p.stroke);
+        float w = Math.max(1, p.width * scale);
+        if (shapes) g.drawShape(path, new Stroke(w, Stroke.CAP_ROUND, Stroke.JOIN_ROUND, 4));
+        else if (p.closed) g.drawPolygon(xs, ys, n);
+        else for (int i = 1; i < n; i++) g.drawLine(xs[i - 1], ys[i - 1], xs[i], ys[i]);
+      }
+    }
+    g.setAlpha(alpha);
+    for (DrawingOps.Text t : ops.texts) {
+      TextStyle style = TextStyle.DEFAULT.with("size", String.valueOf(t.size));
+      if (t.bold) style = style.with("bold", "true");
+      if (t.italic) style = style.with("italic", "true");
+      Font f = font(style, zoom);
+      g.setFont(f);
+      int width = f.stringWidth(t.text);
+      int tx = px + Math.round(t.x * scale), ty = py + Math.round(t.y * scale);
+      int box = Math.round(t.width * scale);
+      if (t.rotation != 0) {
+        float cx = px + t.x * scale, cy = py + t.y * scale;
+        g.rotate((float) Math.toRadians(t.rotation), Math.round(cx), Math.round(cy));
+        int sx = Math.round(cx), sy = Math.round(cy) - Math.round(t.size * 1.2f * scale);
+        if (t.rotation == 270) sy = Math.round(cy);
+        g.setColor(t.color);
+        g.drawString(t.text, t.rotation == 90 ? sx : sx - box, sy);
+        g.rotate((float) -Math.toRadians(t.rotation), Math.round(cx), Math.round(cy));
+        continue;
+      }
+      if ("center".equals(t.align)) tx += (box - width) / 2;
+      else if ("right".equals(t.align)) tx += box - width;
+      if (t.outline >= 0) {
+        g.setColor(t.outline);
+        for (int d = 0; d < 4; d++) g.drawString(t.text, tx + (d % 2 == 0 ? -1 : 1), ty + (d < 2 ? -1 : 1));
+      }
+      g.setColor(t.color);
+      g.drawString(t.text, tx, ty);
+    }
+    g.setAntiAliased(aa);
+  }
+
   /** Corrections, color and transparency, applied once per picture to the decoded pixels. */
   static Image adjusted(Image image, Picture.Look look) {
     int[] px = image.getRGB();
@@ -997,7 +1063,11 @@ public final class EditorSurface extends Container
             y + Math.round(rule[1] * scale),
             x + Math.round(rule[0] * scale),
             y + Math.round(rule[2] * scale));
-      for (LayoutEngine.PlacedPicture pic : page.pictures) {
+      for (LayoutEngine.PlacedPicture pic : LayoutEngine.byDepth(page.pictures, false)) {
+        if (pic.picture.drawing != null) {
+          paintDrawing(g, pic, x + Math.round(pic.x * scale), y + Math.round(pic.y * scale), scale);
+          continue;
+        }
         Image image = picture(pic.picture);
         if (image == null) {
           g.setColor(0x9c2525);
@@ -1217,6 +1287,8 @@ public final class EditorSurface extends Container
         }
         if (line.clipped) g.setClip(clipX, clipY, clipW, clipH);
       }
+      for (LayoutEngine.PlacedPicture pic : LayoutEngine.byDepth(page.pictures, true))
+        paintDrawing(g, pic, x + Math.round(pic.x * scale), y + Math.round(pic.y * scale), scale);
     }
     if (OfficeTheme.mobile() && session.cellSelection() == null && !selection.collapsed()) {
       g.setColor(OfficeTheme.BLUE);

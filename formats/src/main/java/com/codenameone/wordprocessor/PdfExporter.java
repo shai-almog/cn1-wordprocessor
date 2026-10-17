@@ -317,7 +317,7 @@ public final class PdfExporter {
     Map<Picture, Integer> imageIds = new HashMap<Picture, Integer>();
     for (LayoutEngine.Page page : layout.pages)
       for (LayoutEngine.PlacedPicture pic : page.pictures)
-        if (!imageIds.containsKey(pic.picture))
+        if (pic.picture.drawing == null && !imageIds.containsKey(pic.picture))
           imageIds.put(pic.picture, PdfPictures.add(objects, pic.picture));
     int pageIndex = 0;
     for (LayoutEngine.Page page : layout.pages) {
@@ -343,7 +343,11 @@ public final class PdfExporter {
             .append(n(spec.height - n[0] - 9)).append(" Tm (").append(label).append(") Tj ET\n");
       }
       for (LayoutEngine.Frame frame : page.frames) frame(content, frame, spec.height);
-      for (LayoutEngine.PlacedPicture pic : page.pictures) {
+      for (LayoutEngine.PlacedPicture pic : LayoutEngine.byDepth(page.pictures, false)) {
+        if (pic.picture.drawing != null) {
+          PdfDrawings.paint(content, pic, spec.height);
+          continue;
+        }
         String name = "Im" + (imageIndex++);
         imageResources
             .append('/')
@@ -548,6 +552,8 @@ public final class PdfExporter {
               .append(' ')
               .append(n(spec.height - line.y - line.height))
               .append(" l S\n");
+      for (LayoutEngine.PlacedPicture pic : LayoutEngine.byDepth(page.pictures, true))
+        PdfDrawings.paint(content, pic, spec.height);
       int pageId = 7 + pageIndex++ * 2;
       objects.set(
           pageId - 1,
