@@ -585,13 +585,19 @@ public final class EditorSurface extends Container
       for (Revisions.Change c : Revisions.list(d)) d = Revisions.resolve(d, c.revision.id, accept);
     }
     d = OfficeCommands.shown(d);
-    if (!"arabic".equals(AppOptions.get("numeral")) && !"system".equals(AppOptions.get("numeral"))) {
+    // Only a non-default numeral shape rewrites text: copying every paragraph defeats the
+    // layout engine's per-paragraph measurement cache (keyed by identity) on each edit.
+    String numeral = AppOptions.get("numeral");
+    if (numeral != null && !numeral.isEmpty() && !"arabic".equals(numeral) && !"system".equals(numeral)) {
       Sequence<Block> blocks = new Sequence<Block>();
       for (Block b : d.blocks) {
         if (b instanceof Paragraph) {
           final boolean rtl = ((Paragraph) b).format.rtl;
           Paragraph p = (Paragraph) b;
-          b = p.text(p.text.mapText(t -> AppOptions.numerals(t, rtl)));
+          String text = p.text.toString();
+          boolean digits = false;
+          for (int i = 0; i < text.length() && !digits; i++) digits = text.charAt(i) >= '0' && text.charAt(i) <= '9';
+          if (digits) b = p.text(p.text.mapText(t -> AppOptions.numerals(t, rtl)));
         }
         blocks = blocks.append(b);
       }

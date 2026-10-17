@@ -12,7 +12,8 @@ s=s.replace('new UITimer(() -> autosave()).schedule(1000, true, form);','if (Nat
 s=s.replace('public void stop() {','public void stop() {\n    if (NativeBenchmark.input != null) return;')
 f.write_text(s)
 f=editor/'EditorSurface.java';s=f.read_text()
-i=s.index('g.drawString(Integer.toString(p + 1)')
+# Readiness is the end of the editor's document paint method.
+i=s.index('  public void paint(Graphics g) {')
 end=s.index('\n  }',i)
 s=s[:end]+'\n    NativeBenchmark.painted();'+s[end:];f.write_text(s)
 if a.wordcraft is None: raise SystemExit(0)
