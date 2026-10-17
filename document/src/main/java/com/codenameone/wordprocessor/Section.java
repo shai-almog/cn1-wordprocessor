@@ -9,6 +9,7 @@ public final class Section {
   public final PageFurniture furniture;
   public final String start;
   public final Columns columns;
+  public final PageDecor decor;
 
   /** Zero continues numbering from the previous section; positive values restart it. */
   public final int pageStart;
@@ -28,7 +29,19 @@ public final class Section {
       int pageStart,
       NoteOptions notes,
       Columns columns) {
-    if (notes == null || columns == null) throw new NullPointerException();
+    this(page, furniture, start, pageStart, notes, columns, PageDecor.NONE);
+  }
+
+  public Section(
+      PageSpec page,
+      PageFurniture furniture,
+      String start,
+      int pageStart,
+      NoteOptions notes,
+      Columns columns,
+      PageDecor decor) {
+    if (notes == null || columns == null || decor == null) throw new NullPointerException();
+    this.decor = decor;
     this.columns = columns;
     this.notes = notes;
     if (page == null
@@ -43,27 +56,31 @@ public final class Section {
   }
 
   public Section page(PageSpec value) {
-    return new Section(value, furniture, start, pageStart, notes, columns);
+    return new Section(value, furniture, start, pageStart, notes, columns, decor);
   }
 
   public Section furniture(PageFurniture value) {
-    return new Section(page, value, start, pageStart, notes, columns);
+    return new Section(page, value, start, pageStart, notes, columns, decor);
   }
 
   public Section start(String value) {
-    return new Section(page, furniture, value, pageStart, notes, columns);
+    return new Section(page, furniture, value, pageStart, notes, columns, decor);
   }
 
   public Section numbering(int value) {
-    return new Section(page, furniture, start, value, notes, columns);
+    return new Section(page, furniture, start, value, notes, columns, decor);
   }
 
   public Section columns(Columns value) {
-    return new Section(page, furniture, start, pageStart, notes, value);
+    return new Section(page, furniture, start, pageStart, notes, value, decor);
+  }
+
+  public Section decor(PageDecor value) {
+    return new Section(page, furniture, start, pageStart, notes, columns, value);
   }
 
   public Section notes(NoteOptions value) {
-    return new Section(page, furniture, start, pageStart, value, columns);
+    return new Section(page, furniture, start, pageStart, value, columns, decor);
   }
 
   /** Absent story entries link to the previous section; an explicit empty entry unlinks. */

@@ -144,12 +144,18 @@ public final class LayoutEngine {
     public final boolean first, last;
 
     Frame(float x, float top, float width, float bottom, ParagraphFormat f, boolean first, boolean last) {
+      this(x, top, width, bottom, f.borders, f.shading, first, last);
+    }
+
+    public Frame(
+        float x, float top, float width, float bottom, ParagraphBorders borders, int shading,
+        boolean first, boolean last) {
       this.x = x;
       this.top = top;
       this.width = width;
       this.bottom = bottom;
-      borders = f.borders;
-      shading = f.shading;
+      this.borders = borders;
+      this.shading = shading;
       this.first = first;
       this.last = last;
     }
@@ -174,6 +180,9 @@ public final class LayoutEngine {
 
     /** Paragraph border/shading boxes, painted under the text. */
     public final List<Frame> frames = new ArrayList<Frame>();
+
+    /** Page color, watermark and page borders of this page's section. */
+    public PageDecor decor = PageDecor.NONE;
 
     Page(
         PageSpec spec,
@@ -814,6 +823,7 @@ public final class LayoutEngine {
               page.notes);
       rebuilt.columnRules.addAll(page.columnRules);
       rebuilt.frames.addAll(page.frames);
+      rebuilt.decor = ranges.get(page.section).resolved.decor;
       b.pages.set(i, rebuilt);
     }
     cache = nextCache;

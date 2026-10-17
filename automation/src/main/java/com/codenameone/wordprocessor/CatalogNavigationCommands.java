@@ -1,5 +1,8 @@
 package com.codenameone.wordprocessor;
 
+import java.util.Arrays;
+import java.util.Map;
+
 /**
  * Catalog ids for caret movement, selection units, find, fields, outline levels, header/footer
  * options, page size and table properties. Like {@link CatalogCommands}, each id drives an
@@ -270,6 +273,78 @@ final class CatalogNavigationCommands implements Commands.Extension {
               s.activeSection()
                   .raw
                   .furniture(f.options(f.differentFirst, v, f.headerDistance, f.footerDistance)));
+          return null;
+        });
+    // Headers and footers of the caret's section.
+    for (final boolean footer : new boolean[] {false, true}) {
+      final String kind = footer ? "Footer" : "Header";
+      c.register(
+          "insert." + kind.toLowerCase(),
+          "Set the section's " + kind.toLowerCase() + " text (variant: primary, first or even)",
+          "text:string,align?:string,variant?:string",
+          true,
+          (s, a) -> {
+            String align = a.containsKey("align") ? Commands.str(a, "align") : "left";
+            if (!Arrays.asList("left", "center", "right", "both").contains(align))
+              throw new IllegalArgumentException("Unknown alignment " + align);
+            String key = variant(a, kind);
+            Sequence<Paragraph> story = new Sequence<Paragraph>();
+            for (String line : TextUtil.split(Commands.str(a, "text"), '\n'))
+              story =
+                  story.append(
+                      new Paragraph("hf" + story.size(), RichText.of(line, TextStyle.DEFAULT))
+                          .with("align", align));
+            Section raw = s.activeSection().raw;
+            s.section(raw.furniture(raw.furniture.story(key, story)));
+            return null;
+          });
+      c.register(
+          "insert.remove" + kind,
+          "Remove every " + kind.toLowerCase() + " variant from the section",
+          "",
+          true,
+          (s, a) -> {
+            Section raw = s.activeSection().raw;
+            PageFurniture f = raw.furniture;
+            for (String key : PageFurniture.KEYS)
+              if (key.endsWith(kind) || key.equals(kind.toLowerCase()))
+                f = f.story(key, new Sequence<Paragraph>());
+            s.section(raw.furniture(f));
+            return null;
+          });
+    }
+    c.register(
+        "layout.linkToPrevious",
+        "Link a header/footer variant to the previous section, or unlink it with a copy",
+        "story:string,value?:boolean",
+        true,
+        (s, a) -> {
+          String key = Commands.str(a, "story");
+          PageFurniture.check(key);
+          Section.Range range = s.activeSection();
+          if (range.first == 0) throw new IllegalArgumentException("The first section has no previous");
+          boolean linked = !range.raw.furniture.stories.containsKey(key);
+          boolean link = a.containsKey("value") ? (Boolean) a.get("value") : !linked;
+          PageFurniture f =
+              link
+                  ? range.raw.furniture.inherit(key)
+                  : range.raw.furniture.story(key, range.resolved.furniture.get(key));
+          s.section(range.raw.furniture(f));
+          return link;
+        });
+    c.register(
+        "hf.position",
+        "Header and footer distance from the page edge in points",
+        "header?:number,footer?:number",
+        true,
+        (s, a) -> {
+          Section raw = s.activeSection().raw;
+          PageFurniture f = raw.furniture;
+          float h = a.containsKey("header") ? ((Number) a.get("header")).floatValue() : f.headerDistance;
+          float b = a.containsKey("footer") ? ((Number) a.get("footer")).floatValue() : f.footerDistance;
+          if (h > raw.page.height / 2 || b > raw.page.height / 2)
+            throw new IllegalArgumentException("Distance exceeds half the page");
+          s.section(raw.furniture(f.options(f.differentFirst, f.differentEven, h, b)));
           return null;
         });
     c.register(
@@ -594,6 +669,13 @@ final class CatalogNavigationCommands implements Commands.Extension {
     ParagraphStyle six = ParagraphStyle.defaults().get("Heading6");
     return new ParagraphStyle(
         "Heading" + level, "Heading " + level, six.paragraph.with("outlineLevel", "" + level), six.text);
+  }
+
+  private static String variant(Map<String, Object> a, String kind) {
+    String v = a.containsKey("variant") ? Commands.str(a, "variant") : "primary";
+    if ("primary".equals(v)) return kind.toLowerCase();
+    if ("first".equals(v) || "even".equals(v)) return v + kind;
+    throw new IllegalArgumentException("variant: primary, first or even");
   }
 
   private static Object[] paper(String name) {

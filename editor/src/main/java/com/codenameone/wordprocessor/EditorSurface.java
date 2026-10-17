@@ -349,6 +349,35 @@ public final class EditorSurface extends Container
   private float pinchStart;
   private int layoutViewport = -1;
 
+  /** Watermark and page borders; page color is filled by the caller. */
+  private void paintDecor(Graphics g, LayoutEngine.Page page, int x, int y, float scale) {
+    PageDecor d = page.decor;
+    if (!d.watermark.isEmpty()) {
+      Font f = font(TextStyle.DEFAULT.with("size", "54"), zoom);
+      int w = f.stringWidth(d.watermark), h = f.getHeight();
+      int cx = x + Math.round(page.spec.width * scale / 2),
+          cy = y + Math.round(page.spec.height * scale / 2);
+      int alpha = g.getAlpha();
+      g.setAlpha(96);
+      g.setColor(d.watermarkColor);
+      g.setFont(f);
+      g.rotate((float) (-Math.PI / 4), cx, cy);
+      g.drawString(d.watermark, cx - w / 2, cy - h / 2);
+      g.rotate((float) (Math.PI / 4), cx, cy);
+      g.setAlpha(alpha);
+    }
+    if (!d.borders.isEmpty()) {
+      ParagraphBorders b = d.borders;
+      float pw = page.spec.width, ph = page.spec.height;
+      paintFrame(
+          g,
+          new LayoutEngine.Frame(
+              b.left.space, b.top.space, pw - b.left.space - b.right.space,
+              ph - b.bottom.space, b, -1, true, true),
+          x, y, scale);
+    }
+  }
+
   private static void paintFrame(Graphics g, LayoutEngine.Frame f, int px, int py, float scale) {
     int x = px + Math.round(f.x * scale), y = py + Math.round(f.top * scale);
     int w = Math.round(f.width * scale), h = Math.round((f.bottom - f.top) * scale);
@@ -838,8 +867,9 @@ public final class EditorSurface extends Container
       if (y + ph < g.getClipY() || y > g.getClipY() + g.getClipHeight()) continue;
       g.setColor(OfficeTheme.chrome(0xd1d9e2));
       g.fillRect(x + 3, y + 4, pw, ph);
-      g.setColor(0xffffff);
+      g.setColor(page.decor.pageColor < 0 ? 0xffffff : page.decor.pageColor);
       g.fillRect(x, y, pw, ph);
+      paintDecor(g, page, x, y, scale);
       g.setColor(0x242424);
       for (float[] rule : page.columnRules)
         g.drawLine(

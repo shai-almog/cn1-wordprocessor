@@ -124,4 +124,27 @@ public class CatalogNavigationCommandsTest {
     assertEquals(0x4472c4, f.cell(0, 1).background);
     assertEquals(1, f.headerRows);
   }
+
+  @Test
+  public void headersFootersLinkingAndPosition() {
+    Session s = new Session(Document.empty());
+    s.replace("Body");
+    run(s, "insert.header", "text", "Report\nDraft", "align", "center");
+    run(s, "insert.footer", "text", "Confidential", "variant", "first");
+    PageFurniture f = s.activeSection().raw.furniture;
+    assertEquals(2, f.get("header").size());
+    assertEquals("center", f.get("header").get(0).align);
+    assertEquals("Confidential", f.get("firstFooter").get(0).text.plainText());
+    s.sectionBreak("nextPage");
+    assertEquals(Boolean.FALSE, run(s, "layout.linkToPrevious", "story", "header"));
+    assertTrue(s.activeSection().raw.furniture.stories.containsKey("header"));
+    run(s, "insert.header", "text", "Second");
+    assertEquals("Report", s.document().sectionAt(0).resolved.furniture.get("header").get(0).text.plainText());
+    assertEquals(Boolean.TRUE, run(s, "layout.linkToPrevious", "story", "header"));
+    assertEquals("Report", s.activeSection().resolved.furniture.get("header").get(0).text.plainText());
+    run(s, "insert.removeFooter");
+    assertEquals(0, s.activeSection().resolved.furniture.get("firstFooter").size());
+    run(s, "hf.position", "header", 30);
+    assertEquals(30, s.activeSection().raw.furniture.headerDistance, .01);
+  }
 }

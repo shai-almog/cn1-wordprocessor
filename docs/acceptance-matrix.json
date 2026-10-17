@@ -10,8 +10,8 @@
   "not-applicable"
  ],
  "counts": {
-  "unverified": 257,
-  "missing": 217,
+  "unverified": 264,
+  "missing": 210,
   "partial": 13,
   "certified": 0,
   "reference-stub": 15,
@@ -1884,7 +1884,7 @@
    "group": "Header & Footer",
    "feature": "Header",
    "command": "insert.header",
-   "appCommand": null,
+   "appCommand": "insert.header",
    "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
@@ -1896,7 +1896,7 @@
    "group": "Header & Footer",
    "feature": "Footer",
    "command": "insert.footer",
-   "appCommand": null,
+   "appCommand": "insert.footer",
    "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
@@ -1944,24 +1944,24 @@
    "group": "Header & Footer",
    "feature": "Remove Header",
    "command": "insert.removeHeader",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "insert.removeHeader",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "insert.removeHeader (Remove Header)"
+   "notes": "insert.removeHeader (Remove Header) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Insert",
    "group": "Header & Footer",
    "feature": "Remove Footer",
    "command": "insert.removeFooter",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "insert.removeFooter",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "insert.removeFooter (Remove Footer)"
+   "notes": "insert.removeFooter (Remove Footer) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Insert",
@@ -2016,12 +2016,12 @@
    "group": "Header & Footer",
    "feature": "Link to Previous",
    "command": "layout.linkToPrevious",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "layout.linkToPrevious",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "layout.linkToPrevious (Link to Previous)"
+   "notes": "layout.linkToPrevious (Link to Previous) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Insert",
@@ -2448,36 +2448,36 @@
    "group": "Page Background",
    "feature": "Watermark",
    "command": "design.watermark",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "design.watermark",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "design.watermark (Watermark)"
+   "notes": "design.watermark (Watermark) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Design",
    "group": "Page Background",
    "feature": "Page Color",
    "command": "design.pageColor",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "design.pageColor",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "design.pageColor (Page Color)"
+   "notes": "design.pageColor (Page Color) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Design",
    "group": "Page Background",
    "feature": "Page Borders",
    "command": "design.pageBorders",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "design.pageBorders",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "design.pageBorders (Page Borders)"
+   "notes": "design.pageBorders (Page Borders) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Layout",
@@ -5508,12 +5508,12 @@
    "group": "Position",
    "feature": "Header from Top",
    "command": "hf.position",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "hf.position",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "hf.position (Header/Footer Position)"
+   "notes": "hf.position (Header/Footer Position) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Editing",

@@ -32,6 +32,7 @@ public final class DocumentXml {
         .append("\">");
     NoteFormats.write(b, d.lastSection.notes, "");
     columns(b, d.lastSection.columns);
+    decor(b, d.lastSection.decor);
     for (Map.Entry<String, Section> entry : d.sections.entrySet()) {
       Section section = entry.getValue();
       b.append("<section end=\"")
@@ -45,6 +46,7 @@ public final class DocumentXml {
       furniture(b, section.furniture);
       NoteFormats.write(b, section.notes, "");
       columns(b, section.columns);
+      decor(b, section.decor);
       b.append("</section>");
     }
     b.append("</sections>");
@@ -496,7 +498,8 @@ public final class DocumentXml {
                   Xml.attr(item, "start", "nextPage"),
                   Integer.parseInt(Xml.attr(item, "pageStart", "0")),
                   NoteFormats.read(item, null),
-                  readColumns(item)));
+                  readColumns(item),
+                  readDecor(item)));
         }
         result =
             result.sections(
@@ -507,7 +510,8 @@ public final class DocumentXml {
                     Xml.attr(sectionRoot, "start", "nextPage"),
                     Integer.parseInt(Xml.attr(sectionRoot, "pageStart", "0")),
                     NoteFormats.read(sectionRoot, null),
-                    readColumns(sectionRoot)));
+                    readColumns(sectionRoot),
+                    readDecor(sectionRoot)));
         for (String id : ids)
           if (id.startsWith("p") && TextUtil.digits(id, 1))
             next = Math.max(next, Long.parseLong(id.substring(1)) + 1);
@@ -643,6 +647,27 @@ public final class DocumentXml {
     for (int i = 0; i < w.length; i += 2)
       b.append("<col width=\"").append(w[i]).append("\" space=\"").append(w[i + 1]).append("\"/>");
     b.append("</columns>");
+  }
+
+  private static void decor(StringBuilder b, PageDecor d) {
+    if (d.equals(PageDecor.NONE)) return;
+    b.append("<decor pageColor=\"").append(d.pageColor).append("\" watermark=\"")
+        .append(Xml.escape(d.watermark)).append("\" watermarkColor=\"").append(d.watermarkColor)
+        .append("\" borders=\"").append(Xml.escape(d.borders.encode())).append("\"/>");
+  }
+
+  private static PageDecor readDecor(Element parent) throws IOException {
+    Element e = Xml.child(parent, "decor");
+    if (e == null) return PageDecor.NONE;
+    try {
+      return new PageDecor(
+          Integer.parseInt(Xml.attr(e, "pageColor", "-1")),
+          Xml.attr(e, "watermark", ""),
+          Integer.parseInt(Xml.attr(e, "watermarkColor", "12632256")),
+          ParagraphBorders.decode(Xml.attr(e, "borders", "")));
+    } catch (IllegalArgumentException ex) {
+      throw new IOException("Invalid page decoration", ex);
+    }
   }
 
   private static Columns readColumns(Element parent) throws IOException {

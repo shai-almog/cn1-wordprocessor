@@ -301,3 +301,12 @@ Sections carry 1-12 columns, with spacing, an optional separator rule and unequa
 - Columns are not balanced before a continuous section break.
 - A column break in the middle of a DOCX paragraph moves to the paragraph start, with a warning.
 - The native visual check is still pending, so the matrix rows remain unverified.
+
+## Design tab page decoration
+
+`design.pageColor`, `design.watermark` and `design.pageBorders` store a per-section `PageDecor`
+(native XML `<decor>`), which the editor paints. Limitations: there is no DOCX mapping yet for
+`w:background`, `w:pgBorders` or watermark header shapes, so these settings are lost on DOCX save.
+They are also not drawn in PDF export. The watermark is plain diagonal text in a fixed 54pt
+size. Header/footer commands (`insert.header`/`insert.footer`, `layout.linkToPrevious`,
+`hf.position`) edit section furniture directly.

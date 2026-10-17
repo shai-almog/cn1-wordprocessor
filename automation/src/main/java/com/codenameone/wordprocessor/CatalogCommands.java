@@ -250,6 +250,56 @@ final class CatalogCommands implements Commands.Extension {
           return null;
         });
 
+    // Design tab: page color, watermark and page borders of the active section.
+    c.register(
+        "design.pageColor",
+        "Page color RRGGBB, or none/null for white paper",
+        "color?:any",
+        true,
+        (s, a) -> {
+          Object v = a.get("color");
+          Section sec = s.activeSection().raw;
+          s.section(
+              sec.decor(
+                  sec.decor.pageColor(
+                      v == null || "none".equals(v)
+                          ? -1
+                          : Integer.parseInt(color(String.valueOf(v), "ffffff"), 16))));
+          return null;
+        });
+    c.register(
+        "design.watermark",
+        "Diagonal text watermark behind the page; empty text removes it",
+        "text?:string,color?:string",
+        true,
+        (s, a) -> {
+          Section sec = s.activeSection().raw;
+          String text = a.containsKey("text") ? Commands.str(a, "text") : "CONFIDENTIAL";
+          int rgb =
+              a.containsKey("color") ? Integer.parseInt(color(Commands.str(a, "color"), "c0c0c0"), 16) : 0xc0c0c0;
+          s.section(sec.decor(sec.decor.watermark(text, rgb)));
+          return null;
+        });
+    c.register(
+        "design.pageBorders",
+        "Page borders: kind none, all, outside, top, bottom, left or right; space is from the page edge",
+        "kind:string,style?:string,width?:number,color?:string,space?:number",
+        true,
+        (s, a) -> {
+          Section sec = s.activeSection().raw;
+          ParagraphBorders.Side side =
+              new ParagraphBorders.Side(
+                  a.containsKey("width") ? ((Number) a.get("width")).floatValue() : .5f,
+                  a.containsKey("color") ? Integer.parseInt(color(Commands.str(a, "color"), "000000"), 16) : 0,
+                  a.containsKey("space") ? ((Number) a.get("space")).floatValue() : 24,
+                  a.containsKey("style") ? Commands.str(a, "style") : "single");
+          s.section(
+              sec.decor(
+                  sec.decor.borders(
+                      ParagraphBorders.preset(Commands.str(a, "kind"), side, sec.decor.borders))));
+          return null;
+        });
+
     // Borders and shading.
     c.register(
         "para.borders",
