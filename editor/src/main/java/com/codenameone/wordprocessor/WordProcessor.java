@@ -561,6 +561,7 @@ public class WordProcessor {
     if (icon == FontImage.MATERIAL_FORMAT_ALIGN_RIGHT) return "Align right";
     if (icon == FontImage.MATERIAL_FORMAT_ALIGN_JUSTIFY) return "Justify";
     if (icon == FontImage.MATERIAL_FORMAT_LINE_SPACING) return "Line spacing";
+    if (icon == FontImage.MATERIAL_BORDER_OUTER) return "Borders and shading";
     return "";
   }
 
@@ -682,7 +683,9 @@ public class WordProcessor {
                 () -> paragraph("align", "both"),
                 false),
             button("¶…", this::paragraphDialog),
-            iconButton("", FontImage.MATERIAL_FORMAT_LINE_SPACING, this::lineSpacingDialog, false));
+            iconButton("", FontImage.MATERIAL_FORMAT_LINE_SPACING, this::lineSpacingDialog, false),
+            iconButton("", FontImage.MATERIAL_BORDER_OUTER, this::bordersDialog, false),
+            toggleMarks());
     Container styles =
         OfficeTheme.row(
             styleTile("Normal", 0, 15),
@@ -4294,6 +4297,50 @@ public class WordProcessor {
         s -> {
           s.paragraph("lineRule", rule);
           s.paragraph("spacing", value);
+        });
+    edited();
+  }
+
+  private Button toggleMarks() {
+    Button b = button("\u00b6", () -> run("view.marks", new HashMap<String, Object>()));
+    b.setAccessibilityText("Show formatting marks");
+    return b;
+  }
+
+  /** Word's Borders and Shading: one kind/style/width/color for the sides plus a fill. */
+  private void bordersDialog() {
+    if (!(session.editingDocument().blocks.get(session.selection().block) instanceof Paragraph))
+      return;
+    Paragraph p = session.editingDocument().paragraph(session.selection().block);
+    ComboBox<String> kind =
+        new ComboBox<String>("outside", "top", "bottom", "left", "right", "none");
+    ComboBox<String> style = new ComboBox<String>(ParagraphBorders.STYLES);
+    EditField width = field("0.5"), color = field("000000"), shading = field("");
+    shading.setHint("RRGGBB or empty");
+    shading.setText(
+        p.format.shading < 0 ? "" : Integer.toHexString(0x1000000 | p.format.shading).substring(1));
+    for (EditField f : new EditField[] {width, color, shading}) OfficeTheme.applyAppearance(f);
+    Container fields =
+        BoxLayout.encloseY(
+            formRow("Borders", kind),
+            formRow("Style", style),
+            formRow("Width (pt)", width),
+            formRow("Color", color),
+            formRow("Shading", shading));
+    if (!showDialog("Borders and shading", fields, "Apply", "Cancel")) return;
+    session.transact(
+        s -> {
+          commands.execute(
+              s,
+              "para.borders",
+              Json.object(
+                  "kind", kind.getSelectedItem(),
+                  "style", style.getSelectedItem(),
+                  "width", Double.parseDouble(width.getText().trim()),
+                  "color", color.getText().trim()));
+          String fill = shading.getText().trim();
+          commands.execute(
+              s, "para.shading", Json.object("color", fill.isEmpty() ? "none" : fill));
         });
     edited();
   }

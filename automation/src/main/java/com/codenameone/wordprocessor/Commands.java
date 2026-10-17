@@ -37,7 +37,12 @@ public final class Commands {
     public Map<String, Object> schema() {
       Map<String, Object> props = new LinkedHashMap<String, Object>();
       for (Map.Entry<String, String> e : parameters.entrySet())
-        props.put(e.getKey(), Json.object("type", e.getValue()));
+        // "any" accepts null or any JSON value, as Wordcraft's nullable arguments do.
+        props.put(
+            e.getKey(),
+            "any".equals(e.getValue())
+                ? new LinkedHashMap<String, Object>()
+                : Json.object("type", e.getValue()));
       return Json.object(
           "type",
           "object",

@@ -73,7 +73,9 @@ public final class ParagraphStyle {
         "tabs",
         "keepLines",
         "widowControl",
-        "outlineLevel"
+        "outlineLevel",
+        "borders",
+        "shading"
       };
       for (String key : keys)
         if (!value(p, key).equals(value(old.paragraph, key)))
@@ -104,6 +106,9 @@ public final class ParagraphStyle {
     if ("tabInterval".equals(key)) return "" + p.format.tabInterval;
     if ("outlineLevel".equals(key)) return "" + p.format.outlineLevel;
     if ("keepLines".equals(key)) return "" + p.format.keepLines;
+    if ("borders".equals(key)) return p.format.borders.encode();
+    if ("shading".equals(key))
+      return p.format.shading < 0 ? "" : Integer.toHexString(0x1000000 | p.format.shading).substring(1);
     return "" + p.format.widowControl;
   }
 

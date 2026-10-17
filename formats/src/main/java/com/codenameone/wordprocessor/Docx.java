@@ -314,6 +314,13 @@ static final char COLUMN_BREAK = '\u000B';
           }
         }
         layout = layout.with("tabs", TabStop.encode(stops));
+      } else if ("pBdr".equals(kind))
+        layout = layout.with("borders", DocxBorders.read(p, warnings).encode());
+      else if ("shd".equals(kind)) {
+        int fill = DocxBorders.shading(p);
+        layout =
+            layout.with(
+                "shading", fill < 0 ? "" : Integer.toHexString(0x1000000 | fill).substring(1));
       } else if ("pageBreakBefore".equals(kind)) pageBreak = enabled(p);
       else if ("keepNext".equals(kind)) keep = enabled(p);
       else if (!"rPr".equals(kind) && !"pPrChange".equals(kind))
@@ -935,6 +942,7 @@ static final char COLUMN_BREAK = '\u000B';
           .append("\"/>");
     b.append(p.format.keepLines ? "<w:keepLines/>" : "<w:keepLines w:val=\"0\"/>");
     b.append(p.format.widowControl ? "<w:widowControl/>" : "<w:widowControl w:val=\"0\"/>");
+    DocxBorders.write(b, p.format);
     tabs.write(b, p);
     if (p.breakRevision != null) {
       b.append("<w:rPr>");

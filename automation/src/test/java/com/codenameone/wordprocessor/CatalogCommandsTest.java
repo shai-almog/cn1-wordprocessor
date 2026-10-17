@@ -101,4 +101,26 @@ public class CatalogCommandsTest {
     } catch (IllegalArgumentException expected) {
     }
   }
+
+  @Test
+  public void bordersShadingAndHorizontalLine() {
+    Session s = new Session(Document.empty());
+    s.replace("Title");
+    run(s, "para.borders", "kind", "bottom", "width", 1.5, "color", "1f4e79");
+    assertEquals(1.5f, para(s, 0).format.borders.bottom.width, .001);
+    assertFalse(para(s, 0).format.borders.top.present());
+    run(s, "para.borders", "kind", "outside");
+    assertTrue(para(s, 0).format.borders.left.present());
+    run(s, "para.shading", "color", "fff2cc");
+    assertEquals(0xfff2cc, para(s, 0).format.shading);
+    run(s, "para.shading", "color", null);
+    assertEquals(-1, para(s, 0).format.shading);
+    run(s, "para.borders", "kind", "none");
+    assertTrue(para(s, 0).format.borders.isEmpty());
+    run(s, "insert.horizontalLine");
+    assertEquals(3, s.document().blocks.size());
+    assertTrue(para(s, 1).format.borders.bottom.present());
+    assertTrue(para(s, 2).format.borders.isEmpty());
+    assertEquals(2, s.selection().block);
+  }
 }

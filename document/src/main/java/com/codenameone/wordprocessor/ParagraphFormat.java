@@ -17,6 +17,11 @@ public final class ParagraphFormat {
   /** Start this paragraph at the top of the next newspaper column (a DOCX column break). */
   public final boolean columnBreak;
 
+  public final ParagraphBorders borders;
+
+  /** Paragraph shading RRGGBB, or -1 for none. */
+  public final int shading;
+
   public ParagraphFormat(float right, float first, float tab, boolean keep, boolean widow) {
     this(right, first, tab, keep, widow, java.util.Collections.<TabStop>emptyList());
   }
@@ -64,6 +69,25 @@ public final class ParagraphFormat {
       int outlineLevel,
       String lineRule,
       boolean columnBreak) {
+    this(right, first, tab, keep, widow, tabs, outlineLevel, lineRule, columnBreak, ParagraphBorders.NONE, -1);
+  }
+
+  public ParagraphFormat(
+      float right,
+      float first,
+      float tab,
+      boolean keep,
+      boolean widow,
+      java.util.List<TabStop> tabs,
+      int outlineLevel,
+      String lineRule,
+      boolean columnBreak,
+      ParagraphBorders borders,
+      int shading) {
+    if (borders == null || shading < -1 || shading > 0xffffff)
+      throw new IllegalArgumentException("Invalid paragraph borders or shading");
+    this.borders = borders;
+    this.shading = shading;
     this.columnBreak = columnBreak;
     if (!java.util.Arrays.asList("auto", "exact", "atLeast").contains(lineRule))
       throw new IllegalArgumentException("Invalid line spacing rule");
@@ -95,6 +119,8 @@ public final class ParagraphFormat {
         "tabs".equals(key) ? TabStop.decode(value) : tabs,
         "outlineLevel".equals(key) ? Integer.parseInt(value) : outlineLevel,
         "lineRule".equals(key) ? value : lineRule,
-        "columnBreak".equals(key) ? Boolean.parseBoolean(value) : columnBreak);
+        "columnBreak".equals(key) ? Boolean.parseBoolean(value) : columnBreak,
+        "borders".equals(key) ? ParagraphBorders.decode(value) : borders,
+        "shading".equals(key) ? (value.isEmpty() ? -1 : Integer.parseInt(value, 16)) : shading);
   }
 }

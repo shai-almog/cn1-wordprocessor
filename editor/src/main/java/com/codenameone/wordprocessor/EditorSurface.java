@@ -349,6 +349,50 @@ public final class EditorSurface extends Container
   private float pinchStart;
   private int layoutViewport = -1;
 
+  private static void paintFrame(Graphics g, LayoutEngine.Frame f, int px, int py, float scale) {
+    int x = px + Math.round(f.x * scale), y = py + Math.round(f.top * scale);
+    int w = Math.round(f.width * scale), h = Math.round((f.bottom - f.top) * scale);
+    if (f.shading >= 0) {
+      g.setColor(f.shading);
+      g.fillRect(x, y, w, h);
+    }
+    ParagraphBorders b = f.borders;
+    if (f.first) side(g, b.top, x, y, w, true, scale);
+    if (f.last) side(g, b.bottom, x, y + h - stroke(b.bottom, scale), w, true, scale);
+    side(g, b.left, x, y, h, false, scale);
+    side(g, b.right, x + w - stroke(b.right, scale), y, h, false, scale);
+  }
+
+  private static int stroke(ParagraphBorders.Side side, float scale) {
+    return Math.max(1, Math.round(side.width * scale));
+  }
+
+  /** Solid, double (two thirds-width rules), dotted and dashed sides. */
+  private static void side(
+      Graphics g, ParagraphBorders.Side side, int x, int y, int length, boolean horizontal, float scale) {
+    if (!side.present()) return;
+    g.setColor(side.color);
+    int t = stroke(side, scale);
+    if ("double".equals(side.style) && t >= 3) {
+      int line = Math.max(1, t / 3);
+      bar(g, x, y, length, line, horizontal);
+      bar(g, horizontal ? x : x + t - line, horizontal ? y + t - line : y, length, line, horizontal);
+      return;
+    }
+    int on = "dotted".equals(side.style) ? t : "dashed".equals(side.style) ? 4 * t : length;
+    int off = on == length ? 0 : "dotted".equals(side.style) ? t : 2 * t;
+    for (int at = 0; at < length; at += on + off) {
+      int run = Math.min(on, length - at);
+      if (horizontal) g.fillRect(x + at, y, run, t);
+      else g.fillRect(x, y + at, t, run);
+    }
+  }
+
+  private static void bar(Graphics g, int x, int y, int length, int t, boolean horizontal) {
+    if (horizontal) g.fillRect(x, y, length, t);
+    else g.fillRect(x, y, t, length);
+  }
+
   /** Crop maps the visible source fraction onto the frame; rotation turns about its center. */
   private static void drawPicture(
       Graphics g, Image image, Picture.Look k, int px, int py, int pw, int ph, float scale) {
@@ -849,6 +893,7 @@ public final class EditorSurface extends Container
           g.fillRect(bx + bw - stroke, by, stroke, bh);
         }
       }
+      for (LayoutEngine.Frame frame : page.frames) paintFrame(g, frame, x, y, scale);
       for (LayoutEngine.Line area : page.noteAreas()) {
         g.setColor(0x242424);
         int nx = x + Math.round(page.spec.left * scale), ny = y + Math.round((area.y - 6) * scale);

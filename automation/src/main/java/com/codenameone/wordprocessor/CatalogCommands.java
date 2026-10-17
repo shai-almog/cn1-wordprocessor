@@ -250,6 +250,58 @@ final class CatalogCommands implements Commands.Extension {
           return null;
         });
 
+    // Borders and shading.
+    c.register(
+        "para.borders",
+        "Paragraph borders: kind none, all, outside, top, bottom, left or right",
+        "kind:string,style?:string,width?:number,color?:string,space?:number",
+        true,
+        (s, a) -> {
+          Paragraph p = current(s);
+          ParagraphBorders.Side side =
+              new ParagraphBorders.Side(
+                  a.containsKey("width") ? ((Number) a.get("width")).floatValue() : .5f,
+                  a.containsKey("color") ? Integer.parseInt(color(Commands.str(a, "color"), "000000"), 16) : 0,
+                  a.containsKey("space") ? ((Number) a.get("space")).floatValue() : 1,
+                  a.containsKey("style") ? Commands.str(a, "style") : "single");
+          s.paragraph(
+              "borders",
+              ParagraphBorders.preset(Commands.str(a, "kind"), side, p.format.borders).encode());
+          return null;
+        });
+    c.register(
+        "para.shading",
+        "Paragraph shading RRGGBB, or none/null to clear",
+        "color?:any",
+        true,
+        (s, a) -> {
+          Object v = a.get("color");
+          s.paragraph(
+              "shading", v == null || "none".equals(v) ? "" : color(String.valueOf(v), "ffffff"));
+          return null;
+        });
+    c.register(
+        "insert.horizontalLine",
+        "Insert an empty paragraph with a bottom border after the caret paragraph",
+        "",
+        true,
+        (s, a) -> {
+          Paragraph p = current(s);
+          s.select(s.selection().block, p.text.length(), p.text.length());
+          s.enterParagraph();
+          s.paragraph(
+              "borders",
+              new ParagraphBorders(
+                      ParagraphBorders.Side.NONE,
+                      ParagraphBorders.Side.NONE,
+                      new ParagraphBorders.Side(.75f, 0xa0a0a0, 1, "single"),
+                      ParagraphBorders.Side.NONE)
+                  .encode());
+          s.enterParagraph();
+          s.paragraph("borders", "");
+          return null;
+        });
+
     // Lists.
     c.register(
         "para.bullets",

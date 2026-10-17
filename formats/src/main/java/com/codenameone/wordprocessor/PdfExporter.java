@@ -16,6 +16,60 @@ public final class PdfExporter {
     byte[] bytes(String name) throws IOException;
   }
 
+  private static void frame(StringBuilder c, LayoutEngine.Frame f, float pageHeight) {
+    float top = pageHeight - f.top, bottom = pageHeight - f.bottom;
+    if (f.shading >= 0)
+      c.append(color(f.shading))
+          .append(" rg ")
+          .append(n(f.x))
+          .append(' ')
+          .append(n(bottom))
+          .append(' ')
+          .append(n(f.width))
+          .append(' ')
+          .append(n(top - bottom))
+          .append(" re f\n");
+    ParagraphBorders b = f.borders;
+    if (f.first) edge(c, b.top, f.x, top - b.top.width / 2, f.x + f.width, top - b.top.width / 2);
+    if (f.last)
+      edge(c, b.bottom, f.x, bottom + b.bottom.width / 2, f.x + f.width, bottom + b.bottom.width / 2);
+    edge(c, b.left, f.x + b.left.width / 2, top, f.x + b.left.width / 2, bottom);
+    float r = f.x + f.width - b.right.width / 2;
+    edge(c, b.right, r, top, r, bottom);
+  }
+
+  private static void edge(
+      StringBuilder c, ParagraphBorders.Side s, float x1, float y1, float x2, float y2) {
+    if (!s.present()) return;
+    boolean dbl = "double".equals(s.style);
+    float w = dbl ? s.width / 3 : s.width;
+    String dash =
+        "dotted".equals(s.style)
+            ? "[" + n(s.width) + "] 0 d "
+            : "dashed".equals(s.style) ? "[" + n(4 * s.width) + ' ' + n(2 * s.width) + "] 0 d " : "";
+    float dx = 0, dy = 0;
+    if (dbl) {
+      boolean horizontal = y1 == y2;
+      dx = horizontal ? 0 : s.width / 3;
+      dy = horizontal ? s.width / 3 : 0;
+    }
+    for (int i = dbl ? -1 : 0; i <= (dbl ? 1 : 0); i += 2)
+      c.append("q ")
+          .append(color(s.color))
+          .append(" RG ")
+          .append(n(w))
+          .append(" w ")
+          .append(dash)
+          .append(n(x1 + i * dx))
+          .append(' ')
+          .append(n(y1 + i * dy))
+          .append(" m ")
+          .append(n(x2 + i * dx))
+          .append(' ')
+          .append(n(y2 + i * dy))
+          .append(" l S Q\n");
+  }
+
   /**
    * Frame-centered coordinates: rotate clockwise and flip about the center, clip to the frame,
    * draw the enlarged source offset by the crop, then stroke the border.
@@ -255,6 +309,7 @@ public final class PdfExporter {
             .append(' ')
             .append(n(spec.height - rule[2]))
             .append(" l S Q\n");
+      for (LayoutEngine.Frame frame : page.frames) frame(content, frame, spec.height);
       for (LayoutEngine.PlacedPicture pic : page.pictures) {
         String name = "Im" + (imageIndex++);
         imageResources

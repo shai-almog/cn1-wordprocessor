@@ -278,6 +278,12 @@ public final class DocumentXml {
         .append(p.format.outlineLevel)
         .append("\"");
     if (p.format.columnBreak) b.append(" columnBreak=\"true\"");
+    if (!p.format.borders.isEmpty())
+      b.append(" borders=\"").append(p.format.borders.encode()).append('"');
+    if (p.format.shading >= 0)
+      b.append(" shading=\"")
+          .append(Integer.toHexString(0x1000000 | p.format.shading).substring(1))
+          .append('"');
     RevisionFormats.attributes(b, p.breakRevision, "break-");
     RevisionFormats.attributes(b, p.formatRevision, "format-");
     b.append(">");
@@ -611,7 +617,11 @@ public final class DocumentXml {
                     TabStop.decode(Xml.attr(e, "tabs", "")),
                     Integer.parseInt(Xml.attr(e, "outlineLevel", "-1")),
                     Xml.attr(e, "lineRule", "auto"),
-                    flag(e, "columnBreak")))
+                    flag(e, "columnBreak"),
+                    ParagraphBorders.decode(Xml.attr(e, "borders", "")),
+                    Xml.attr(e, "shading", "").isEmpty()
+                        ? -1
+                        : Integer.parseInt(Xml.attr(e, "shading", ""), 16)))
             .breakRevision(RevisionFormats.nativeRead(e, "break-"));
     Revision change = RevisionFormats.nativeRead(e, "format-");
     if (change != null) {

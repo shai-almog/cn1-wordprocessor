@@ -229,6 +229,9 @@ public final class Paragraph implements Block {
         && format.keepLines == p.format.keepLines
         && format.widowControl == p.format.widowControl
         && format.outlineLevel == p.format.outlineLevel
+        && format.columnBreak == p.format.columnBreak
+        && format.borders.equals(p.format.borders)
+        && format.shading == p.format.shading
         && TabStop.encode(format.tabs).equals(TabStop.encode(p.format.tabs));
   }
 

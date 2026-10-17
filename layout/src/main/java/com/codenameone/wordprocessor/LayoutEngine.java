@@ -134,6 +134,27 @@ public final class LayoutEngine {
     }
   }
 
+  /** One page's share of a bordered or shaded paragraph, in points. */
+  public static final class Frame {
+    public final float x, top, width, bottom;
+    public final ParagraphBorders borders;
+    public final int shading;
+
+    /** False where the paragraph continues on another page or column (that side is open). */
+    public final boolean first, last;
+
+    Frame(float x, float top, float width, float bottom, ParagraphFormat f, boolean first, boolean last) {
+      this.x = x;
+      this.top = top;
+      this.width = width;
+      this.bottom = bottom;
+      borders = f.borders;
+      shading = f.shading;
+      this.first = first;
+      this.last = last;
+    }
+  }
+
   public static final class Page {
     public final PageSpec spec;
     public final int section, sectionPage, number;
@@ -150,6 +171,9 @@ public final class LayoutEngine {
 
     /** Column separator lines as {x, top, bottom} in points. */
     public final List<float[]> columnRules = new ArrayList<float[]>();
+
+    /** Paragraph border/shading boxes, painted under the text. */
+    public final List<Frame> frames = new ArrayList<Frame>();
 
     Page(
         PageSpec spec,
@@ -789,6 +813,7 @@ public final class LayoutEngine {
                   warnings),
               page.notes);
       rebuilt.columnRules.addAll(page.columnRules);
+      rebuilt.frames.addAll(page.frames);
       b.pages.set(i, rebuilt);
     }
     cache = nextCache;
@@ -1134,7 +1159,17 @@ public final class LayoutEngine {
     Page page(Page value) {
       value.columnRules.addAll(rules);
       rules.clear();
+      value.frames.addAll(frames);
+      frames.clear();
       return value;
+    }
+
+    final List<Frame> frames = new ArrayList<Frame>();
+
+    /** Adds a frame to the page it belongs to, which may already be finished. */
+    void frame(int page, Frame f) {
+      if (page < pages.size()) pages.get(page).frames.add(f);
+      else frames.add(f);
     }
 
     void newPage() {
@@ -1190,9 +1225,16 @@ public final class LayoutEngine {
       float first = p.before + ls.get(0).height;
       if (p.format.widowControl && ls.size() > 1 && first + ls.get(1).height <= pageHeight)
         first += ls.get(1).height;
-      room(first);
+      ParagraphBorders bd = p.format.borders;
+      boolean decor = !bd.isEmpty() || p.format.shading >= 0;
+      float topPad = bd.top.extent(), bottomPad = bd.bottom.extent();
+      room(first + topPad);
       y += p.before;
-      int lineIndex = 0;
+      if (decor) y += topPad;
+      int segPage = pages.size(), segColumn = column;
+      float segTop = y - topPad, segBottom = y, segLeft = spec.left, segWidth = spec.contentWidth();
+      boolean segFirst = true;
+      int lineIndex = 0, segLines = 0;
       for (RawLine l : ls) {
         if (!pendingNotes.isEmpty()) newPage();
         collectNotes(p, l);
@@ -1203,6 +1245,22 @@ public final class LayoutEngine {
           room(l.height + ls.get(lineIndex + 1).height);
         lineIndex++;
         room(l.height);
+        if (decor && (segPage != pages.size() || segColumn != column)) {
+          // A paragraph pushed whole to the next page keeps its top border there.
+          if (segLines > 0) {
+            frame(segPage, frame(p, indent, segLeft, segWidth, segTop, segBottom, segFirst, false));
+            segFirst = false;
+            segTop = y;
+          } else {
+            segTop = y;
+            y += topPad;
+          }
+          segLines = 0;
+          segPage = pages.size();
+          segColumn = column;
+          segLeft = spec.left;
+          segWidth = spec.contentWidth();
+        }
         float firstIndent = l.start == 0 ? p.format.firstIndent : 0;
         float x = spec.left + indent + firstIndent;
         if ("center".equals(p.align))
@@ -1212,8 +1270,26 @@ public final class LayoutEngine {
         current.add(new Line(index, -1, -1, p.id, pages.size(), x, y, l, marker));
         marker = "";
         y += l.height;
+        segBottom = y;
+        segLines++;
+      }
+      if (decor) {
+        y += bottomPad;
+        frame(
+            segPage,
+            frame(p, indent, segLeft, segWidth, segTop, segBottom + bottomPad, segFirst, true));
       }
       y += p.after;
+    }
+
+    /** The border box spans the indented text width plus each side's distance and width. */
+    Frame frame(
+        Paragraph p, float indent, float left, float width, float top, float bottom,
+        boolean first, boolean last) {
+      ParagraphBorders bd = p.format.borders;
+      float x = left + indent - bd.left.extent();
+      float right = left + width - p.format.rightIndent + bd.right.extent();
+      return new Frame(x, top, right - x, bottom, p.format, first, last);
     }
 
     void picture(Picture p, int index) {

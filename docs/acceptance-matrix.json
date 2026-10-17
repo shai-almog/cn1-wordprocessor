@@ -10,8 +10,8 @@
   "not-applicable"
  ],
  "counts": {
-  "unverified": 252,
-  "missing": 222,
+  "unverified": 255,
+  "missing": 219,
   "partial": 13,
   "certified": 0,
   "reference-stub": 15,
@@ -1116,36 +1116,36 @@
    "group": "Paragraph",
    "feature": "Shading",
    "command": "para.shading",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "para.shading",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "para.shading (Shading)"
+   "notes": "para.shading (Shading) Catalog id registered (runtime registry); needs native evidence."
   },
   {
    "tab": "Home",
    "group": "Paragraph",
    "feature": "Borders",
    "command": "para.borders",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "para.borders",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "para.borders (Borders)"
+   "notes": "para.borders (Borders) Catalog id registered (runtime registry); needs native evidence."
   },
   {
    "tab": "Home",
    "group": "Paragraph",
    "feature": "Horizontal Line",
    "command": "insert.horizontalLine",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "insert.horizontalLine",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "insert.horizontalLine (Horizontal Line)"
+   "notes": "insert.horizontalLine (Horizontal Line) Catalog id registered (runtime registry); needs native evidence."
   },
   {
    "tab": "Home",

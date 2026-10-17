@@ -41,7 +41,7 @@ public class TableContentsFormatTest {
     Docx.Opened opened = Docx.read(getClass().getResourceAsStream("/wordcraft-contents.docx"));
     assertEquals(new java.util.LinkedHashSet<String>(java.util.Arrays.asList(
         "Character feature: kern",
-         "Paragraph feature: contextualSpacing", "Paragraph feature: pBdr")),
+         "Paragraph feature: contextualSpacing")),
         new java.util.LinkedHashSet<String>(opened.warnings));
     Document d = opened.document;
     assertArrayEquals(new int[]{0,3}, TableContents.range(d));
