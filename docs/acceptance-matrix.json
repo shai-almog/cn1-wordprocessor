@@ -10,8 +10,8 @@
   "not-applicable"
  ],
  "counts": {
-  "unverified": 264,
-  "missing": 210,
+  "unverified": 280,
+  "missing": 194,
   "partial": 13,
   "certified": 0,
   "reference-stub": 15,
@@ -324,12 +324,12 @@
    "group": "Toolbar",
    "feature": "Repeat",
    "command": "edit.repeat",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "edit.repeat",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "edit.repeat (Repeat)"
+   "notes": "edit.repeat (Repeat) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Quick Access",
@@ -444,24 +444,24 @@
    "group": "Clipboard",
    "feature": "Copy Formatting",
    "command": "edit.copyFormat",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "edit.copyFormat",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "edit.copyFormat (Copy Formatting)"
+   "notes": "edit.copyFormat (Copy Formatting) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Home",
    "group": "Clipboard",
    "feature": "Paste Formatting",
    "command": "edit.pasteFormat",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "edit.pasteFormat",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "edit.pasteFormat (Paste Formatting)"
+   "notes": "edit.pasteFormat (Paste Formatting) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Home",
@@ -1608,12 +1608,12 @@
    "group": "Pages",
    "feature": "Blank Page",
    "command": "insert.blankPage",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "insert.blankPage",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "insert.blankPage (Blank Page)"
+   "notes": "insert.blankPage (Blank Page) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Insert",
@@ -2064,12 +2064,12 @@
    "group": "Text",
    "feature": "Document Property",
    "command": "insert.docProperty",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "insert.docProperty",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "insert.docProperty (Document Property)"
+   "notes": "insert.docProperty (Document Property) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Insert",
@@ -4920,24 +4920,24 @@
    "group": "Outline Tools",
    "feature": "Move Up",
    "command": "outline.moveUp",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "outline.moveUp",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "outline.moveUp (Move Up)"
+   "notes": "outline.moveUp (Move Up) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Outlining",
    "group": "Outline Tools",
    "feature": "Move Down",
    "command": "outline.moveDown",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "outline.moveDown",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "outline.moveDown (Move Down)"
+   "notes": "outline.moveDown (Move Down) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Outlining",
@@ -5628,24 +5628,24 @@
    "group": "Keyboard",
    "feature": "Move Paragraph Up",
    "command": "para.moveUp",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "para.moveUp",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "para.moveUp (Move Paragraph Up)"
+   "notes": "para.moveUp (Move Paragraph Up) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Editing",
    "group": "Keyboard",
    "feature": "Move Paragraph Down",
    "command": "para.moveDown",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "para.moveDown",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "para.moveDown (Move Paragraph Down)"
+   "notes": "para.moveDown (Move Paragraph Down) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Editing",
@@ -5676,12 +5676,12 @@
    "group": "Keyboard",
    "feature": "Toggle Unicode Character",
    "command": "text.toggleUnicode",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "text.toggleUnicode",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "text.toggleUnicode (Toggle Unicode Character)"
+   "notes": "text.toggleUnicode (Toggle Unicode Character) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Editing",
@@ -5712,24 +5712,24 @@
    "group": "Navigation",
    "feature": "Line Start",
    "command": "caret.home",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "caret.home",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "caret.home (Line Start)"
+   "notes": "Editor command (needs layout); not in the CLI registry. Needs native acceptance evidence."
   },
   {
    "tab": "Editing",
    "group": "Navigation",
    "feature": "Line End",
    "command": "caret.end",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "caret.end",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "caret.end (Line End)"
+   "notes": "Editor command (needs layout); not in the CLI registry. Needs native acceptance evidence."
   },
   {
    "tab": "Editing",
@@ -5784,36 +5784,36 @@
    "group": "Navigation",
    "feature": "Page Up",
    "command": "caret.pageUp",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "caret.pageUp",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "caret.pageUp (Page Up)"
+   "notes": "Editor command (needs layout); not in the CLI registry. Needs native acceptance evidence."
   },
   {
    "tab": "Editing",
    "group": "Navigation",
    "feature": "Page Down",
    "command": "caret.pageDown",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "caret.pageDown",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "caret.pageDown (Page Down)"
+   "notes": "Editor command (needs layout); not in the CLI registry. Needs native acceptance evidence."
   },
   {
    "tab": "Editing",
    "group": "Navigation",
    "feature": "Go Back",
    "command": "edit.goBack",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "edit.goBack",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "edit.goBack (Go Back)"
+   "notes": "edit.goBack (Go Back) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Editing",
@@ -5904,12 +5904,12 @@
    "group": "Fields",
    "feature": "Edit Field Code",
    "command": "fields.setCode",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "fields.setCode",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "fields.setCode (Edit Field Code)"
+   "notes": "fields.setCode (Edit Field Code) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Editing",

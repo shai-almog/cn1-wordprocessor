@@ -113,6 +113,7 @@ public class WordProcessor {
     editor = new EditorSurface(session, commands, this::edited, this::editCell);
     editor.setPictureEditor(this::editPicture);
     registerViewCommands();
+    registerCaretCommands();
     ribbon = new OfficeRibbon();
     ribbon.addActionTab("File", this::showBackstage);
     ribbon.addTab("Home", home());
@@ -3427,6 +3428,28 @@ public class WordProcessor {
       if (!editor.isReflow()) editor.setReflow(true);
       zoomTo(editor.getZoom());
     });
+  }
+
+  /** Line- and screen-relative caret movement needs the editor's layout, so it lives here. */
+  private void registerCaretCommands() {
+    caretKey("caret.home", "Move to the start of the visual line", EditorSurface.KEY_HOME);
+    caretKey("caret.end", "Move to the end of the visual line", EditorSurface.KEY_END);
+    caretKey("caret.pageUp", "Move up one screen", EditorSurface.KEY_PAGE_UP);
+    caretKey("caret.pageDown", "Move down one screen", EditorSurface.KEY_PAGE_DOWN);
+  }
+
+  private void caretKey(String id, String description, final int key) {
+    commands.register(
+        id,
+        description,
+        "extend?:boolean",
+        false,
+        (s, a) -> {
+          editor.onKeyCommand(
+              key, Boolean.TRUE.equals(a.get("extend")) ? EditorSurface.MOD_SHIFT : 0);
+          Selection x = s.selection();
+          return Json.object("block", x.block, "caret", x.caret, "anchor", x.anchor);
+        });
   }
 
   private interface ViewAction {

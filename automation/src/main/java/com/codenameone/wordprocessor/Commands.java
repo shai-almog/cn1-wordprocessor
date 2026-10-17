@@ -75,6 +75,7 @@ public final class Commands {
     new CatalogCommands().register(this);
     new CatalogNavigationCommands().register(this);
     new PictureCommands().register(this);
+    new CatalogEditingCommands().register(this);
   }
 
   /** Bind automation to the host's print layout, independent of viewport reflow. */
@@ -108,6 +109,14 @@ public final class Commands {
     return Collections.unmodifiableCollection(commands.values());
   }
 
+  /** The last successful editing command, for edit.repeat. */
+  String lastId;
+
+  Map<String, Object> lastArgs;
+
+  /** Caret {block, offset} after the most recent edits, newest last, for edit.goBack. */
+  final List<int[]> editSpots = new java.util.ArrayList<int[]>();
+
   public Object execute(final Session session, String id, final Map<String, Object> args) {
     final Descriptor d = commands.get(id);
     if (d == null) throw new IllegalArgumentException("Unknown command: " + id);
@@ -133,6 +142,17 @@ public final class Commands {
     if (!d.transactional) return d.handler.execute(session, args);
     final Object[] result = new Object[1];
     session.transact(s -> result[0] = d.handler.execute(s, args));
+    if (!id.startsWith("edit.undo") && !id.startsWith("edit.redo")) {
+      lastId = id;
+      lastArgs = new java.util.LinkedHashMap<String, Object>(args);
+    }
+    Selection x = session.selection();
+    if (editSpots.isEmpty()
+        || editSpots.get(editSpots.size() - 1)[0] != x.block
+        || editSpots.get(editSpots.size() - 1)[1] != x.caret) {
+      editSpots.add(new int[] {x.block, x.caret});
+      if (editSpots.size() > 3) editSpots.remove(0);
+    }
     return result[0];
   }
 
