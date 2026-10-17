@@ -492,6 +492,32 @@ public final class EditorSurface extends Container
   }
 
   private boolean darkPage, gridlines, draft, viewOnly;
+  private String markup = "all";
+
+  /**
+   * Review display: "all" shows revisions inline; "simple" and "none" show the document as if
+   * every change were accepted, "original" as if every change were rejected. The last three are
+   * previews, so editing is disabled while they are shown.
+   */
+  public void setMarkup(String mode) {
+    if (!"all".equals(mode) && !"simple".equals(mode) && !"none".equals(mode) && !"original".equals(mode))
+      throw new IllegalArgumentException("Markup must be all, simple, none or original");
+    markup = mode;
+    laidOut = null;
+    repaint();
+  }
+
+  public String getMarkup() {
+    return markup;
+  }
+
+  private Document shown() {
+    Document d = session.document();
+    if ("all".equals(markup)) return d;
+    boolean accept = !"original".equals(markup);
+    for (Revisions.Change c : Revisions.list(d)) d = Revisions.resolve(d, c.revision.id, accept);
+    return d;
+  }
 
   /** Word's "Switch Modes": a dark page with light text; colors in the document are unchanged. */
   public void setDarkPage(boolean value) {
@@ -535,7 +561,10 @@ public final class EditorSurface extends Container
   private int ink(int rgb) {
     if (!darkPage) return rgb;
     int r = rgb >> 16 & 255, g = rgb >> 8 & 255, b = rgb & 255;
-    return (r * 299 + g * 587 + b * 114) / 1000 < 110 ? 0xffffff - (rgb & 0xffffff) : rgb;
+    if ((r * 299 + g * 587 + b * 114) / 1000 >= 110) return rgb;
+    // Invert HSL lightness only, so dark blue becomes light blue rather than orange.
+    int shift = 255 - Math.max(r, Math.max(g, b)) - Math.min(r, Math.min(g, b));
+    return (r + shift) << 16 | (g + shift) << 8 | (b + shift);
   }
 
   public void setShowMarks(boolean value) {
@@ -673,10 +702,10 @@ public final class EditorSurface extends Container
       layout =
           reflow
               ? engine.reflow(
-                  session.document(),
+                  shown(),
                   session.revision(),
                   Math.max(120, (getWidth() - OfficeTheme.px(16)) / scale()))
-              : engine.layout(session.document(), session.revision());
+              : engine.layout(shown(), session.revision());
       layoutViewport = getWidth();
       laidOut = session.document();
     }
@@ -1841,7 +1870,7 @@ public final class EditorSurface extends Container
    */
   public boolean readOnly() {
     String mode = session.document().properties.protection;
-    return viewOnly || "readOnly".equals(mode) || "comments".equals(mode);
+    return viewOnly || !"all".equals(markup) || "readOnly".equals(mode) || "comments".equals(mode);
   }
 
   @Override

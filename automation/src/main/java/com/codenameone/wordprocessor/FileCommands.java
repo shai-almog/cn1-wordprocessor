@@ -46,6 +46,12 @@ final class FileCommands implements Commands.Extension {
           return mode;
         });
     c.register(
+        "review.restrict",
+        "Restrict editing (same as File > Protect): none, readOnly, comments or trackedChanges",
+        "mode:string",
+        true,
+        (s, a) -> c.execute(s, "file.protect", a));
+    c.register(
         "file.inspect",
         "Document inspector: report comments, revisions, hidden text, properties and headers; remove listed kinds",
         "remove?:array",

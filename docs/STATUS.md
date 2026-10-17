@@ -363,3 +363,7 @@ DOCX writes the numFmt and lvlText for each level and reads custom lvlText back 
 - Per-level indents, fonts and `w:suff` are not modelled.
 - A template's ancestor counters use the formats seen at those levels.
 - Picture bullets are not supported.
+
+## Review markup display
+
+`review.markup {mode}` switches the canvas between all markup, simple/no markup (every revision previewed as accepted) and original (every revision previewed as rejected); `review.showMarkup` toggles all/none. Previews are read-only on the canvas. Simple markup does not yet differ from no markup (Word adds change bars only). `review.restrict` is the same as `file.protect`. `insert.editHeader`/`insert.editFooter` open the header/footer editor dialog; there is no in-page header editing mode yet. Dark page mode inverts lightness while preserving hue.

@@ -3457,6 +3457,13 @@ public class WordProcessor {
       editor.setPagesAcross(Math.max(1, editor.layout().pages.size()));
       zoomTo(editor.getZoom());
     });
+    view("review.markup", "Markup display: all, simple, none (final) or original", "mode?:string", a ->
+        editor.setMarkup(a.containsKey("mode") ? Commands.str(a, "mode") : "all".equals(editor.getMarkup()) ? "simple" : "all"));
+    view("review.showMarkup", "Show or hide revision markup", "value?:boolean", a ->
+        editor.setMarkup(
+            (a.containsKey("value") ? (Boolean) a.get("value") : !"all".equals(editor.getMarkup())) ? "all" : "none"));
+    view("insert.editHeader", "Edit the page header", "", a -> Display.getInstance().callSerially(() -> editFurniture(false)));
+    view("insert.editFooter", "Edit the page footer", "", a -> Display.getInstance().callSerially(() -> editFurniture(true)));
     view("view.vertical", "Lay pages out vertically", "", a -> {
       editor.setPagesAcross(1);
       zoomTo(editor.getZoom());

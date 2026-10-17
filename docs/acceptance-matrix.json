@@ -10,8 +10,8 @@
   "not-applicable"
  ],
  "counts": {
-  "unverified": 311,
-  "missing": 163,
+  "unverified": 312,
+  "missing": 162,
   "partial": 13,
   "certified": 0,
   "reference-stub": 15,
@@ -3600,12 +3600,12 @@
    "group": "Protect",
    "feature": "Restrict Editing",
    "command": "review.restrict",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "review.restrict",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "review.restrict (Restrict Editing)"
+   "notes": "review.restrict (Restrict Editing) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Review",
