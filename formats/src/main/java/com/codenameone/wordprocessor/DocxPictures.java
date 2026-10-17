@@ -62,13 +62,7 @@ final class DocxPictures {
           throw new IllegalArgumentException("Drawing is not an embedded picture");
         byte[] data = parts.get(targets.get(Xml.attr(blip, "embed", "")));
         if (data == null) throw new IllegalArgumentException("Picture data missing or external");
-        if (descendant(container, "srcRect") != null) warnings.add("Picture crop needs conversion");
-        Element transform = descendant(container, "xfrm");
-        if (transform != null
-            && (!"0".equals(Xml.attr(transform, "rot", "0"))
-                || "1".equals(Xml.attr(transform, "flipH", "0"))
-                || "1".equals(Xml.attr(transform, "flipV", "0"))))
-          warnings.add("Picture rotation or reflection needs conversion");
+        Picture.Look look = look(container, warnings);
         result.add(
             new Picture(
                 "i" + id[0]++,
@@ -76,13 +70,58 @@ final class DocxPictures {
                 Float.parseFloat(Xml.attr(extent, "cx", "0")) / 12700f,
                 Float.parseFloat(Xml.attr(extent, "cy", "0")) / 12700f,
                 props == null ? "" : Xml.attr(props, "descr", Xml.attr(props, "name", "")),
-                "left"));
+                "left",
+                look));
       } catch (RuntimeException ex) {
         warnings.add("Picture requires conversion: " + ex.getMessage());
       }
       return;
     }
     for (Element child : Xml.children(e, null)) collect(child, result, id, warnings);
+  }
+
+  /** a:srcRect (1/1000 percent), a:xfrm rot (1/60000 degree) and flips, and a solid a:ln. */
+  private static Picture.Look look(Element container, Set<String> warnings) {
+    Element crop = descendant(container, "srcRect"), transform = descendant(container, "xfrm");
+    Element line = descendant(container, "ln");
+    float[] edges = new float[4];
+    if (crop != null) {
+      String[] keys = {"l", "t", "r", "b"};
+      for (int i = 0; i < 4; i++)
+        edges[i] = Math.max(0, Float.parseFloat(Xml.attr(crop, keys[i], "0")) / 100000f);
+    }
+    int color = -1;
+    float width = 0;
+    if (line != null && descendant(line, "noFill") == null) {
+      Element rgb = descendant(line, "srgbClr");
+      if (rgb != null) {
+        color = Integer.parseInt(Xml.attr(rgb, "val", "000000"), 16);
+        width = Float.parseFloat(Xml.attr(line, "w", "9525")) / 12700f;
+      } else if (descendant(line, "solidFill") != null) {
+        color = 0;
+        width = Float.parseFloat(Xml.attr(line, "w", "9525")) / 12700f;
+        warnings.add("Picture border theme color converted to black");
+      }
+    }
+    int rotation =
+        transform == null
+            ? 0
+            : Math.round(Float.parseFloat(Xml.attr(transform, "rot", "0")) / 60000f);
+    try {
+      return new Picture.Look(
+          edges[0],
+          edges[1],
+          edges[2],
+          edges[3],
+          color,
+          Math.min(72, width),
+          rotation,
+          transform != null && "1".equals(Xml.attr(transform, "flipH", "0")),
+          transform != null && "1".equals(Xml.attr(transform, "flipV", "0")));
+    } catch (IllegalArgumentException ex) {
+      warnings.add("Picture crop outside the supported range was removed");
+      return Picture.Look.NONE.border(color, Math.min(72, width)).rotate(rotation, false, false);
+    }
   }
 
   void write(StringBuilder b, Picture p) {
@@ -116,14 +155,35 @@ final class DocxPictures {
                 + " r:embed=\"")
         .append(id)
         .append(
-            "\"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off"
-                + " x=\"0\" y=\"0\"/><a:ext cx=\"")
+            "\"/>");
+    Picture.Look k = p.look;
+    if (k.cropped())
+      b.append("<a:srcRect l=\"")
+          .append(Math.round(k.cropLeft * 100000))
+          .append("\" t=\"")
+          .append(Math.round(k.cropTop * 100000))
+          .append("\" r=\"")
+          .append(Math.round(k.cropRight * 100000))
+          .append("\" b=\"")
+          .append(Math.round(k.cropBottom * 100000))
+          .append("\"/>");
+    b.append("<a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm");
+    if (k.rotation != 0) b.append(" rot=\"").append(k.rotation * 60000L).append('"');
+    if (k.flipH) b.append(" flipH=\"1\"");
+    if (k.flipV) b.append(" flipV=\"1\"");
+    b.append("><a:off x=\"0\" y=\"0\"/><a:ext cx=\"")
         .append(cx)
         .append("\" cy=\"")
         .append(cy)
-        .append(
-            "\"/></a:xfrm><a:prstGeom"
-                + " prst=\"rect\"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>");
+        .append("\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom>");
+    if (k.borderColor >= 0)
+      b.append("<a:ln w=\"")
+          .append(Math.round(k.borderWidth * 12700))
+          .append("\"><a:solidFill><a:srgbClr val=\"")
+          .append(Integer.toHexString(0x1000000 | k.borderColor).substring(1))
+          .append("\"/></a:solidFill></a:ln>");
+    b.append(
+        "</pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>");
   }
 
   void packageParts() throws IOException {

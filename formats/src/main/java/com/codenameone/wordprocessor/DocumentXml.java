@@ -97,7 +97,28 @@ public final class DocumentXml {
             .append(picture.align)
             .append("\" alt=\"")
             .append(Xml.escape(picture.alt))
-            .append("\">")
+            .append("\"");
+        Picture.Look look = picture.look;
+        if (!Picture.Look.NONE.equals(look))
+          b.append(" crop=\"")
+              .append(look.cropLeft)
+              .append(',')
+              .append(look.cropTop)
+              .append(',')
+              .append(look.cropRight)
+              .append(',')
+              .append(look.cropBottom)
+              .append("\" border=\"")
+              .append(look.borderColor)
+              .append(',')
+              .append(look.borderWidth)
+              .append("\" rotation=\"")
+              .append(look.rotation)
+              .append("\" flip=\"")
+              .append(look.flipH ? "h" : "")
+              .append(look.flipV ? "v" : "")
+              .append('"');
+        b.append(">")
             .append(com.codename1.util.Base64.encodeNoNewline(picture.bytes()))
             .append("</picture>");
       } else throw new IllegalArgumentException("Unknown block");
@@ -329,6 +350,23 @@ public final class DocumentXml {
     b.append("</p>");
   }
 
+  private static Picture.Look pictureLook(Element c) {
+    if (Xml.attr(c, "crop", "").isEmpty()) return Picture.Look.NONE;
+    String[] crop = TextUtil.split(Xml.attr(c, "crop", "0,0,0,0"), ',');
+    String[] border = TextUtil.split(Xml.attr(c, "border", "-1,0"), ',');
+    String flip = Xml.attr(c, "flip", "");
+    return new Picture.Look(
+        Float.parseFloat(crop[0]),
+        Float.parseFloat(crop[1]),
+        Float.parseFloat(crop[2]),
+        Float.parseFloat(crop[3]),
+        Integer.parseInt(border[0]),
+        Float.parseFloat(border[1]),
+        Integer.parseInt(Xml.attr(c, "rotation", "0")),
+        flip.indexOf('h') >= 0,
+        flip.indexOf('v') >= 0);
+  }
+
   public static Document read(String xml) throws IOException {
     Element e = Xml.parse(xml);
     if (!"document".equals(Xml.local(e)) || !"1".equals(Xml.attr(e, "version", "")))
@@ -388,7 +426,8 @@ public final class DocumentXml {
                       f(c, "width"),
                       f(c, "height"),
                       Xml.attr(c, "alt", ""),
-                      Xml.attr(c, "align", "left")));
+                      Xml.attr(c, "align", "left"),
+                      pictureLook(c)));
         } else if ("bookmark".equals(Xml.local(c))) {
           Bookmark mark =
               new Bookmark(

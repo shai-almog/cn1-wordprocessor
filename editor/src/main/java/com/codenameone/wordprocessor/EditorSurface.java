@@ -108,6 +108,10 @@ public final class EditorSurface extends Container
   private final Map<TextStyle, Font> layoutFonts = fontCache(), paintFonts = fontCache();
   private final float pointScale = 1.333333f * OfficeTheme.ratio();
   private int scrollExtent = -1;
+  private int across = 1, rowsAcross;
+  private int[] rowTops;
+  private LayoutEngine.Result rowsFor;
+  private float rowsScale;
 
   private static Map<TextStyle, Font> fontCache() {
     return new LinkedHashMap<TextStyle, Font>(64, .75f, true) {
@@ -340,10 +344,84 @@ public final class EditorSurface extends Container
   private int composingStart = -1, composingEnd = -1;
   private int dragBlock = -1, dragAnchor;
   private int dragTable = -1, dragRow, dragColumn;
-  private boolean reflow = OfficeTheme.mobile(), touchMoved, touchSelecting;
+  private boolean reflow = OfficeTheme.mobile(), touchMoved, touchSelecting, showMarks;
   private int touchX, touchY, dragHandle;
   private float pinchStart;
   private int layoutViewport = -1;
+
+  /** Crop maps the visible source fraction onto the frame; rotation turns about its center. */
+  private static void drawPicture(
+      Graphics g, Image image, Picture.Look k, int px, int py, int pw, int ph, float scale) {
+    boolean rotate = (k.rotation != 0 || k.flipH || k.flipV) && g.isAffineSupported();
+    float cx = px + pw / 2f, cy = py + ph / 2f;
+    if (rotate) {
+      g.translate((int) cx, (int) cy);
+      if (k.rotation != 0) g.rotateRadians((float) Math.toRadians(k.rotation), 0, 0);
+      if (k.flipH || k.flipV) g.scale(k.flipH ? -1 : 1, k.flipV ? -1 : 1);
+      g.translate(-(int) cx, -(int) cy);
+    }
+    int cx0 = g.getClipX(), cy0 = g.getClipY(), cw0 = g.getClipWidth(), ch0 = g.getClipHeight();
+    if (k.cropped()) {
+      float fw = pw / (1 - k.cropLeft - k.cropRight), fh = ph / (1 - k.cropTop - k.cropBottom);
+      g.clipRect(px, py, pw, ph);
+      g.drawImage(
+          image,
+          px - Math.round(fw * k.cropLeft),
+          py - Math.round(fh * k.cropTop),
+          Math.round(fw),
+          Math.round(fh));
+      g.setClip(cx0, cy0, cw0, ch0);
+    } else g.drawImage(image, px, py, pw, ph);
+    if (k.borderColor >= 0 && k.borderWidth > 0) {
+      g.setColor(k.borderColor);
+      int t = Math.max(1, Math.round(k.borderWidth * scale));
+      g.fillRect(px, py, pw, t);
+      g.fillRect(px, py + ph - t, pw, t);
+      g.fillRect(px, py, t, ph);
+      g.fillRect(px + pw - t, py, t, ph);
+    }
+    if (rotate) g.resetAffine();
+  }
+
+  /** Word's Show/Hide formatting marks: pilcrows, space dots, tab arrows and hidden text. */
+  public boolean isShowMarks() {
+    return showMarks;
+  }
+
+  public void setShowMarks(boolean value) {
+    showMarks = value;
+    repaint();
+  }
+
+  private void paintMarks(Graphics g, LayoutEngine.Line line, int lx, int ly, float scale) {
+    g.setFont(font(TextStyle.DEFAULT, zoom));
+    g.setColor(OfficeTheme.chrome(0x5b7fa6));
+    int baseline = ly + Math.round(line.height * scale) - g.getFont().getHeight();
+    for (LayoutEngine.Span span : line.spans) {
+      int sx = lx + Math.round(span.x * scale), sy = ly + Math.round(span.top * scale);
+      if (span.style.characters.hidden) {
+        Font f = font(span.glyphStyle, zoom);
+        for (int x = sx; x < sx + Math.round(span.width * scale); x += 3)
+          g.fillRect(x, sy + f.getHeight() - 1, 1, 1);
+      }
+      for (int i = 0; i < span.text.length(); i++) {
+        char ch = span.text.charAt(i);
+        if (ch != ' ' && ch != '\t' && ch != '\u00a0') continue;
+        int a = lx + Math.round(offsetX(line, span.start + i) * scale),
+            b = lx + Math.round(offsetX(line, span.start + i + 1) * scale);
+        String mark = ch == '\t' ? "\u2192" : ch == ' ' ? "\u00b7" : "\u00b0";
+        g.drawString(mark, (a + b - g.getFont().stringWidth(mark)) / 2, baseline);
+      }
+    }
+    if (line.block >= 0) {
+      Paragraph paragraph = lineParagraph(line);
+      if (paragraph.breakRevision == null && line.end == paragraph.text.length())
+        g.drawString(
+            "\u00b6",
+            lx + Math.round(line.width * scale) + 1,
+            baseline);
+    }
+  }
 
   public boolean isReflow() {
     return reflow;
@@ -433,6 +511,7 @@ public final class EditorSurface extends Container
   }
 
   public void fitWidth() {
+    across = 1;
     if (reflow) {
       laidOut = null;
       revalidateView();
@@ -490,6 +569,17 @@ public final class EditorSurface extends Container
   }
 
   private int pageX(int page) {
+    if (across > 1 && !reflow) {
+      java.util.List<LayoutEngine.Page> pages = layout().pages;
+      int first = page - page % across, last = Math.min(pages.size(), first + across);
+      int row = 0, before = 0;
+      for (int i = first; i < last; i++) {
+        int w = Math.round(pages.get(i).spec.width * scale());
+        if (i < page) before += w + 24;
+        row += w + (i > first ? 24 : 0);
+      }
+      return Math.max(24, (getWidth() - row) / 2) + before - getScrollX();
+    }
     return Math.max(
             reflow ? OfficeTheme.px(8) : 24,
             (getWidth() - Math.round(layout().pages.get(page).spec.width * scale())) / 2)
@@ -497,7 +587,57 @@ public final class EditorSurface extends Container
   }
 
   private int pageY(int page) {
+    if (across > 1 && !reflow) {
+      int[] tops = rowTops();
+      int n = layout().pages.size();
+      return page >= n ? tops[tops.length - 1] : tops[page / across];
+    }
     return 24 + Math.round(layout().heightBefore(page) * scale()) + page * 24;
+  }
+
+  /** Top of each row of pages when several pages sit side by side; the last entry is the end. */
+  private int[] rowTops() {
+    LayoutEngine.Result r = layout();
+    float sc = scale();
+    if (rowTops == null || rowsFor != r || rowsScale != sc || rowsAcross != across) {
+      int n = r.pages.size(), rows = (n + across - 1) / across, y = 24;
+      int[] tops = new int[rows + 1];
+      for (int row = 0; row < rows; row++) {
+        tops[row] = y;
+        float h = 0;
+        for (int i = row * across; i < Math.min(n, (row + 1) * across); i++)
+          h = Math.max(h, r.pages.get(i).spec.height);
+        y += Math.round(h * sc) + 24;
+      }
+      tops[rows] = y;
+      rowTops = tops;
+      rowsFor = r;
+      rowsScale = sc;
+      rowsAcross = across;
+    }
+    return rowTops;
+  }
+
+  /** Pages per row in print layout (View > One Page / Multiple Pages). */
+  public int getPagesAcross() {
+    return across;
+  }
+
+  public void setPagesAcross(int value) {
+    across = Math.max(1, Math.min(6, value));
+    scrollExtent = -1;
+    revalidateView();
+  }
+
+  /** Zoom so a whole page (or a row of pages) fits the viewport. */
+  public void fitPages(int count) {
+    if (reflow) setReflow(false);
+    setPagesAcross(count);
+    LayoutEngine.Page page = layout().pages.get(Math.max(0, currentPage() - 1));
+    float ptp = pointsToPixels();
+    float byWidth = (getWidth() - 24f * (count + 1)) / (page.spec.width * count * ptp);
+    float byHeight = (getHeight() - 48f) / (page.spec.height * ptp);
+    setZoom(Math.min(byWidth, byHeight));
   }
 
   private int pageAt(int y) {
@@ -520,7 +660,8 @@ public final class EditorSurface extends Container
     return new Dimension(
         Math.max(
             getWidth(),
-            Math.round(layout().maxWidth * scale()) + (reflow ? OfficeTheme.px(16) : 48)),
+            Math.round(layout().maxWidth * scale()) * (reflow ? 1 : across)
+                + (reflow ? OfficeTheme.px(16) : 24 * (across + 1))),
         pageY(layout().pages.size()));
   }
 
@@ -678,12 +819,15 @@ public final class EditorSurface extends Container
               y + Math.round(pic.y * scale) + 4);
           continue;
         }
-        g.drawImage(
+        drawPicture(
+            g,
             image,
+            pic.picture.look,
             x + Math.round(pic.x * scale),
             y + Math.round(pic.y * scale),
             Math.round(pic.width * scale),
-            Math.round(pic.height * scale));
+            Math.round(pic.height * scale),
+            scale);
       }
       for (LayoutEngine.Box box : page.boxes) {
         int bx = x + Math.round(box.x * scale),
@@ -798,7 +942,7 @@ public final class EditorSurface extends Container
               Math.round(line.height * scale));
         }
         for (LayoutEngine.Span span : line.spans) {
-          if (span.style.characters.hidden) continue;
+          if (span.style.characters.hidden && !showMarks) continue;
           Font f = font(span.glyphStyle, zoom);
           g.setFont(f);
           int sx = lx + Math.round(span.x * scale), sy = ly + Math.round(span.top * scale);
@@ -850,6 +994,7 @@ public final class EditorSurface extends Container
                   decorationY - Math.max(2, Math.round(1.5f * scale)));
           }
         }
+        if (showMarks) paintMarks(g, line, lx, ly, scale);
         g.setColor(0x242424);
         for (float bar : line.barTabs)
           g.fillRect(

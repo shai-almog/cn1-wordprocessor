@@ -10,8 +10,8 @@
   "not-applicable"
  ],
  "counts": {
-  "unverified": 235,
-  "missing": 239,
+  "unverified": 243,
+  "missing": 231,
   "partial": 13,
   "certified": 0,
   "reference-stub": 15,
@@ -2736,12 +2736,12 @@
    "group": "Arrange",
    "feature": "Rotate",
    "command": "arrange.rotate",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "arrange.rotate",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "arrange.rotate (Rotate)"
+   "notes": "arrange.rotate (Rotate) Catalog id registered (runtime registry); needs native evidence."
   },
   {
    "tab": "References",
@@ -5100,12 +5100,12 @@
    "group": "Adjust",
    "feature": "Reset Picture",
    "command": "picture.reset",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "picture.reset",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "picture.reset (Reset Picture)"
+   "notes": "picture.reset (Reset Picture) Catalog id registered (runtime registry); needs native evidence."
   },
   {
    "tab": "Picture Format",
@@ -5124,72 +5124,72 @@
    "group": "Picture Styles",
    "feature": "Picture Border",
    "command": "picture.border",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "picture.border",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "picture.border (Picture Border)"
+   "notes": "picture.border (Picture Border) Catalog id registered (runtime registry); needs native evidence."
   },
   {
    "tab": "Picture Format",
    "group": "Accessibility",
    "feature": "Alt Text",
    "command": "picture.altText",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "picture.altText",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "picture.altText (Alt Text)"
+   "notes": "picture.altText (Alt Text) Catalog id registered (runtime registry); needs native evidence."
   },
   {
    "tab": "Shape Format",
    "group": "Accessibility",
    "feature": "Alt Text",
    "command": "object.altText",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "object.altText",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "object.altText (Alt Text)"
+   "notes": "object.altText (Alt Text) Catalog id registered (runtime registry); needs native evidence."
   },
   {
    "tab": "Picture Format",
    "group": "Size",
    "feature": "Crop",
    "command": "picture.crop",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "picture.crop",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "picture.crop (Crop)"
+   "notes": "picture.crop (Crop) Catalog id registered (runtime registry); needs native evidence."
   },
   {
    "tab": "Picture Format",
    "group": "Size",
    "feature": "Size",
    "command": "picture.size",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "picture.size",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "picture.size (Size)"
+   "notes": "picture.size (Size) Catalog id registered (runtime registry); needs native evidence."
   },
   {
    "tab": "Picture Format",
    "group": "Size",
    "feature": "Rotation",
    "command": "arrange.rotation",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "arrange.rotation",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "arrange.rotation (Rotation)"
+   "notes": "arrange.rotation (Rotation) Catalog id registered (runtime registry); needs native evidence."
   },
   {
    "tab": "SmartArt Design",

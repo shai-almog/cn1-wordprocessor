@@ -112,6 +112,7 @@ public class WordProcessor {
     if (Display.getInstance().isDesktop()) Display.getInstance().refreshNativeTitle();
     editor = new EditorSurface(session, commands, this::edited, this::editCell);
     editor.setPictureEditor(this::editPicture);
+    registerViewCommands();
     ribbon = new OfficeRibbon();
     ribbon.addActionTab("File", this::showBackstage);
     ribbon.addTab("Home", home());
@@ -3326,8 +3327,14 @@ public class WordProcessor {
   private Container view() {
     return OfficeTheme.groups(
         OfficeTheme.group(
+            "Views",
+            BoxLayout.encloseY(
+                button("Print layout", () -> run("view.printLayout", new HashMap<String, Object>())),
+                button("Web layout", () -> run("view.webLayout", new HashMap<String, Object>())))),
+        OfficeTheme.group(
             "Show",
             BoxLayout.encloseY(
+                button("Formatting marks", () -> run("view.marks", new HashMap<String, Object>())),
                 button(
                     "Navigation pane",
                     () -> {
@@ -3362,7 +3369,87 @@ public class WordProcessor {
                       updateStatus();
                       ruler.repaint();
                     },
+                    true),
+                iconButton(
+                    "One page",
+                    FontImage.MATERIAL_DESCRIPTION,
+                    () -> run("view.onePage", new HashMap<String, Object>()),
+                    true),
+                iconButton(
+                    "Multiple pages",
+                    FontImage.MATERIAL_AUTO_STORIES,
+                    () -> run("view.multiplePages", new HashMap<String, Object>()),
                     true))));
+  }
+
+  /** View tab catalog ids; they change only the window, never the document. */
+  private void registerViewCommands() {
+    view("view.zoom", "Zoom to a percentage (35-250)", "percent:number", a -> zoomTo(((Number) a.get("percent")).floatValue() / 100f));
+    view("view.zoomIn", "Zoom in by 10%", "", a -> zoomTo(Math.round(editor.getZoom() * 10 + 1) / 10f));
+    view("view.zoomOut", "Zoom out by 10%", "", a -> zoomTo(Math.round(editor.getZoom() * 10 - 1) / 10f));
+    view("view.zoom100", "Zoom to 100%", "", a -> {
+      editor.setPagesAcross(1);
+      zoomTo(1);
+    });
+    view("view.pageWidth", "Zoom to the page width", "", a -> {
+      editor.fitWidth();
+      zoomTo(editor.getZoom());
+    });
+    view("view.onePage", "Fit one whole page", "", a -> {
+      editor.fitPages(1);
+      zoomTo(editor.getZoom());
+    });
+    view("view.multiplePages", "Show pages side by side (default 2)", "count?:integer", a -> {
+      editor.fitPages(a.containsKey("count") ? Commands.integer(a, "count") : 2);
+      zoomTo(editor.getZoom());
+    });
+    view("view.marks", "Show or hide formatting marks", "value?:boolean", a ->
+        editor.setShowMarks(a.containsKey("value") ? (Boolean) a.get("value") : !editor.isShowMarks()));
+    view("view.ruler", "Show or hide the ruler", "value?:boolean", a -> {
+      ruler.setHidden(a.containsKey("value") ? !(Boolean) a.get("value") : !ruler.isHidden());
+      ruler.getParent().revalidate();
+    });
+    view("view.navigationPane", "Show or hide the navigation pane", "value?:boolean", a -> {
+      boolean shown = navigation.getParent() != null;
+      boolean show = a.containsKey("value") ? (Boolean) a.get("value") : !shown;
+      if (show && !shown) workspace.add(BorderLayout.WEST, navigation);
+      else if (!show && shown) workspace.removeComponent(navigation);
+      workspace.revalidate();
+    });
+    view("view.printLayout", "Paginated print layout", "", a -> {
+      if (editor.isReflow()) editor.setReflow(false);
+      zoomTo(editor.getZoom());
+    });
+    view("view.webLayout", "Reflow the document to the window width", "", a -> {
+      if (!editor.isReflow()) editor.setReflow(true);
+      zoomTo(editor.getZoom());
+    });
+  }
+
+  private interface ViewAction {
+    void run(Map<String, Object> args);
+  }
+
+  private void view(String id, String description, String spec, ViewAction action) {
+    commands.register(
+        id,
+        description,
+        spec,
+        false,
+        (s, a) -> {
+          action.run(a);
+          return Json.object(
+              "zoom", Math.round(editor.getZoom() * 100),
+              "pagesAcross", editor.getPagesAcross(),
+              "reflow", editor.isReflow(),
+              "marks", editor.isShowMarks());
+        });
+  }
+
+  private void zoomTo(float zoom) {
+    editor.setZoom(zoom);
+    updateStatus();
+    ruler.repaint();
   }
 
   private Container automation() {

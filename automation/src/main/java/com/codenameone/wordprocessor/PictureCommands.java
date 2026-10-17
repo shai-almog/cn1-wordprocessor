@@ -1,0 +1,141 @@
+package com.codenameone.wordprocessor;
+
+import java.util.Map;
+
+/** Picture Format catalog ids. The picture is `block`, or the block holding the caret. */
+final class PictureCommands implements Commands.Extension {
+  public void register(final Commands c) {
+    c.register(
+        "picture.crop",
+        "Crop edges as fractions of the source (0-0.95)",
+        "block?:integer,left?:number,top?:number,right?:number,bottom?:number",
+        true,
+        (s, a) -> {
+          int block = block(s, a);
+          Picture.Look k = picture(s, block).look;
+          s.pictureLook(
+              block,
+              k.crop(
+                  f(a, "left", k.cropLeft),
+                  f(a, "top", k.cropTop),
+                  f(a, "right", k.cropRight),
+                  f(a, "bottom", k.cropBottom)));
+          return null;
+        });
+    c.register(
+        "picture.border",
+        "Picture border color RRGGBB (or none) and width in points",
+        "block?:integer,color?:string,width?:number",
+        true,
+        (s, a) -> {
+          int block = block(s, a);
+          Picture.Look k = picture(s, block).look;
+          Object color = a.get("color");
+          int rgb =
+              "none".equals(color)
+                  ? -1
+                  : color == null
+                      ? (k.borderColor < 0 ? 0 : k.borderColor)
+                      : Integer.parseInt(hex((String) color), 16);
+          float width = f(a, "width", k.borderWidth > 0 ? k.borderWidth : .75f);
+          s.pictureLook(block, k.border(rgb, width));
+          return null;
+        });
+    c.register(
+        "arrange.rotation",
+        "Set picture rotation in degrees and flips",
+        "block?:integer,degrees?:number,flipH?:boolean,flipV?:boolean",
+        true,
+        (s, a) -> {
+          int block = block(s, a);
+          Picture.Look k = picture(s, block).look;
+          s.pictureLook(
+              block,
+              k.rotate(
+                  a.containsKey("degrees") ? Math.round(f(a, "degrees", 0)) : k.rotation,
+                  a.containsKey("flipH") ? (Boolean) a.get("flipH") : k.flipH,
+                  a.containsKey("flipV") ? (Boolean) a.get("flipV") : k.flipV));
+          return null;
+        });
+    c.register(
+        "arrange.rotate",
+        "Rotate right/left 90 degrees or flip horizontal/vertical",
+        "block?:integer,kind:string",
+        true,
+        (s, a) -> {
+          int block = block(s, a);
+          Picture.Look k = picture(s, block).look;
+          String kind = Commands.str(a, "kind");
+          Picture.Look next =
+              "right".equals(kind)
+                  ? k.rotate(k.rotation + 90, k.flipH, k.flipV)
+                  : "left".equals(kind)
+                      ? k.rotate(k.rotation + 270, k.flipH, k.flipV)
+                      : "flipH".equals(kind)
+                          ? k.rotate(k.rotation, !k.flipH, k.flipV)
+                          : "flipV".equals(kind) ? k.rotate(k.rotation, k.flipH, !k.flipV) : null;
+          if (next == null) throw new IllegalArgumentException("kind: right, left, flipH or flipV");
+          s.pictureLook(block, next);
+          return null;
+        });
+    c.register(
+        "picture.reset",
+        "Remove crop, border and rotation",
+        "block?:integer",
+        true,
+        (s, a) -> {
+          s.pictureLook(block(s, a), Picture.Look.NONE);
+          return null;
+        });
+    c.register(
+        "picture.size",
+        "Resize in points; a single dimension keeps the aspect ratio",
+        "block?:integer,width?:number,height?:number",
+        true,
+        (s, a) -> {
+          int block = block(s, a);
+          Picture p = picture(s, block);
+          float w = f(a, "width", 0), h = f(a, "height", 0);
+          if (w <= 0 && h <= 0) throw new IllegalArgumentException("Give width or height");
+          if (w <= 0) w = p.width * h / p.height;
+          if (h <= 0) h = p.height * w / p.width;
+          s.updatePicture(block, w, h, p.alt, p.align, false);
+          return null;
+        });
+    for (String id : new String[] {"picture.altText", "object.altText"})
+      c.register(
+          id,
+          "Set the picture's alternative text",
+          "block?:integer,text:string",
+          true,
+          (s, a) -> {
+            int block = block(s, a);
+            Picture p = picture(s, block);
+            String text = Commands.str(a, "text");
+            if (text.length() > 2000) throw new IllegalArgumentException("Alt text is too long");
+            s.updatePicture(block, p.width, p.height, text, p.align, false);
+            return null;
+          });
+  }
+
+  private static int block(Session s, Map<String, Object> a) {
+    return a.containsKey("block") ? Commands.integer(a, "block") : s.selection().block;
+  }
+
+  private static Picture picture(Session s, int block) {
+    if (block < 0 || block >= s.document().blocks.size()
+        || !(s.document().blocks.get(block) instanceof Picture))
+      throw new IllegalArgumentException("Select a picture");
+    return (Picture) s.document().blocks.get(block);
+  }
+
+  private static float f(Map<String, Object> a, String k, float fallback) {
+    return a.containsKey(k) ? ((Number) a.get(k)).floatValue() : fallback;
+  }
+
+  private static String hex(String v) {
+    String h = v.startsWith("#") ? v.substring(1) : v;
+    if (h.length() != 6) throw new IllegalArgumentException("Color must be RRGGBB");
+    return h;
+  }
+}

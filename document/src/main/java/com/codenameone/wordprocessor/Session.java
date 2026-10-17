@@ -2039,6 +2039,19 @@ public final class Session {
         });
   }
 
+  /** Replace a picture's crop, border and orientation as one undo step. */
+  public void pictureLook(final int block, final Picture.Look look) {
+    if (!(document.blocks.get(block) instanceof Picture))
+      throw new IllegalArgumentException("Select a picture");
+    leaveCell();
+    transact(
+        s ->
+            document =
+                document.blocks(
+                    document.blocks.set(block, ((Picture) document.blocks.get(block)).look(look)),
+                    document.nextId));
+  }
+
   /** Inserts a template at the text selection, preserving the prefix and suffix paragraphs. */
   public void insertQuickTable(final String kind) {
     if (inCell()) throw new IllegalArgumentException("Nested tables are not supported yet");

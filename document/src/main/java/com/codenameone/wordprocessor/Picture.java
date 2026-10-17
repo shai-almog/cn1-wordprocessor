@@ -2,18 +2,116 @@ package com.codenameone.wordprocessor;
 
 /** Immutable embedded PNG/JPEG picture, sized in typographic points. */
 public final class Picture implements Block {
+  /** Crop, border and orientation applied on top of the picture's bytes. */
+  public static final class Look {
+    public static final Look NONE = new Look(0, 0, 0, 0, -1, 0, 0, false, false);
+
+    /** Fractions of the source cut from each edge; their sum per axis stays below 0.95. */
+    public final float cropLeft, cropTop, cropRight, cropBottom;
+
+    /** Border color RRGGBB, or -1 for none; width in points. */
+    public final int borderColor;
+
+    public final float borderWidth;
+
+    /** Clockwise rotation in degrees, 0-359. */
+    public final int rotation;
+
+    public final boolean flipH, flipV;
+
+    public Look(
+        float cropLeft,
+        float cropTop,
+        float cropRight,
+        float cropBottom,
+        int borderColor,
+        float borderWidth,
+        int rotation,
+        boolean flipH,
+        boolean flipV) {
+      for (float f : new float[] {cropLeft, cropTop, cropRight, cropBottom})
+        if (!(f >= 0 && f < .95f)) throw new IllegalArgumentException("Crop must be 0-95%");
+      if (cropLeft + cropRight >= .95f || cropTop + cropBottom >= .95f)
+        throw new IllegalArgumentException("Crop leaves too little of the picture");
+      if (borderColor < -1 || borderColor > 0xffffff || !(borderWidth >= 0 && borderWidth <= 72))
+        throw new IllegalArgumentException("Invalid picture border");
+      this.cropLeft = cropLeft;
+      this.cropTop = cropTop;
+      this.cropRight = cropRight;
+      this.cropBottom = cropBottom;
+      this.borderColor = borderColor;
+      this.borderWidth = borderColor < 0 ? 0 : borderWidth;
+      this.rotation = ((rotation % 360) + 360) % 360;
+      this.flipH = flipH;
+      this.flipV = flipV;
+    }
+
+    public boolean cropped() {
+      return cropLeft + cropTop + cropRight + cropBottom > 0;
+    }
+
+    public Look crop(float l, float t, float r, float b) {
+      return new Look(l, t, r, b, borderColor, borderWidth, rotation, flipH, flipV);
+    }
+
+    public Look border(int color, float width) {
+      return new Look(cropLeft, cropTop, cropRight, cropBottom, color, width, rotation, flipH, flipV);
+    }
+
+    public Look rotate(int degrees, boolean h, boolean v) {
+      return new Look(cropLeft, cropTop, cropRight, cropBottom, borderColor, borderWidth, degrees, h, v);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      if (!(o instanceof Look)) return false;
+      Look k = (Look) o;
+      return cropLeft == k.cropLeft
+          && cropTop == k.cropTop
+          && cropRight == k.cropRight
+          && cropBottom == k.cropBottom
+          && borderColor == k.borderColor
+          && borderWidth == k.borderWidth
+          && rotation == k.rotation
+          && flipH == k.flipH
+          && flipV == k.flipV;
+    }
+
+    @Override
+    public int hashCode() {
+      return (int) (cropLeft * 1000 + cropTop * 100 + cropRight * 10 + cropBottom)
+          ^ borderColor
+          ^ rotation << 20
+          ^ (flipH ? 1 << 29 : 0)
+          ^ (flipV ? 1 << 30 : 0);
+    }
+  }
+
   private final String id;
   private final byte[] data;
   public final String mime, alt, align;
   public final float width, height;
   public final int pixelWidth, pixelHeight, channels;
+  public final Look look;
 
   public Picture(String id, byte[] data, float width, float height, String alt, String align) {
-    this(id, data, width, height, alt, align, true);
+    this(id, data, width, height, alt, align, Look.NONE, true);
+  }
+
+  public Picture(
+      String id, byte[] data, float width, float height, String alt, String align, Look look) {
+    this(id, data, width, height, alt, align, look, true);
   }
 
   private Picture(
-      String id, byte[] data, float width, float height, String alt, String align, boolean copy) {
+      String id,
+      byte[] data,
+      float width,
+      float height,
+      String alt,
+      String align,
+      Look look,
+      boolean copy) {
     if (id == null
         || data == null
         || data.length < 24
@@ -25,6 +123,7 @@ public final class Picture implements Block {
         || height <= 0
         || width > 10000
         || height > 10000
+        || look == null
         || !("left".equals(align) || "center".equals(align) || "right".equals(align)))
       throw new IllegalArgumentException("Invalid picture");
     int[] shape = shape(data);
@@ -40,6 +139,7 @@ public final class Picture implements Block {
     this.height = height;
     this.alt = alt;
     this.align = align;
+    this.look = look;
   }
 
   private boolean finite(float n) {
@@ -55,11 +155,15 @@ public final class Picture implements Block {
   }
 
   public Picture copy(String id) {
-    return new Picture(id, data, width, height, alt, align, false);
+    return new Picture(id, data, width, height, alt, align, look, false);
   }
 
   public Picture resize(float width, float height, String alt, String align) {
-    return new Picture(id, data, width, height, alt, align, false);
+    return new Picture(id, data, width, height, alt, align, look, false);
+  }
+
+  public Picture look(Look value) {
+    return new Picture(id, data, width, height, alt, align, value, false);
   }
 
   public static int[] shape(byte[] b) {

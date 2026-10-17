@@ -16,6 +16,73 @@ public final class PdfExporter {
     byte[] bytes(String name) throws IOException;
   }
 
+  /**
+   * Frame-centered coordinates: rotate clockwise and flip about the center, clip to the frame,
+   * draw the enlarged source offset by the crop, then stroke the border.
+   */
+  private static void picture(
+      StringBuilder content, LayoutEngine.PlacedPicture pic, float pageHeight, String name) {
+    Picture.Look k = pic.picture.look;
+    float w = pic.width, h = pic.height;
+    double a = Math.toRadians(k.rotation);
+    float cos = (float) Math.cos(a), sin = (float) Math.sin(a);
+    float fx = k.flipH ? -1 : 1, fy = k.flipV ? -1 : 1;
+    content
+        .append("q 1 0 0 1 ")
+        .append(n(pic.x + w / 2))
+        .append(' ')
+        .append(n(pageHeight - pic.y - h / 2))
+        .append(" cm ")
+        .append(n(cos))
+        .append(' ')
+        .append(n(-sin))
+        .append(' ')
+        .append(n(sin))
+        .append(' ')
+        .append(n(cos))
+        .append(" 0 0 cm ")
+        .append(n(fx))
+        .append(" 0 0 ")
+        .append(n(fy))
+        .append(" 0 0 cm ");
+    float fw = w / (1 - k.cropLeft - k.cropRight), fh = h / (1 - k.cropTop - k.cropBottom);
+    content
+        .append(n(-w / 2))
+        .append(' ')
+        .append(n(-h / 2))
+        .append(' ')
+        .append(n(w))
+        .append(' ')
+        .append(n(h))
+        .append(" re W n q ")
+        .append(n(fw))
+        .append(" 0 0 ")
+        .append(n(fh))
+        .append(' ')
+        .append(n(-w / 2 - fw * k.cropLeft))
+        .append(' ')
+        .append(n(-h / 2 - fh * k.cropBottom))
+        .append(" cm /")
+        .append(name)
+        .append(" Do Q");
+    if (k.borderColor >= 0 && k.borderWidth > 0)
+      content
+          .append(' ')
+          .append(color(k.borderColor))
+          .append(" RG ")
+          .append(n(k.borderWidth))
+          .append(" w ")
+          .append(n(-w / 2 + k.borderWidth / 2))
+          .append(' ')
+          .append(n(-h / 2 + k.borderWidth / 2))
+          .append(' ')
+          .append(n(w - k.borderWidth))
+          .append(' ')
+          .append(n(h - k.borderWidth))
+          .append(" re S");
+    content.append(" Q\n");
+  }
+
   public static byte[] write(Document document) throws IOException {
     return write(document.page, new LayoutEngine(new PdfMetrics()).layout(document, 0));
   }
@@ -196,18 +263,7 @@ public final class PdfExporter {
             .append(' ')
             .append(imageIds.get(pic.picture))
             .append(" 0 R ");
-        content
-            .append("q ")
-            .append(n(pic.width))
-            .append(" 0 0 ")
-            .append(n(pic.height))
-            .append(' ')
-            .append(n(pic.x))
-            .append(' ')
-            .append(n(spec.height - pic.y - pic.height))
-            .append(" cm /")
-            .append(name)
-            .append(" Do Q\n");
+        picture(content, pic, spec.height, name);
       }
       for (LayoutEngine.Box b : page.boxes) {
         content
