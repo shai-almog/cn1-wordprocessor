@@ -10,8 +10,8 @@
   "not-applicable"
  ],
  "counts": {
-  "unverified": 297,
-  "missing": 177,
+  "unverified": 299,
+  "missing": 175,
   "partial": 13,
   "certified": 0,
   "reference-stub": 15,
@@ -1968,12 +1968,12 @@
    "group": "Header & Footer",
    "feature": "Format Page Numbers",
    "command": "layout.pageNumberFormat",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "layout.pageNumberFormat",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "layout.pageNumberFormat (Format Page Numbers)"
+   "notes": "layout.pageNumberFormat (Format Page Numbers) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Insert",
@@ -2544,12 +2544,12 @@
    "group": "Page Setup",
    "feature": "Line Numbers",
    "command": "layout.lineNumbers",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "layout.lineNumbers",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "layout.lineNumbers (Line Numbers)"
+   "notes": "layout.lineNumbers (Line Numbers) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Layout",

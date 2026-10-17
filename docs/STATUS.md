@@ -338,3 +338,16 @@ text, and the PDF lightens it instead of using transparency. Header/footer comma
 - `file.exportPdf` returns the PDF as base64.
 - **Not yet implemented:** PNG export, version history, encryption, autosave/recover commands
   and templates.
+
+## Page-number format and line numbers
+
+`layout.pageNumberFormat` sets the section's PAGE format (roman or letters) and an optional restart.
+Body, header and footer PAGE fields without a `\*` switch use it. `layout.lineNumbers` numbers every
+Nth body line in the margin; numbering restarts per page, per section or never. These are painted
+in the editor and the PDF, and map to DOCX `w:pgNumType w:fmt` and `w:lnNumType`.
+
+**Limitations:**
+- Table cell lines are not numbered.
+- `w:lnNumType w:start` and `w:distance` are not kept.
+- Per-paragraph suppression (`w:suppressLineNumbers`) is not supported.
+- Page vertical alignment (`w:vAlign`) is not implemented.

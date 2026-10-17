@@ -669,7 +669,10 @@ public final class DocumentXml {
     if (d.equals(PageDecor.NONE)) return;
     b.append("<decor pageColor=\"").append(d.pageColor).append("\" watermark=\"")
         .append(Xml.escape(d.watermark)).append("\" watermarkColor=\"").append(d.watermarkColor)
-        .append("\" borders=\"").append(Xml.escape(d.borders.encode())).append("\"/>");
+        .append("\" borders=\"").append(Xml.escape(d.borders.encode()))
+        .append("\" numberFormat=\"").append(d.numberFormat)
+        .append("\" lineCountBy=\"").append(d.lineCountBy)
+        .append("\" lineRestart=\"").append(d.lineRestart).append("\"/>");
   }
 
   private static PageDecor readDecor(Element parent) throws IOException {
@@ -680,7 +683,10 @@ public final class DocumentXml {
           Integer.parseInt(Xml.attr(e, "pageColor", "-1")),
           Xml.attr(e, "watermark", ""),
           Integer.parseInt(Xml.attr(e, "watermarkColor", "12632256")),
-          ParagraphBorders.decode(Xml.attr(e, "borders", "")));
+          ParagraphBorders.decode(Xml.attr(e, "borders", "")),
+          Xml.attr(e, "numberFormat", "decimal"),
+          Integer.parseInt(Xml.attr(e, "lineCountBy", "0")),
+          Xml.attr(e, "lineRestart", "page"));
     } catch (IllegalArgumentException ex) {
       throw new IOException("Invalid page decoration", ex);
     }

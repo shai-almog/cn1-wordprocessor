@@ -985,6 +985,16 @@ public final class EditorSurface extends Container
         }
       }
       for (LayoutEngine.Frame frame : page.frames) paintFrame(g, frame, x, y, scale);
+      if (!page.lineNumbers.isEmpty()) {
+        Font lf = font(TextStyle.DEFAULT.with("size", "9"), zoom);
+        g.setFont(lf);
+        g.setColor(ink(0x6b6b6b));
+        int right = x + Math.round((page.spec.left - 14) * scale);
+        for (float[] n : page.lineNumbers) {
+          String label = String.valueOf((int) n[1]);
+          g.drawString(label, right - lf.stringWidth(label), y + Math.round(n[0] * scale));
+        }
+      }
       for (LayoutEngine.Line area : page.noteAreas()) {
         g.setColor(0x242424);
         int nx = x + Math.round(page.spec.left * scale), ny = y + Math.round((area.y - 6) * scale);

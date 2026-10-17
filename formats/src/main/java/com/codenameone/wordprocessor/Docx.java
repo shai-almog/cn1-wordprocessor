@@ -792,8 +792,17 @@ static final char COLUMN_BREAK = '\u000B';
         .append(Math.round(section.furniture.footerDistance * 20))
         .append("\"/>");
     DocxBorders.page(b, section.decor.borders);
-    if (section.pageStart > 0)
-      b.append("<w:pgNumType w:start=\"").append(section.pageStart).append("\"/>");
+    PageDecor decor = section.decor;
+    if (decor.lineCountBy > 0)
+      b.append("<w:lnNumType w:countBy=\"").append(decor.lineCountBy).append("\" w:restart=\"")
+          .append("page".equals(decor.lineRestart) ? "newPage" : "section".equals(decor.lineRestart) ? "newSection" : "continuous")
+          .append("\"/>");
+    if (section.pageStart > 0 || !"decimal".equals(decor.numberFormat)) {
+      b.append("<w:pgNumType");
+      if (!"decimal".equals(decor.numberFormat)) b.append(" w:fmt=\"").append(decor.numberFormat).append('"');
+      if (section.pageStart > 0) b.append(" w:start=\"").append(section.pageStart).append('"');
+      b.append("/>");
+    }
     Columns c = section.columns;
     if (!c.equals(Columns.ONE)) {
       b.append("<w:cols w:num=\"").append(c.count).append("\" w:space=\"")
@@ -818,6 +827,7 @@ static final char COLUMN_BREAK = '\u000B';
     PageSpec page = PageSpec.A4;
     String start = "nextPage";
     int pageStart = 0;
+    String numberFormat = "decimal";
     Columns columns = Columns.ONE;
     if (e != null) {
       Element cols = Xml.child(e, "cols");
@@ -871,8 +881,11 @@ static final char COLUMN_BREAK = '\u000B';
           pageStart = 0;
           warnings.add("Invalid page-number restart");
         }
-        if (!"decimal".equals(Xml.attr(numbers, "fmt", "decimal")))
-          warnings.add("Section page-number format");
+        numberFormat = Xml.attr(numbers, "fmt", "decimal");
+        if (!PageDecor.NUMBER_FORMATS.contains(numberFormat)) {
+          warnings.add("Section page-number format " + numberFormat + " shown as decimal");
+          numberFormat = "decimal";
+        }
       }
       for (Element child : Xml.children(e, null))
         if (!Arrays.asList(
@@ -882,6 +895,7 @@ static final char COLUMN_BREAK = '\u000B';
                 "pgNumType",
                 "cols",
                 "pgBorders",
+                "lnNumType",
                 "titlePg",
                 "headerReference",
                 "footerReference",
@@ -904,6 +918,22 @@ static final char COLUMN_BREAK = '\u000B';
         decor = decor.borders(DocxBorders.readPage(pageBorders, warnings));
       } catch (RuntimeException ex) {
         warnings.add("Invalid page borders");
+      }
+    }
+    decor = decor.numberFormat(numberFormat);
+    Element lines = e == null ? null : Xml.child(e, "lnNumType");
+    if (lines != null) {
+      try {
+        int by = Math.min(100, Integer.parseInt(Xml.attr(lines, "countBy", "1")));
+        String restart = Xml.attr(lines, "restart", "newPage");
+        decor =
+            decor.lineNumbers(
+                by,
+                "newSection".equals(restart) ? "section" : "continuous".equals(restart) ? "continuous" : "page");
+        if (!Xml.attr(lines, "start", "").isEmpty() && !"1".equals(Xml.attr(lines, "start", "1")))
+          warnings.add("Line numbers start at 1");
+      } catch (RuntimeException ex) {
+        warnings.add("Invalid line numbering");
       }
     }
     return new Section(

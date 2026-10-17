@@ -300,6 +300,33 @@ final class CatalogCommands implements Commands.Extension {
           return null;
         });
 
+    c.register(
+        "layout.pageNumberFormat",
+        "Section page-number format (decimal, upperRoman, lowerRoman, upperLetter, lowerLetter) and optional restart",
+        "format:string,start?:integer",
+        true,
+        (s, a) -> {
+          Section sec = s.activeSection().raw;
+          sec = sec.decor(sec.decor.numberFormat(Commands.str(a, "format")));
+          if (a.containsKey("start")) sec = sec.numbering(Commands.integer(a, "start"));
+          s.section(sec);
+          return null;
+        });
+    c.register(
+        "layout.lineNumbers",
+        "Margin line numbers: countBy (0 = off) and restart page, section or continuous",
+        "countBy:integer,restart?:string",
+        true,
+        (s, a) -> {
+          Section sec = s.activeSection().raw;
+          s.section(
+              sec.decor(
+                  sec.decor.lineNumbers(
+                      Commands.integer(a, "countBy"),
+                      a.containsKey("restart") ? Commands.str(a, "restart") : sec.decor.lineRestart)));
+          return null;
+        });
+
     // Borders and shading.
     c.register(
         "para.borders",

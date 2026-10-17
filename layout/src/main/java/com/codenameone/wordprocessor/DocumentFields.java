@@ -21,27 +21,39 @@ public final class DocumentFields {
     final Session.FieldResolver formulas = TableFormulas.resolver(doc);
     return (paragraph, offset, field) -> {
       int number = 0;
+      String format = "decimal";
       int displayOffset = offset + (notePrefixes.containsKey(paragraph) ? notePrefixes.get(paragraph) : 0);
       List<LayoutEngine.Line> ls = lines.get(paragraph);
       if (ls != null)
         for (LayoutEngine.Line line : ls)
           if (displayOffset >= line.start && displayOffset < line.end) {
             number = layout.pages.get(line.page).number;
+            format = layout.pages.get(line.page).decor.numberFormat;
             break;
           }
       InlineField sequence = sequences.resolve(paragraph, offset, formulas.resolve(paragraph, offset, field));
       InlineField reference = CrossReferences.resolve(doc, layout, lines, paragraph, offset, sequence);
-      return resolve(reference, doc.title, number, layout.pages.size(), values);
+      return resolve(reference, doc.title, number, layout.pages.size(), values, format);
     };
   }
 
   public static InlineField resolve(
       InlineField field, String title, int page, int count, Map<String, String> values) {
+    return resolve(field, title, page, count, values, "decimal");
+  }
+
+  /** pageFormat is the section's page-number format, used by PAGE fields without a \* switch. */
+  public static InlineField resolve(
+      InlineField field, String title, int page, int count, Map<String, String> values, String pageFormat) {
     if (field.locked) return field;
     List<String> tokens = tokens(field.instruction);
     if (tokens.isEmpty()) return field;
     String kind = tokens.get(0).toUpperCase(), result = null;
-    if ("PAGE".equals(kind) && page > 0) result = "" + page;
+    if ("PAGE".equals(kind) && page > 0)
+      result =
+          "decimal".equals(pageFormat) || field.instruction.indexOf("\\*") >= 0
+              ? "" + page
+              : ListNumbers.format(page, pageFormat);
     else if ("NUMPAGES".equals(kind)) result = "" + count;
     else if ("TITLE".equals(kind)) result = title;
     else if ("MERGEFIELD".equals(kind) && tokens.size() > 1) result = values.get(tokens.get(1));

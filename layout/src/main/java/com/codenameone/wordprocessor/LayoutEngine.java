@@ -184,6 +184,9 @@ public final class LayoutEngine {
     /** Page color, watermark and page borders of this page's section. */
     public PageDecor decor = PageDecor.NONE;
 
+    /** Margin line numbers as {y, number} in points, set from the section's line numbering. */
+    public final List<float[]> lineNumbers = new ArrayList<float[]>();
+
     Page(
         PageSpec spec,
         int section,
@@ -740,6 +743,9 @@ public final class LayoutEngine {
     for (int i = 0; i < ranges.size(); i++) {
       Section section = ranges.get(i).resolved;
       Document context = doc.page(section.page).furniture(section.furniture);
+      // Furniture fields read the section's page-number format from the context's last section.
+      if (!context.lastSection.decor.equals(section.decor))
+        context = context.sections(context.sections, context.lastSection.decor(section.decor));
       contexts.add(context);
       for (int side = 0; side < 2; side++)
         heights[i][side] =
@@ -789,6 +795,7 @@ public final class LayoutEngine {
       if (!grow) break;
     }
     Set<String> warnings = new LinkedHashSet<String>();
+    int lineCount = 0;
     for (int i = 0; i < b.pages.size(); i++) {
       Page page = b.pages.get(i);
       Document context = contexts.get(page.section);
@@ -824,6 +831,16 @@ public final class LayoutEngine {
       rebuilt.columnRules.addAll(page.columnRules);
       rebuilt.frames.addAll(page.frames);
       rebuilt.decor = ranges.get(page.section).resolved.decor;
+      PageDecor numbering = rebuilt.decor;
+      if (numbering.lineCountBy > 0) {
+        if ("page".equals(numbering.lineRestart)
+            || "section".equals(numbering.lineRestart) && page.sectionPage == 0) lineCount = 0;
+        for (Line line : page.lines) {
+          if (line.block < 0 || line.row >= 0) continue;
+          if (++lineCount % numbering.lineCountBy == 0)
+            rebuilt.lineNumbers.add(new float[] {line.y, lineCount});
+        }
+      }
       b.pages.set(i, rebuilt);
     }
     cache = nextCache;
@@ -854,7 +871,8 @@ public final class LayoutEngine {
           p.text.mapFields(
               (offset, field) ->
                   DocumentFields.resolve(
-                      field, doc.title, number, count, Collections.<String, String>emptyMap()));
+                      field, doc.title, number, count, Collections.<String, String>emptyMap(),
+                      doc.lastSection.decor.numberFormat));
       result = result.append(resolved == p.text ? p : p.text(resolved));
     }
     return result;
