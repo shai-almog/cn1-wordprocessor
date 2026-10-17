@@ -579,10 +579,24 @@ public final class EditorSurface extends Container
 
   private Document shown() {
     Document d = session.document();
-    if ("all".equals(markup)) return d;
-    boolean accept = !"original".equals(markup);
-    for (Revisions.Change c : Revisions.list(d)) d = Revisions.resolve(d, c.revision.id, accept);
-    return d;
+    if (!"all".equals(markup)) {
+      boolean accept = !"original".equals(markup);
+      for (Revisions.Change c : Revisions.list(d)) d = Revisions.resolve(d, c.revision.id, accept);
+    }
+    return outline == null ? d : outline.apply(d);
+  }
+
+  /** Outline view state, or null outside Outline view. */
+  private OutlineView outline;
+
+  public OutlineView getOutline() {
+    return outline;
+  }
+
+  public void setOutline(OutlineView value) {
+    outline = value;
+    laidOut = null;
+    repaint();
   }
 
   /** Word's "Switch Modes": a dark page with light text; colors in the document are unchanged. */
@@ -1964,7 +1978,8 @@ public final class EditorSurface extends Container
    */
   public boolean readOnly() {
     String mode = session.document().properties.protection;
-    return viewOnly || !"all".equals(markup) || "readOnly".equals(mode) || "comments".equals(mode);
+    return viewOnly || !"all".equals(markup) || "readOnly".equals(mode) || "comments".equals(mode)
+        || outline != null && outline.filters(session.document());
   }
 
   @Override

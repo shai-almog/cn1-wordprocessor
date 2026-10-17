@@ -272,7 +272,7 @@ final class TableStyleCommands implements Commands.Extension {
   private static String[] spec(Document d, String name, boolean builtIns) {
     String custom = d.properties.setting(key(name), "");
     if (!custom.isEmpty()) {
-      String[] p = custom.split(",");
+      String[] p = TextUtil.split(custom, ',');
       if (p.length == 5) return new String[] {name, p[0], p[1], p[2], p[3], p[4]};
     }
     for (String[] b : BUILT_IN) if (b[0].equals(name)) return b;

@@ -114,7 +114,7 @@ public final class ParagraphFormat {
     for (String a : ASIAN)
       if (("," + asianOff + ",").contains("," + a + ","))
         off.append(off.length() == 0 ? "" : ",").append(a);
-    for (String a : asianOff.split(","))
+    for (String a : TextUtil.split(asianOff, ','))
       if (!a.trim().isEmpty() && !ASIAN.contains(a.trim()))
         throw new IllegalArgumentException("Unknown Asian typography option: " + a);
     this.rtl = rtl;

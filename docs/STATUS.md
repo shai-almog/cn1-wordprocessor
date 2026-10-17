@@ -407,3 +407,9 @@ Limits:
 - `table.rtl` (`w:bidiVisual`) mirrors column positions in layout.
 - `table.textDirection` stores per-cell `w:textDirection`. Limitation: rotated cell text is not rendered yet, and the per-cell direction keys do not follow inserted or deleted rows.
 - `table.viewGridlines` (editor) shows dotted guides on cell edges without borders. They are never printed or exported.
+
+## 2026-10-17 outline view and editing workflows
+- Outline view (`OutlineView`, editor `view.outline`, `outline.*`): show level, collapse/expand, plain-text and first-line-only display. A filtered outline is read-only; it is a display transform and never alters the stored document.
+- `WorkflowCommands`: header/footer section navigation, extend/similar/column selection, Advanced Find with Word wildcards, a 24-item Office clipboard fed by copy/cut, Paste Special/merge formatting, font dialog, character styles, the styles pane, inspector and manager, cover pages, Quick Parts/AutoText galleries, Insert Text from File, and embedded spreadsheets as formula tables.
+- Limitations: the Office clipboard is per-process and in-memory. The spreadsheet is a Word table with field formulas, not an embedded OLE workbook. Wildcard find does not support `{n,m}` repetition or `@`.
+- Matrix: 450 unverified, 37 missing, 0 partial (all unverified rows still need native evidence before certification).

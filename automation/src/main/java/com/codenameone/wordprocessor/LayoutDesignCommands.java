@@ -362,7 +362,7 @@ final class LayoutDesignCommands implements Commands.Extension {
 
   /** Re-applies the remembered design defaults to a session (used for new documents). */
   static void applyDefaults(Commands c, Session s) {
-    for (String line : defaults.split("\n")) {
+    for (String line : TextUtil.split(defaults, '\n')) {
       int eq = line.indexOf('=');
       if (eq < 0 || eq == line.length() - 1) continue;
       String key = line.substring(0, eq), value = line.substring(eq + 1);

@@ -3440,6 +3440,27 @@ public class WordProcessor {
         editor.setGridlines(a.containsKey("value") ? (Boolean) a.get("value") : !editor.isGridlines()));
     view("table.viewGridlines", "Show or hide dotted table gridlines on borderless cell edges", "value?:boolean", a ->
         editor.setTableGridlines(a.containsKey("value") ? (Boolean) a.get("value") : !editor.isTableGridlines()));
+    view("view.outline", "Outline view: paragraphs indented by level with expand/collapse", "value?:boolean", a ->
+        outlineView(a.containsKey("value") ? (Boolean) a.get("value") : editor.getOutline() == null));
+    view("outline.close", "Close Outline view", "", a -> outlineView(false));
+    view("outline.expand", "Expand the heading at the caret, or all headings", "all?:boolean", a ->
+        outlineCollapse(Boolean.TRUE.equals(a.get("all")), false));
+    view("outline.collapse", "Collapse the heading at the caret, or all headings", "all?:boolean", a ->
+        outlineCollapse(Boolean.TRUE.equals(a.get("all")), true));
+    view("outline.showLevel", "Show outline levels 1-9, or all (level 10)", "level:integer", a -> {
+      outlineView(true);
+      editor.setOutline(editor.getOutline().showLevel(((Number) a.get("level")).intValue()));
+    });
+    view("outline.showFormatting", "Show text formatting in Outline view", "value?:boolean", a -> {
+      outlineView(true);
+      OutlineView o = editor.getOutline();
+      editor.setOutline(o.showFormatting(a.containsKey("value") ? (Boolean) a.get("value") : !o.showFormatting));
+    });
+    view("outline.firstLineOnly", "Show only the first line of body paragraphs", "value?:boolean", a -> {
+      outlineView(true);
+      OutlineView o = editor.getOutline();
+      editor.setOutline(o.firstLineOnly(a.containsKey("value") ? (Boolean) a.get("value") : !o.firstLineOnly));
+    });
     view("view.focus", "Focus mode: hide the ribbon and status bar", "value?:boolean", a ->
         focus(a.containsKey("value") ? (Boolean) a.get("value") : !ribbon.isHidden()));
     view("view.readMode", "Read mode: full screen, pages side by side, no editing", "value?:boolean", a -> {
@@ -5796,4 +5817,32 @@ public class WordProcessor {
     s.select(0, 0, 0);
     return s.document().title("The writing studio");
   }
+  private void outlineView(boolean on) {
+    if (on == (editor.getOutline() != null)) return;
+    editor.setOutline(on ? OutlineView.ALL : null);
+    if (editor.isDraft() != on) {
+      editor.setDraft(on);
+      if (editor.isReflow() != on) editor.setReflow(on);
+      zoomTo(editor.getZoom());
+    }
+  }
+
+  /** Collapses or expands the heading that owns the caret (or every heading). */
+  private void outlineCollapse(boolean all, boolean collapse) {
+    outlineView(true);
+    Document d = session.document();
+    OutlineView o = editor.getOutline();
+    if (all) {
+      for (int i = 0; i < d.blocks.size(); i++)
+        if (OutlineView.hasChildren(d, i)) o = o.collapse(d.blocks.get(i).id(), collapse);
+    } else {
+      int at = Math.min(session.selection().block, d.blocks.size() - 1);
+      while (at > 0
+          && !(d.blocks.get(at) instanceof Paragraph
+              && OutlineView.level(d, (Paragraph) d.blocks.get(at)) < OutlineView.BODY)) at--;
+      if (OutlineView.hasChildren(d, at)) o = o.collapse(d.blocks.get(at).id(), collapse);
+    }
+    editor.setOutline(o);
+  }
+
 }

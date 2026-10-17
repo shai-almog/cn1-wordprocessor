@@ -568,7 +568,10 @@ final class CatalogCommands implements Commands.Extension {
         "Copy the selection; returns the copied text",
         "",
         false,
-        (s, a) -> s.selectedText());
+        (s, a) -> {
+          WorkflowCommands.record(s);
+          return s.selectedText();
+        });
     c.register(
         "edit.cut",
         "Delete the selection; returns the removed text",
@@ -576,6 +579,7 @@ final class CatalogCommands implements Commands.Extension {
         true,
         (s, a) -> {
           String text = s.selectedText();
+          WorkflowCommands.record(s);
           if (!s.selection().collapsed()) s.replace("");
           return text;
         });

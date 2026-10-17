@@ -326,7 +326,7 @@ public final class TableFormat {
   public TableFormat withProp(String key, String value) {
     if (!PROPS.contains(key)) throw new IllegalArgumentException("Unknown table option: " + key);
     if ("look".equals(key) && value != null)
-      for (String v : value.split(","))
+      for (String v : TextUtil.split(value, ','))
         if (!v.isEmpty() && !"none".equals(v) && !LOOK.contains(v)) throw new IllegalArgumentException("Unknown table look: " + v);
     if (value != null && value.length() > 4096) throw new IllegalArgumentException("Table option too long");
     java.util.TreeMap<String, String> next = new java.util.TreeMap<String, String>(props);
@@ -338,7 +338,7 @@ public final class TableFormat {
   /** Cell text direction (lrTb, tbRl or btLr) from the "directions" option, encoded r:c=dir;... */
   public String direction(int row, int column) {
     String key = row + ":" + column + "=";
-    for (String part : prop("directions", "").split(";"))
+    for (String part : TextUtil.split(prop("directions", ""), ';'))
       if (part.startsWith(key)) return part.substring(key.length());
     return "lrTb";
   }
@@ -348,7 +348,7 @@ public final class TableFormat {
       throw new IllegalArgumentException("Text direction is lrTb, tbRl or btLr");
     StringBuilder b = new StringBuilder();
     String key = row + ":" + column + "=";
-    for (String part : prop("directions", "").split(";"))
+    for (String part : TextUtil.split(prop("directions", ""), ';'))
       if (!part.isEmpty() && !part.startsWith(key)) b.append(b.length() == 0 ? "" : ";").append(part);
     if (!"lrTb".equals(dir)) b.append(b.length() == 0 ? "" : ";").append(key).append(dir);
     return withProp("directions", b.toString());

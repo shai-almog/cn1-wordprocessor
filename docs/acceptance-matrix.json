@@ -10,8 +10,8 @@
   "not-applicable"
  ],
  "counts": {
-  "unverified": 431,
-  "missing": 56,
+  "unverified": 450,
+  "missing": 37,
   "partial": 0,
   "certified": 0,
   "reference-stub": 15,
@@ -384,24 +384,24 @@
    "group": "Clipboard",
    "feature": "Paste Merge Formatting",
    "command": "edit.pasteMerge",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "edit.pasteMerge",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "edit.pasteMerge (Paste: Merge Formatting)"
+   "notes": "edit.pasteMerge (Paste: Merge Formatting) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Home",
    "group": "Clipboard",
    "feature": "Paste Special",
    "command": "edit.pasteSpecial",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "edit.pasteSpecial",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "edit.pasteSpecial (Paste Special)"
+   "notes": "edit.pasteSpecial (Paste Special) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Home",
@@ -468,12 +468,12 @@
    "group": "Clipboard",
    "feature": "Clipboard Pane",
    "command": "edit.clipboardPane",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "edit.clipboardPane",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "edit.clipboardPane (Clipboard Pane)"
+   "notes": "edit.clipboardPane (Clipboard Pane) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Home",
@@ -708,12 +708,12 @@
    "group": "Font",
    "feature": "Font Dialog",
    "command": "format.fontDialog",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "format.fontDialog",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "format.fontDialog (Font Dialog)"
+   "notes": "format.fontDialog (Font Dialog) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Home",
@@ -1392,36 +1392,36 @@
    "group": "Styles",
    "feature": "Styles Pane",
    "command": "styles.pane",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "styles.pane",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "styles.pane (Styles Pane)"
+   "notes": "styles.pane (Styles Pane) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Home",
    "group": "Styles",
    "feature": "Style Inspector",
    "command": "styles.inspector",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "styles.inspector",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "styles.inspector (Style Inspector)"
+   "notes": "styles.inspector (Style Inspector) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Home",
    "group": "Styles",
    "feature": "Manage Styles",
    "command": "styles.manage",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "styles.manage",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "styles.manage (Manage Styles)"
+   "notes": "styles.manage (Manage Styles) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Home",
@@ -1440,12 +1440,12 @@
    "group": "Styles",
    "feature": "Character Style",
    "command": "format.charStyle",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "format.charStyle",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "format.charStyle (Apply Character Style)"
+   "notes": "format.charStyle (Apply Character Style) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Home",
@@ -1488,12 +1488,12 @@
    "group": "Editing",
    "feature": "Advanced Find",
    "command": "edit.advancedFind",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "edit.advancedFind",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "edit.advancedFind (Advanced Find)"
+   "notes": "edit.advancedFind (Advanced Find) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Home",
@@ -1560,12 +1560,12 @@
    "group": "Editing",
    "feature": "Select Similar Formatting",
    "command": "select.similar",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "select.similar",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "select.similar (Select Text with Similar Formatting)"
+   "notes": "select.similar (Select Text with Similar Formatting) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Home",
@@ -1596,12 +1596,12 @@
    "group": "Pages",
    "feature": "Cover Page",
    "command": "insert.coverPage",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "insert.coverPage",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "insert.coverPage (Cover Page)"
+   "notes": "insert.coverPage (Cover Page) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Insert",
@@ -1668,12 +1668,12 @@
    "group": "Tables",
    "feature": "Excel Spreadsheet",
    "command": "insert.spreadsheet",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "insert.spreadsheet",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "insert.spreadsheet (Spreadsheet Table)"
+   "notes": "insert.spreadsheet (Spreadsheet Table) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Insert",
@@ -2040,24 +2040,24 @@
    "group": "Text",
    "feature": "Quick Parts",
    "command": "insert.quickParts",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "insert.quickParts",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "insert.quickParts (Quick Parts)"
+   "notes": "insert.quickParts (Quick Parts) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Insert",
    "group": "Text",
    "feature": "AutoText",
    "command": "insert.autoText",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "insert.autoText",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "insert.autoText (AutoText)"
+   "notes": "insert.autoText (AutoText) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Insert",
@@ -2148,12 +2148,12 @@
    "group": "Text",
    "feature": "Text from File",
    "command": "insert.textFromFile",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "insert.textFromFile",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "insert.textFromFile (Text from File)"
+   "notes": "insert.textFromFile (Text from File) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Insert",
@@ -5484,24 +5484,24 @@
    "group": "Navigation",
    "feature": "Previous Section",
    "command": "hf.previous",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "hf.previous",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "hf.previous (Previous Section)"
+   "notes": "hf.previous (Previous Section) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Header & Footer",
    "group": "Navigation",
    "feature": "Next Section",
    "command": "hf.next",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "hf.next",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "hf.next (Next Section)"
+   "notes": "hf.next (Next Section) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Header & Footer",
@@ -5856,24 +5856,24 @@
    "group": "Selection",
    "feature": "Extend Selection (F8)",
    "command": "select.extend",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "select.extend",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "select.extend (Extend Selection)"
+   "notes": "select.extend (Extend Selection) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Editing",
    "group": "Selection",
    "feature": "Column Selection",
    "command": "select.column",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "select.column",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "select.column (Column Selection)"
+   "notes": "select.column (Column Selection) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Editing",

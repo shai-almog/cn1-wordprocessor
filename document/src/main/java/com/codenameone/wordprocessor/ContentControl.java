@@ -66,7 +66,7 @@ public final class ContentControl {
   public List<String> items() {
     String v = get("items", "");
     if (v.isEmpty()) return Collections.emptyList();
-    return Arrays.asList(v.split("\\|", -1));
+    return Arrays.asList(TextUtil.split(v, '|'));
   }
 
   public boolean contentLocked() {
