@@ -10,11 +10,11 @@
   "not-applicable"
  ],
  "counts": {
-  "unverified": 502,
-  "missing": 0,
-  "partial": 0,
+  "unverified": 140,
+  "missing": 334,
+  "partial": 13,
   "certified": 0,
-  "reference-stub": 0,
+  "reference-stub": 15,
   "not-applicable": 0
  },
  "retired": [],
@@ -26,10 +26,10 @@
    "command": "file.new",
    "appCommand": null,
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "UI label \"New\" in WordProcessor"
   },
   {
    "tab": "File",
@@ -38,10 +38,10 @@
    "command": "file.open",
    "appCommand": null,
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "UI label \"Open\" in WordProcessor"
   },
   {
    "tab": "File",
@@ -50,10 +50,10 @@
    "command": "file.save",
    "appCommand": null,
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "UI label \"Save\" in WordProcessor"
   },
   {
    "tab": "File",
@@ -62,10 +62,10 @@
    "command": "file.saveAs",
    "appCommand": null,
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "UI label \"Save As\" in WordProcessor"
   },
   {
    "tab": "File",
@@ -74,10 +74,10 @@
    "command": "file.print",
    "appCommand": null,
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "UI label \"Print\" in WordProcessor"
   },
   {
    "tab": "File",
@@ -85,11 +85,11 @@
    "feature": "Print Markup",
    "command": "file.printMarkup",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "file.printMarkup (Print Markup)"
   },
   {
    "tab": "File",
@@ -98,10 +98,10 @@
    "command": "file.close",
    "appCommand": null,
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "UI label \"Close\" in WordProcessor"
   },
   {
    "tab": "File",
@@ -110,10 +110,10 @@
    "command": "file.info",
    "appCommand": null,
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "UI label \"Info\" in WordProcessor"
   },
   {
    "tab": "File",
@@ -121,11 +121,11 @@
    "feature": "Properties",
    "command": "file.properties",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "file.properties (Properties)"
   },
   {
    "tab": "File",
@@ -133,11 +133,11 @@
    "feature": "Export PDF",
    "command": "file.exportPdf",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "file.exportPdf (Export PDF)"
   },
   {
    "tab": "File",
@@ -145,11 +145,11 @@
    "feature": "Export Image",
    "command": "file.exportPng",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "file.exportPng (Export Page as PNG)"
   },
   {
    "tab": "File",
@@ -157,11 +157,11 @@
    "feature": "Options",
    "command": "file.options",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "file.options (Options)"
   },
   {
    "tab": "File",
@@ -169,11 +169,11 @@
    "feature": "Numerals",
    "command": "view.numeral",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "view.numeral (Numerals)"
   },
   {
    "tab": "File",
@@ -181,11 +181,11 @@
    "feature": "Share",
    "command": "file.share",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "file.share (Share)"
   },
   {
    "tab": "File",
@@ -193,11 +193,11 @@
    "feature": "Protect Document",
    "command": "file.protect",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "file.protect (Protect Document)"
   },
   {
    "tab": "File",
@@ -205,11 +205,11 @@
    "feature": "Inspect Document",
    "command": "file.inspect",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "file.inspect (Inspect Document)"
   },
   {
    "tab": "File",
@@ -217,11 +217,11 @@
    "feature": "Check Accessibility",
    "command": "file.accessibility",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "file.accessibility (Check Accessibility)"
   },
   {
    "tab": "File",
@@ -229,11 +229,11 @@
    "feature": "Check Compatibility",
    "command": "file.compatibility",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "file.compatibility (Check Compatibility)"
   },
   {
    "tab": "File",
@@ -241,11 +241,11 @@
    "feature": "Version History",
    "command": "file.versions",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "file.versions (Version History)"
   },
   {
    "tab": "File",
@@ -253,11 +253,11 @@
    "feature": "Recover Unsaved",
    "command": "file.recover",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "file.recover (Recover Unsaved Documents)"
   },
   {
    "tab": "File",
@@ -265,11 +265,11 @@
    "feature": "New from Template",
    "command": "file.newFromTemplate",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "file.newFromTemplate (New from Template)"
   },
   {
    "tab": "File",
@@ -277,11 +277,11 @@
    "feature": "Save as Template",
    "command": "file.saveTemplate",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "file.saveTemplate (Save as Template)"
   },
   {
    "tab": "Quick Access",
@@ -290,10 +290,10 @@
    "command": "edit.undo",
    "appCommand": "edit.undo",
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "edit.undo"
   },
   {
    "tab": "Quick Access",
@@ -301,11 +301,11 @@
    "feature": "Undo List",
    "command": "edit.undoTo",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "edit.undoTo (Undo Actions)"
   },
   {
    "tab": "Quick Access",
@@ -314,10 +314,10 @@
    "command": "edit.redo",
    "appCommand": "edit.redo",
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "edit.redo"
   },
   {
    "tab": "Quick Access",
@@ -325,11 +325,11 @@
    "feature": "Repeat",
    "command": "edit.repeat",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "edit.repeat (Repeat)"
   },
   {
    "tab": "Quick Access",
@@ -337,11 +337,11 @@
    "feature": "AutoSave",
    "command": "file.autosave",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "file.autosave (AutoSave)"
   },
   {
    "tab": "Title Bar",
@@ -349,11 +349,11 @@
    "feature": "Search (Tell Me)",
    "command": "tools.search",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "tools.search (Search)"
   },
   {
    "tab": "Home",
@@ -362,10 +362,10 @@
    "command": "edit.paste",
    "appCommand": null,
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "UI label \"Paste\" in WordProcessor"
   },
   {
    "tab": "Home",
@@ -374,10 +374,10 @@
    "command": "edit.pasteText",
    "appCommand": "edit.pasteText",
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "edit.pasteText"
   },
   {
    "tab": "Home",
@@ -385,11 +385,11 @@
    "feature": "Paste Merge Formatting",
    "command": "edit.pasteMerge",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "edit.pasteMerge (Paste: Merge Formatting)"
   },
   {
    "tab": "Home",
@@ -397,11 +397,11 @@
    "feature": "Paste Special",
    "command": "edit.pasteSpecial",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "edit.pasteSpecial (Paste Special)"
   },
   {
    "tab": "Home",
@@ -410,10 +410,10 @@
    "command": "edit.cut",
    "appCommand": null,
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "UI label \"Cut\" in WordProcessor"
   },
   {
    "tab": "Home",
@@ -422,10 +422,10 @@
    "command": "edit.copy",
    "appCommand": null,
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "UI label \"Copy\" in WordProcessor"
   },
   {
    "tab": "Home",
@@ -434,10 +434,10 @@
    "command": "edit.formatPainter",
    "appCommand": null,
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "UI label \"Format Painter\" in WordProcessor"
   },
   {
    "tab": "Home",
@@ -445,11 +445,11 @@
    "feature": "Copy Formatting",
    "command": "edit.copyFormat",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "edit.copyFormat (Copy Formatting)"
   },
   {
    "tab": "Home",
@@ -457,11 +457,11 @@
    "feature": "Paste Formatting",
    "command": "edit.pasteFormat",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "edit.pasteFormat (Paste Formatting)"
   },
   {
    "tab": "Home",
@@ -469,11 +469,11 @@
    "feature": "Clipboard Pane",
    "command": "edit.clipboardPane",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "edit.clipboardPane (Clipboard Pane)"
   },
   {
    "tab": "Home",
@@ -482,10 +482,10 @@
    "command": "format.font",
    "appCommand": null,
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "UI label \"Font\" in WordProcessor"
   },
   {
    "tab": "Home",
@@ -493,11 +493,11 @@
    "feature": "Font Size",
    "command": "format.size",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "format.size (Font Size)"
   },
   {
    "tab": "Home",
@@ -505,11 +505,11 @@
    "feature": "Increase Font Size",
    "command": "format.growFont",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "format.growFont (Increase Font Size)"
   },
   {
    "tab": "Home",
@@ -517,11 +517,11 @@
    "feature": "Decrease Font Size",
    "command": "format.shrinkFont",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "format.shrinkFont (Decrease Font Size)"
   },
   {
    "tab": "Home",
@@ -530,10 +530,10 @@
    "command": "format.changeCase",
    "appCommand": "format.changeCase",
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "format.changeCase"
   },
   {
    "tab": "Home",
@@ -541,11 +541,11 @@
    "feature": "Clear All Formatting",
    "command": "format.clear",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "format.clear (Clear All Formatting)"
   },
   {
    "tab": "Home",
@@ -553,11 +553,11 @@
    "feature": "Bold",
    "command": "format.bold",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "partial",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "via format.set"
   },
   {
    "tab": "Home",
@@ -565,11 +565,11 @@
    "feature": "Italic",
    "command": "format.italic",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "partial",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "via format.set"
   },
   {
    "tab": "Home",
@@ -577,11 +577,11 @@
    "feature": "Underline",
    "command": "format.underline",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "partial",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "via format.set"
   },
   {
    "tab": "Home",
@@ -589,11 +589,11 @@
    "feature": "Double Underline",
    "command": "format.doubleUnderline",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "partial",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "via format.set"
   },
   {
    "tab": "Home",
@@ -601,11 +601,11 @@
    "feature": "Strikethrough",
    "command": "format.strikethrough",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "partial",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "via format.set"
   },
   {
    "tab": "Home",
@@ -613,11 +613,11 @@
    "feature": "Subscript",
    "command": "format.subscript",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "partial",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "via format.set"
   },
   {
    "tab": "Home",
@@ -625,11 +625,11 @@
    "feature": "Superscript",
    "command": "format.superscript",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "partial",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "via format.set"
   },
   {
    "tab": "Home",
@@ -637,11 +637,11 @@
    "feature": "Text Effects Outline",
    "command": "format.outline",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "partial",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "via format.set"
   },
   {
    "tab": "Home",
@@ -649,11 +649,11 @@
    "feature": "Text Effects Shadow",
    "command": "format.shadow",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "partial",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "via format.set"
   },
   {
    "tab": "Home",
@@ -661,11 +661,11 @@
    "feature": "Text Effects and Typography",
    "command": "format.textEffects",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "partial",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "via format.set"
   },
   {
    "tab": "Home",
@@ -673,11 +673,11 @@
    "feature": "Text Highlight Color",
    "command": "format.highlight",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "partial",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "via format.set"
   },
   {
    "tab": "Home",
@@ -685,11 +685,11 @@
    "feature": "Font Color",
    "command": "format.color",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "partial",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "via format.set"
   },
   {
    "tab": "Home",
@@ -697,11 +697,11 @@
    "feature": "Character Shading",
    "command": "format.shading",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "partial",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "via format.set"
   },
   {
    "tab": "Home",
@@ -709,11 +709,11 @@
    "feature": "Font Dialog",
    "command": "format.fontDialog",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "format.fontDialog (Font Dialog)"
   },
   {
    "tab": "Home",
@@ -721,11 +721,11 @@
    "feature": "Double Strikethrough",
    "command": "format.doubleStrikethrough",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "format.doubleStrikethrough (Double Strikethrough)"
   },
   {
    "tab": "Home",
@@ -733,11 +733,11 @@
    "feature": "Small Caps",
    "command": "format.smallCaps",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "format.smallCaps (Small Caps)"
   },
   {
    "tab": "Home",
@@ -745,11 +745,11 @@
    "feature": "All Caps",
    "command": "format.allCaps",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "format.allCaps (All Caps)"
   },
   {
    "tab": "Home",
@@ -757,11 +757,11 @@
    "feature": "Hidden",
    "command": "format.hidden",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "format.hidden (Hidden)"
   },
   {
    "tab": "Home",
@@ -770,10 +770,10 @@
    "command": "format.emboss",
    "appCommand": null,
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "UI label \"Emboss\" in WordProcessor"
   },
   {
    "tab": "Home",
@@ -782,10 +782,10 @@
    "command": "format.engrave",
    "appCommand": null,
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "UI label \"Engrave\" in WordProcessor"
   },
   {
    "tab": "Home",
@@ -793,11 +793,11 @@
    "feature": "Character Spacing",
    "command": "format.spacing",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "format.spacing (Character Spacing)"
   },
   {
    "tab": "Home",
@@ -805,11 +805,11 @@
    "feature": "Character Scale",
    "command": "format.scale",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "format.scale (Character Scale)"
   },
   {
    "tab": "Home",
@@ -817,11 +817,11 @@
    "feature": "Character Position",
    "command": "format.position",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "format.position (Character Position)"
   },
   {
    "tab": "Home",
@@ -829,11 +829,11 @@
    "feature": "Character Border",
    "command": "format.border",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "format.border (Character Border)"
   },
   {
    "tab": "Home",
@@ -841,11 +841,11 @@
    "feature": "Phonetic Guide",
    "command": "format.phonetic",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "format.phonetic (Phonetic Guide)"
   },
   {
    "tab": "Home",
@@ -853,11 +853,11 @@
    "feature": "Enclose Characters",
    "command": "format.enclose",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "format.enclose (Enclose Characters)"
   },
   {
    "tab": "Home",
@@ -866,10 +866,10 @@
    "command": "para.bullets",
    "appCommand": null,
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "UI label \"Bullets\" in WordProcessor"
   },
   {
    "tab": "Home",
@@ -878,10 +878,10 @@
    "command": "para.numbering",
    "appCommand": null,
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "UI label \"Numbering\" in WordProcessor"
   },
   {
    "tab": "Home",
@@ -889,11 +889,11 @@
    "feature": "Multilevel List",
    "command": "para.multilevel",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "para.multilevel (Multilevel List)"
   },
   {
    "tab": "Home",
@@ -901,11 +901,11 @@
    "feature": "Define New Multilevel List",
    "command": "list.define",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "list.define (Define New Multilevel List)"
   },
   {
    "tab": "Home",
@@ -913,11 +913,11 @@
    "feature": "Change List Level",
    "command": "para.listLevel",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "para.listLevel (Change List Level)"
   },
   {
    "tab": "Home",
@@ -925,11 +925,11 @@
    "feature": "Restart Numbering",
    "command": "para.restartNumbering",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "para.restartNumbering (Restart at 1)"
   },
   {
    "tab": "Home",
@@ -937,11 +937,11 @@
    "feature": "Define New Bullet",
    "command": "para.defineBullet",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "para.defineBullet (Define New Bullet)"
   },
   {
    "tab": "Home",
@@ -949,11 +949,11 @@
    "feature": "Define New Number Format",
    "command": "para.defineNumber",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "para.defineNumber (Define New Number Format)"
   },
   {
    "tab": "Home",
@@ -961,11 +961,11 @@
    "feature": "Set Numbering Value",
    "command": "para.setNumberingValue",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "para.setNumberingValue (Set Numbering Value)"
   },
   {
    "tab": "Home",
@@ -973,11 +973,11 @@
    "feature": "Decrease Indent",
    "command": "para.outdent",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "para.outdent (Decrease Indent)"
   },
   {
    "tab": "Home",
@@ -985,11 +985,11 @@
    "feature": "Increase Indent",
    "command": "para.indent",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "para.indent (Increase Indent)"
   },
   {
    "tab": "Home",
@@ -998,10 +998,10 @@
    "command": "para.sort",
    "appCommand": null,
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "UI label \"Sort\" in WordProcessor"
   },
   {
    "tab": "Home",
@@ -1009,11 +1009,11 @@
    "feature": "Show/Hide Marks",
    "command": "view.marks",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "view.marks (Show/Hide \u00b6)"
   },
   {
    "tab": "Home",
@@ -1021,11 +1021,11 @@
    "feature": "Align Left",
    "command": "para.alignLeft",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "para.alignLeft (Align Left)"
   },
   {
    "tab": "Home",
@@ -1034,10 +1034,10 @@
    "command": "para.alignCenter",
    "appCommand": null,
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "UI label \"Center\" in WordProcessor"
   },
   {
    "tab": "Home",
@@ -1045,11 +1045,11 @@
    "feature": "Align Right",
    "command": "para.alignRight",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "para.alignRight (Align Right)"
   },
   {
    "tab": "Home",
@@ -1058,10 +1058,10 @@
    "command": "para.justify",
    "appCommand": null,
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "UI label \"Justify\" in WordProcessor"
   },
   {
    "tab": "Home",
@@ -1070,10 +1070,10 @@
    "command": "para.distribute",
    "appCommand": null,
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "UI label \"Distributed\" in WordProcessor"
   },
   {
    "tab": "Home",
@@ -1081,11 +1081,11 @@
    "feature": "Line Spacing",
    "command": "para.lineSpacing",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "para.lineSpacing (Line and Paragraph Spacing)"
   },
   {
    "tab": "Home",
@@ -1093,11 +1093,11 @@
    "feature": "Add Space Before",
    "command": "para.addSpaceBefore",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "para.addSpaceBefore (Add Space Before Paragraph)"
   },
   {
    "tab": "Home",
@@ -1105,11 +1105,11 @@
    "feature": "Remove Space After",
    "command": "para.removeSpaceAfter",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "para.removeSpaceAfter (Remove Space After Paragraph)"
   },
   {
    "tab": "Home",
@@ -1117,11 +1117,11 @@
    "feature": "Shading",
    "command": "para.shading",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "para.shading (Shading)"
   },
   {
    "tab": "Home",
@@ -1129,11 +1129,11 @@
    "feature": "Borders",
    "command": "para.borders",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "para.borders (Borders)"
   },
   {
    "tab": "Home",
@@ -1141,11 +1141,11 @@
    "feature": "Horizontal Line",
    "command": "insert.horizontalLine",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "insert.horizontalLine (Horizontal Line)"
   },
   {
    "tab": "Home",
@@ -1153,11 +1153,11 @@
    "feature": "Paragraph Dialog",
    "command": "para.dialog",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "para.dialog (Paragraph Settings)"
   },
   {
    "tab": "Home",
@@ -1166,10 +1166,10 @@
    "command": "para.tabs",
    "appCommand": null,
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "UI label \"Tabs\" in WordProcessor"
   },
   {
    "tab": "Home",
@@ -1178,10 +1178,10 @@
    "command": "para.keepNext",
    "appCommand": null,
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "UI label \"Keep with Next\" in WordProcessor"
   },
   {
    "tab": "Home",
@@ -1189,11 +1189,11 @@
    "feature": "Keep Lines Together",
    "command": "para.keepLines",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "para.keepLines (Keep Lines Together)"
   },
   {
    "tab": "Home",
@@ -1201,11 +1201,11 @@
    "feature": "Page Break Before",
    "command": "para.pageBreakBefore",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "para.pageBreakBefore (Page Break Before)"
   },
   {
    "tab": "Home",
@@ -1213,11 +1213,11 @@
    "feature": "Widow/Orphan Control",
    "command": "para.widowControl",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "para.widowControl (Widow/Orphan Control)"
   },
   {
    "tab": "Home",
@@ -1225,11 +1225,11 @@
    "feature": "Outline Level",
    "command": "para.outlineLevel",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "para.outlineLevel (Outline Level)"
   },
   {
    "tab": "Home",
@@ -1237,11 +1237,11 @@
    "feature": "Hanging Indent",
    "command": "para.hangingIndent",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "para.hangingIndent (Hanging Indent)"
   },
   {
    "tab": "Home",
@@ -1249,11 +1249,11 @@
    "feature": "Right-to-Left Text Direction",
    "command": "para.rtl",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "para.rtl (Right-to-Left Text Direction)"
   },
   {
    "tab": "Home",
@@ -1261,11 +1261,11 @@
    "feature": "Left-to-Right Text Direction",
    "command": "para.ltr",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "para.ltr (Left-to-Right Text Direction)"
   },
   {
    "tab": "Home",
@@ -1273,11 +1273,11 @@
    "feature": "Asian Typography",
    "command": "para.asianTypography",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "para.asianTypography (Asian Typography)"
   },
   {
    "tab": "Home",
@@ -1285,11 +1285,11 @@
    "feature": "Styles Gallery",
    "command": "para.style",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "para.style (Apply Style)"
   },
   {
    "tab": "Home",
@@ -1298,10 +1298,10 @@
    "command": "para.normal",
    "appCommand": null,
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "UI label \"Normal\" in WordProcessor"
   },
   {
    "tab": "Home",
@@ -1309,11 +1309,11 @@
    "feature": "Heading 1",
    "command": "para.heading1",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "para.heading1 (Heading 1)"
   },
   {
    "tab": "Home",
@@ -1321,11 +1321,11 @@
    "feature": "Heading 2",
    "command": "para.heading2",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "para.heading2 (Heading 2)"
   },
   {
    "tab": "Home",
@@ -1333,11 +1333,11 @@
    "feature": "Heading 3",
    "command": "para.heading3",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "para.heading3 (Heading 3)"
   },
   {
    "tab": "Home",
@@ -1346,10 +1346,10 @@
    "command": "styles.create",
    "appCommand": "styles.create",
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "styles.create"
   },
   {
    "tab": "Home",
@@ -1358,10 +1358,10 @@
    "command": "styles.modify",
    "appCommand": "styles.modify",
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "styles.modify"
   },
   {
    "tab": "Home",
@@ -1370,10 +1370,10 @@
    "command": "styles.updateToMatch",
    "appCommand": "styles.updateToMatch",
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "styles.updateToMatch"
   },
   {
    "tab": "Home",
@@ -1382,10 +1382,10 @@
    "command": "styles.delete",
    "appCommand": "styles.delete",
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "styles.delete"
   },
   {
    "tab": "Home",
@@ -1393,11 +1393,11 @@
    "feature": "Styles Pane",
    "command": "styles.pane",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "styles.pane (Styles Pane)"
   },
   {
    "tab": "Home",
@@ -1405,11 +1405,11 @@
    "feature": "Style Inspector",
    "command": "styles.inspector",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "styles.inspector (Style Inspector)"
   },
   {
    "tab": "Home",
@@ -1417,11 +1417,11 @@
    "feature": "Manage Styles",
    "command": "styles.manage",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "styles.manage (Manage Styles)"
   },
   {
    "tab": "Home",
@@ -1430,10 +1430,10 @@
    "command": "styles.apply",
    "appCommand": "styles.apply",
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "styles.apply"
   },
   {
    "tab": "Home",
@@ -1441,11 +1441,11 @@
    "feature": "Character Style",
    "command": "format.charStyle",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "format.charStyle (Apply Character Style)"
   },
   {
    "tab": "Home",
@@ -1454,10 +1454,10 @@
    "command": "edit.find",
    "appCommand": null,
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "UI label \"Find\" in WordProcessor"
   },
   {
    "tab": "Home",
@@ -1465,11 +1465,11 @@
    "feature": "Find Next",
    "command": "edit.findNext",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "edit.findNext (Find Next)"
   },
   {
    "tab": "Home",
@@ -1477,11 +1477,11 @@
    "feature": "Find Previous",
    "command": "edit.findPrevious",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "edit.findPrevious (Find Previous)"
   },
   {
    "tab": "Home",
@@ -1489,11 +1489,11 @@
    "feature": "Advanced Find",
    "command": "edit.advancedFind",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "edit.advancedFind (Advanced Find)"
   },
   {
    "tab": "Home",
@@ -1502,10 +1502,10 @@
    "command": "edit.replace",
    "appCommand": null,
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "UI label \"Replace\" in WordProcessor"
   },
   {
    "tab": "Home",
@@ -1513,11 +1513,11 @@
    "feature": "Replace All",
    "command": "edit.replaceAll",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "edit.replaceAll (Replace All)"
   },
   {
    "tab": "Home",
@@ -1526,10 +1526,10 @@
    "command": "edit.goto",
    "appCommand": null,
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "UI label \"Go To\" in WordProcessor"
   },
   {
    "tab": "Home",
@@ -1537,11 +1537,11 @@
    "feature": "Select All",
    "command": "select.all",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "select.all (Select All)"
   },
   {
    "tab": "Home",
@@ -1549,11 +1549,11 @@
    "feature": "Select Objects",
    "command": "select.objects",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "select.objects (Select Objects)"
   },
   {
    "tab": "Home",
@@ -1561,11 +1561,11 @@
    "feature": "Select Similar Formatting",
    "command": "select.similar",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "select.similar (Select Text with Similar Formatting)"
   },
   {
    "tab": "Home",
@@ -1573,8 +1573,8 @@
    "feature": "Dictate",
    "command": "tools.dictate",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "reference-stub",
+   "referenceBehavior": "absent",
    "missing": [],
    "evidence": [],
    "notes": ""
@@ -1586,10 +1586,10 @@
    "command": "review.editor",
    "appCommand": null,
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "UI label \"Editor\" in WordProcessor"
   },
   {
    "tab": "Insert",
@@ -1597,11 +1597,11 @@
    "feature": "Cover Page",
    "command": "insert.coverPage",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "insert.coverPage (Cover Page)"
   },
   {
    "tab": "Insert",
@@ -1609,11 +1609,11 @@
    "feature": "Blank Page",
    "command": "insert.blankPage",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "insert.blankPage (Blank Page)"
   },
   {
    "tab": "Insert",
@@ -1622,10 +1622,10 @@
    "command": "insert.pageBreak",
    "appCommand": null,
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "UI label \"Page Break\" in WordProcessor"
   },
   {
    "tab": "Insert",
@@ -1633,11 +1633,11 @@
    "feature": "Insert Table",
    "command": "insert.table",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "insert.table (Table)"
   },
   {
    "tab": "Insert",
@@ -1645,11 +1645,11 @@
    "feature": "Draw Table",
    "command": "table.draw",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "table.draw (Draw Table)"
   },
   {
    "tab": "Insert",
@@ -1657,11 +1657,11 @@
    "feature": "Convert Text to Table",
    "command": "table.fromText",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "table.fromText (Convert Text to Table)"
   },
   {
    "tab": "Insert",
@@ -1669,11 +1669,11 @@
    "feature": "Excel Spreadsheet",
    "command": "insert.spreadsheet",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "insert.spreadsheet (Spreadsheet Table)"
   },
   {
    "tab": "Insert",
@@ -1682,10 +1682,10 @@
    "command": "table.quick",
    "appCommand": "table.quick",
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "table.quick"
   },
   {
    "tab": "Insert",
@@ -1694,10 +1694,10 @@
    "command": "insert.picture",
    "appCommand": null,
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "UI label \"Pictures\" in WordProcessor"
   },
   {
    "tab": "Insert",
@@ -1705,8 +1705,8 @@
    "feature": "Online Pictures",
    "command": "insert.onlinePicture",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "reference-stub",
+   "referenceBehavior": "absent",
    "missing": [],
    "evidence": [],
    "notes": ""
@@ -1717,11 +1717,11 @@
    "feature": "Shapes",
    "command": "insert.shape",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "insert.shape (Shapes)"
   },
   {
    "tab": "Insert",
@@ -1729,11 +1729,11 @@
    "feature": "Icons",
    "command": "insert.icon",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "insert.icon (Icons)"
   },
   {
    "tab": "Insert",
@@ -1741,8 +1741,8 @@
    "feature": "3D Models",
    "command": "insert.model3d",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "reference-stub",
+   "referenceBehavior": "absent",
    "missing": [],
    "evidence": [],
    "notes": ""
@@ -1753,11 +1753,11 @@
    "feature": "SmartArt",
    "command": "insert.smartArt",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "insert.smartArt (SmartArt)"
   },
   {
    "tab": "Insert",
@@ -1765,11 +1765,11 @@
    "feature": "Chart",
    "command": "insert.chart",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "insert.chart (Chart)"
   },
   {
    "tab": "Insert",
@@ -1777,8 +1777,8 @@
    "feature": "Screenshot",
    "command": "insert.screenshot",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "reference-stub",
+   "referenceBehavior": "absent",
    "missing": [],
    "evidence": [],
    "notes": ""
@@ -1789,11 +1789,11 @@
    "feature": "Drawing Canvas",
    "command": "insert.canvas",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "insert.canvas (Drawing Canvas)"
   },
   {
    "tab": "Insert",
@@ -1801,8 +1801,8 @@
    "feature": "Get Add-ins",
    "command": "addins.get",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "reference-stub",
+   "referenceBehavior": "absent",
    "missing": [],
    "evidence": [],
    "notes": ""
@@ -1813,8 +1813,8 @@
    "feature": "Online Video",
    "command": "insert.video",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "reference-stub",
+   "referenceBehavior": "absent",
    "missing": [],
    "evidence": [],
    "notes": ""
@@ -1826,10 +1826,10 @@
    "command": "insert.link",
    "appCommand": null,
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "UI label \"Link\" in WordProcessor"
   },
   {
    "tab": "Insert",
@@ -1837,11 +1837,11 @@
    "feature": "Remove Link",
    "command": "insert.removeLink",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "insert.removeLink (Remove Hyperlink)"
   },
   {
    "tab": "Insert",
@@ -1850,10 +1850,10 @@
    "command": "insert.bookmark",
    "appCommand": null,
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "UI label \"Bookmark\" in WordProcessor"
   },
   {
    "tab": "Insert",
@@ -1862,10 +1862,10 @@
    "command": "insert.crossReference",
    "appCommand": null,
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "UI label \"Cross-reference\" in WordProcessor"
   },
   {
    "tab": "Insert",
@@ -1874,10 +1874,10 @@
    "command": "review.newComment",
    "appCommand": null,
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "UI label \"Comment\" in WordProcessor"
   },
   {
    "tab": "Insert",
@@ -1886,10 +1886,10 @@
    "command": "insert.header",
    "appCommand": null,
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "UI label \"Header\" in WordProcessor"
   },
   {
    "tab": "Insert",
@@ -1898,10 +1898,10 @@
    "command": "insert.footer",
    "appCommand": null,
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "UI label \"Footer\" in WordProcessor"
   },
   {
    "tab": "Insert",
@@ -1909,11 +1909,11 @@
    "feature": "Page Number",
    "command": "insert.pageNumber",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "insert.pageNumber (Page Number)"
   },
   {
    "tab": "Insert",
@@ -1921,11 +1921,11 @@
    "feature": "Edit Header",
    "command": "insert.editHeader",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "insert.editHeader (Edit Header)"
   },
   {
    "tab": "Insert",
@@ -1933,11 +1933,11 @@
    "feature": "Edit Footer",
    "command": "insert.editFooter",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "insert.editFooter (Edit Footer)"
   },
   {
    "tab": "Insert",
@@ -1945,11 +1945,11 @@
    "feature": "Remove Header",
    "command": "insert.removeHeader",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "insert.removeHeader (Remove Header)"
   },
   {
    "tab": "Insert",
@@ -1957,11 +1957,11 @@
    "feature": "Remove Footer",
    "command": "insert.removeFooter",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "insert.removeFooter (Remove Footer)"
   },
   {
    "tab": "Insert",
@@ -1969,11 +1969,11 @@
    "feature": "Format Page Numbers",
    "command": "layout.pageNumberFormat",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "layout.pageNumberFormat (Format Page Numbers)"
   },
   {
    "tab": "Insert",
@@ -1981,11 +1981,11 @@
    "feature": "Close Header and Footer",
    "command": "insert.closeHeader",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "insert.closeHeader (Close Header and Footer)"
   },
   {
    "tab": "Insert",
@@ -1993,11 +1993,11 @@
    "feature": "Different First Page",
    "command": "layout.differentFirstPage",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "layout.differentFirstPage (Different First Page)"
   },
   {
    "tab": "Insert",
@@ -2005,11 +2005,11 @@
    "feature": "Different Odd & Even",
    "command": "layout.differentOddEven",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "layout.differentOddEven (Different Odd & Even Pages)"
   },
   {
    "tab": "Insert",
@@ -2017,11 +2017,11 @@
    "feature": "Link to Previous",
    "command": "layout.linkToPrevious",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "layout.linkToPrevious (Link to Previous)"
   },
   {
    "tab": "Insert",
@@ -2029,11 +2029,11 @@
    "feature": "Text Box",
    "command": "insert.textBox",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "insert.textBox (Text Box)"
   },
   {
    "tab": "Insert",
@@ -2041,11 +2041,11 @@
    "feature": "Quick Parts",
    "command": "insert.quickParts",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "insert.quickParts (Quick Parts)"
   },
   {
    "tab": "Insert",
@@ -2053,11 +2053,11 @@
    "feature": "AutoText",
    "command": "insert.autoText",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "insert.autoText (AutoText)"
   },
   {
    "tab": "Insert",
@@ -2065,11 +2065,11 @@
    "feature": "Document Property",
    "command": "insert.docProperty",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "insert.docProperty (Document Property)"
   },
   {
    "tab": "Insert",
@@ -2078,10 +2078,10 @@
    "command": "insert.field",
    "appCommand": null,
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "UI label \"Field\" in WordProcessor"
   },
   {
    "tab": "Insert",
@@ -2089,11 +2089,11 @@
    "feature": "WordArt",
    "command": "insert.wordArt",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "insert.wordArt (WordArt)"
   },
   {
    "tab": "Insert",
@@ -2101,11 +2101,11 @@
    "feature": "Drop Cap",
    "command": "insert.dropCap",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "insert.dropCap (Drop Cap)"
   },
   {
    "tab": "Insert",
@@ -2113,11 +2113,11 @@
    "feature": "Signature Line",
    "command": "insert.signatureLine",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "insert.signatureLine (Signature Line)"
   },
   {
    "tab": "Insert",
@@ -2125,11 +2125,11 @@
    "feature": "Date & Time",
    "command": "insert.dateTime",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "insert.dateTime (Date & Time)"
   },
   {
    "tab": "Insert",
@@ -2137,11 +2137,11 @@
    "feature": "Object",
    "command": "insert.object",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "insert.object (Object)"
   },
   {
    "tab": "Insert",
@@ -2149,11 +2149,11 @@
    "feature": "Text from File",
    "command": "insert.textFromFile",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "insert.textFromFile (Text from File)"
   },
   {
    "tab": "Insert",
@@ -2162,10 +2162,10 @@
    "command": "insert.equation",
    "appCommand": null,
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "UI label \"Equation\" in WordProcessor"
   },
   {
    "tab": "Insert",
@@ -2173,8 +2173,8 @@
    "feature": "Ink Equation",
    "command": "insert.inkEquation",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "reference-stub",
+   "referenceBehavior": "absent",
    "missing": [],
    "evidence": [],
    "notes": ""
@@ -2185,11 +2185,11 @@
    "feature": "Symbol",
    "command": "insert.symbol",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "insert.symbol (Symbol)"
   },
   {
    "tab": "Insert",
@@ -2197,11 +2197,11 @@
    "feature": "Nonbreaking Space",
    "command": "text.nbsp",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "text.nbsp (Nonbreaking Space)"
   },
   {
    "tab": "Insert",
@@ -2209,11 +2209,11 @@
    "feature": "Nonbreaking Hyphen",
    "command": "text.nbHyphen",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "text.nbHyphen (Nonbreaking Hyphen)"
   },
   {
    "tab": "Insert",
@@ -2221,11 +2221,11 @@
    "feature": "Optional Hyphen",
    "command": "text.optionalHyphen",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "text.optionalHyphen (Optional Hyphen)"
   },
   {
    "tab": "Draw",
@@ -2234,10 +2234,10 @@
    "command": "draw.select",
    "appCommand": null,
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "UI label \"Select\" in WordProcessor"
   },
   {
    "tab": "Draw",
@@ -2245,11 +2245,11 @@
    "feature": "Lasso Select",
    "command": "draw.lasso",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "draw.lasso (Lasso Select)"
   },
   {
    "tab": "Draw",
@@ -2257,11 +2257,11 @@
    "feature": "Eraser",
    "command": "draw.eraser",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "draw.eraser (Eraser)"
   },
   {
    "tab": "Draw",
@@ -2269,11 +2269,11 @@
    "feature": "Pen",
    "command": "draw.pen",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "draw.pen (Pen)"
   },
   {
    "tab": "Draw",
@@ -2281,11 +2281,11 @@
    "feature": "Pencil",
    "command": "draw.pencil",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "draw.pencil (Pencil)"
   },
   {
    "tab": "Draw",
@@ -2293,11 +2293,11 @@
    "feature": "Highlighter",
    "command": "draw.highlighter",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "draw.highlighter (Highlighter)"
   },
   {
    "tab": "Draw",
@@ -2305,11 +2305,11 @@
    "feature": "Add Pen",
    "command": "draw.addPen",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "draw.addPen (Add Pen)"
   },
   {
    "tab": "Draw",
@@ -2317,11 +2317,11 @@
    "feature": "Ink to Shape",
    "command": "draw.inkToShape",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "draw.inkToShape (Ink to Shape)"
   },
   {
    "tab": "Draw",
@@ -2329,8 +2329,8 @@
    "feature": "Ink to Math",
    "command": "draw.inkToMath",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "reference-stub",
+   "referenceBehavior": "absent",
    "missing": [],
    "evidence": [],
    "notes": ""
@@ -2341,11 +2341,11 @@
    "feature": "Drawing Canvas",
    "command": "insert.canvas",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "insert.canvas (Drawing Canvas)"
   },
   {
    "tab": "Draw",
@@ -2353,11 +2353,11 @@
    "feature": "Ink Replay",
    "command": "draw.replay",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "draw.replay (Ink Replay)"
   },
   {
    "tab": "Design",
@@ -2365,11 +2365,11 @@
    "feature": "Themes",
    "command": "design.theme",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "design.theme (Themes)"
   },
   {
    "tab": "Design",
@@ -2377,11 +2377,11 @@
    "feature": "Style Set",
    "command": "design.styleSet",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "design.styleSet (Style Set)"
   },
   {
    "tab": "Design",
@@ -2389,11 +2389,11 @@
    "feature": "Colors",
    "command": "design.themeColors",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "design.themeColors (Colors)"
   },
   {
    "tab": "Design",
@@ -2401,11 +2401,11 @@
    "feature": "Fonts",
    "command": "design.themeFonts",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "design.themeFonts (Fonts)"
   },
   {
    "tab": "Design",
@@ -2413,11 +2413,11 @@
    "feature": "Paragraph Spacing",
    "command": "design.paragraphSpacing",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "design.paragraphSpacing (Paragraph Spacing)"
   },
   {
    "tab": "Design",
@@ -2425,11 +2425,11 @@
    "feature": "Effects",
    "command": "design.effects",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "design.effects (Effects)"
   },
   {
    "tab": "Design",
@@ -2437,11 +2437,11 @@
    "feature": "Set as Default",
    "command": "design.setDefault",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "design.setDefault (Set as Default)"
   },
   {
    "tab": "Design",
@@ -2449,11 +2449,11 @@
    "feature": "Watermark",
    "command": "design.watermark",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "design.watermark (Watermark)"
   },
   {
    "tab": "Design",
@@ -2461,11 +2461,11 @@
    "feature": "Page Color",
    "command": "design.pageColor",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "design.pageColor (Page Color)"
   },
   {
    "tab": "Design",
@@ -2473,11 +2473,11 @@
    "feature": "Page Borders",
    "command": "design.pageBorders",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "design.pageBorders (Page Borders)"
   },
   {
    "tab": "Layout",
@@ -2486,10 +2486,10 @@
    "command": "layout.margins",
    "appCommand": null,
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "UI label \"Margins\" in WordProcessor"
   },
   {
    "tab": "Layout",
@@ -2498,10 +2498,10 @@
    "command": "layout.orientation",
    "appCommand": null,
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "UI label \"Orientation\" in WordProcessor"
   },
   {
    "tab": "Layout",
@@ -2509,11 +2509,11 @@
    "feature": "Size",
    "command": "layout.size",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "layout.size (Size)"
   },
   {
    "tab": "Layout",
@@ -2522,10 +2522,10 @@
    "command": "layout.columns",
    "appCommand": null,
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "UI label \"Columns\" in WordProcessor"
   },
   {
    "tab": "Layout",
@@ -2534,10 +2534,10 @@
    "command": "layout.break",
    "appCommand": "layout.break",
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "layout.break"
   },
   {
    "tab": "Layout",
@@ -2545,11 +2545,11 @@
    "feature": "Line Numbers",
    "command": "layout.lineNumbers",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "layout.lineNumbers (Line Numbers)"
   },
   {
    "tab": "Layout",
@@ -2557,11 +2557,11 @@
    "feature": "Hyphenation",
    "command": "layout.hyphenation",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "layout.hyphenation (Hyphenation)"
   },
   {
    "tab": "Layout",
@@ -2569,11 +2569,11 @@
    "feature": "Page Setup Dialog",
    "command": "layout.pageSetup",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "layout.pageSetup (Page Setup)"
   },
   {
    "tab": "Layout",
@@ -2581,11 +2581,11 @@
    "feature": "Vertical Alignment",
    "command": "layout.verticalAlign",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "layout.verticalAlign (Vertical Alignment)"
   },
   {
    "tab": "Layout",
@@ -2593,11 +2593,11 @@
    "feature": "Document Grid",
    "command": "layout.documentGrid",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "layout.documentGrid (Document Grid)"
   },
   {
    "tab": "Layout",
@@ -2605,11 +2605,11 @@
    "feature": "Section Direction",
    "command": "layout.sectionRtl",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "layout.sectionRtl (Right-to-Left Section)"
   },
   {
    "tab": "Layout",
@@ -2617,11 +2617,11 @@
    "feature": "Text Direction",
    "command": "layout.textDirection",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "layout.textDirection (Text Direction)"
   },
   {
    "tab": "Layout",
@@ -2629,11 +2629,11 @@
    "feature": "Indent",
    "command": "para.indents",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "para.indents (Indents)"
   },
   {
    "tab": "Layout",
@@ -2641,11 +2641,11 @@
    "feature": "Spacing",
    "command": "para.spacing",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "para.spacing (Paragraph Spacing)"
   },
   {
    "tab": "Layout",
@@ -2654,10 +2654,10 @@
    "command": "arrange.position",
    "appCommand": null,
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "UI label \"Position\" in WordProcessor"
   },
   {
    "tab": "Layout",
@@ -2665,11 +2665,11 @@
    "feature": "Wrap Text",
    "command": "arrange.wrap",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "arrange.wrap (Wrap Text)"
   },
   {
    "tab": "Layout",
@@ -2677,11 +2677,11 @@
    "feature": "Bring Forward",
    "command": "arrange.bringForward",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "arrange.bringForward (Bring Forward)"
   },
   {
    "tab": "Layout",
@@ -2689,11 +2689,11 @@
    "feature": "Send Backward",
    "command": "arrange.sendBackward",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "arrange.sendBackward (Send Backward)"
   },
   {
    "tab": "Layout",
@@ -2701,11 +2701,11 @@
    "feature": "Selection Pane",
    "command": "arrange.selectionPane",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "arrange.selectionPane (Selection Pane)"
   },
   {
    "tab": "Layout",
@@ -2713,11 +2713,11 @@
    "feature": "Align",
    "command": "arrange.align",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "arrange.align (Align)"
   },
   {
    "tab": "Layout",
@@ -2725,11 +2725,11 @@
    "feature": "Group",
    "command": "arrange.group",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "arrange.group (Group)"
   },
   {
    "tab": "Layout",
@@ -2737,11 +2737,11 @@
    "feature": "Rotate",
    "command": "arrange.rotate",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "arrange.rotate (Rotate)"
   },
   {
    "tab": "References",
@@ -2750,10 +2750,10 @@
    "command": "references.toc",
    "appCommand": "references.toc",
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "references.toc"
   },
   {
    "tab": "References",
@@ -2762,10 +2762,10 @@
    "command": "references.addText",
    "appCommand": "references.addText",
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "references.addText"
   },
   {
    "tab": "References",
@@ -2774,10 +2774,10 @@
    "command": "references.updateToc",
    "appCommand": "references.updateToc",
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "references.updateToc"
   },
   {
    "tab": "References",
@@ -2786,10 +2786,10 @@
    "command": "references.removeToc",
    "appCommand": "references.removeToc",
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "references.removeToc"
   },
   {
    "tab": "References",
@@ -2798,10 +2798,10 @@
    "command": "references.footnote",
    "appCommand": null,
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "references.footnote"
   },
   {
    "tab": "References",
@@ -2810,10 +2810,10 @@
    "command": "references.endnote",
    "appCommand": null,
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "references.endnote"
   },
   {
    "tab": "References",
@@ -2822,10 +2822,10 @@
    "command": "references.nextFootnote",
    "appCommand": "references.nextFootnote",
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "references.nextFootnote"
   },
   {
    "tab": "References",
@@ -2834,10 +2834,10 @@
    "command": "references.notes",
    "appCommand": "references.notes",
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "references.notes"
   },
   {
    "tab": "References",
@@ -2846,10 +2846,10 @@
    "command": "references.noteOptions",
    "appCommand": "references.noteOptions",
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "references.noteOptions"
   },
   {
    "tab": "References",
@@ -2857,11 +2857,11 @@
    "feature": "Researcher",
    "command": "references.researcher",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "references.researcher (Researcher)"
   },
   {
    "tab": "References",
@@ -2870,10 +2870,10 @@
    "command": "references.citation",
    "appCommand": "references.citation",
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "references.citation"
   },
   {
    "tab": "References",
@@ -2882,10 +2882,10 @@
    "command": "references.sources",
    "appCommand": "references.sources",
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "references.sources"
   },
   {
    "tab": "References",
@@ -2894,10 +2894,10 @@
    "command": "references.citationStyle",
    "appCommand": "references.citationStyle",
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "references.citationStyle"
   },
   {
    "tab": "References",
@@ -2906,10 +2906,10 @@
    "command": "references.bibliography",
    "appCommand": "references.bibliography",
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "references.bibliography"
   },
   {
    "tab": "References",
@@ -2918,10 +2918,10 @@
    "command": "references.caption",
    "appCommand": "references.caption",
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "references.caption"
   },
   {
    "tab": "References",
@@ -2930,10 +2930,10 @@
    "command": "references.tableOfFigures",
    "appCommand": "references.tableOfFigures",
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "references.tableOfFigures"
   },
   {
    "tab": "References",
@@ -2942,10 +2942,10 @@
    "command": "references.updateFigures",
    "appCommand": "references.updateFigures",
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "references.updateFigures"
   },
   {
    "tab": "References",
@@ -2954,10 +2954,10 @@
    "command": "insert.crossReference",
    "appCommand": null,
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "UI label \"Cross-reference\" in WordProcessor"
   },
   {
    "tab": "References",
@@ -2966,10 +2966,10 @@
    "command": "references.markEntry",
    "appCommand": "references.markEntry",
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "references.markEntry"
   },
   {
    "tab": "References",
@@ -2978,10 +2978,10 @@
    "command": "references.index",
    "appCommand": "references.index",
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "references.index"
   },
   {
    "tab": "References",
@@ -2990,10 +2990,10 @@
    "command": "references.updateIndex",
    "appCommand": "references.updateIndex",
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "references.updateIndex"
   },
   {
    "tab": "References",
@@ -3002,10 +3002,10 @@
    "command": "references.markCitation",
    "appCommand": "references.markCitation",
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "references.markCitation"
   },
   {
    "tab": "References",
@@ -3014,10 +3014,10 @@
    "command": "references.tableOfAuthorities",
    "appCommand": "references.tableOfAuthorities",
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "references.tableOfAuthorities"
   },
   {
    "tab": "References",
@@ -3026,10 +3026,10 @@
    "command": "references.updateAuthorities",
    "appCommand": "references.updateAuthorities",
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "references.updateAuthorities"
   },
   {
    "tab": "References",
@@ -3038,10 +3038,10 @@
    "command": "references.updateFields",
    "appCommand": "references.updateFields",
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "references.updateFields"
   },
   {
    "tab": "Mailings",
@@ -3050,10 +3050,10 @@
    "command": "mailings.envelopes",
    "appCommand": "mailings.envelopes",
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "mailings.envelopes"
   },
   {
    "tab": "Mailings",
@@ -3062,10 +3062,10 @@
    "command": "mailings.labels",
    "appCommand": "mailings.labels",
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "mailings.labels"
   },
   {
    "tab": "Mailings",
@@ -3074,10 +3074,10 @@
    "command": "mailings.start",
    "appCommand": "mailings.start",
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "mailings.start"
   },
   {
    "tab": "Mailings",
@@ -3086,10 +3086,10 @@
    "command": "mailings.recipients",
    "appCommand": "mailings.recipients",
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "mailings.recipients"
   },
   {
    "tab": "Mailings",
@@ -3098,10 +3098,10 @@
    "command": "mailings.editRecipients",
    "appCommand": "mailings.editRecipients",
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "mailings.editRecipients"
   },
   {
    "tab": "Mailings",
@@ -3110,10 +3110,10 @@
    "command": "mailings.highlightFields",
    "appCommand": "mailings.highlightFields",
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "mailings.highlightFields"
   },
   {
    "tab": "Mailings",
@@ -3122,10 +3122,10 @@
    "command": "mailings.addressBlock",
    "appCommand": "mailings.addressBlock",
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "mailings.addressBlock"
   },
   {
    "tab": "Mailings",
@@ -3134,10 +3134,10 @@
    "command": "mailings.greetingLine",
    "appCommand": "mailings.greetingLine",
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "mailings.greetingLine"
   },
   {
    "tab": "Mailings",
@@ -3146,10 +3146,10 @@
    "command": "mailings.insertField",
    "appCommand": "mailings.insertField",
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "mailings.insertField"
   },
   {
    "tab": "Mailings",
@@ -3158,10 +3158,10 @@
    "command": "mailings.rules",
    "appCommand": "mailings.rules",
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "mailings.rules"
   },
   {
    "tab": "Mailings",
@@ -3170,10 +3170,10 @@
    "command": "mailings.matchFields",
    "appCommand": "mailings.matchFields",
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "mailings.matchFields"
   },
   {
    "tab": "Mailings",
@@ -3182,10 +3182,10 @@
    "command": "mailings.preview",
    "appCommand": "mailings.preview",
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "mailings.preview"
   },
   {
    "tab": "Mailings",
@@ -3194,10 +3194,10 @@
    "command": "mailings.next",
    "appCommand": "mailings.next",
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "mailings.next"
   },
   {
    "tab": "Mailings",
@@ -3206,10 +3206,10 @@
    "command": "mailings.previous",
    "appCommand": "mailings.previous",
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "mailings.previous"
   },
   {
    "tab": "Mailings",
@@ -3218,10 +3218,10 @@
    "command": "mailings.findRecipient",
    "appCommand": "mailings.findRecipient",
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "mailings.findRecipient"
   },
   {
    "tab": "Mailings",
@@ -3230,10 +3230,10 @@
    "command": "mailings.checkErrors",
    "appCommand": "mailings.checkErrors",
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "mailings.checkErrors"
   },
   {
    "tab": "Mailings",
@@ -3242,10 +3242,10 @@
    "command": "mailings.finish",
    "appCommand": "mailings.finish",
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "mailings.finish"
   },
   {
    "tab": "Review",
@@ -3253,11 +3253,11 @@
    "feature": "Spelling & Grammar",
    "command": "review.spelling",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "review.spelling (Spelling & Grammar)"
   },
   {
    "tab": "Review",
@@ -3265,11 +3265,11 @@
    "feature": "Thesaurus",
    "command": "review.thesaurus",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "review.thesaurus (Thesaurus)"
   },
   {
    "tab": "Review",
@@ -3278,10 +3278,10 @@
    "command": "review.wordCount",
    "appCommand": null,
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "UI label \"Word Count\" in WordProcessor"
   },
   {
    "tab": "Review",
@@ -3289,11 +3289,11 @@
    "feature": "Read Aloud",
    "command": "review.readAloud",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "review.readAloud (Read Aloud)"
   },
   {
    "tab": "Review",
@@ -3301,11 +3301,11 @@
    "feature": "Check Accessibility",
    "command": "file.accessibility",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "file.accessibility (Check Accessibility)"
   },
   {
    "tab": "Review",
@@ -3313,11 +3313,11 @@
    "feature": "Alt Text",
    "command": "view.altTextPane",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "view.altTextPane (Alt Text Pane)"
   },
   {
    "tab": "Review",
@@ -3325,8 +3325,8 @@
    "feature": "Translate",
    "command": "review.translate",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "reference-stub",
+   "referenceBehavior": "absent",
    "missing": [],
    "evidence": [],
    "notes": ""
@@ -3337,11 +3337,11 @@
    "feature": "Language",
    "command": "review.language",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "review.language (Language)"
   },
   {
    "tab": "Review",
@@ -3349,11 +3349,11 @@
    "feature": "New Comment",
    "command": "review.newComment",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "review.newComment (New Comment)"
   },
   {
    "tab": "Review",
@@ -3362,10 +3362,10 @@
    "command": "review.deleteComment",
    "appCommand": null,
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "UI label \"Delete\" in WordProcessor"
   },
   {
    "tab": "Review",
@@ -3373,11 +3373,11 @@
    "feature": "Previous",
    "command": "review.previousComment",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "review.previousComment (Previous)"
   },
   {
    "tab": "Review",
@@ -3385,11 +3385,11 @@
    "feature": "Next",
    "command": "review.nextComment",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "review.nextComment (Next)"
   },
   {
    "tab": "Review",
@@ -3397,11 +3397,11 @@
    "feature": "Show Comments",
    "command": "review.comments",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "review.comments (Show Comments)"
   },
   {
    "tab": "Review",
@@ -3410,10 +3410,10 @@
    "command": "review.resolveComment",
    "appCommand": null,
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "UI label \"Resolve\" in WordProcessor"
   },
   {
    "tab": "Review",
@@ -3422,10 +3422,10 @@
    "command": "review.reply",
    "appCommand": null,
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "UI label \"Reply\" in WordProcessor"
   },
   {
    "tab": "Review",
@@ -3434,10 +3434,10 @@
    "command": "review.trackChanges",
    "appCommand": "review.trackChanges",
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "review.trackChanges"
   },
   {
    "tab": "Review",
@@ -3445,11 +3445,11 @@
    "feature": "Display for Review",
    "command": "review.markup",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "review.markup (Display for Review)"
   },
   {
    "tab": "Review",
@@ -3457,11 +3457,11 @@
    "feature": "Show Markup",
    "command": "review.showMarkup",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "review.showMarkup (Show Markup)"
   },
   {
    "tab": "Review",
@@ -3470,10 +3470,10 @@
    "command": "review.changes",
    "appCommand": "review.changes",
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "review.changes"
   },
   {
    "tab": "Review",
@@ -3482,10 +3482,10 @@
    "command": "review.trackingOptions",
    "appCommand": "review.trackingOptions",
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "review.trackingOptions"
   },
   {
    "tab": "Review",
@@ -3494,10 +3494,10 @@
    "command": "review.accept",
    "appCommand": "review.accept",
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "review.accept"
   },
   {
    "tab": "Review",
@@ -3506,10 +3506,10 @@
    "command": "review.reject",
    "appCommand": "review.reject",
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "review.reject"
   },
   {
    "tab": "Review",
@@ -3518,10 +3518,10 @@
    "command": "review.acceptAll",
    "appCommand": "review.acceptAll",
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "review.acceptAll"
   },
   {
    "tab": "Review",
@@ -3530,10 +3530,10 @@
    "command": "review.rejectAll",
    "appCommand": "review.rejectAll",
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "review.rejectAll"
   },
   {
    "tab": "Review",
@@ -3542,10 +3542,10 @@
    "command": "review.previousChange",
    "appCommand": "review.previousChange",
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "review.previousChange"
   },
   {
    "tab": "Review",
@@ -3554,10 +3554,10 @@
    "command": "review.nextChange",
    "appCommand": "review.nextChange",
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "review.nextChange"
   },
   {
    "tab": "Review",
@@ -3566,10 +3566,10 @@
    "command": "review.compare",
    "appCommand": "review.compare",
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "review.compare"
   },
   {
    "tab": "Review",
@@ -3577,11 +3577,11 @@
    "feature": "Combine",
    "command": "review.combine",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "review.combine (Combine)"
   },
   {
    "tab": "Review",
@@ -3589,8 +3589,8 @@
    "feature": "Block Authors",
    "command": "review.blockAuthors",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "reference-stub",
+   "referenceBehavior": "absent",
    "missing": [],
    "evidence": [],
    "notes": ""
@@ -3601,11 +3601,11 @@
    "feature": "Restrict Editing",
    "command": "review.restrict",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "review.restrict (Restrict Editing)"
   },
   {
    "tab": "Review",
@@ -3613,11 +3613,11 @@
    "feature": "Hide Ink",
    "command": "review.hideInk",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "review.hideInk (Hide Ink)"
   },
   {
    "tab": "View",
@@ -3625,11 +3625,11 @@
    "feature": "Read Mode",
    "command": "view.readMode",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "view.readMode (Read Mode)"
   },
   {
    "tab": "View",
@@ -3637,11 +3637,11 @@
    "feature": "Print Layout",
    "command": "view.printLayout",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "view.printLayout (Print Layout)"
   },
   {
    "tab": "View",
@@ -3649,11 +3649,11 @@
    "feature": "Web Layout",
    "command": "view.webLayout",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "view.webLayout (Web Layout)"
   },
   {
    "tab": "View",
@@ -3662,10 +3662,10 @@
    "command": "view.outline",
    "appCommand": null,
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "UI label \"Outline\" in WordProcessor"
   },
   {
    "tab": "View",
@@ -3673,11 +3673,11 @@
    "feature": "Draft",
    "command": "view.draft",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "view.draft (Draft)"
   },
   {
    "tab": "View",
@@ -3685,11 +3685,11 @@
    "feature": "Focus",
    "command": "view.focus",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "view.focus (Focus)"
   },
   {
    "tab": "View",
@@ -3697,11 +3697,11 @@
    "feature": "Immersive Reader",
    "command": "view.immersive",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "view.immersive (Immersive Reader)"
   },
   {
    "tab": "View",
@@ -3709,11 +3709,11 @@
    "feature": "Vertical",
    "command": "view.vertical",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "view.vertical (Vertical)"
   },
   {
    "tab": "View",
@@ -3721,11 +3721,11 @@
    "feature": "Side to Side",
    "command": "view.sideToSide",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "view.sideToSide (Side to Side)"
   },
   {
    "tab": "View",
@@ -3734,10 +3734,10 @@
    "command": "view.ruler",
    "appCommand": null,
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "UI label \"Ruler\" in WordProcessor"
   },
   {
    "tab": "View",
@@ -3745,11 +3745,11 @@
    "feature": "Gridlines",
    "command": "view.gridlines",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "view.gridlines (Gridlines)"
   },
   {
    "tab": "View",
@@ -3757,11 +3757,11 @@
    "feature": "Navigation Pane",
    "command": "view.navigationPane",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "view.navigationPane (Navigation Pane)"
   },
   {
    "tab": "View",
@@ -3770,10 +3770,10 @@
    "command": "view.zoom",
    "appCommand": null,
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "UI label \"Zoom\" in WordProcessor"
   },
   {
    "tab": "View",
@@ -3781,11 +3781,11 @@
    "feature": "100%",
    "command": "view.zoom100",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "view.zoom100 (100%)"
   },
   {
    "tab": "View",
@@ -3793,11 +3793,11 @@
    "feature": "One Page",
    "command": "view.onePage",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "view.onePage (One Page)"
   },
   {
    "tab": "View",
@@ -3805,11 +3805,11 @@
    "feature": "Multiple Pages",
    "command": "view.multiplePages",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "view.multiplePages (Multiple Pages)"
   },
   {
    "tab": "View",
@@ -3818,10 +3818,10 @@
    "command": "view.pageWidth",
    "appCommand": null,
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "UI label \"Page Width\" in WordProcessor"
   },
   {
    "tab": "View",
@@ -3829,11 +3829,11 @@
    "feature": "Zoom In",
    "command": "view.zoomIn",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "view.zoomIn (Zoom In)"
   },
   {
    "tab": "View",
@@ -3841,11 +3841,11 @@
    "feature": "Zoom Out",
    "command": "view.zoomOut",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "view.zoomOut (Zoom Out)"
   },
   {
    "tab": "View",
@@ -3853,11 +3853,11 @@
    "feature": "Switch Modes",
    "command": "view.darkMode",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "view.darkMode (Switch Modes)"
   },
   {
    "tab": "View",
@@ -3865,11 +3865,11 @@
    "feature": "New Window",
    "command": "view.newWindow",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "view.newWindow (New Window)"
   },
   {
    "tab": "View",
@@ -3877,8 +3877,8 @@
    "feature": "Arrange All",
    "command": "view.arrangeAll",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "reference-stub",
+   "referenceBehavior": "absent",
    "missing": [],
    "evidence": [],
    "notes": ""
@@ -3890,10 +3890,10 @@
    "command": "view.split",
    "appCommand": null,
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "UI label \"Split\" in WordProcessor"
   },
   {
    "tab": "View",
@@ -3901,8 +3901,8 @@
    "feature": "View Side by Side",
    "command": "view.sideBySide",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "reference-stub",
+   "referenceBehavior": "absent",
    "missing": [],
    "evidence": [],
    "notes": ""
@@ -3913,8 +3913,8 @@
    "feature": "Synchronous Scrolling",
    "command": "view.syncScroll",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "reference-stub",
+   "referenceBehavior": "absent",
    "missing": [],
    "evidence": [],
    "notes": ""
@@ -3925,8 +3925,8 @@
    "feature": "Switch Windows",
    "command": "view.switchWindows",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "reference-stub",
+   "referenceBehavior": "absent",
    "missing": [],
    "evidence": [],
    "notes": ""
@@ -3938,10 +3938,10 @@
    "command": "tools.macros",
    "appCommand": null,
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "UI label \"Macros\" in WordProcessor"
   },
   {
    "tab": "View",
@@ -3949,11 +3949,11 @@
    "feature": "Record Macro",
    "command": "tools.recordMacro",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "tools.recordMacro (Record Macro)"
   },
   {
    "tab": "View",
@@ -3961,11 +3961,11 @@
    "feature": "Properties",
    "command": "file.properties",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "file.properties (Properties)"
   },
   {
    "tab": "Developer",
@@ -3973,11 +3973,11 @@
    "feature": "Rich Text Content Control",
    "command": "developer.richText",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "developer.richText (Rich Text Content Control)"
   },
   {
    "tab": "Developer",
@@ -3985,11 +3985,11 @@
    "feature": "Plain Text Content Control",
    "command": "developer.plainText",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "developer.plainText (Plain Text Content Control)"
   },
   {
    "tab": "Developer",
@@ -3997,11 +3997,11 @@
    "feature": "Picture Content Control",
    "command": "developer.picture",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "developer.picture (Picture Content Control)"
   },
   {
    "tab": "Developer",
@@ -4009,11 +4009,11 @@
    "feature": "Building Block Gallery Content Control",
    "command": "developer.buildingBlock",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "developer.buildingBlock (Building Block Gallery Content Cont"
   },
   {
    "tab": "Developer",
@@ -4021,11 +4021,11 @@
    "feature": "Check Box Content Control",
    "command": "developer.checkBox",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "developer.checkBox (Check Box Content Control)"
   },
   {
    "tab": "Developer",
@@ -4033,11 +4033,11 @@
    "feature": "Combo Box Content Control",
    "command": "developer.comboBox",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "developer.comboBox (Combo Box Content Control)"
   },
   {
    "tab": "Developer",
@@ -4045,11 +4045,11 @@
    "feature": "Drop-Down List Content Control",
    "command": "developer.dropDown",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "developer.dropDown (Drop-Down List Content Control)"
   },
   {
    "tab": "Developer",
@@ -4057,11 +4057,11 @@
    "feature": "Date Picker Content Control",
    "command": "developer.datePicker",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "developer.datePicker (Date Picker Content Control)"
   },
   {
    "tab": "Developer",
@@ -4069,11 +4069,11 @@
    "feature": "Repeating Section Content Control",
    "command": "developer.repeatingSection",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "developer.repeatingSection (Repeating Section Content Contro"
   },
   {
    "tab": "Developer",
@@ -4081,11 +4081,11 @@
    "feature": "Design Mode",
    "command": "developer.designMode",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "developer.designMode (Design Mode)"
   },
   {
    "tab": "Developer",
@@ -4093,11 +4093,11 @@
    "feature": "Properties",
    "command": "developer.properties",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "developer.properties (Properties)"
   },
   {
    "tab": "Table Design",
@@ -4105,11 +4105,11 @@
    "feature": "Table Style Options",
    "command": "table.look",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "table.look (Table Style Options)"
   },
   {
    "tab": "Table Design",
@@ -4117,11 +4117,11 @@
    "feature": "Table Styles",
    "command": "table.style",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "table.style (Table Styles)"
   },
   {
    "tab": "Table Design",
@@ -4129,11 +4129,11 @@
    "feature": "New Table Style",
    "command": "table.newStyle",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "table.newStyle (New Table Style)"
   },
   {
    "tab": "Table Design",
@@ -4141,11 +4141,11 @@
    "feature": "Modify Table Style",
    "command": "table.modifyStyle",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "table.modifyStyle (Modify Table Style)"
   },
   {
    "tab": "Table Design",
@@ -4153,11 +4153,11 @@
    "feature": "Delete Table Style",
    "command": "table.deleteStyle",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "table.deleteStyle (Delete Table Style)"
   },
   {
    "tab": "Table Design",
@@ -4165,11 +4165,11 @@
    "feature": "Shading",
    "command": "table.shading",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "table.shading (Shading)"
   },
   {
    "tab": "Table Design",
@@ -4177,11 +4177,11 @@
    "feature": "Borders",
    "command": "table.borders",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "table.borders (Borders)"
   },
   {
    "tab": "Table Design",
@@ -4189,11 +4189,11 @@
    "feature": "Border Painter",
    "command": "table.borderPainter",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "table.borderPainter (Border Painter)"
   },
   {
    "tab": "Table Layout",
@@ -4202,10 +4202,10 @@
    "command": "table.selectTable",
    "appCommand": null,
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "table.selectTable"
   },
   {
    "tab": "Table Layout",
@@ -4214,10 +4214,10 @@
    "command": "table.selectRow",
    "appCommand": null,
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "table.selectRow"
   },
   {
    "tab": "Table Layout",
@@ -4226,10 +4226,10 @@
    "command": "table.selectColumn",
    "appCommand": null,
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "table.selectColumn"
   },
   {
    "tab": "Table Layout",
@@ -4238,10 +4238,10 @@
    "command": "table.selectCell",
    "appCommand": null,
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "table.selectCell"
   },
   {
    "tab": "Table Layout",
@@ -4249,11 +4249,11 @@
    "feature": "View Gridlines",
    "command": "table.viewGridlines",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "table.viewGridlines (View Gridlines)"
   },
   {
    "tab": "Table Layout",
@@ -4262,10 +4262,10 @@
    "command": "table.properties",
    "appCommand": "table.properties",
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "table.properties"
   },
   {
    "tab": "Table Layout",
@@ -4274,10 +4274,10 @@
    "command": "table.altText",
    "appCommand": "table.altText",
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "table.altText"
   },
   {
    "tab": "Table Layout",
@@ -4285,11 +4285,11 @@
    "feature": "Table Direction",
    "command": "table.rtl",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "table.rtl (Right-to-Left Table)"
   },
   {
    "tab": "Table Layout",
@@ -4297,11 +4297,11 @@
    "feature": "Draw Table",
    "command": "table.draw",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "table.draw (Draw Table)"
   },
   {
    "tab": "Table Layout",
@@ -4309,11 +4309,11 @@
    "feature": "Eraser",
    "command": "table.eraser",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "table.eraser (Eraser)"
   },
   {
    "tab": "Table Layout",
@@ -4321,11 +4321,11 @@
    "feature": "Delete Cells",
    "command": "table.deleteCells",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "table.deleteCells (Delete Cells)"
   },
   {
    "tab": "Table Layout",
@@ -4333,11 +4333,11 @@
    "feature": "Delete Rows",
    "command": "table.deleteRow",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "table.deleteRow (Delete Rows)"
   },
   {
    "tab": "Table Layout",
@@ -4345,11 +4345,11 @@
    "feature": "Delete Columns",
    "command": "table.deleteColumn",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "table.deleteColumn (Delete Columns)"
   },
   {
    "tab": "Table Layout",
@@ -4357,11 +4357,11 @@
    "feature": "Delete Table",
    "command": "table.deleteTable",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "table.deleteTable (Delete Table)"
   },
   {
    "tab": "Table Layout",
@@ -4370,10 +4370,10 @@
    "command": "table.insertRowAbove",
    "appCommand": null,
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "table.insertRowAbove"
   },
   {
    "tab": "Table Layout",
@@ -4382,10 +4382,10 @@
    "command": "table.insertRowBelow",
    "appCommand": null,
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "table.insertRowBelow"
   },
   {
    "tab": "Table Layout",
@@ -4394,10 +4394,10 @@
    "command": "table.insertColumnLeft",
    "appCommand": null,
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "table.insertColumnLeft"
   },
   {
    "tab": "Table Layout",
@@ -4406,10 +4406,10 @@
    "command": "table.insertColumnRight",
    "appCommand": null,
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "table.insertColumnRight"
   },
   {
    "tab": "Table Layout",
@@ -4418,10 +4418,10 @@
    "command": "table.merge",
    "appCommand": "table.merge",
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "table.merge"
   },
   {
    "tab": "Table Layout",
@@ -4430,10 +4430,10 @@
    "command": "table.split",
    "appCommand": "table.split",
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "table.split"
   },
   {
    "tab": "Table Layout",
@@ -4442,10 +4442,10 @@
    "command": "table.splitTable",
    "appCommand": "table.splitTable",
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "table.splitTable"
   },
   {
    "tab": "Table Layout",
@@ -4454,10 +4454,10 @@
    "command": "table.autofit",
    "appCommand": "table.autofit",
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "table.autofit"
   },
   {
    "tab": "Table Layout",
@@ -4466,10 +4466,10 @@
    "command": "table.rowHeight",
    "appCommand": "table.rowHeight",
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "table.rowHeight"
   },
   {
    "tab": "Table Layout",
@@ -4477,11 +4477,11 @@
    "feature": "Column Width",
    "command": "table.columnWidth",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "table.columnWidth (Table Column Width)"
   },
   {
    "tab": "Table Layout",
@@ -4490,10 +4490,10 @@
    "command": "table.distributeRows",
    "appCommand": "table.distributeRows",
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "table.distributeRows"
   },
   {
    "tab": "Table Layout",
@@ -4502,10 +4502,10 @@
    "command": "table.distributeColumns",
    "appCommand": "table.distributeColumns",
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "table.distributeColumns"
   },
   {
    "tab": "Table Layout",
@@ -4514,10 +4514,10 @@
    "command": "table.cellAlign",
    "appCommand": "table.cellAlign",
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "table.cellAlign"
   },
   {
    "tab": "Table Layout",
@@ -4525,11 +4525,11 @@
    "feature": "Text Direction",
    "command": "table.textDirection",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "table.textDirection (Text Direction)"
   },
   {
    "tab": "Table Layout",
@@ -4537,11 +4537,11 @@
    "feature": "Cell Margins",
    "command": "table.cellMargins",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "table.cellMargins (Cell Margins)"
   },
   {
    "tab": "Table Layout",
@@ -4550,10 +4550,10 @@
    "command": "table.sort",
    "appCommand": "table.sort",
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "table.sort"
   },
   {
    "tab": "Table Layout",
@@ -4561,11 +4561,11 @@
    "feature": "Repeat Header Rows",
    "command": "table.repeatHeader",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "table.repeatHeader (Repeat Header Rows)"
   },
   {
    "tab": "Table Layout",
@@ -4574,10 +4574,10 @@
    "command": "table.toText",
    "appCommand": "table.toText",
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "table.toText"
   },
   {
    "tab": "Table Layout",
@@ -4586,10 +4586,10 @@
    "command": "table.formula",
    "appCommand": "table.formula",
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "table.formula"
   },
   {
    "tab": "Equation",
@@ -4598,10 +4598,10 @@
    "command": "insert.equation",
    "appCommand": null,
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "UI label \"Equation\" in WordProcessor"
   },
   {
    "tab": "Equation",
@@ -4609,8 +4609,8 @@
    "feature": "Ink Equation",
    "command": "insert.inkEquation",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "reference-stub",
+   "referenceBehavior": "absent",
    "missing": [],
    "evidence": [],
    "notes": ""
@@ -4621,11 +4621,11 @@
    "feature": "Unicode",
    "command": "equation.inputFormat",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "equation.inputFormat (Input Format)"
   },
   {
    "tab": "Equation",
@@ -4633,11 +4633,11 @@
    "feature": "LaTeX",
    "command": "equation.inputFormat",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "equation.inputFormat (Input Format)"
   },
   {
    "tab": "Equation",
@@ -4645,11 +4645,11 @@
    "feature": "Convert",
    "command": "equation.convert",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "equation.convert (Convert)"
   },
   {
    "tab": "Equation",
@@ -4657,11 +4657,11 @@
    "feature": "Normal Text",
    "command": "equation.normalText",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "equation.normalText (Normal Text)"
   },
   {
    "tab": "Equation",
@@ -4669,11 +4669,11 @@
    "feature": "Symbols",
    "command": "equation.insertSymbol",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "equation.insertSymbol (Insert Symbol)"
   },
   {
    "tab": "Equation",
@@ -4681,11 +4681,11 @@
    "feature": "Fraction",
    "command": "equation.insertStructure",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "equation.insertStructure (Insert Structure)"
   },
   {
    "tab": "Equation",
@@ -4693,11 +4693,11 @@
    "feature": "Script",
    "command": "equation.insertStructure",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "equation.insertStructure (Insert Structure)"
   },
   {
    "tab": "Equation",
@@ -4705,11 +4705,11 @@
    "feature": "Radical",
    "command": "equation.insertStructure",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "equation.insertStructure (Insert Structure)"
   },
   {
    "tab": "Equation",
@@ -4717,11 +4717,11 @@
    "feature": "Integral",
    "command": "equation.insertStructure",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "equation.insertStructure (Insert Structure)"
   },
   {
    "tab": "Equation",
@@ -4729,11 +4729,11 @@
    "feature": "Large Operator",
    "command": "equation.insertStructure",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "equation.insertStructure (Insert Structure)"
   },
   {
    "tab": "Equation",
@@ -4741,11 +4741,11 @@
    "feature": "Bracket",
    "command": "equation.insertStructure",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "equation.insertStructure (Insert Structure)"
   },
   {
    "tab": "Equation",
@@ -4753,11 +4753,11 @@
    "feature": "Function",
    "command": "equation.insertStructure",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "equation.insertStructure (Insert Structure)"
   },
   {
    "tab": "Equation",
@@ -4765,11 +4765,11 @@
    "feature": "Accent",
    "command": "equation.insertStructure",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "equation.insertStructure (Insert Structure)"
   },
   {
    "tab": "Equation",
@@ -4777,11 +4777,11 @@
    "feature": "Limit and Log",
    "command": "equation.insertStructure",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "equation.insertStructure (Insert Structure)"
   },
   {
    "tab": "Equation",
@@ -4789,11 +4789,11 @@
    "feature": "Operator",
    "command": "equation.insertStructure",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "equation.insertStructure (Insert Structure)"
   },
   {
    "tab": "Equation",
@@ -4802,10 +4802,10 @@
    "command": "equation.insertStructure",
    "appCommand": null,
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "UI label \"Matrix\" in WordProcessor"
   },
   {
    "tab": "Equation",
@@ -4813,11 +4813,11 @@
    "feature": "Change to Inline / Display",
    "command": "equation.display",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "equation.display (Change to Display)"
   },
   {
    "tab": "Equation",
@@ -4825,11 +4825,11 @@
    "feature": "Justification",
    "command": "equation.justify",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "equation.justify (Justification)"
   },
   {
    "tab": "Equation",
@@ -4837,11 +4837,11 @@
    "feature": "Equation Number (#)",
    "command": "equation.number",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "equation.number (Equation Number)"
   },
   {
    "tab": "Equation",
@@ -4849,11 +4849,11 @@
    "feature": "Structure Commands",
    "command": "equation.structure",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "equation.structure (Change Structure)"
   },
   {
    "tab": "Outlining",
@@ -4861,11 +4861,11 @@
    "feature": "Promote to Heading 1",
    "command": "outline.promoteToHeading1",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "outline.promoteToHeading1 (Promote to Heading 1)"
   },
   {
    "tab": "Outlining",
@@ -4873,11 +4873,11 @@
    "feature": "Promote",
    "command": "outline.promote",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "outline.promote (Promote)"
   },
   {
    "tab": "Outlining",
@@ -4885,11 +4885,11 @@
    "feature": "Outline Level",
    "command": "outline.level",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "outline.level (Outline Level)"
   },
   {
    "tab": "Outlining",
@@ -4897,11 +4897,11 @@
    "feature": "Demote",
    "command": "outline.demote",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "outline.demote (Demote)"
   },
   {
    "tab": "Outlining",
@@ -4909,11 +4909,11 @@
    "feature": "Demote to Body Text",
    "command": "outline.demoteToBody",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "outline.demoteToBody (Demote to Body Text)"
   },
   {
    "tab": "Outlining",
@@ -4921,11 +4921,11 @@
    "feature": "Move Up",
    "command": "outline.moveUp",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "outline.moveUp (Move Up)"
   },
   {
    "tab": "Outlining",
@@ -4933,11 +4933,11 @@
    "feature": "Move Down",
    "command": "outline.moveDown",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "outline.moveDown (Move Down)"
   },
   {
    "tab": "Outlining",
@@ -4945,11 +4945,11 @@
    "feature": "Expand",
    "command": "outline.expand",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "outline.expand (Expand)"
   },
   {
    "tab": "Outlining",
@@ -4957,11 +4957,11 @@
    "feature": "Collapse",
    "command": "outline.collapse",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "outline.collapse (Collapse)"
   },
   {
    "tab": "Outlining",
@@ -4969,11 +4969,11 @@
    "feature": "Show Level",
    "command": "outline.showLevel",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "outline.showLevel (Show Level)"
   },
   {
    "tab": "Outlining",
@@ -4981,11 +4981,11 @@
    "feature": "Show Text Formatting",
    "command": "outline.showFormatting",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "outline.showFormatting (Show Text Formatting)"
   },
   {
    "tab": "Outlining",
@@ -4993,11 +4993,11 @@
    "feature": "Show First Line Only",
    "command": "outline.firstLineOnly",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "outline.firstLineOnly (Show First Line Only)"
   },
   {
    "tab": "Outlining",
@@ -5005,11 +5005,11 @@
    "feature": "Close Outline View",
    "command": "outline.close",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "outline.close (Close Outline View)"
   },
   {
    "tab": "Picture Format",
@@ -5017,11 +5017,11 @@
    "feature": "Remove Background",
    "command": "picture.removeBackground",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "picture.removeBackground (Remove Background)"
   },
   {
    "tab": "Picture Format",
@@ -5029,11 +5029,11 @@
    "feature": "Corrections",
    "command": "picture.corrections",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "picture.corrections (Corrections)"
   },
   {
    "tab": "Picture Format",
@@ -5041,11 +5041,11 @@
    "feature": "Color",
    "command": "picture.color",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "picture.color (Color)"
   },
   {
    "tab": "Picture Format",
@@ -5053,11 +5053,11 @@
    "feature": "Artistic Effects",
    "command": "picture.effects",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "picture.effects (Artistic Effects)"
   },
   {
    "tab": "Picture Format",
@@ -5065,11 +5065,11 @@
    "feature": "Transparency",
    "command": "picture.transparency",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "picture.transparency (Transparency)"
   },
   {
    "tab": "Picture Format",
@@ -5077,11 +5077,11 @@
    "feature": "Compress Pictures",
    "command": "picture.compress",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "picture.compress (Compress Pictures)"
   },
   {
    "tab": "Picture Format",
@@ -5089,11 +5089,11 @@
    "feature": "Change Picture",
    "command": "picture.change",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "picture.change (Change Picture)"
   },
   {
    "tab": "Picture Format",
@@ -5101,11 +5101,11 @@
    "feature": "Reset Picture",
    "command": "picture.reset",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "picture.reset (Reset Picture)"
   },
   {
    "tab": "Picture Format",
@@ -5113,11 +5113,11 @@
    "feature": "Picture Styles",
    "command": "picture.style",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "picture.style (Picture Styles)"
   },
   {
    "tab": "Picture Format",
@@ -5125,11 +5125,11 @@
    "feature": "Picture Border",
    "command": "picture.border",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "picture.border (Picture Border)"
   },
   {
    "tab": "Picture Format",
@@ -5137,11 +5137,11 @@
    "feature": "Alt Text",
    "command": "picture.altText",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "picture.altText (Alt Text)"
   },
   {
    "tab": "Shape Format",
@@ -5149,11 +5149,11 @@
    "feature": "Alt Text",
    "command": "object.altText",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "object.altText (Alt Text)"
   },
   {
    "tab": "Picture Format",
@@ -5161,11 +5161,11 @@
    "feature": "Crop",
    "command": "picture.crop",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "picture.crop (Crop)"
   },
   {
    "tab": "Picture Format",
@@ -5173,11 +5173,11 @@
    "feature": "Size",
    "command": "picture.size",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "picture.size (Size)"
   },
   {
    "tab": "Picture Format",
@@ -5185,11 +5185,11 @@
    "feature": "Rotation",
    "command": "arrange.rotation",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "arrange.rotation (Rotation)"
   },
   {
    "tab": "SmartArt Design",
@@ -5197,11 +5197,11 @@
    "feature": "Add Shape",
    "command": "smartArt.addShape",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "smartArt.addShape (Add Shape)"
   },
   {
    "tab": "SmartArt Design",
@@ -5209,11 +5209,11 @@
    "feature": "Promote",
    "command": "smartArt.promote",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "smartArt.promote (Promote)"
   },
   {
    "tab": "SmartArt Design",
@@ -5221,11 +5221,11 @@
    "feature": "Demote",
    "command": "smartArt.demote",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "smartArt.demote (Demote)"
   },
   {
    "tab": "SmartArt Design",
@@ -5233,11 +5233,11 @@
    "feature": "Text Pane",
    "command": "smartArt.textPane",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "smartArt.textPane (Text Pane)"
   },
   {
    "tab": "SmartArt Design",
@@ -5245,11 +5245,11 @@
    "feature": "Layouts",
    "command": "smartArt.layout",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "smartArt.layout (Change Layout)"
   },
   {
    "tab": "SmartArt Design",
@@ -5257,11 +5257,11 @@
    "feature": "Change Colors",
    "command": "smartArt.colors",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "smartArt.colors (Change Colors)"
   },
   {
    "tab": "SmartArt Design",
@@ -5269,11 +5269,11 @@
    "feature": "Reset Graphic",
    "command": "smartArt.reset",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "smartArt.reset (Reset Graphic)"
   },
   {
    "tab": "Chart Design",
@@ -5281,11 +5281,11 @@
    "feature": "Change Chart Type",
    "command": "chart.type",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "chart.type (Change Chart Type)"
   },
   {
    "tab": "Chart Design",
@@ -5293,11 +5293,11 @@
    "feature": "Edit Data",
    "command": "chart.editData",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "chart.editData (Edit Data)"
   },
   {
    "tab": "Chart Design",
@@ -5305,11 +5305,11 @@
    "feature": "Chart Title",
    "command": "chart.title",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "chart.title (Chart Title)"
   },
   {
    "tab": "Chart Design",
@@ -5317,11 +5317,11 @@
    "feature": "Legend",
    "command": "chart.legend",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "chart.legend (Legend)"
   },
   {
    "tab": "Chart Design",
@@ -5329,11 +5329,11 @@
    "feature": "Data Labels",
    "command": "chart.dataLabels",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "chart.dataLabels (Data Labels)"
   },
   {
    "tab": "Shape Format",
@@ -5341,11 +5341,11 @@
    "feature": "Shape Fill",
    "command": "shape.fill",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "shape.fill (Shape Fill)"
   },
   {
    "tab": "Shape Format",
@@ -5353,11 +5353,11 @@
    "feature": "Shape Outline",
    "command": "shape.outline",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "shape.outline (Shape Outline)"
   },
   {
    "tab": "Shape Format",
@@ -5365,11 +5365,11 @@
    "feature": "Shape Effects",
    "command": "shape.effects",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "shape.effects (Shape Effects)"
   },
   {
    "tab": "Shape Format",
@@ -5377,11 +5377,11 @@
    "feature": "WordArt Quick Styles",
    "command": "wordArt.style",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "wordArt.style (WordArt Styles)"
   },
   {
    "tab": "Shape Format",
@@ -5389,11 +5389,11 @@
    "feature": "Text Fill",
    "command": "wordArt.textFill",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "wordArt.textFill (Text Fill)"
   },
   {
    "tab": "Shape Format",
@@ -5401,11 +5401,11 @@
    "feature": "Text Outline",
    "command": "wordArt.textOutline",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "wordArt.textOutline (Text Outline)"
   },
   {
    "tab": "Shape Format",
@@ -5413,11 +5413,11 @@
    "feature": "Text Effects Transform",
    "command": "wordArt.transform",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "wordArt.transform (Transform)"
   },
   {
    "tab": "Shape Format",
@@ -5425,11 +5425,11 @@
    "feature": "Text Direction",
    "command": "shape.textDirection",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "shape.textDirection (Text Direction)"
   },
   {
    "tab": "Shape Format",
@@ -5437,11 +5437,11 @@
    "feature": "Align Text",
    "command": "shape.alignText",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "shape.alignText (Align Text)"
   },
   {
    "tab": "Shape Format",
@@ -5449,11 +5449,11 @@
    "feature": "Create Link",
    "command": "shape.link",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "shape.link (Create Link)"
   },
   {
    "tab": "Header & Footer",
@@ -5461,11 +5461,11 @@
    "feature": "Go to Header",
    "command": "insert.editHeader",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "insert.editHeader (Edit Header)"
   },
   {
    "tab": "Header & Footer",
@@ -5473,11 +5473,11 @@
    "feature": "Go to Footer",
    "command": "insert.editFooter",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "insert.editFooter (Edit Footer)"
   },
   {
    "tab": "Header & Footer",
@@ -5485,11 +5485,11 @@
    "feature": "Previous Section",
    "command": "hf.previous",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "hf.previous (Previous Section)"
   },
   {
    "tab": "Header & Footer",
@@ -5497,11 +5497,11 @@
    "feature": "Next Section",
    "command": "hf.next",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "hf.next (Next Section)"
   },
   {
    "tab": "Header & Footer",
@@ -5509,11 +5509,11 @@
    "feature": "Header from Top",
    "command": "hf.position",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "hf.position (Header/Footer Position)"
   },
   {
    "tab": "Editing",
@@ -5522,10 +5522,10 @@
    "command": "text.insert",
    "appCommand": "text.insert",
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "text.insert"
   },
   {
    "tab": "Editing",
@@ -5533,11 +5533,11 @@
    "feature": "New Paragraph",
    "command": "text.newParagraph",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "text.newParagraph (New Paragraph)"
   },
   {
    "tab": "Editing",
@@ -5545,11 +5545,11 @@
    "feature": "Line Break",
    "command": "text.lineBreak",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "text.lineBreak (Line Break)"
   },
   {
    "tab": "Editing",
@@ -5557,11 +5557,11 @@
    "feature": "Column Break",
    "command": "text.columnBreak",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "text.columnBreak (Column Break)"
   },
   {
    "tab": "Editing",
@@ -5569,11 +5569,11 @@
    "feature": "Tab",
    "command": "text.tab",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "text.tab (Tab)"
   },
   {
    "tab": "Editing",
@@ -5582,10 +5582,10 @@
    "command": "text.backspace",
    "appCommand": "text.backspace",
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "text.backspace"
   },
   {
    "tab": "Editing",
@@ -5594,10 +5594,10 @@
    "command": "text.delete",
    "appCommand": null,
    "status": "unverified",
-   "referenceBehavior": "unknown",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "UI label \"Delete\" in WordProcessor"
   },
   {
    "tab": "Editing",
@@ -5605,11 +5605,11 @@
    "feature": "Delete Previous Word",
    "command": "text.deleteWordBack",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "text.deleteWordBack (Delete Previous Word)"
   },
   {
    "tab": "Editing",
@@ -5617,11 +5617,11 @@
    "feature": "Delete Next Word",
    "command": "text.deleteWordForward",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "text.deleteWordForward (Delete Next Word)"
   },
   {
    "tab": "Editing",
@@ -5629,11 +5629,11 @@
    "feature": "Move Paragraph Up",
    "command": "para.moveUp",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "para.moveUp (Move Paragraph Up)"
   },
   {
    "tab": "Editing",
@@ -5641,11 +5641,11 @@
    "feature": "Move Paragraph Down",
    "command": "para.moveDown",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "para.moveDown (Move Paragraph Down)"
   },
   {
    "tab": "Editing",
@@ -5653,11 +5653,11 @@
    "feature": "Promote",
    "command": "para.promote",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "para.promote (Promote)"
   },
   {
    "tab": "Editing",
@@ -5665,11 +5665,11 @@
    "feature": "Demote",
    "command": "para.demote",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "para.demote (Demote)"
   },
   {
    "tab": "Editing",
@@ -5677,11 +5677,11 @@
    "feature": "Toggle Unicode Character",
    "command": "text.toggleUnicode",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "text.toggleUnicode (Toggle Unicode Character)"
   },
   {
    "tab": "Editing",
@@ -5689,11 +5689,11 @@
    "feature": "Word Left",
    "command": "caret.wordLeft",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "caret.wordLeft (Word Left)"
   },
   {
    "tab": "Editing",
@@ -5701,11 +5701,11 @@
    "feature": "Word Right",
    "command": "caret.wordRight",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "caret.wordRight (Word Right)"
   },
   {
    "tab": "Editing",
@@ -5713,11 +5713,11 @@
    "feature": "Line Start",
    "command": "caret.home",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "caret.home (Line Start)"
   },
   {
    "tab": "Editing",
@@ -5725,11 +5725,11 @@
    "feature": "Line End",
    "command": "caret.end",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "caret.end (Line End)"
   },
   {
    "tab": "Editing",
@@ -5737,11 +5737,11 @@
    "feature": "Paragraph Up",
    "command": "caret.paraUp",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "caret.paraUp (Paragraph Up)"
   },
   {
    "tab": "Editing",
@@ -5749,11 +5749,11 @@
    "feature": "Paragraph Down",
    "command": "caret.paraDown",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "caret.paraDown (Paragraph Down)"
   },
   {
    "tab": "Editing",
@@ -5761,11 +5761,11 @@
    "feature": "Document Start",
    "command": "caret.docStart",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "caret.docStart (Document Start)"
   },
   {
    "tab": "Editing",
@@ -5773,11 +5773,11 @@
    "feature": "Document End",
    "command": "caret.docEnd",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "caret.docEnd (Document End)"
   },
   {
    "tab": "Editing",
@@ -5785,11 +5785,11 @@
    "feature": "Page Up",
    "command": "caret.pageUp",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "caret.pageUp (Page Up)"
   },
   {
    "tab": "Editing",
@@ -5797,11 +5797,11 @@
    "feature": "Page Down",
    "command": "caret.pageDown",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "caret.pageDown (Page Down)"
   },
   {
    "tab": "Editing",
@@ -5809,11 +5809,11 @@
    "feature": "Go Back",
    "command": "edit.goBack",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "edit.goBack (Go Back)"
   },
   {
    "tab": "Editing",
@@ -5821,11 +5821,11 @@
    "feature": "Select Word",
    "command": "select.word",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "select.word (Select Word)"
   },
   {
    "tab": "Editing",
@@ -5833,11 +5833,11 @@
    "feature": "Select Sentence",
    "command": "select.sentence",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "select.sentence (Select Sentence)"
   },
   {
    "tab": "Editing",
@@ -5845,11 +5845,11 @@
    "feature": "Select Paragraph",
    "command": "select.paragraph",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "select.paragraph (Select Paragraph)"
   },
   {
    "tab": "Editing",
@@ -5857,11 +5857,11 @@
    "feature": "Extend Selection (F8)",
    "command": "select.extend",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "select.extend (Extend Selection)"
   },
   {
    "tab": "Editing",
@@ -5869,11 +5869,11 @@
    "feature": "Column Selection",
    "command": "select.column",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "select.column (Column Selection)"
   },
   {
    "tab": "Editing",
@@ -5881,11 +5881,11 @@
    "feature": "Show Field Codes",
    "command": "view.fieldCodes",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "view.fieldCodes (Field Codes)"
   },
   {
    "tab": "Editing",
@@ -5893,11 +5893,11 @@
    "feature": "Toggle Field Codes",
    "command": "fields.toggleCode",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "fields.toggleCode (Toggle Field Codes)"
   },
   {
    "tab": "Editing",
@@ -5905,11 +5905,11 @@
    "feature": "Edit Field Code",
    "command": "fields.setCode",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "fields.setCode (Edit Field Code)"
   },
   {
    "tab": "Editing",
@@ -5917,11 +5917,11 @@
    "feature": "Unlink Fields",
    "command": "fields.unlink",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "fields.unlink (Unlink Fields)"
   },
   {
    "tab": "Editing",
@@ -5929,11 +5929,11 @@
    "feature": "Lock Fields",
    "command": "fields.lock",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "fields.lock (Lock Fields)"
   },
   {
    "tab": "Editing",
@@ -5941,11 +5941,11 @@
    "feature": "Unlock Fields",
    "command": "fields.unlock",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "fields.unlock (Unlock Fields)"
   },
   {
    "tab": "Editing",
@@ -5953,11 +5953,11 @@
    "feature": "Next Field",
    "command": "fields.next",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "fields.next (Next Field)"
   },
   {
    "tab": "Editing",
@@ -5965,11 +5965,11 @@
    "feature": "Previous Field",
    "command": "fields.previous",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "fields.previous (Previous Field)"
   },
   {
    "tab": "Tools",
@@ -5977,11 +5977,11 @@
    "feature": "AutoCorrect Options",
    "command": "tools.autocorrect",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "tools.autocorrect (AutoCorrect Options)"
   },
   {
    "tab": "Tools",
@@ -5989,11 +5989,11 @@
    "feature": "Set Proofing Language",
    "command": "review.language",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "review.language (Language)"
   },
   {
    "tab": "Tools",
@@ -6001,11 +6001,11 @@
    "feature": "Customize Ribbon",
    "command": "tools.customizeRibbon",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "tools.customizeRibbon (Customize Ribbon)"
   },
   {
    "tab": "Tools",
@@ -6013,11 +6013,11 @@
    "feature": "Customize Keyboard",
    "command": "tools.customizeKeyboard",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "tools.customizeKeyboard (Customize Keyboard)"
   },
   {
    "tab": "Tools",
@@ -6025,11 +6025,11 @@
    "feature": "Encrypt with Password",
    "command": "file.encrypt",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "file.encrypt (Encrypt with Password)"
   },
   {
    "tab": "Tools",
@@ -6037,11 +6037,12 @@
    "feature": "Templates and Add-ins",
    "command": "tools.templates",
    "appCommand": null,
-   "status": "unverified",
-   "referenceBehavior": "unknown",
+   "status": "missing",
+   "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": ""
+   "notes": "tools.templates (Templates and Add-ins)"
   }
- ]
+ ],
+ "triageNote": "2026-10-17 automated triage: Wordcraft handlers by grep; app status by automation command ids and ribbon labels. 'missing' over-counts features reached through dialogs or icon-only buttons (for example Small Caps, Line Spacing). Rows become 'certified' only with reproducible evidence paths."
 }
