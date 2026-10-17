@@ -66,7 +66,8 @@ def main():
     rows = []
     for row in catalog_rows(args.wordcraft):
         old = previous.get(row["command"], {})
-        row["appCommand"] = row["command"] if row["command"] in app_ids else None
+        # Editor-only ids (view.*) are not in the CLI registry; keep a manually recorded mapping.
+        row["appCommand"] = row["command"] if row["command"] in app_ids else old.get("appCommand")
         row["status"] = old.get("status", "unverified")
         row["referenceBehavior"] = old.get("referenceBehavior", "unknown")
         row["missing"] = old.get("missing", [])

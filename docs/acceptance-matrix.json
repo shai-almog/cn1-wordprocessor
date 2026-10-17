@@ -10,8 +10,8 @@
   "not-applicable"
  ],
  "counts": {
-  "unverified": 243,
-  "missing": 231,
+  "unverified": 252,
+  "missing": 222,
   "partial": 13,
   "certified": 0,
   "reference-stub": 15,
@@ -1008,12 +1008,12 @@
    "group": "Paragraph",
    "feature": "Show/Hide Marks",
    "command": "view.marks",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "view.marks",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "view.marks (Show/Hide \u00b6)"
+   "notes": "view.marks (Show/Hide \u00b6) Editor-registered view command (WordProcessor.registerViewCommands); marks and multiplePages checked on native Mac 2026-10-17."
   },
   {
    "tab": "Home",
@@ -3636,24 +3636,24 @@
    "group": "Views",
    "feature": "Print Layout",
    "command": "view.printLayout",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "view.printLayout",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "view.printLayout (Print Layout)"
+   "notes": "view.printLayout (Print Layout) Editor-registered view command (WordProcessor.registerViewCommands); marks and multiplePages checked on native Mac 2026-10-17."
   },
   {
    "tab": "View",
    "group": "Views",
    "feature": "Web Layout",
    "command": "view.webLayout",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "view.webLayout",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "view.webLayout (Web Layout)"
+   "notes": "view.webLayout (Web Layout) Editor-registered view command (WordProcessor.registerViewCommands); marks and multiplePages checked on native Mac 2026-10-17."
   },
   {
    "tab": "View",
@@ -3756,12 +3756,12 @@
    "group": "Show",
    "feature": "Navigation Pane",
    "command": "view.navigationPane",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "view.navigationPane",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "view.navigationPane (Navigation Pane)"
+   "notes": "view.navigationPane (Navigation Pane) Editor-registered view command (WordProcessor.registerViewCommands); marks and multiplePages checked on native Mac 2026-10-17."
   },
   {
    "tab": "View",
@@ -3780,36 +3780,36 @@
    "group": "Zoom",
    "feature": "100%",
    "command": "view.zoom100",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "view.zoom100",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "view.zoom100 (100%)"
+   "notes": "view.zoom100 (100%) Editor-registered view command (WordProcessor.registerViewCommands); marks and multiplePages checked on native Mac 2026-10-17."
   },
   {
    "tab": "View",
    "group": "Zoom",
    "feature": "One Page",
    "command": "view.onePage",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "view.onePage",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "view.onePage (One Page)"
+   "notes": "view.onePage (One Page) Editor-registered view command (WordProcessor.registerViewCommands); marks and multiplePages checked on native Mac 2026-10-17."
   },
   {
    "tab": "View",
    "group": "Zoom",
    "feature": "Multiple Pages",
    "command": "view.multiplePages",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "view.multiplePages",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "view.multiplePages (Multiple Pages)"
+   "notes": "view.multiplePages (Multiple Pages) Editor-registered view command (WordProcessor.registerViewCommands); marks and multiplePages checked on native Mac 2026-10-17."
   },
   {
    "tab": "View",
@@ -3828,24 +3828,24 @@
    "group": "Zoom",
    "feature": "Zoom In",
    "command": "view.zoomIn",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "view.zoomIn",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "view.zoomIn (Zoom In)"
+   "notes": "view.zoomIn (Zoom In) Editor-registered view command (WordProcessor.registerViewCommands); marks and multiplePages checked on native Mac 2026-10-17."
   },
   {
    "tab": "View",
    "group": "Zoom",
    "feature": "Zoom Out",
    "command": "view.zoomOut",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "view.zoomOut",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "view.zoomOut (Zoom Out)"
+   "notes": "view.zoomOut (Zoom Out) Editor-registered view command (WordProcessor.registerViewCommands); marks and multiplePages checked on native Mac 2026-10-17."
   },
   {
    "tab": "View",
