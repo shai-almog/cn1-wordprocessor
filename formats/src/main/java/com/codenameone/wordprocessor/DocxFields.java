@@ -112,6 +112,24 @@ final class DocxFields {
       for (Element child : Xml.children(node, null)) node(child, links.target(node));
       return;
     }
+    if ("sdt".equals(kind)) {
+      Element props = Xml.child(node, "sdtPr"), content = Xml.child(node, "sdtContent");
+      ContentControl control = props == null ? null : DocxControls.read(props);
+      if (control == null || content == null) {
+        if (content != null) for (Element child : Xml.children(content, null)) node(child, link);
+        return;
+      }
+      RichText result = read(content, reader, links, warnings);
+      String value = result.plainText();
+      // Repeating section items are stored as the section's "; "-separated content.
+      if ("repeatingSection".equals(control.type) && !value.isEmpty())
+        control = control.with("items", value.replace("; ", "|"));
+      append(
+          RichText.field(
+              control.field(value),
+              value.isEmpty() ? TextStyle.DEFAULT : result.styleAt(0)));
+      return;
+    }
     if (!"r".equals(kind)) {
       warnings.add("Inline feature: " + kind);
       for (Element child : Xml.children(node, null)) node(child, link);
@@ -186,6 +204,10 @@ final class DocxFields {
   }
 
   static void write(StringBuilder b, InlineField field, TextStyle style, DocxLinks links) {
+    if (ContentControl.is(field) && style.revision == null) {
+      DocxControls.write(b, field, style, links);
+      return;
+    }
     if (style.revision != null) {
       RevisionFormats.start(b, style.revision);
       b.append("<w:r><w:fldChar w:fldCharType=\"begin\" w:fldLock=\"")

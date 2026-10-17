@@ -171,3 +171,15 @@ Shapes, text boxes, WordArt, charts, SmartArt, equations, ink/canvases, icons, s
   - Square/tight wrap narrows whole paragraphs that start beside a left- or right-aligned object.
   - Behind/in-front objects take no space.
   - There is no free positioning or per-line contour wrapping.
+
+## Content controls (2026-10-17)
+
+Content controls are atomic fields with a `CONTROL` instruction and survive native XML exactly. DOCX writes run-level `w:sdt` for:
+- rich text, plain text, picture, building block, check box (`w14:checkbox`), combo box, drop-down list, date and repeating section (`w15`);
+- title, tag, lock and placeholder state.
+
+Limits:
+- Block-level content controls are read as their contents.
+- Repeating-section items are stored as "; "-separated content.
+- Picture controls hold no image.
+- Locks are enforced only for value changes made through `developer.properties`.

@@ -21,6 +21,12 @@ public final class InlineField {
   }
 
   public String display() {
+    if (showCode && instruction.startsWith(ContentControl.PREFIX)) {
+      // Design mode shows the control's title (or type) as a tag around its content.
+      ContentControl c = ContentControl.parse(instruction);
+      String tag = c.get("title", c.type);
+      return ("[" + tag + "] " + result + " [/" + tag + "]").replace('\n', ' ');
+    }
     return (showCode ? "{ " + instruction + " }" : result)
         .replace('\n', ' ')
         .replace('\r', ' ')

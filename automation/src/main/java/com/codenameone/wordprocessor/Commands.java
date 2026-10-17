@@ -79,6 +79,7 @@ public final class Commands {
     new FileCommands().register(this);
     new TableTextCommands().register(this);
     new DrawingCommands().register(this);
+    new DeveloperCommands().register(this);
   }
 
   /** Bind automation to the host's print layout, independent of viewport reflow. */

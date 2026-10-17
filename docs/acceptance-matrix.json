@@ -10,8 +10,8 @@
   "not-applicable"
  ],
  "counts": {
-  "unverified": 374,
-  "missing": 100,
+  "unverified": 385,
+  "missing": 89,
   "partial": 13,
   "certified": 0,
   "reference-stub": 15,
@@ -3972,132 +3972,132 @@
    "group": "Controls",
    "feature": "Rich Text Content Control",
    "command": "developer.richText",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "developer.richText",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "developer.richText (Rich Text Content Control)"
+   "notes": "developer.richText (Rich Text Content Control) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Developer",
    "group": "Controls",
    "feature": "Plain Text Content Control",
    "command": "developer.plainText",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "developer.plainText",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "developer.plainText (Plain Text Content Control)"
+   "notes": "developer.plainText (Plain Text Content Control) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Developer",
    "group": "Controls",
    "feature": "Picture Content Control",
    "command": "developer.picture",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "developer.picture",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "developer.picture (Picture Content Control)"
+   "notes": "developer.picture (Picture Content Control) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Developer",
    "group": "Controls",
    "feature": "Building Block Gallery Content Control",
    "command": "developer.buildingBlock",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "developer.buildingBlock",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "developer.buildingBlock (Building Block Gallery Content Cont"
+   "notes": "developer.buildingBlock (Building Block Gallery Content Cont App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Developer",
    "group": "Controls",
    "feature": "Check Box Content Control",
    "command": "developer.checkBox",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "developer.checkBox",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "developer.checkBox (Check Box Content Control)"
+   "notes": "developer.checkBox (Check Box Content Control) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Developer",
    "group": "Controls",
    "feature": "Combo Box Content Control",
    "command": "developer.comboBox",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "developer.comboBox",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "developer.comboBox (Combo Box Content Control)"
+   "notes": "developer.comboBox (Combo Box Content Control) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Developer",
    "group": "Controls",
    "feature": "Drop-Down List Content Control",
    "command": "developer.dropDown",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "developer.dropDown",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "developer.dropDown (Drop-Down List Content Control)"
+   "notes": "developer.dropDown (Drop-Down List Content Control) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Developer",
    "group": "Controls",
    "feature": "Date Picker Content Control",
    "command": "developer.datePicker",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "developer.datePicker",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "developer.datePicker (Date Picker Content Control)"
+   "notes": "developer.datePicker (Date Picker Content Control) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Developer",
    "group": "Controls",
    "feature": "Repeating Section Content Control",
    "command": "developer.repeatingSection",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "developer.repeatingSection",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "developer.repeatingSection (Repeating Section Content Contro"
+   "notes": "developer.repeatingSection (Repeating Section Content Contro App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Developer",
    "group": "Controls",
    "feature": "Design Mode",
    "command": "developer.designMode",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "developer.designMode",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "developer.designMode (Design Mode)"
+   "notes": "developer.designMode (Design Mode) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Developer",
    "group": "Controls",
    "feature": "Properties",
    "command": "developer.properties",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "developer.properties",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "developer.properties (Properties)"
+   "notes": "developer.properties (Properties) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Table Design",
