@@ -6,12 +6,12 @@
 
 | Metric | Java + Codename One | Wordcraft Rust |
 | --- | ---: | ---: |
-| Application files | 33 | 281 |
-| Application LOC, before inline-test pruning | 5,085 | 138,785 |
-| Application LOC, explicit tests pruned (estimate) | 5,085 | 118,659 |
-| Application source tokens, before inline-test pruning | 46,550 | 1,980,112 |
-| Application source tokens, explicit tests pruned (estimate) | 46,550 | 1,646,847 |
-| Separate test source tokens | 8,976 | 410,496 |
+| Application files | 45 | 281 |
+| Application LOC, before inline-test pruning | 7,837 | 138,785 |
+| Application LOC, explicit tests pruned (estimate) | 7,837 | 118,659 |
+| Application source tokens, before inline-test pruning | 72,052 | 1,980,112 |
+| Application source tokens, explicit tests pruned (estimate) | 72,052 | 1,646,847 |
+| Separate test source tokens | 15,040 | 410,496 |
 
 Counts use `cloc` and pinned `tiktoken` `o200k_base`. Source tokens include comments/whitespace, tokenize each file separately, and exclude filename/chat framing. Frameworks, dependencies, assets and generated output are excluded for both sides. Java includes the document libraries, command-line tools and shared platform lifecycle. Tests, benchmarks, examples and build tooling have separate buckets in [the complete file/hash manifest](source-metrics.json).
 
@@ -27,8 +27,15 @@ The CN1 implementation delegates platform UI/input/storage and several text-form
 | bold_selection | Pass | Pass |
 | replace_all | Pass | Pass |
 | table_grid | Pass | Pass |
+| hyperlink | Pass | Pass |
+| nested_numbering | Pass | Pass |
+| keep_next | Pass | Pass |
+| table_structure | Pass | Pass |
+| table_sort | Pass | Pass |
+| comment_range | Pass | Pass |
+| comment_resolved | Pass | Pass |
 
-These probes inspect CLI-generated DOCX paragraphs, direct bold formatting, replacement text and table dimensions. They do not cover GUI interaction, shaped rendering or all edge cases, and certify zero full catalog rows. The broader [502-row catalog](../benchmarks/baseline.json) remains pending. [Probe artifact hashes](parity-probes.json) make the exercised outputs identifiable.
+These probes inspect CLI-generated DOCX text, bold ranges, hyperlinks, nested numbering, keep-with-next, table dimensions/structure/sorting and comment ranges/resolution. Bidirectional resolved-comment import is also checked; see [feature acceptance](FEATURE-VALIDATION.md). They do not cover GUI interaction, shaped rendering or all edge cases, and certify zero full catalog rows. The broader [502-row catalog](../benchmarks/baseline.json) remains pending. [Probe artifact hashes](parity-probes.json) make the exercised outputs identifiable.
 
 ## Performance measured so far
 
@@ -51,19 +58,19 @@ Warmed in-memory DOCX parsing plus text extraction on that same fixture (three a
 
 CN1 is faster for this simple, warmed import workload. Both outputs are byte-identical. Startup, disk I/O, layout, rendering and memory measurement are excluded; normal GC/reference destruction applies. The readers support different broader format scopes, so this result does not establish full DOCX performance/fidelity parity. [Raw warmed samples and linked-library hashes](warm-import.json).
 
-The [CN1 model/layout timings](model-layout.json) separately exercise warmed edits with synthetic metrics. They cannot be compared to font-shaped Wordcraft layout timings and do not measure input-to-present latency or peak memory. The overall performance gate is not evaluated.
+The [CN1 model/layout timings](model-layout.json) separately exercise warmed edits with synthetic metrics. They cannot be compared to font-shaped Wordcraft layout timings and do not measure input-to-present latency or peak memory. See [native GUI measurements](NATIVE-BENCHMARKS.md) for startup, RSS and operation timings. The overall parity/performance gate remains unmet.
 
 ## Platforms
 
 | Platform | CN1 application evidence | Wordcraft evidence inspected |
 | --- | --- | --- |
-| macOS | ParparVM AppKit/Metal application; see current native validation | Release CLI built and exercised; GUI untested here |
+| macOS | ParparVM AppKit/Metal application; see current native validation | Release CLI and native GUI built; scripted GUI workload exercised on macOS |
 | Windows | CN1 native target; application execution untested | Declared target and workflow source; execution untested here |
 | Linux | CN1 native target; application execution untested | Declared target and workflow source; execution untested here |
 | BSD | No app support claimed | Declared target and FreeBSD workflow; execution untested here |
-| Browser | JavaScript build passed; live interaction unverified | WebAssembly target exists; not built/tested here |
+| Browser | Earlier JavaScript build passed; current feature batch and live interaction unverified | WebAssembly target exists; not built/tested here |
 | Android | CN1 profile/lifecycle present; no device build/test | No advertised app target in inspected README/workspace |
-| iOS | CN1 profile/lifecycle present; no device build/test | No advertised app target in inspected README/workspace |
+| iOS | Maven/ParparVM iPhone simulator build; native keyboard, dialogs and reference workflows exercised; physical device untested | No advertised app target in inspected README/workspace |
 
 This is not a 6-versus-5 platform-support victory: framework reach, target declaration, compilation and working application behavior are different evidence levels. The [machine-readable platform matrix](platforms.json) records source references. Upstream workflow presence does not verify that a workflow passed, and these local checks are asymmetrical.
 

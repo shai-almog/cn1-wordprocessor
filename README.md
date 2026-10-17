@@ -1,7 +1,7 @@
 # CN1 Word Processor
 
 A Codename One application with reusable Java document, layout, format and automation
-libraries. The desktop application uses **ParparVM and the native AppKit/Metal port**.
+libraries. The macOS application uses **ParparVM and the native AppKit/Metal port**.
 There is no custom Swing host or GraalVM application build.
 
 This is an initial editor implementation. Full Wordcraft feature parity remains unfinished;
@@ -10,9 +10,14 @@ this application's native performance.
 
 ## Build and run the native macOS application
 
-Use JDK 8 for Maven, Xcode, and current Codename One `8.0-SNAPSHOT` artifacts. The native
+Use JDK 8 for Maven, Xcode, and current Codename One `8.0-SNAPSHOT` artifacts. The
+validated merged framework baseline is `008f9ece62526d807c2064887ad8f8641d6195a4` (PR #6019). The native
 runtime must include the shared ZIP API. If using a local framework checkout, refresh its
-ParparVM bundle with `mvn -f maven/parparvm/pom.xml install -DskipTests` when it is stale.
+ParparVM bundle when it is stale. Every framework and application Maven invocation must
+use the same isolated repository via `-Dmaven.repo.local=...`; never install custom snapshots
+in `~/.m2`. The scripts default to `.local/maven-repository` inside this project. To use a
+unique external repository, set `WORDPROCESSOR_MAVEN_REPO` or save its absolute path in the
+ignored `.local/maven-repo-path` file. Do not use a shared temporary repository name.
 
 ```sh
 scripts/build-native.sh
@@ -22,7 +27,9 @@ scripts/run-desktop.sh
 The script installs/tests the shared libraries, then uses the existing Codename One target:
 
 ```sh
-mvn -B -f app/pom.xml -Dcodename1.platform=ios -Dcodename1.buildTarget=mac-source package
+source scripts/maven-env.sh
+mvn -Dmaven.repo.local="$WORDPROCESSOR_MAVEN_REPO" -B -f app/pom.xml \
+  -Dcodename1.platform=ios -Dcodename1.buildTarget=mac-source package
 ```
 
 This generates `app/common/target/app-common-0.1.0-SNAPSHOT-mac-source/Main.xcodeproj`.
@@ -63,8 +70,7 @@ See [formats](docs/FORMATS.md), [automation](docs/AUTOMATION.md), and
 ## Other targets and measurements
 
 `app/common` is shared with Codename One's browser, Android and iOS targets.
-`scripts/build-web.sh` builds the JavaScript target. Mobile device builds and Windows/Linux
-native execution remain unverified. No cloud builds or public release have been submitted.
+`scripts/build-web.sh` builds the JavaScript target; `scripts/build-linux.sh` uses the local native Linux target. Mac, iPhone simulator, Android emulator and current browser comparison workflows have acceptance evidence. See [Linux build instructions](docs/LINUX.md) and [platform evidence](docs/platforms.json) for the precise Linux result and remaining gaps. Windows and physical mobile devices remain unverified. No cloud builds or public release have been submitted.
 
 [COMPARISON](docs/COMPARISON.md) records source LOC/tokens and the limitations of existing
 measurements. Source tokens use pinned `tiktoken` / `o200k_base`, not agent usage.
@@ -80,3 +86,9 @@ python3 scripts/parity-probes.py /path/to/wordcraft-cli --out artifacts/parity-p
 The [502-entry catalog](benchmarks/baseline.json) is pending verification. Fewer application
 lines alone does not establish parity or a language advantage. A project license has not
 yet been selected; see [third-party notices](third-party/README.md).
+
+The native editor now has a grouped Word-style ribbon and uses Aqua’s native macOS menu/title bar. The [earlier native GUI measurements](docs/NATIVE-BENCHMARKS.md) are historical and are not final parity benchmarks; [implementation status](docs/STATUS.md) records the remaining feature gaps.
+
+Live native UI debugging uses the optional [built-in MCP integration](docs/LIVE-MCP.md).
+
+For browser acceptance after rebuilding, close all preview tabs/PWA windows and reopen them, or start the local preview on a new `PORT`. Reload alone can retain the old service-worker bundle. See [Unicode editing acceptance](docs/GRAPHEME-EDITING.md).

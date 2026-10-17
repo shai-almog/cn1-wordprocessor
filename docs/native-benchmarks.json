@@ -1,0 +1,593 @@
+{
+  "fixtures": {
+    "1": {
+      "path": "artifacts/startup-final/1-paragraphs.docx",
+      "bytes": 883,
+      "sha256": "45a0205528ba2be9b7a165a4ee06900ff26d757f7e66f7c79718e3708008f5d7",
+      "paragraphs": 1,
+      "characters": 69
+    },
+    "1000": {
+      "path": "artifacts/1000-paragraphs.docx",
+      "bytes": 5260,
+      "sha256": "bae79e892d7f62124d6f492b2d949133a606dd5beb601cc98c80c96792262c71",
+      "paragraphs": 1000,
+      "characters": 186889
+    },
+    "10000": {
+      "path": "artifacts/startup-final/10000-paragraphs.docx",
+      "bytes": 4375,
+      "sha256": "8c5512833cc53bc280d0b9545127cb2cdfbf7edd14f328edca579d3f36a73179",
+      "paragraphs": 10000,
+      "characters": 699999
+    }
+  },
+  "artifacts": {
+    "cn1": {
+      "executableBytes": 22229912,
+      "appBundleBytes": 27143197,
+      "sha256": "66efb697bac1556a32439589330058febaa262caf61019ce70f39d4f140d3c1f"
+    },
+    "wordcraft": {
+      "executableBytes": 57402384,
+      "sha256": "30d2162b1d895bc78a04d6c5b748fb267093284ae71dd0a8f86773e45ad6aa3e",
+      "appBundleBytes": 57515260,
+      "bundleMethod": "Unsigned assembly from upstream packaging/macos/package.sh: production executable, icon, expanded Info.plist, PkgInfo; no optional craft-fonts configured."
+    },
+    "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+    "machine": "Mac16,5",
+    "cpuCount": 16,
+    "ramBytes": 68719476736,
+    "frameworkRevision": "d519cd4e6f",
+    "wordcraftRevision": "159b84f54c74e9e82fb3109b758ae7dd6f4e3ab0",
+    "frameworkLocalChanges": [
+      {
+        "file": "CodenameOne/src/com/codename1/ui/Dialog.java",
+        "sha256": "f7e3a063906c7e1cd39c19881edb99e609541bd9303455b1e854bb2cb31aacf3"
+      },
+      {
+        "file": "Ports/MacPort/nativeSources/METALView.m",
+        "sha256": "4acaacbf2fa86de83e9b6ebfa7e0546cd750b9520b35cb93576e85e3c419d2f5"
+      },
+      {
+        "file": "Ports/MacPort/nativeSources/CN1AppKitTextInput.m",
+        "sha256": "e4d275d62f92cab822b9d802b8264df29d5ba74d257c5efd3b58661f8d445d29"
+      },
+      {
+        "file": "Ports/MacPort/nativeSources/CN1AppKitWindows.m",
+        "sha256": "30f91765acbee84c628e85c4a2c06645d20812a81cd94010dee95ace785a8b1e"
+      },
+      {
+        "file": "Ports/iOSPort/nativeSources/CodenameOne_GLViewController.m",
+        "sha256": "8d637e34aa820126560ca82a8fda60c4adf7edf45feefb0bdf3ae259cec76e41"
+      }
+    ],
+    "recordedAt": "2026-10-13T17:39:30.041184+00:00",
+    "instrumentedArtifacts": {
+      "cn1": {
+        "path": "/private/tmp/cn1-ribbon-benchmark/app/common/target/mac-native/Build/Products/Release/Main.app/Contents/MacOS/Main",
+        "sha256": "d776d2af71f198aad1190ae67417e8b93de6e93cde7b8ebca4b5faa38f67e2bb"
+      },
+      "wordcraft": {
+        "path": "/private/tmp/wordcraft-comparison/target/release/wordcraft",
+        "sha256": "30141943ed4fb545c739c4504705956c18925a12682f3729199862e0a977f2cb"
+      }
+    }
+  },
+  "startup": {
+    "1": {
+      "cn1": {
+        "launches": 10,
+        "successes": 10,
+        "cpuReadyMs": {
+          "min": 108.6130142211914,
+          "median": 132.75015354156494,
+          "p95": 145.80297470092773,
+          "max": 145.80297470092773,
+          "n": 10
+        },
+        "idleRssBytes": {
+          "min": 104431616,
+          "median": 105021440.0,
+          "p95": 106168320,
+          "max": 106184704,
+          "n": 3630
+        },
+        "kernelPeakBytes": {
+          "min": 104841216,
+          "median": 105267200.0,
+          "p95": 106348544,
+          "max": 106348544,
+          "n": 10
+        },
+        "sampledWholeRunMinBytes": 524288,
+        "pages": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "wordcraft": {
+        "launches": 10,
+        "successes": 10,
+        "cpuReadyMs": {
+          "min": 280.14087677001953,
+          "median": 346.06194496154785,
+          "p95": 394.9599266052246,
+          "max": 394.9599266052246,
+          "n": 10
+        },
+        "idleRssBytes": {
+          "min": 182501376,
+          "median": 183861248.0,
+          "p95": 185712640,
+          "max": 186056704,
+          "n": 3624
+        },
+        "kernelPeakBytes": {
+          "min": 197165056,
+          "median": 198549504.0,
+          "p95": 200884224,
+          "max": 200884224,
+          "n": 10
+        },
+        "sampledWholeRunMinBytes": 409600,
+        "pages": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      }
+    },
+    "1000": {
+      "cn1": {
+        "launches": 10,
+        "successes": 10,
+        "cpuReadyMs": {
+          "min": 124.42302703857422,
+          "median": 162.38081455230713,
+          "p95": 252.44593620300293,
+          "max": 252.44593620300293,
+          "n": 10
+        },
+        "idleRssBytes": {
+          "min": 136445952,
+          "median": 137035776,
+          "p95": 137478144,
+          "max": 137986048,
+          "n": 3637
+        },
+        "kernelPeakBytes": {
+          "min": 137019392,
+          "median": 137584640.0,
+          "p95": 138018816,
+          "max": 138018816,
+          "n": 10
+        },
+        "sampledWholeRunMinBytes": 622592,
+        "pages": [
+          91,
+          91,
+          91,
+          91,
+          91,
+          91,
+          91,
+          91,
+          91,
+          91
+        ]
+      },
+      "wordcraft": {
+        "launches": 10,
+        "successes": 10,
+        "cpuReadyMs": {
+          "min": 376.8491744995117,
+          "median": 395.688533782959,
+          "p95": 433.4430694580078,
+          "max": 433.4430694580078,
+          "n": 10
+        },
+        "idleRssBytes": {
+          "min": 235405312,
+          "median": 236584960.0,
+          "p95": 239796224,
+          "max": 240074752,
+          "n": 3636
+        },
+        "kernelPeakBytes": {
+          "min": 250593280,
+          "median": 251985920.0,
+          "p95": 255066112,
+          "max": 255066112,
+          "n": 10
+        },
+        "sampledWholeRunMinBytes": 524288,
+        "pages": [
+          56,
+          56,
+          56,
+          56,
+          56,
+          56,
+          56,
+          56,
+          56,
+          56
+        ]
+      }
+    },
+    "10000": {
+      "cn1": {
+        "launches": 10,
+        "successes": 10,
+        "cpuReadyMs": {
+          "min": 172.93310165405273,
+          "median": 237.6260757446289,
+          "p95": 275.7220268249512,
+          "max": 275.7220268249512,
+          "n": 10
+        },
+        "idleRssBytes": {
+          "min": 161103872,
+          "median": 161841152.0,
+          "p95": 162447360,
+          "max": 162463744,
+          "n": 3658
+        },
+        "kernelPeakBytes": {
+          "min": 161742848,
+          "median": 162398208.0,
+          "p95": 163053568,
+          "max": 163053568,
+          "n": 10
+        },
+        "sampledWholeRunMinBytes": 458752,
+        "pages": [
+          345,
+          345,
+          345,
+          345,
+          345,
+          345,
+          345,
+          345,
+          345,
+          345
+        ]
+      },
+      "wordcraft": {
+        "launches": 10,
+        "successes": 10,
+        "cpuReadyMs": {
+          "min": 496.9947338104248,
+          "median": 521.3025808334351,
+          "p95": 566.5900707244873,
+          "max": 566.5900707244873,
+          "n": 10
+        },
+        "idleRssBytes": {
+          "min": 336838656,
+          "median": 338788352,
+          "p95": 340328448,
+          "max": 340639744,
+          "n": 3649
+        },
+        "kernelPeakBytes": {
+          "min": 351846400,
+          "median": 353198080.0,
+          "p95": 355549184,
+          "max": 355549184,
+          "n": 10
+        },
+        "sampledWholeRunMinBytes": 475136,
+        "pages": [
+          385,
+          385,
+          385,
+          385,
+          385,
+          385,
+          385,
+          385,
+          385,
+          385
+        ]
+      }
+    }
+  },
+  "workload": {
+    "cn1": {
+      "successes": 3,
+      "runs": 3,
+      "cpuSeconds": {
+        "min": 1.261897,
+        "median": 1.275865,
+        "p95": 1.549966,
+        "max": 1.549966,
+        "n": 3
+      },
+      "wallSeconds": {
+        "min": 19.254934582859278,
+        "median": 19.31540449988097,
+        "p95": 19.334029040765017,
+        "max": 19.334029040765017,
+        "n": 3
+      },
+      "kernelPeakBytes": {
+        "min": 277839872,
+        "median": 289128448,
+        "p95": 289374208,
+        "max": 289374208,
+        "n": 3
+      },
+      "sampledWholeRunMinBytes": 376832,
+      "validatedDocx": 15,
+      "operations": {
+        "exportPdf": {
+          "min": 13.344,
+          "median": 14.509,
+          "p95": 16.32,
+          "max": 16.32,
+          "n": 9
+        },
+        "insert": {
+          "min": 0.711,
+          "median": 2.161,
+          "p95": 4.343,
+          "max": 5.586,
+          "n": 150
+        },
+        "paste10000": {
+          "min": 1.842,
+          "median": 1.904,
+          "p95": 3.21,
+          "max": 3.21,
+          "n": 3
+        },
+        "reopenDocx": {
+          "min": 40.857,
+          "median": 43.089,
+          "p95": 64.889,
+          "max": 64.889,
+          "n": 15
+        },
+        "saveDocx": {
+          "min": 5.369,
+          "median": 6.061,
+          "p95": 16.201,
+          "max": 16.201,
+          "n": 15
+        },
+        "undo": {
+          "min": 0.705,
+          "median": 2.383,
+          "p95": 4.221,
+          "max": 12.846,
+          "n": 150
+        },
+        "undoPaste": {
+          "min": 0.865,
+          "median": 0.904,
+          "p95": 2.466,
+          "max": 2.466,
+          "n": 3
+        }
+      },
+      "commandToCpuPaint": {
+        "exportPdf": {
+          "min": 14.755,
+          "median": 15.883,
+          "p95": 17.7,
+          "max": 17.7,
+          "n": 9
+        },
+        "insert": {
+          "min": 14.946,
+          "median": 17.439,
+          "p95": 18.886,
+          "max": 19.714,
+          "n": 150
+        },
+        "paste10000": {
+          "min": 16.372,
+          "median": 17.452,
+          "p95": 18.941,
+          "max": 18.941,
+          "n": 3
+        },
+        "reopenDocx": {
+          "min": 42.28,
+          "median": 44.485,
+          "p95": 66.295,
+          "max": 66.295,
+          "n": 15
+        },
+        "saveDocx": {
+          "min": 14.503,
+          "median": 16.759,
+          "p95": 18.179,
+          "max": 18.179,
+          "n": 15
+        },
+        "undo": {
+          "min": 3.789,
+          "median": 17.365499999999997,
+          "p95": 19.185,
+          "max": 19.837,
+          "n": 150
+        },
+        "undoPaste": {
+          "min": 15.657,
+          "median": 16.484,
+          "p95": 18.572,
+          "max": 18.572,
+          "n": 3
+        }
+      }
+    },
+    "wordcraft": {
+      "successes": 3,
+      "runs": 3,
+      "cpuSeconds": {
+        "min": 9.415769,
+        "median": 9.516466,
+        "p95": 9.589383000000002,
+        "max": 9.589383000000002,
+        "n": 3
+      },
+      "wallSeconds": {
+        "min": 17.040816999971867,
+        "median": 17.070987292099744,
+        "p95": 17.09510516701266,
+        "max": 17.09510516701266,
+        "n": 3
+      },
+      "kernelPeakBytes": {
+        "min": 300417024,
+        "median": 304791552,
+        "p95": 305168384,
+        "max": 305168384,
+        "n": 3
+      },
+      "sampledWholeRunMinBytes": 655360,
+      "validatedDocx": 15,
+      "operations": {
+        "exportPdf": {
+          "min": 251.96099999999998,
+          "median": 253.72616599999998,
+          "p95": 259.044,
+          "max": 259.044,
+          "n": 9
+        },
+        "insert": {
+          "min": 0.07825,
+          "median": 0.097563,
+          "p95": 0.216333,
+          "max": 0.522458,
+          "n": 150
+        },
+        "paste10000": {
+          "min": 0.102167,
+          "median": 0.103667,
+          "p95": 0.120542,
+          "max": 0.120542,
+          "n": 3
+        },
+        "reopenDocx": {
+          "min": 6.719583,
+          "median": 7.008,
+          "p95": 12.282791,
+          "max": 12.282791,
+          "n": 15
+        },
+        "saveDocx": {
+          "min": 7.476,
+          "median": 8.127875,
+          "p95": 12.205499999999999,
+          "max": 12.205499999999999,
+          "n": 15
+        },
+        "undo": {
+          "min": 0.024583,
+          "median": 0.038813,
+          "p95": 0.048667,
+          "max": 0.053542000000000006,
+          "n": 150
+        },
+        "undoPaste": {
+          "min": 0.034041999999999996,
+          "median": 0.034917,
+          "p95": 0.054125,
+          "max": 0.054125,
+          "n": 3
+        }
+      },
+      "commandToCpuPaint": {
+        "exportPdf": {
+          "min": 252.29666699999999,
+          "median": 254.08641599999999,
+          "p95": 259.394666,
+          "max": 259.394666,
+          "n": 9
+        },
+        "insert": {
+          "min": 11.11725,
+          "median": 12.2946665,
+          "p95": 13.689667,
+          "max": 20.934917000000002,
+          "n": 150
+        },
+        "paste10000": {
+          "min": 18.374499999999998,
+          "median": 18.403917,
+          "p95": 18.759833,
+          "max": 18.759833,
+          "n": 3
+        },
+        "reopenDocx": {
+          "min": 48.202041,
+          "median": 49.434792,
+          "p95": 60.789083,
+          "max": 60.789083,
+          "n": 15
+        },
+        "saveDocx": {
+          "min": 7.867624999999999,
+          "median": 8.596334,
+          "p95": 12.666333,
+          "max": 12.666333,
+          "n": 15
+        },
+        "undo": {
+          "min": 10.887708,
+          "median": 12.0922715,
+          "p95": 13.165666,
+          "max": 14.364583,
+          "n": 150
+        },
+        "undoPaste": {
+          "min": 11.178749999999999,
+          "median": 12.059958,
+          "p95": 12.288084,
+          "max": 12.288084,
+          "n": 3
+        }
+      }
+    }
+  },
+  "source": {
+    "cn1Java": {
+      "files": 45,
+      "bytes": 301034,
+      "sourceTokens": 72052,
+      "testPrunedTokens": 72052,
+      "explicitTestItemsRemoved": 0,
+      "rawCodeLines": 7837,
+      "testPrunedCodeLines": 7837
+    },
+    "wordcraftRust": {
+      "files": 281,
+      "bytes": 7140326,
+      "sourceTokens": 1980112,
+      "testPrunedTokens": 1646847,
+      "explicitTestItemsRemoved": 266,
+      "rawCodeLines": 138785,
+      "testPrunedCodeLines": 118659
+    }
+  }
+}

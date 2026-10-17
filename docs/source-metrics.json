@@ -14,33 +14,33 @@
   "matchedFeatureScope": false,
   "languageSuperiorityEstablished": false,
   "cn1Java": {
-    "revision": "6322950d6a304420d6a98273d9201fbaae2f34ef",
+    "revision": "3ac33836cddb3a247c984baa341862ee4c097182",
     "applicationTotal": {
-      "files": 33,
-      "bytes": 192841,
-      "sourceTokens": 46550,
-      "testPrunedTokens": 46550,
+      "files": 45,
+      "bytes": 301034,
+      "sourceTokens": 72052,
+      "testPrunedTokens": 72052,
       "explicitTestItemsRemoved": 0,
-      "rawCodeLines": 5085,
-      "testPrunedCodeLines": 5085
+      "rawCodeLines": 7837,
+      "testPrunedCodeLines": 7837
     },
     "groups": {
       "buildAndAutomation": {
         "files": 28,
-        "bytes": 128423,
-        "sourceTokens": 25842,
-        "testPrunedTokens": 25842,
+        "bytes": 134470,
+        "sourceTokens": 27506,
+        "testPrunedTokens": 27506,
         "explicitTestItemsRemoved": 0,
         "rawLoc": {
-          "blank": 96,
+          "blank": 98,
           "comment": 263,
-          "code": 2202,
+          "code": 2253,
           "nFiles": 28
         },
         "prunedLoc": {
-          "blank": 96,
+          "blank": 98,
           "comment": 263,
-          "code": 2202,
+          "code": 2253,
           "nFiles": 28
         }
       },
@@ -64,41 +64,41 @@
         }
       },
       "tests": {
-        "files": 10,
-        "bytes": 36433,
-        "sourceTokens": 8976,
-        "testPrunedTokens": 8976,
+        "files": 14,
+        "bytes": 58818,
+        "sourceTokens": 15040,
+        "testPrunedTokens": 15040,
         "explicitTestItemsRemoved": 0,
         "rawLoc": {
-          "blank": 83,
+          "blank": 116,
           "comment": 4,
-          "code": 951,
-          "nFiles": 10
+          "code": 1516,
+          "nFiles": 14
         },
         "prunedLoc": {
-          "blank": 83,
+          "blank": 116,
           "comment": 4,
-          "code": 951,
-          "nFiles": 10
+          "code": 1516,
+          "nFiles": 14
         }
       },
       "application": {
-        "files": 32,
-        "bytes": 188573,
-        "sourceTokens": 45894,
-        "testPrunedTokens": 45894,
+        "files": 44,
+        "bytes": 296766,
+        "sourceTokens": 71396,
+        "testPrunedTokens": 71396,
         "explicitTestItemsRemoved": 0,
         "rawLoc": {
-          "blank": 421,
-          "comment": 45,
-          "code": 4995,
-          "nFiles": 32
+          "blank": 593,
+          "comment": 70,
+          "code": 7747,
+          "nFiles": 44
         },
         "prunedLoc": {
-          "blank": 421,
-          "comment": 45,
-          "code": 4995,
-          "nFiles": 32
+          "blank": 593,
+          "comment": 70,
+          "code": 7747,
+          "nFiles": 44
         }
       },
       "benchmarks": {
@@ -131,11 +131,11 @@
         "files": 1
       },
       "automation": {
-        "bytes": 23478,
-        "sourceTokens": 5206,
-        "testPrunedTokens": 5206,
-        "rawCodeLines": 632,
-        "prunedCodeLines": 632,
+        "bytes": 26519,
+        "sourceTokens": 5846,
+        "testPrunedTokens": 5846,
+        "rawCodeLines": 740,
+        "prunedCodeLines": 740,
         "files": 6
       },
       "cli": {
@@ -147,36 +147,36 @@
         "files": 3
       },
       "document": {
-        "bytes": 37222,
-        "sourceTokens": 9600,
-        "testPrunedTokens": 9600,
-        "rawCodeLines": 1095,
-        "prunedCodeLines": 1095,
-        "files": 12
+        "bytes": 61181,
+        "sourceTokens": 15079,
+        "testPrunedTokens": 15079,
+        "rawCodeLines": 1711,
+        "prunedCodeLines": 1711,
+        "files": 15
       },
       "editor": {
-        "bytes": 52428,
-        "sourceTokens": 11811,
-        "testPrunedTokens": 11811,
-        "rawCodeLines": 1400,
-        "prunedCodeLines": 1400,
-        "files": 3
-      },
-      "formats": {
-        "bytes": 48766,
-        "sourceTokens": 13163,
-        "testPrunedTokens": 13163,
-        "rawCodeLines": 1138,
-        "prunedCodeLines": 1138,
+        "bytes": 96506,
+        "sourceTokens": 21792,
+        "testPrunedTokens": 21792,
+        "rawCodeLines": 2515,
+        "prunedCodeLines": 2515,
         "files": 7
       },
+      "formats": {
+        "bytes": 82293,
+        "sourceTokens": 21648,
+        "testPrunedTokens": 21648,
+        "rawCodeLines": 1963,
+        "prunedCodeLines": 1963,
+        "files": 11
+      },
       "layout": {
-        "bytes": 9045,
-        "sourceTokens": 2272,
-        "testPrunedTokens": 2272,
-        "rawCodeLines": 274,
-        "prunedCodeLines": 274,
-        "files": 1
+        "bytes": 12633,
+        "sourceTokens": 3189,
+        "testPrunedTokens": 3189,
+        "rawCodeLines": 362,
+        "prunedCodeLines": 362,
+        "files": 2
       }
     },
     "unprunedFiles": [],
@@ -250,13 +250,13 @@
       {
         "path": "automation/src/main/java/com/codenameone/wordprocessor/Commands.java",
         "category": "application",
-        "bytes": 10685,
-        "sha256": "ecc71465d379d8fe548e661ad0e03211ce8892a2018949126aae84c9fd49c6dc",
-        "sourceTokens": 2360,
+        "bytes": 13726,
+        "sha256": "3b4dd64cbf669925e64de7ffcba8099b9547d725bb13b1c1560f785ce5e41c80",
+        "sourceTokens": 3000,
         "explicitTestItemsRemoved": 0,
-        "testPrunedTokens": 2360,
-        "rawCodeLines": 309,
-        "prunedCodeLines": 309
+        "testPrunedTokens": 3000,
+        "rawCodeLines": 417,
+        "prunedCodeLines": 417
       },
       {
         "path": "automation/src/main/java/com/codenameone/wordprocessor/DocumentDiff.java",
@@ -448,13 +448,13 @@
       {
         "path": "document/src/main/java/com/codenameone/wordprocessor/Document.java",
         "category": "application",
-        "bytes": 2059,
-        "sha256": "801d9754d4643c704f5bd6686be0c521a439fc8c8659f26b0e05327002dca291",
-        "sourceTokens": 512,
+        "bytes": 2881,
+        "sha256": "bd89a52b78263400ee92c1abe1d46a8dd86e08bed25bff5f07f4d9df2cb9d8c0",
+        "sourceTokens": 698,
         "explicitTestItemsRemoved": 0,
-        "testPrunedTokens": 512,
-        "rawCodeLines": 61,
-        "prunedCodeLines": 61
+        "testPrunedTokens": 698,
+        "rawCodeLines": 89,
+        "prunedCodeLines": 89
       },
       {
         "path": "document/src/main/java/com/codenameone/wordprocessor/DocumentStats.java",
@@ -466,6 +466,28 @@
         "testPrunedTokens": 376,
         "rawCodeLines": 49,
         "prunedCodeLines": 49
+      },
+      {
+        "path": "document/src/main/java/com/codenameone/wordprocessor/DocumentText.java",
+        "category": "application",
+        "bytes": 1693,
+        "sha256": "c75a1b2097fe4fa7f4ecbf377188e355aa61458a403f28cbc3e0d6501a155337",
+        "sourceTokens": 420,
+        "explicitTestItemsRemoved": 0,
+        "testPrunedTokens": 420,
+        "rawCodeLines": 43,
+        "prunedCodeLines": 43
+      },
+      {
+        "path": "document/src/main/java/com/codenameone/wordprocessor/ListNumbers.java",
+        "category": "application",
+        "bytes": 1655,
+        "sha256": "1aae43132dc8c3e396d217fc39af01d187a8ff3b3d71626179099a13b6fdf8b1",
+        "sourceTokens": 488,
+        "explicitTestItemsRemoved": 0,
+        "testPrunedTokens": 488,
+        "rawCodeLines": 46,
+        "prunedCodeLines": 46
       },
       {
         "path": "document/src/main/java/com/codenameone/wordprocessor/PageSpec.java",
@@ -481,24 +503,35 @@
       {
         "path": "document/src/main/java/com/codenameone/wordprocessor/Paragraph.java",
         "category": "application",
-        "bytes": 2412,
-        "sha256": "20eb73eef75186c3275c595dc91d4e6c2574c9fe0c644475c480752628d9d3d9",
-        "sourceTokens": 609,
+        "bytes": 3755,
+        "sha256": "76f69b986daafbfe242607f98e7f4edd903543d58b0c56ea59e778c00906e7a7",
+        "sourceTokens": 917,
         "explicitTestItemsRemoved": 0,
-        "testPrunedTokens": 609,
-        "rawCodeLines": 75,
-        "prunedCodeLines": 75
+        "testPrunedTokens": 917,
+        "rawCodeLines": 135,
+        "prunedCodeLines": 135
+      },
+      {
+        "path": "document/src/main/java/com/codenameone/wordprocessor/ReviewComment.java",
+        "category": "application",
+        "bytes": 3928,
+        "sha256": "b398c2bc2116aa56a8fa4f80aac4cba1ce7aa3a65d8d101f71eb82e3e7c2a6ca",
+        "sourceTokens": 997,
+        "explicitTestItemsRemoved": 0,
+        "testPrunedTokens": 997,
+        "rawCodeLines": 104,
+        "prunedCodeLines": 104
       },
       {
         "path": "document/src/main/java/com/codenameone/wordprocessor/RichText.java",
         "category": "application",
-        "bytes": 5602,
-        "sha256": "2efb279398519f3a4d2b2772109eb21c3889549a5613993696464c2b9f211126",
-        "sourceTokens": 1687,
+        "bytes": 5907,
+        "sha256": "0dee68b97b9b3bd4f6369a1be2d3861ae3be8404649553fc99b91f0c356d9f3f",
+        "sourceTokens": 1768,
         "explicitTestItemsRemoved": 0,
-        "testPrunedTokens": 1687,
-        "rawCodeLines": 184,
-        "prunedCodeLines": 184
+        "testPrunedTokens": 1768,
+        "rawCodeLines": 191,
+        "prunedCodeLines": 191
       },
       {
         "path": "document/src/main/java/com/codenameone/wordprocessor/Selection.java",
@@ -525,24 +558,24 @@
       {
         "path": "document/src/main/java/com/codenameone/wordprocessor/Session.java",
         "category": "application",
-        "bytes": 13884,
-        "sha256": "0a0c81b53e679f7f93688e69e994f140064f1b2ab8da00dab849dca650ad0a98",
-        "sourceTokens": 3143,
+        "bytes": 25228,
+        "sha256": "d6ef980fe127bd9cf8dbea6f8ce9742581a671604d500c81a0ae0f41104edd68",
+        "sourceTokens": 5474,
         "explicitTestItemsRemoved": 0,
-        "testPrunedTokens": 3143,
-        "rawCodeLines": 375,
-        "prunedCodeLines": 375
+        "testPrunedTokens": 5474,
+        "rawCodeLines": 634,
+        "prunedCodeLines": 634
       },
       {
         "path": "document/src/main/java/com/codenameone/wordprocessor/Table.java",
         "category": "application",
-        "bytes": 1648,
-        "sha256": "81716307f16e0c8998eba733a4c1a78ed146fc7d7a983744fe27c4b6c83d5545",
-        "sourceTokens": 398,
+        "bytes": 4418,
+        "sha256": "746fa5dcf51d44ed1b80374284c255cec765ce3415a89986c3297167767a728b",
+        "sourceTokens": 1056,
         "explicitTestItemsRemoved": 0,
-        "testPrunedTokens": 398,
-        "rawCodeLines": 42,
-        "prunedCodeLines": 42
+        "testPrunedTokens": 1056,
+        "rawCodeLines": 105,
+        "prunedCodeLines": 105
       },
       {
         "path": "document/src/main/java/com/codenameone/wordprocessor/TextStyle.java",
@@ -558,13 +591,24 @@
       {
         "path": "document/src/main/java/com/codenameone/wordprocessor/TextUtil.java",
         "category": "application",
-        "bytes": 1879,
-        "sha256": "d57a8a6c56c11d40855706f52eb795914d12314290c2ef6795677ad82ddfcfb5",
-        "sourceTokens": 518,
+        "bytes": 1978,
+        "sha256": "dcefc6e8e52adae3c956a6d8aa08d819772341402916fa1821fe75e4e94a1380",
+        "sourceTokens": 528,
         "explicitTestItemsRemoved": 0,
-        "testPrunedTokens": 518,
-        "rawCodeLines": 46,
-        "prunedCodeLines": 46
+        "testPrunedTokens": 528,
+        "rawCodeLines": 52,
+        "prunedCodeLines": 52
+      },
+      {
+        "path": "document/src/test/java/com/codenameone/wordprocessor/CommentsTest.java",
+        "category": "tests",
+        "bytes": 2633,
+        "sha256": "af5f6650f5575f54d976dd87be919c8083350c8cfa9d7e26a2634cdc4238a9c9",
+        "sourceTokens": 705,
+        "explicitTestItemsRemoved": 0,
+        "testPrunedTokens": 705,
+        "rawCodeLines": 81,
+        "prunedCodeLines": 81
       },
       {
         "path": "document/src/test/java/com/codenameone/wordprocessor/DocumentTest.java",
@@ -578,6 +622,28 @@
         "prunedCodeLines": 289
       },
       {
+        "path": "document/src/test/java/com/codenameone/wordprocessor/DocumentTextTest.java",
+        "category": "tests",
+        "bytes": 1318,
+        "sha256": "1272b9085d69b3c7cbe5039ded9dfbebf71533855bf1ca1d5866296cb2753950",
+        "sourceTokens": 348,
+        "explicitTestItemsRemoved": 0,
+        "testPrunedTokens": 348,
+        "rawCodeLines": 33,
+        "prunedCodeLines": 33
+      },
+      {
+        "path": "document/src/test/java/com/codenameone/wordprocessor/EditingFeaturesTest.java",
+        "category": "tests",
+        "bytes": 4263,
+        "sha256": "e6ebde5815fc1bf59814a4ca7d1fdf2d53058468baa314a8bee469ab010e900b",
+        "sourceTokens": 1234,
+        "explicitTestItemsRemoved": 0,
+        "testPrunedTokens": 1234,
+        "rawCodeLines": 121,
+        "prunedCodeLines": 121
+      },
+      {
         "path": "editor/pom.xml",
         "category": "buildAndAutomation",
         "bytes": 570,
@@ -589,15 +655,59 @@
         "prunedCodeLines": 1
       },
       {
+        "path": "editor/src/main/java/com/codenameone/wordprocessor/DocumentFonts.java",
+        "category": "application",
+        "bytes": 1179,
+        "sha256": "f2a557384c044bf75bd077aebe6e6fe707bc62b6d0e0a317edf69540784bbdca",
+        "sourceTokens": 309,
+        "explicitTestItemsRemoved": 0,
+        "testPrunedTokens": 309,
+        "rawCodeLines": 27,
+        "prunedCodeLines": 27
+      },
+      {
         "path": "editor/src/main/java/com/codenameone/wordprocessor/EditorSurface.java",
         "category": "application",
-        "bytes": 19394,
-        "sha256": "8bf4a0daa8b812bdc09e08555adecf6f0f514b5247b28dc8cf159125d20da3c2",
-        "sourceTokens": 4803,
+        "bytes": 24268,
+        "sha256": "007f6398e68f6c626dd9bb73bcf758183d27209df98fa0fa41f6cef579fd5477",
+        "sourceTokens": 5957,
         "explicitTestItemsRemoved": 0,
-        "testPrunedTokens": 4803,
-        "rawCodeLines": 552,
-        "prunedCodeLines": 552
+        "testPrunedTokens": 5957,
+        "rawCodeLines": 670,
+        "prunedCodeLines": 670
+      },
+      {
+        "path": "editor/src/main/java/com/codenameone/wordprocessor/OfficeRibbon.java",
+        "category": "application",
+        "bytes": 2107,
+        "sha256": "658b45dd1547c038617673abbd3c74249b431b5f5f05a72ce2393ae24356d1f7",
+        "sourceTokens": 493,
+        "explicitTestItemsRemoved": 0,
+        "testPrunedTokens": 493,
+        "rawCodeLines": 56,
+        "prunedCodeLines": 56
+      },
+      {
+        "path": "editor/src/main/java/com/codenameone/wordprocessor/OfficeTheme.java",
+        "category": "application",
+        "bytes": 3616,
+        "sha256": "04523f71afdc0ee2bba71bafe03ee0f5f51160f95bbfc2bb6fd7a95df6d69046",
+        "sourceTokens": 1009,
+        "explicitTestItemsRemoved": 0,
+        "testPrunedTokens": 1009,
+        "rawCodeLines": 96,
+        "prunedCodeLines": 96
+      },
+      {
+        "path": "editor/src/main/java/com/codenameone/wordprocessor/PageRuler.java",
+        "category": "application",
+        "bytes": 2671,
+        "sha256": "21d2903c46d089f6cda395d58bdc637f6dc182c7bb180809ee51772fa83ff614",
+        "sourceTokens": 779,
+        "explicitTestItemsRemoved": 0,
+        "testPrunedTokens": 779,
+        "rawCodeLines": 62,
+        "prunedCodeLines": 62
       },
       {
         "path": "editor/src/main/java/com/codenameone/wordprocessor/RecoveryStore.java",
@@ -613,13 +723,13 @@
       {
         "path": "editor/src/main/java/com/codenameone/wordprocessor/WordProcessor.java",
         "category": "application",
-        "bytes": 28762,
-        "sha256": "e30cc14b5530cbe1ebe44cea193b9bec0fd215e7d6a7a7c4227383ee6d586d9d",
-        "sourceTokens": 6029,
+        "bytes": 58393,
+        "sha256": "f0c953bbc39edda03cb8caafe98aa08bbd25bcad66cd63dcefed01d41ccf2313",
+        "sourceTokens": 12266,
         "explicitTestItemsRemoved": 0,
-        "testPrunedTokens": 6029,
-        "rawCodeLines": 730,
-        "prunedCodeLines": 730
+        "testPrunedTokens": 12266,
+        "rawCodeLines": 1486,
+        "prunedCodeLines": 1486
       },
       {
         "path": "editor/src/test/java/com/codenameone/wordprocessor/RecoveryTest.java",
@@ -657,44 +767,88 @@
       {
         "path": "formats/src/main/java/com/codenameone/wordprocessor/DocumentXml.java",
         "category": "application",
-        "bytes": 6917,
-        "sha256": "a5a3cc79680677e4280d93d5a1890d69e228f1bb690566adf02b02925c64473e",
-        "sourceTokens": 1592,
+        "bytes": 8900,
+        "sha256": "5f3d9d597dc77defc8c6c2be38f9ee92c91ce2b15b466368e91061d60d53ce5f",
+        "sourceTokens": 2039,
         "explicitTestItemsRemoved": 0,
-        "testPrunedTokens": 1592,
-        "rawCodeLines": 179,
-        "prunedCodeLines": 179
+        "testPrunedTokens": 2039,
+        "rawCodeLines": 229,
+        "prunedCodeLines": 229
       },
       {
         "path": "formats/src/main/java/com/codenameone/wordprocessor/Docx.java",
         "category": "application",
-        "bytes": 16105,
-        "sha256": "8ec882b1791d5c199f1263bf31ef9f3cae5a1b8688641ded4c4e0006efab00ac",
-        "sourceTokens": 4045,
+        "bytes": 18012,
+        "sha256": "9bdb5fa975bc25299a7086c53ffdd3d743fc84cd555e3bc3230b3e518f08b900",
+        "sourceTokens": 4569,
         "explicitTestItemsRemoved": 0,
-        "testPrunedTokens": 4045,
-        "rawCodeLines": 353,
-        "prunedCodeLines": 353
+        "testPrunedTokens": 4569,
+        "rawCodeLines": 406,
+        "prunedCodeLines": 406
+      },
+      {
+        "path": "formats/src/main/java/com/codenameone/wordprocessor/DocxComments.java",
+        "category": "application",
+        "bytes": 10717,
+        "sha256": "397aafaf7786cf2e805908fc3cf657b31b33c320022f5a07758deaadbf0ce5ba",
+        "sourceTokens": 2641,
+        "explicitTestItemsRemoved": 0,
+        "testPrunedTokens": 2641,
+        "rawCodeLines": 255,
+        "prunedCodeLines": 255
+      },
+      {
+        "path": "formats/src/main/java/com/codenameone/wordprocessor/DocxLinks.java",
+        "category": "application",
+        "bytes": 2560,
+        "sha256": "6fa03438b9c8a35c7efa22fa96ac438e6ab4e78ec0a46ba5dfa6c4b48c01b0c0",
+        "sourceTokens": 586,
+        "explicitTestItemsRemoved": 0,
+        "testPrunedTokens": 586,
+        "rawCodeLines": 61,
+        "prunedCodeLines": 61
+      },
+      {
+        "path": "formats/src/main/java/com/codenameone/wordprocessor/DocxLists.java",
+        "category": "application",
+        "bytes": 9416,
+        "sha256": "1e16eb3869fb43f3a4d743bdfef2e4a3b08b765b6293c167ffd4909a0810d858",
+        "sourceTokens": 2452,
+        "explicitTestItemsRemoved": 0,
+        "testPrunedTokens": 2452,
+        "rawCodeLines": 229,
+        "prunedCodeLines": 229
+      },
+      {
+        "path": "formats/src/main/java/com/codenameone/wordprocessor/DocxStyles.java",
+        "category": "application",
+        "bytes": 4982,
+        "sha256": "92a65806ddeca7a641d3bfef237780e0dbd7071333d66228c670741938c43187",
+        "sourceTokens": 1303,
+        "explicitTestItemsRemoved": 0,
+        "testPrunedTokens": 1303,
+        "rawCodeLines": 119,
+        "prunedCodeLines": 119
       },
       {
         "path": "formats/src/main/java/com/codenameone/wordprocessor/PdfExporter.java",
         "category": "application",
-        "bytes": 6508,
-        "sha256": "add14d9ea61727be819282c2cbd010e432aa153f1e65bc90675c5bbcdba201d7",
-        "sourceTokens": 1727,
+        "bytes": 8339,
+        "sha256": "ff44125d34d015c190f9cac076f38674b497612068331869e78ab9efee32ca34",
+        "sourceTokens": 2242,
         "explicitTestItemsRemoved": 0,
-        "testPrunedTokens": 1727,
-        "rawCodeLines": 164,
-        "prunedCodeLines": 164
+        "testPrunedTokens": 2242,
+        "rawCodeLines": 212,
+        "prunedCodeLines": 212
       },
       {
         "path": "formats/src/main/java/com/codenameone/wordprocessor/PdfMetrics.java",
         "category": "application",
-        "bytes": 3623,
-        "sha256": "3446a1f048d1570eaa570dc42df38d6ebf7203cc02bf45f930dd2aa0d89cd085",
-        "sourceTokens": 1853,
+        "bytes": 3626,
+        "sha256": "03dd1dd697b00924987f39cc7c3464f8a4c50ddf8247796bb230eccc3149f212",
+        "sourceTokens": 1857,
         "explicitTestItemsRemoved": 0,
-        "testPrunedTokens": 1853,
+        "testPrunedTokens": 1857,
         "rawCodeLines": 52,
         "prunedCodeLines": 52
       },
@@ -712,46 +866,57 @@
       {
         "path": "formats/src/main/java/com/codenameone/wordprocessor/TextFormats.java",
         "category": "application",
-        "bytes": 4934,
-        "sha256": "af52505e650ba34f1ed2c8fd6c1287062bbad6cb52b92ebaec0d4e3422f0ad56",
-        "sourceTokens": 1256,
+        "bytes": 5014,
+        "sha256": "cef2abb4d9abd3f77dd4043f584da97daae98d6a57fea8e77298b8513fe09c73",
+        "sourceTokens": 1263,
         "explicitTestItemsRemoved": 0,
-        "testPrunedTokens": 1256,
-        "rawCodeLines": 113,
-        "prunedCodeLines": 113
+        "testPrunedTokens": 1263,
+        "rawCodeLines": 119,
+        "prunedCodeLines": 119
       },
       {
         "path": "formats/src/main/java/com/codenameone/wordprocessor/Xml.java",
         "category": "application",
-        "bytes": 7994,
-        "sha256": "8ae658e72b0ec977ca14cd9c41337f9a48565f436725ff22041ea7fd31602a1f",
-        "sourceTokens": 2052,
+        "bytes": 8042,
+        "sha256": "fea3ee002094990511d9e914f100c69d30e5447b1abbaaa0ceff74c4951aba11",
+        "sourceTokens": 2058,
         "explicitTestItemsRemoved": 0,
-        "testPrunedTokens": 2052,
-        "rawCodeLines": 214,
-        "prunedCodeLines": 214
+        "testPrunedTokens": 2058,
+        "rawCodeLines": 218,
+        "prunedCodeLines": 218
+      },
+      {
+        "path": "formats/src/test/java/com/codenameone/wordprocessor/DocxFeaturesTest.java",
+        "category": "tests",
+        "bytes": 8252,
+        "sha256": "3963a2762217154121952b7f18a2e31a37c3b95fbb254ce1f8acd2ece8645882",
+        "sourceTokens": 2202,
+        "explicitTestItemsRemoved": 0,
+        "testPrunedTokens": 2202,
+        "rawCodeLines": 178,
+        "prunedCodeLines": 178
       },
       {
         "path": "formats/src/test/java/com/codenameone/wordprocessor/FormatTest.java",
         "category": "tests",
-        "bytes": 7327,
-        "sha256": "be2c650dd852c42cbf20a7285152ed663f019b663659c45fba9ec3125cb4421e",
-        "sourceTokens": 1851,
+        "bytes": 9455,
+        "sha256": "460e2ed00c931ef3a751f454636503218475bdfa8a2ed1257078b70cd1862bb6",
+        "sourceTokens": 2367,
         "explicitTestItemsRemoved": 0,
-        "testPrunedTokens": 1851,
-        "rawCodeLines": 176,
-        "prunedCodeLines": 176
+        "testPrunedTokens": 2367,
+        "rawCodeLines": 232,
+        "prunedCodeLines": 232
       },
       {
         "path": "formats/src/test/java/com/codenameone/wordprocessor/PdfTest.java",
         "category": "tests",
-        "bytes": 2903,
-        "sha256": "5f87f37ca4a2e24d1a933601c686c5f237320ed8c81aa29db5c7638cbd570904",
-        "sourceTokens": 702,
+        "bytes": 3606,
+        "sha256": "88ed6bf7e31b1b9be01d002340fa7bcc692cc85b3fba6cf21f922b15008d886d",
+        "sourceTokens": 896,
         "explicitTestItemsRemoved": 0,
-        "testPrunedTokens": 702,
-        "rawCodeLines": 68,
-        "prunedCodeLines": 68
+        "testPrunedTokens": 896,
+        "rawCodeLines": 86,
+        "prunedCodeLines": 86
       },
       {
         "path": "layout/pom.xml",
@@ -767,24 +932,35 @@
       {
         "path": "layout/src/main/java/com/codenameone/wordprocessor/LayoutEngine.java",
         "category": "application",
-        "bytes": 9045,
-        "sha256": "7ff2b163432893e322219ff217141fac45b97fea7e82b40d2612a8966eb08828",
-        "sourceTokens": 2272,
+        "bytes": 10985,
+        "sha256": "b61e452b1eaad62ca62f354daaa39d9328ba5d49b6ce05417c45f395a84c5fb5",
+        "sourceTokens": 2803,
         "explicitTestItemsRemoved": 0,
-        "testPrunedTokens": 2272,
-        "rawCodeLines": 274,
-        "prunedCodeLines": 274
+        "testPrunedTokens": 2803,
+        "rawCodeLines": 313,
+        "prunedCodeLines": 313
+      },
+      {
+        "path": "layout/src/main/java/com/codenameone/wordprocessor/MeasurementCache.java",
+        "category": "application",
+        "bytes": 1648,
+        "sha256": "8608372c64eb7d18d02b15a5e47214a47a17e1b0577e51fd8725ef297fcf0ab7",
+        "sourceTokens": 386,
+        "explicitTestItemsRemoved": 0,
+        "testPrunedTokens": 386,
+        "rawCodeLines": 49,
+        "prunedCodeLines": 49
       },
       {
         "path": "layout/src/test/java/com/codenameone/wordprocessor/LayoutTest.java",
         "category": "tests",
-        "bytes": 2666,
-        "sha256": "26eb25cce209ee8bdf67fbd1cbe520d1be853f31010141fe9aac3b5b81d7fbb0",
-        "sourceTokens": 696,
+        "bytes": 5754,
+        "sha256": "bdda36ffe1552df715c0a44b29e0b713d650c6bc3be4b8f9ebc899e18fc8983a",
+        "sourceTokens": 1561,
         "explicitTestItemsRemoved": 0,
-        "testPrunedTokens": 696,
-        "rawCodeLines": 68,
-        "prunedCodeLines": 68
+        "testPrunedTokens": 1561,
+        "rawCodeLines": 146,
+        "prunedCodeLines": 146
       },
       {
         "path": "pom.xml",
@@ -899,13 +1075,13 @@
       {
         "path": "scripts/comparison-report.py",
         "category": "buildAndAutomation",
-        "bytes": 7999,
-        "sha256": "a72c61d2af7a9c05d71d0ebdc01d4f0849a62e13756a08fbeb4c7afd05d09051",
-        "sourceTokens": 1799,
+        "bytes": 8429,
+        "sha256": "b8e3560a4b09fab97401374f2f896b556ef431201e4788bb0aef5c69fb3e18a6",
+        "sourceTokens": 1893,
         "explicitTestItemsRemoved": 0,
-        "testPrunedTokens": 1799,
-        "rawCodeLines": 43,
-        "prunedCodeLines": 43
+        "testPrunedTokens": 1893,
+        "rawCodeLines": 45,
+        "prunedCodeLines": 45
       },
       {
         "path": "scripts/dependency-inventory.py",
@@ -932,13 +1108,13 @@
       {
         "path": "scripts/parity-probes.py",
         "category": "buildAndAutomation",
-        "bytes": 4237,
-        "sha256": "d18abcddc56baeafd6a0039b3e4620c4bec8642ef380b039a5c8bf78973f29d6",
-        "sourceTokens": 1096,
+        "bytes": 9854,
+        "sha256": "3d958c403a481bb87581b8e559c4ac217290a5d8f2b518654eef9ca7b4e3259f",
+        "sourceTokens": 2666,
         "explicitTestItemsRemoved": 0,
-        "testPrunedTokens": 1096,
-        "rawCodeLines": 69,
-        "prunedCodeLines": 69
+        "testPrunedTokens": 2666,
+        "rawCodeLines": 118,
+        "prunedCodeLines": 118
       },
       {
         "path": "scripts/run-desktop.sh",

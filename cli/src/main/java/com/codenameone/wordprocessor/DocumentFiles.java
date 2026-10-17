@@ -21,6 +21,13 @@ public final class DocumentFiles {
 
   private DocumentFiles() {}
 
+  private static final PdfExporter.FontProvider FONTS =
+      BundledFonts.provider(path -> DocumentFiles.class.getResourceAsStream(path));
+
+  static Commands commands() {
+    return new Commands(PdfExporter.layoutEngine(FONTS));
+  }
+
   public static Opened read(Path path) throws IOException {
     if (Files.size(path) > 128 * 1024 * 1024) throw new IOException("File exceeds 128 MiB");
     byte[] bytes = Files.readAllBytes(path);
@@ -50,7 +57,8 @@ public final class DocumentFiles {
   public static byte[] write(
       Document d, Docx.Opened source, String extension, boolean allowConversion)
       throws IOException {
-    if ("pdf".equals(extension)) return PdfExporter.write(d);
+    if ("pdf".equals(extension)) return PdfExporter.write(d,
+        FONTS);
     if ("cn1doc".equals(extension)) return ProjectFile.write(d, source);
     if ("docx".equals(extension)) {
       ByteArrayOutputStream out = new ByteArrayOutputStream();

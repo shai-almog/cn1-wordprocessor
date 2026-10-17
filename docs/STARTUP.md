@@ -18,10 +18,18 @@ The rebuilt native application was launched and its rendered document inspected.
 Its ZIP recovery record was independently checked for its CRC, ZIP integrity and
 XML contents. The executable is ARM64 and links AppKit/Metal without a JVM.
 
-**Native GUI startup timings have not yet been measured.** A valid comparison must
-measure launch to the first presented editable document in both GUI applications,
-with identical documents, recovery state, hardware and cache conditions. Report
-median/p95 and failed launches separately. CLI extraction timings do not answer this.
+Native GUI startup and RSS have now been measured using repeated fresh native
+processes and matching DOCX inputs. See [the complete report](NATIVE-BENCHMARKS.md)
+and [machine-readable distributions](native-benchmarks.json). Readiness is the end
+of CPU document painting, not GPU presentation; the filesystem cache is warm.
+The final application uses Aqua's native macOS menus and title bar alongside the
+Word-style ribbon. Native menu execution and Command-F were verified interactively.
+
+The local core, Mac port, build engine and Maven plugin were rebuilt from the
+framework checkout for the Aqua build. The app explicitly selects
+`macos.themeMode=aqua`, retains the native theme's constants, and declares commands
+through `Command.setDesktopMenu` / `setDesktopShortcut`. It does not install a
+custom NSMenu or initialize Display itself.
 
 The previous GraalVM CLI experiment used the wrong compiler and application boundary.
 Its raw records are retained under [history/graalvm-cli](history/graalvm-cli/README.md)

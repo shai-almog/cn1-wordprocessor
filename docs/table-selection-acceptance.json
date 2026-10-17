@@ -1,0 +1,35 @@
+{
+  "fullParity": false,
+  "javaTests": 374,
+  "nativeUiChecks": 40,
+  "nativeReports": [
+    "mac-tables-accepted",
+    "mac-labels-accepted",
+    "ios-tables-final",
+    "ios-labels-final"
+  ],
+  "desktopInteractionOutcomes": [
+    "native-drag-and-shift-right-rectangle",
+    "native-shift-up-contraction",
+    "native-typed-replacement",
+    "undo-restores-rectangle",
+    "rich-ribbon-clipboard-rectangle",
+    "native-tsv-clipboard",
+    "native-backspace-with-empty-focused-cell",
+    "native-cut-with-empty-focused-cell",
+    "native-copy-with-empty-focused-cell"
+  ],
+  "physicalInputBoundary": "Mac pointer/keyboard through CUA, read-only MCP verification; phone workflows use built-in accessibility actions, not physical touch. Earlier desktop range/clipboard checks used mac-build-final3; empty-focus checks and all final Mac UI workflows use mac-build-final4.",
+  "tableDocxChecks": 48,
+  "pairedDocumentCases": 59,
+  "mailingsChecks": 13,
+  "nativeBuildLogs": {
+    "mac": "mac-build-final4.log",
+    "ios": "ios-build.log"
+  },
+  "framework": "Prior 008f9ece baseline plus recorded local Mac input fixes and framework-patches/mac-composite-selection.patch; no upstream PR or release-baseline claim.",
+  "sourceManifest": "source-sha256.json",
+  "restored": true,
+  "appsStopped": true,
+  "remaining": "See docs/TABLE-SELECTION.md and docs/STATUS.md"
+}

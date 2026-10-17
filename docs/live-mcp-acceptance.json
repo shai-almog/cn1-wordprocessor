@@ -1,0 +1,62 @@
+{
+  "macOS": {
+    "choices": [
+      {
+        "choice": "Sentence case",
+        "expected": "Hello world. Second sentence",
+        "actual": "Hello world. Second sentence"
+      },
+      {
+        "choice": "lowercase",
+        "expected": "hello world. second sentence",
+        "actual": "hello world. second sentence"
+      },
+      {
+        "choice": "UPPERCASE",
+        "expected": "HELLO WORLD. SECOND SENTENCE",
+        "actual": "HELLO WORLD. SECOND SENTENCE"
+      },
+      {
+        "choice": "Capitalize Each Word",
+        "expected": "Hello World. Second Sentence",
+        "actual": "Hello World. Second Sentence"
+      },
+      {
+        "choice": "tOGGLE cASE",
+        "expected": "HellO world. Second SENTENCE",
+        "actual": "HellO world. Second SENTENCE"
+      }
+    ],
+    "originalXmlRestored": true
+  },
+  "iPhone simulator": {
+    "choices": [
+      {
+        "choice": "Sentence case",
+        "expected": "Hello world. Second sentence",
+        "actual": "Hello world. Second sentence"
+      },
+      {
+        "choice": "lowercase",
+        "expected": "hello world. second sentence",
+        "actual": "hello world. second sentence"
+      },
+      {
+        "choice": "UPPERCASE",
+        "expected": "HELLO WORLD. SECOND SENTENCE",
+        "actual": "HELLO WORLD. SECOND SENTENCE"
+      },
+      {
+        "choice": "Capitalize Each Word",
+        "expected": "Hello World. Second Sentence",
+        "actual": "Hello World. Second Sentence"
+      },
+      {
+        "choice": "tOGGLE cASE",
+        "expected": "HellO world. Second SENTENCE",
+        "actual": "HellO world. Second SENTENCE"
+      }
+    ],
+    "originalXmlRestored": true
+  }
+}

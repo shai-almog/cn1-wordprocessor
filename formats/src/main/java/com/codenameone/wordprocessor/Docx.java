@@ -56,102 +56,357 @@ public final class Docx {
     Element body = Xml.child(root, "body");
     if (body == null) throw new IOException("Missing document body");
     Set<String> warnings = new LinkedHashSet<String>();
+    DocxLists.Read lists = DocxLists.read(parts.get("word/numbering.xml"), warnings);
+    DocxStyles styles =
+        new DocxStyles(parts.get("word/styles.xml"), parts.get("word/settings.xml"), warnings);
+    DocxLinks links = new DocxLinks(parts);
+    DocxComments comments = new DocxComments(parts);
+    DocxPictures pictures = new DocxPictures(parts);
     long[] id = {1};
+    links.notes = new DocxNotes(parts, id, warnings, styles);
     Sequence<Block> blocks = new Sequence<Block>();
-    PageSpec page = PageSpec.A4;
-    for (Element c : Xml.children(body, null)) {
+    Map<String, Element> sectionElements = new LinkedHashMap<String, Element>();
+    for (Element c : DocxToc.body(body, warnings)) {
       String kind = Xml.local(c);
-      if ("p".equals(kind)) blocks = blocks.append(paragraph(c, id, warnings));
-      else if ("tbl".equals(kind)) {
-        List<List<Sequence<Paragraph>>> rows = new ArrayList<List<Sequence<Paragraph>>>();
-        for (Element row : Xml.children(c, "tr")) {
-          List<Sequence<Paragraph>> cells = new ArrayList<Sequence<Paragraph>>();
-          for (Element cell : Xml.children(row, "tc")) {
-            Sequence<Paragraph> ps = new Sequence<Paragraph>();
-            for (Element p : Xml.children(cell, "p")) ps = ps.append(paragraph(p, id, warnings));
-            if (ps.size() == 0) ps = ps.append(new Paragraph("p" + id[0]++, new RichText()));
-            cells.add(ps);
-            for (Element prop : Xml.children(cell, null))
-              if (!"p".equals(Xml.local(prop)))
-                warnings.add("Table cell properties or nested content need conversion");
-          }
-          if (!cells.isEmpty()) rows.add(cells);
-        }
-        if (!rows.isEmpty()) {
-          int max = 0;
-          for (List<Sequence<Paragraph>> row : rows) max = Math.max(max, row.size());
-          for (List<Sequence<Paragraph>> row : rows)
-            while (row.size() < max)
-              row.add(
-                  new Sequence<Paragraph>().append(new Paragraph("p" + id[0]++, new RichText())));
-          blocks = blocks.append(new Table("t" + id[0]++, rows));
-          warnings.add(
-              "Table widths, merges, borders and row properties are not preserved during editing");
-        }
-      } else if ("sectPr".equals(kind)) {
-        Element sz = Xml.child(c, "pgSz"), m = Xml.child(c, "pgMar");
-        try {
-          if (sz != null && m != null)
-            page =
-                new PageSpec(
-                    twips(sz, "w", 11906),
-                    twips(sz, "h", 16838),
-                    twips(m, "top", 1080),
-                    twips(m, "right", 1080),
-                    twips(m, "bottom", 1080),
-                    twips(m, "left", 1080));
-        } catch (RuntimeException ex) {
-          warnings.add("Unsupported page geometry; using A4");
-        }
-        for (Element p : Xml.children(c, null))
-          if (!"pgSz".equals(Xml.local(p)) && !"pgMar".equals(Xml.local(p)))
-            warnings.add("Section feature: " + Xml.local(p));
-      } else warnings.add("Document feature: " + kind);
+      if ("p".equals(kind)) {
+        Set<String> paragraphWarnings = new LinkedHashSet<String>();
+        Paragraph p = paragraph(c, id, paragraphWarnings, lists, styles, links, comments);
+        paragraphWarnings.remove("Run feature: drawing");
+        paragraphWarnings.remove("Paragraph feature: sectPr");
+        Element paragraphProps = Xml.child(c, "pPr");
+        Element section = paragraphProps == null ? null : Xml.child(paragraphProps, "sectPr");
+        if (section != null) sectionElements.put(p.id, section);
+        warnings.addAll(paragraphWarnings);
+        List<Picture> images = pictures.read(c, id, warnings);
+        if (images.isEmpty() || p.text.length() > 0 || section != null) blocks = blocks.append(p);
+        if (!images.isEmpty() && p.text.length() > 0)
+          warnings.add("Pictures embedded in text moved after their paragraph");
+        Element props = Xml.child(c, "pPr"), jc = props == null ? null : Xml.child(props, "jc");
+        String align = jc == null ? "left" : Xml.attr(jc, "val", "left");
+        if (!"center".equals(align) && !"right".equals(align)) align = "left";
+        for (Picture image : images)
+          blocks = blocks.append(image.resize(image.width, image.height, image.alt, align));
+      } else if ("tbl".equals(kind)) {
+        Table table = readTable(c, id, warnings, lists, styles, links, comments);
+        if (table != null) blocks = blocks.append(table);
+      } else if (!"sectPr".equals(kind)) warnings.add("Document feature: " + kind);
     }
-    if (blocks.size() == 0) blocks = blocks.append(new Paragraph("p" + id[0]++, new RichText()));
-    if (parts.containsKey("word/styles.xml"))
-      warnings.add("Named style inheritance is not resolved");
-    if (parts.containsKey("word/numbering.xml"))
-      warnings.add("Numbering definitions are not resolved");
-    return new Opened(new Document(blocks, page, "Imported document", id[0]), warnings, parts);
+    if (blocks.size() == 0
+        || !(blocks.get(blocks.size() - 1) instanceof Paragraph)
+        || sectionElements.containsKey(blocks.get(blocks.size() - 1).id()))
+      blocks = blocks.append(new Paragraph("p" + id[0]++, new RichText()));
+    Map<String, Section> sections = new LinkedHashMap<String, Section>();
+    for (Map.Entry<String, Element> sectionEntry : sectionElements.entrySet())
+      sections.put(
+          sectionEntry.getKey(), readSection(parts, sectionEntry.getValue(), id, warnings, styles));
+    Section last = readSection(parts, Xml.child(body, "sectPr"), id, warnings, styles);
+    Document document =
+        new Document(blocks, last.page, "Imported document", id[0]).sections(sections, last);
+    document = document.comments(comments.read(document, warnings));
+    document = document.bookmarks(comments.bookmarks.read(document, warnings));
+    Element settings =
+        parts.containsKey("word/settings.xml") ? Xml.parse(parts.get("word/settings.xml")) : null;
+    document =
+        document
+            .notes(NoteFormats.read(settings, warnings))
+            .bibliography(BibliographyFormats.read(parts, warnings));
+    Element tracking = settings == null ? null : Xml.child(settings, "trackRevisions");
+    document =
+        RevisionFormats.reserveIds(document.trackChanges(tracking != null && enabled(tracking)));
+    Map<String, ParagraphStyle> definitions =
+        new LinkedHashMap<String, ParagraphStyle>(ParagraphStyle.defaults());
+    for (Map.Entry<String, String> styleEntry : styles.paragraphNames().entrySet()) {
+      Element p =
+          Xml.parse(
+              "<w:p><w:pPr><w:pStyle w:val=\""
+                  + Xml.escape(styleEntry.getKey())
+                  + "\"/></w:pPr></w:p>");
+      Paragraph template =
+          paragraph(
+              p,
+              new long[] {1},
+              warnings,
+              lists,
+              styles,
+              links,
+              new DocxComments(Collections.<String, byte[]>emptyMap()),
+              true);
+      definitions.put(
+          styleEntry.getKey(),
+          new ParagraphStyle(
+              styleEntry.getKey(),
+              styleEntry.getValue(),
+              template,
+              styles.text(styleEntry.getKey(), null)));
+    }
+    document = Notes.normalize(document.styles(definitions));
+
+    return new Opened(document, warnings, parts);
+  }
+
+  private static Table readTable(
+      Element table,
+      long[] id,
+      Set<String> warnings,
+      DocxLists.Read lists,
+      DocxStyles styles,
+      DocxLinks links,
+      DocxComments comments) {
+    List<List<Sequence<Paragraph>>> rows = new ArrayList<List<Sequence<Paragraph>>>();
+    List<int[]> spans = new ArrayList<int[]>();
+    for (Element row : Xml.children(table, "tr")) {
+      List<Sequence<Paragraph>> cells = new ArrayList<Sequence<Paragraph>>();
+      for (Element cell : Xml.children(row, "tc")) {
+        Element props = Xml.child(cell, "tcPr"),
+            grid = props == null ? null : Xml.child(props, "gridSpan"),
+            vertical = props == null ? null : Xml.child(props, "vMerge");
+        int width = grid == null ? 1 : Integer.parseInt(Xml.attr(grid, "val", "1"));
+        if (width < 1 || width > 100)
+          throw new IllegalArgumentException("Invalid table column span");
+        int column = cells.size();
+        if (column + width > 100 || rows.size() >= 1000)
+          throw new IllegalArgumentException("Table size limit exceeded");
+        boolean continuation =
+            vertical != null && !"restart".equals(Xml.attr(vertical, "val", "continue"));
+        Sequence<Paragraph> content = new Sequence<Paragraph>();
+        for (Element p : Xml.children(cell, "p"))
+          content = content.append(paragraph(p, id, warnings, lists, styles, links, comments));
+        if (content.size() == 0)
+          content = content.append(new Paragraph("p" + id[0]++, new RichText()));
+        if (continuation) {
+          int[] found = null;
+          for (int[] old : spans)
+            if (old[1] == column && old[3] == width && old[0] + old[2] == rows.size()) found = old;
+          if (found == null) warnings.add("Unmatched vertical table merge requires conversion");
+          else {
+            found[2]++;
+            if (!Table.cellText(content).isEmpty())
+              warnings.add("Content in a vertical merge continuation requires conversion");
+          }
+        } else if (width > 1 || vertical != null)
+          spans.add(new int[] {rows.size(), column, 1, width});
+        cells.add(content);
+        for (int i = 1; i < width; i++)
+          cells.add(new Sequence<Paragraph>().append(new Paragraph("p" + id[0]++, new RichText())));
+        if (props != null)
+          for (Element prop : Xml.children(props, null)) {
+            String name = Xml.local(prop);
+            if (!"gridSpan".equals(name)
+                && !"vMerge".equals(name)
+                && !"tcW".equals(name)
+                && !"tcBorders".equals(name)
+                && !"tcMar".equals(name)
+                && !"shd".equals(name)
+                && !"vAlign".equals(name)) warnings.add("Table cell property: " + name);
+          }
+        for (Element child : Xml.children(cell, null))
+          if (!"p".equals(Xml.local(child)) && !"tcPr".equals(Xml.local(child)))
+            warnings.add("Nested table content needs conversion");
+      }
+      if (!cells.isEmpty()) rows.add(cells);
+    }
+    if (rows.isEmpty()) return null;
+    int columns = 0;
+    for (List<Sequence<Paragraph>> row : rows) columns = Math.max(columns, row.size());
+    for (List<Sequence<Paragraph>> row : rows)
+      while (row.size() < columns)
+        row.add(new Sequence<Paragraph>().append(new Paragraph("p" + id[0]++, new RichText())));
+    List<Table.Merge> merges = new ArrayList<Table.Merge>();
+    for (int[] span : spans)
+      if (span[2] > 1 || span[3] > 1)
+        merges.add(new Table.Merge(span[0], span[1], span[2], span[3]));
+    return TableFormats.readDocx(table, new Table("t" + id[0]++, rows, merges), warnings);
   }
 
   private static float twips(Element e, String key, int fallback) {
     return Float.parseFloat(Xml.attr(e, key, Integer.toString(fallback))) / 20f;
   }
 
-  private static Paragraph paragraph(Element e, long[] id, Set<String> warnings) {
+  static Paragraph paragraph(
+      Element e,
+      long[] id,
+      Set<String> warnings,
+      DocxLists.Read lists,
+      DocxStyles styles,
+      DocxLinks links,
+      DocxComments comments) {
+    return paragraph(e, id, warnings, lists, styles, links, comments, false);
+  }
+
+  private static Paragraph paragraph(
+      Element e,
+      long[] id,
+      Set<String> warnings,
+      DocxLists.Read lists,
+      DocxStyles styles,
+      DocxLinks links,
+      DocxComments comments,
+      boolean styleTemplate) {
     RichText text = new RichText();
-    String style = "Normal", align = "left";
+    String style = styles.defaultParagraph(), align = "left", list = "";
     float before = 0, after = 6, indent = 0, line = 1.2f;
     boolean pageBreak = false, keep = false;
+    int listLevel = 0, listStart = 0;
+    String listFormat = "decimal", listId = "";
+    ParagraphFormat layout =
+        ParagraphFormat.DEFAULT.with("tabInterval", String.valueOf(styles.tabInterval));
     Element props = Xml.child(e, "pPr");
-    if (props != null)
-      for (Element p : Xml.children(props, null)) {
-        String kind = Xml.local(p);
-        if ("pStyle".equals(kind)) style = Xml.attr(p, "val", "Normal");
-        else if ("jc".equals(kind)) align = Xml.attr(p, "val", "left");
-        else if ("spacing".equals(kind)) {
-          before = twips(p, "before", 0);
-          after = twips(p, "after", 120);
-          line = Float.parseFloat(Xml.attr(p, "line", "288")) / 240f;
-          if (!"auto".equals(Xml.attr(p, "lineRule", "auto")))
-            warnings.add("Exact line spacing is approximated");
-          line = Math.max(1, line);
-        } else if ("ind".equals(kind)) indent = Math.max(0, twips(p, "left", 0));
-        else if ("pageBreakBefore".equals(kind)) pageBreak = enabled(p);
-        else if ("keepNext".equals(kind)) keep = enabled(p);
-        else warnings.add("Paragraph feature: " + kind);
+    if (props != null && Xml.child(props, "pStyle") != null)
+      style = Xml.attr(Xml.child(props, "pStyle"), "val", style);
+    List<Element> properties = styles.paragraphProperties(style);
+    if (!styleTemplate)
+      for (int i = properties.size() - 1; i >= 0; i--)
+        if ("outlineLvl".equals(Xml.local(properties.get(i)))) properties.remove(i);
+    if (props != null) properties.addAll(Xml.children(props, null));
+    for (Element p : properties) {
+      String kind = Xml.local(p);
+      if ("pStyle".equals(kind)) style = Xml.attr(p, "val", "Normal");
+      else if ("numPr".equals(kind)) {
+        Element n = Xml.child(p, "numId"), level = Xml.child(p, "ilvl");
+        listId = n == null ? "" : Xml.attr(n, "val", "");
+        listLevel = level == null ? 0 : Integer.parseInt(Xml.attr(level, "val", "0"));
+      } else if ("jc".equals(kind)) align = Xml.attr(p, "val", "left");
+      else if ("spacing".equals(kind)) {
+        before = twips(p, "before", Math.round(before * 20));
+        after = twips(p, "after", Math.round(after * 20));
+        // A spacing element that only overrides before/after must retain the
+        // line rule and amount inherited from the paragraph's named style.
+        String rule = Xml.attr(p, "lineRule", layout.lineRule);
+        float stored = line * ("auto".equals(layout.lineRule) ? 240 : 20);
+        line =
+            Math.max(
+                .06f,
+                Float.parseFloat(Xml.attr(p, "line", "" + stored))
+                    / ("auto".equals(rule) ? 240f : 20f));
+        layout = layout.with("lineRule", rule);
+      } else if ("ind".equals(kind)) {
+        indent = Math.max(0, twips(p, "left", 0));
+        layout = layout.with("rightIndent", String.valueOf(Math.max(0, twips(p, "right", 0))));
+        layout =
+            layout.with(
+                "firstIndent", String.valueOf(twips(p, "firstLine", 0) - twips(p, "hanging", 0)));
+      } else if ("keepLines".equals(kind))
+        layout = layout.with("keepLines", String.valueOf(enabled(p)));
+      else if ("widowControl".equals(kind))
+        layout = layout.with("widowControl", String.valueOf(enabled(p)));
+      else if ("outlineLvl".equals(kind)) {
+        int level = Integer.parseInt(Xml.attr(p, "val", "9"));
+        if (level < 0 || level > 9)
+          throw new IllegalArgumentException("Invalid DOCX outline level");
+        layout = layout.with("outlineLevel", "" + (level == 9 ? 0 : level + 1));
+      } else if ("tabs".equals(kind)) {
+        List<TabStop> stops = new ArrayList<TabStop>(layout.tabs);
+        for (Element tab : Xml.children(p, "tab")) {
+          float position = twips(tab, "pos", 0);
+          String alignment = Xml.attr(tab, "val", "left"), leader = Xml.attr(tab, "leader", "none");
+          for (int i = stops.size() - 1; i >= 0; i--)
+            if (Math.abs(stops.get(i).position - position) < .01f) stops.remove(i);
+          if ("clear".equals(alignment)) continue;
+          try {
+            stops.add(new TabStop(position, alignment, leader));
+          } catch (IllegalArgumentException unsupported) {
+            warnings.add("Unsupported tab stop: " + alignment + "/" + leader);
+          }
+        }
+        layout = layout.with("tabs", TabStop.encode(stops));
+      } else if ("pageBreakBefore".equals(kind)) pageBreak = enabled(p);
+      else if ("keepNext".equals(kind)) keep = enabled(p);
+      else if (!"rPr".equals(kind) && !"pPrChange".equals(kind))
+        warnings.add("Paragraph feature: " + kind);
+    }
+    List<TabStop> stops = layout.tabs;
+    boolean periodic = stops.size() == 64;
+    float interval = stops.isEmpty() ? 36 : stops.get(0).position;
+    for (int i = 0; i < stops.size(); i++) {
+      TabStop stop = stops.get(i);
+      periodic &=
+          "left".equals(stop.alignment)
+              && "none".equals(stop.leader)
+              && Math.abs(stop.position - (i + 1) * interval) < .01f;
+    }
+    if (periodic && interval > 0 && interval <= 1000)
+      layout = layout.with("tabInterval", String.valueOf(interval)).with("tabs", "");
+    final String paragraphStyle = style;
+    text =
+        DocxFields.read(
+            e, (run, link) -> run(run, warnings, styles, paragraphStyle, link), links, warnings);
+    if (!listId.isEmpty() && !"0".equals(listId)) {
+      DocxLists.Definition definition = lists.take(listId, listLevel);
+      if (definition == null) warnings.add("Unresolved list numbering");
+      else {
+        list = definition.kind;
+        listStart = definition.start;
+        listFormat = definition.format;
       }
-    for (Element c : Xml.children(e, null)) {
-      if ("r".equals(Xml.local(c))) text = text.concat(run(c, warnings));
-      else if (!"pPr".equals(Xml.local(c))) {
-        warnings.add("Inline feature: " + Xml.local(c));
-        for (Element r : Xml.children(c, "r")) text = text.concat(run(r, warnings));
+    } else lists.body();
+    if (!list.isEmpty()) indent = Math.max(0, indent - 18 * (listLevel + 1));
+    Paragraph paragraph =
+        new Paragraph(
+            "p" + id[0]++,
+            text,
+            style,
+            align,
+            list,
+            before,
+            after,
+            indent,
+            line,
+            pageBreak,
+            keep,
+            listLevel,
+            listStart,
+            listFormat,
+            layout);
+    Element markProps = props == null ? null : Xml.child(props, "rPr");
+    if (markProps != null) {
+      Element insert = Xml.child(markProps, "ins"), delete = Xml.child(markProps, "del");
+      Revision mark = insert == null ? null : RevisionFormats.docxRead(insert);
+      if (delete != null) mark = RevisionFormats.docxRead(delete).previous(mark);
+      paragraph = paragraph.breakRevision(mark);
+    }
+    Element prior = props == null ? null : Xml.child(props, "pPrChange");
+    if (prior != null && Xml.child(prior, "pPr") != null) {
+      Element container = new Element("w:p");
+      Element previous = Xml.child(prior, "pPr");
+      prior.removeChildAt(prior.getChildIndex(previous));
+      container.addChild(previous);
+      DocxLists.Read priorLists = new DocxLists.Read();
+      priorLists.definitions.putAll(lists.definitions);
+      Paragraph previousParagraph =
+          paragraph(container, new long[] {0}, warnings, priorLists, styles, links, comments);
+      container.removeChildAt(0);
+      prior.addChild(previous);
+      paragraph =
+          paragraph.formatRevision(
+              new Revision(
+                  Xml.attr(prior, "id", "0"),
+                  "format",
+                  Xml.attr(prior, "author", ""),
+                  Xml.attr(prior, "date", "")),
+              previousParagraph);
+      if (!previousParagraph.style.equals(paragraphStyle)) {
+        final String previousStyle = previousParagraph.style;
+        final Revision styleChange = paragraph.formatRevision;
+        paragraph =
+            paragraph.text(
+                DocxFields.read(
+                    e,
+                    (element, link) -> {
+                      RichText current = run(element, warnings, styles, paragraphStyle, link);
+                      TextStyle old =
+                          run(element, warnings, styles, previousStyle, link).styleAt(0);
+                      return current.mapStyles(
+                          value ->
+                              value.formatRevision == null
+                                  ? value.trackedProperties(old, styleChange)
+                                  : value);
+                    },
+                    links,
+                    warnings));
       }
     }
-    return new Paragraph(
-        "p" + id[0]++, text, style, align, "", before, after, indent, line, pageBreak, keep);
+    comments.scan(e, paragraph.id, warnings);
+    return paragraph;
   }
 
   private static boolean enabled(Element e) {
@@ -159,41 +414,28 @@ public final class Docx {
     return !("0".equals(v) || "false".equals(v) || "off".equals(v) || "none".equals(v));
   }
 
-  private static RichText run(Element e, Set<String> warnings) {
-    TextStyle defaults = TextStyle.DEFAULT;
-    String font = defaults.font;
-    float size = defaults.size;
-    int color = defaults.color, background = defaults.background;
-    boolean bold = defaults.bold, italic = defaults.italic,
-        underline = defaults.underline, strike = defaults.strike;
-    Element props = Xml.child(e, "rPr");
-    if (props != null)
-      for (Element p : Xml.children(props, null)) {
-        String k = Xml.local(p);
-        if ("b".equals(k)) bold = enabled(p);
-        else if ("i".equals(k)) italic = enabled(p);
-        else if ("u".equals(k)) underline = enabled(p);
-        else if ("strike".equals(k)) strike = enabled(p);
-        else if ("sz".equals(k)) size = Float.parseFloat(Xml.attr(p, "val", "24")) / 2;
-        else if ("color".equals(k)) {
-          String v = Xml.attr(p, "val", "202833");
-          if (!"auto".equals(v)) color = Integer.parseInt(v, 16);
-        } else if ("rFonts".equals(k)) font = Xml.attr(p, "ascii", "Serif");
-        else if ("shd".equals(k)) background = Integer.parseInt(Xml.attr(p, "fill", "ffffff"), 16);
-        else warnings.add("Character feature: " + k);
-      }
-    TextStyle style = new TextStyle(font, size, color, bold, italic, underline, strike,
-        background, defaults.link);
+  private static RichText run(
+      Element e, Set<String> warnings, DocxStyles styles, String paragraphStyle, String link) {
+    TextStyle style = styles.text(paragraphStyle, Xml.child(e, "rPr"));
+    if (!link.isEmpty()) style = style.with("link", link);
     StringBuilder b = new StringBuilder();
     for (Element c : Xml.children(e, null)) {
       String k = Xml.local(c);
-      if ("t".equals(k)) b.append(Xml.text(c));
+      if ("t".equals(k) || "delText".equals(k)) b.append(Xml.text(c));
       else if ("tab".equals(k)) b.append('\t');
       else if ("br".equals(k) || "cr".equals(k)) {
         b.append('\n');
         if ("page".equals(Xml.attr(c, "type", "")))
           warnings.add("Inline page break converted to line break");
-      } else if (!"rPr".equals(k)) warnings.add("Run feature: " + k);
+      } else if (!"rPr".equals(k)
+          && !"commentReference".equals(k)
+          && !"fldChar".equals(k)
+          && !"instrText".equals(k)
+          && !"delInstrText".equals(k)
+          && !"footnoteReference".equals(k)
+          && !"endnoteReference".equals(k)
+          && !"footnoteRef".equals(k)
+          && !"endnoteRef".equals(k)) warnings.add("Run feature: " + k);
     }
     return RichText.of(b.toString(), style);
   }
@@ -202,26 +444,23 @@ public final class Docx {
     LinkedHashSet<String> warnings = new LinkedHashSet<String>();
     if (source != null && source.document == d) return new ArrayList<String>();
     if (source != null) warnings.addAll(source.warnings);
-    for (Block b : d.blocks) {
-      if (b instanceof Paragraph) exportWarnings((Paragraph) b, warnings);
-      else if (b instanceof Table) {
-        Table t = (Table) b;
-        for (int r = 0; r < t.rows(); r++)
-          for (int c = 0; c < t.columns(); c++)
-            for (Paragraph p : t.cell(r, c)) exportWarnings(p, warnings);
-      }
-    }
+
+    DocxTabs tabs = new DocxTabs(d);
+    for (Paragraph paragraph : DocxTabs.paragraphs(d))
+      exportWarnings(paragraph, warnings, tabs.interval);
     return new ArrayList<String>(warnings);
   }
 
-  private static void exportWarnings(Paragraph p, Set<String> warnings) {
-    if (!p.list.isEmpty())
-      warnings.add("List numbering is not exported by the initial DOCX writer");
-    p.text.visit(
-        (o, text, style) -> {
-          if (!style.link.isEmpty())
-            warnings.add("Hyperlink targets are not exported by the initial DOCX writer");
-        });
+  private static void exportWarnings(Paragraph p, Set<String> warnings, float interval) {
+    if (p.format.tabInterval != interval)
+      for (TabStop stop : p.format.tabs)
+        if ("bar".equals(stop.alignment)) {
+          warnings.add(
+              "Bar tabs with paragraph-specific default intervals require DOCX" + " conversion");
+          break;
+        }
+    if (!p.list.isEmpty() && !"bullet".equals(p.list) && !"number".equals(p.list))
+      warnings.add("Unsupported list format: " + p.list);
   }
 
   public static void write(Document d, OutputStream out) throws IOException {
@@ -237,7 +476,29 @@ public final class Docx {
     final Map<String, byte[]> parts = new LinkedHashMap<String, byte[]>();
     if (source != null) parts.putAll(source.parts);
     if (!original) {
-      parts.put("word/document.xml", documentXml(d).getBytes("UTF-8"));
+      DocxLists lists = new DocxLists(d);
+      DocxTabs tabs = new DocxTabs(d);
+      DocxLinks links = new DocxLinks(parts);
+      links.notes = new DocxNotes(d);
+      DocxComments comments = new DocxComments(d);
+      DocxPictures pictures = new DocxPictures(parts);
+      List<DocxFurniture> furniture = new ArrayList<DocxFurniture>();
+      boolean even = false;
+      for (Section.Range section : d.sectionRanges()) even |= section.raw.furniture.differentEven;
+      int sectionIndex = 0;
+      for (Section.Range section : d.sectionRanges()) {
+        PageFurniture f = section.raw.furniture;
+        furniture.add(
+            new DocxFurniture(
+                d.page(section.raw.page)
+                    .furniture(
+                        f.options(f.differentFirst, even, f.headerDistance, f.footerDistance)),
+                parts,
+                sectionIndex++ == 0 ? "" : "S" + (sectionIndex - 1) + "-"));
+      }
+      parts.put(
+          "word/document.xml",
+          documentXml(d, lists, tabs, links, comments, pictures, furniture).getBytes("UTF-8"));
       if (source == null) {
         parts.put(
             "[Content_Types].xml",
@@ -258,6 +519,14 @@ public final class Docx {
                  + " Target=\"word/document.xml\"/></Relationships>")
                 .getBytes("UTF-8"));
       }
+      lists.packageParts(parts);
+      links.packageParts(parts);
+      comments.packageParts(parts);
+      pictures.packageParts();
+      writeStyles(d, parts, lists, tabs, links);
+      for (DocxFurniture part : furniture) part.packageParts(parts, lists, tabs);
+      links.notes.packageParts(parts, lists, tabs);
+      BibliographyFormats.write(parts, d.bibliography);
     }
     ZipOutputStream zip = new ZipOutputStream(out);
     for (Map.Entry<String, byte[]> e : parts.entrySet()) {
@@ -271,38 +540,203 @@ public final class Docx {
     zip.flush();
   }
 
-  private static String documentXml(Document d) {
+  private static void writeStyles(
+      Document d, Map<String, byte[]> parts, DocxLists lists, DocxTabs tabs, DocxLinks links)
+      throws IOException {
+    StringBuilder xml = new StringBuilder("<w:styles xmlns:w=\"").append(W).append("\">");
+    DocxComments comments = new DocxComments(Document.empty());
+    for (ParagraphStyle style : d.styles.values()) {
+      StringBuilder paragraph = new StringBuilder();
+      writeParagraph(paragraph, style.paragraph, lists, tabs.withoutStyles(), links, comments);
+      String content = paragraph.toString();
+      int first = content.indexOf("<w:pPr>"), last = content.indexOf("</w:pPr>") + 8;
+      String props = content.substring(first, last);
+      int ps = props.indexOf("<w:pStyle");
+      if (ps >= 0) props = props.substring(0, ps) + props.substring(props.indexOf("/>", ps) + 2);
+      StringBuilder run = new StringBuilder();
+      writeRun(run, " ", style.text, links);
+      String r = run.toString();
+      String rpr = r.substring(r.indexOf("<w:rPr>"), r.indexOf("</w:rPr>") + 8);
+      xml.append("<w:style w:type=\"paragraph\" w:styleId=\"")
+          .append(Xml.escape(style.id))
+          .append("\"");
+      if ("Normal".equals(style.id)) xml.append(" w:default=\"1\"");
+      xml.append("><w:name w:val=\"")
+          .append(Xml.escape(style.name))
+          .append("\"/><w:qFormat/>")
+          .append(props)
+          .append(rpr)
+          .append("</w:style>");
+    }
+    parts.put("word/styles.xml", xml.append("</w:styles>").toString().getBytes("UTF-8"));
+    String path = "word/_rels/document.xml.rels",
+        rels =
+            parts.containsKey(path)
+                ? new String(parts.get(path), "UTF-8")
+                : "<Relationships"
+                      + " xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"></Relationships>";
+    boolean found = false;
+    Set<String> ids = new HashSet<String>();
+    for (Element e : Xml.children(Xml.parse(rels), null)) {
+      ids.add(Xml.attr(e, "Id", ""));
+      if (Xml.attr(e, "Type", "").endsWith("/styles")) found = true;
+    }
+    if (!found) {
+      String id = "cn1Styles";
+      while (ids.contains(id)) id += "x";
+      rels =
+          DocxLists.insert(
+              rels,
+              "<Relationship"
+                  + " xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\""
+                  + " Id=\""
+                  + id
+                  + "\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles\""
+                  + " Target=\"styles.xml\"/>");
+      parts.put(path, rels.getBytes("UTF-8"));
+    }
+    path = "[Content_Types].xml";
+    if (parts.containsKey(path)) {
+      String types = new String(parts.get(path), "UTF-8");
+      found = false;
+      for (Element e : Xml.children(Xml.parse(types), null))
+        if ("/word/styles.xml".equals(Xml.attr(e, "PartName", ""))) found = true;
+      if (!found)
+        parts.put(
+            path,
+            DocxLists.insert(
+                    types,
+                    "<Override"
+                        + " xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\""
+                        + " PartName=\"/word/styles.xml\""
+                        + " ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml\"/>")
+                .getBytes("UTF-8"));
+    }
+  }
+
+  private static String documentXml(
+      Document d,
+      DocxLists lists,
+      DocxTabs tabs,
+      DocxLinks links,
+      DocxComments comments,
+      DocxPictures pictures,
+      List<DocxFurniture> furniture) {
     StringBuilder b =
         new StringBuilder("<?xml version=\"1.0\" encoding=\"UTF-8\"?><w:document xmlns:w=\"")
             .append(W)
-            .append("\"><w:body>");
+            .append(
+                "\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\"><w:body>");
+    int sectionIndex = 0;
+    List<Section.Range> sections = d.sectionRanges();
+    List<int[]> contentsRanges = TableContents.ranges(d);
+    int[] indexRange = DocumentIndex.range(d);
+    if (indexRange != null) contentsRanges.add(indexRange);
+    int[] authorities = TableAuthorities.range(d);
+    if (authorities != null) contentsRanges.add(authorities);
+    int[] bibliography = Citations.range(d);
+    if (bibliography != null) contentsRanges.add(bibliography);
+    Collections.sort(contentsRanges, (a, c) -> a[0] - c[0]);
+    int rangeIndex = 0;
+    int[] contents = contentsRanges.isEmpty() ? null : contentsRanges.get(0);
+    InlineField contentsField = contents == null ? null : DocxToc.marker(d.paragraph(contents[0]));
+    int blockIndex = 0;
     for (Block block : d.blocks) {
-      if (block instanceof Paragraph) writeParagraph(b, (Paragraph) block);
+      if (contents != null && blockIndex == contents[0])
+        b.append(
+            "BIBLIOGRAPHY".equals(new FieldCode(contentsField.instruction).name)
+                ? DocxToc.START.replace("Table of Contents", "Bibliographies")
+                : "TOA".equals(new FieldCode(contentsField.instruction).name)
+                    ? DocxToc.START.replace("Table of Contents", "Table of Authorities")
+                    : "INDEX".equals(new FieldCode(contentsField.instruction).name)
+                        ? DocxToc.START.replace("Table of Contents", "Indexes")
+                        : new FieldCode(contentsField.instruction).switches.containsKey("c")
+                            ? DocxToc.START.replace("Table of Contents", "Table of Figures")
+                            : DocxToc.START);
+      PageSpec sectionPage = sections.get(sectionIndex).raw.page;
+      if (block instanceof Paragraph) {
+        Section end = d.sections.get(block.id());
+        String sectionXml = end == null ? "" : sectionXml(end, furniture.get(sectionIndex++));
+        Paragraph paragraph = (Paragraph) block;
+        String prefix = "", suffix = "";
+        if (contents != null && contents[1] > contents[0] + 1) {
+          if (blockIndex == contents[0])
+            paragraph =
+                DocxToc.withoutMarker(paragraph)
+                    .with(
+                        "style",
+                        "BIBLIOGRAPHY".equals(new FieldCode(contentsField.instruction).name)
+                            ? "BibliographyHeading"
+                            : "TOA".equals(new FieldCode(contentsField.instruction).name)
+                                ? "TOAHeading"
+                                : "INDEX".equals(new FieldCode(contentsField.instruction).name)
+                                    ? "IndexHeading"
+                                    : "TOCHeading");
+          if (blockIndex == contents[0] + 1) prefix = DocxToc.begin(contentsField);
+          if (blockIndex == contents[1] - 1) suffix = DocxToc.END_FIELD;
+        }
+        writeParagraph(b, paragraph, lists, tabs, links, comments, sectionXml, prefix, suffix);
+      } else if (block instanceof Picture) pictures.write(b, (Picture) block);
       else if (block instanceof Table) {
         Table t = (Table) block;
-        b.append("<w:tbl><w:tblPr><w:tblW w:w=\"0\" w:type=\"auto\"/></w:tblPr><w:tblGrid>");
+        b.append("<w:tbl><w:tblPr>");
+        TableFormats.sizingXml(b, t.format);
+        float tableWidth = t.format.preferredWidth(sectionPage.contentWidth());
+        TableFormats.alternativeXml(b, t.format);
+        b.append("</w:tblPr><w:tblGrid>");
         for (int c = 0; c < t.columns(); c++)
           b.append("<w:gridCol w:w=\"")
-              .append(Math.round(d.page.contentWidth() * 20 / t.columns()))
+              .append(Math.round(20 * tableWidth * t.format.columnFraction(c)))
               .append("\"/>");
         b.append("</w:tblGrid>");
         for (int r = 0; r < t.rows(); r++) {
           b.append("<w:tr>");
+          TableFormats.rowXml(b, t.format, r);
           for (int c = 0; c < t.columns(); c++) {
-            b.append("<w:tc>");
-            for (Paragraph p : t.cell(r, c)) writeParagraph(b, p);
+            Table.Merge span = t.span(r, c);
+            if (span.column != c) continue;
+            b.append("<w:tc><w:tcPr>");
+            float cellWidth = 0;
+            for (int column = c; column < c + span.columns; column++)
+              cellWidth += tableWidth * t.format.columnFraction(column);
+            TableFormats.cellXml(b, t.format.cell(span.row, span.column), cellWidth);
+            if (span.columns > 1)
+              b.append("<w:gridSpan w:val=\"").append(span.columns).append("\"/>");
+            if (span.rows > 1)
+              b.append(r == span.row ? "<w:vMerge w:val=\"restart\"/>" : "<w:vMerge/>");
+            b.append("</w:tcPr>");
+            if (span.row == r)
+              for (Paragraph p : t.cell(r, c)) writeParagraph(b, p, lists, tabs, links, comments);
+            else b.append("<w:p/>");
             b.append("</w:tc>");
           }
           b.append("</w:tr>");
         }
         b.append("</w:tbl>");
       }
+      if (contents != null && blockIndex == contents[1] - 1) {
+        b.append("</w:sdtContent></w:sdt>");
+        contents = ++rangeIndex < contentsRanges.size() ? contentsRanges.get(rangeIndex) : null;
+        contentsField = contents == null ? null : DocxToc.marker(d.paragraph(contents[0]));
+      }
+      blockIndex++;
     }
-    PageSpec p = d.page;
-    b.append("<w:sectPr><w:pgSz w:w=\"")
+    b.append(sectionXml(d.lastSection, furniture.get(furniture.size() - 1)));
+    return b.append("</w:body></w:document>").toString();
+  }
+
+  private static String sectionXml(Section section, DocxFurniture furniture) {
+    StringBuilder b = new StringBuilder("<w:sectPr>");
+    furniture.references(b);
+    NoteFormats.write(b, section.notes, "w:");
+    PageSpec p = section.page;
+    b.append("<w:type w:val=\"").append(section.start).append("\"/>");
+    b.append("<w:pgSz w:w=\"")
         .append(Math.round(p.width * 20))
         .append("\" w:h=\"")
         .append(Math.round(p.height * 20))
+        .append("\" w:orient=\"")
+        .append(p.width > p.height ? "landscape" : "portrait")
         .append("\"/><w:pgMar w:top=\"")
         .append(Math.round(p.top * 20))
         .append("\" w:right=\"")
@@ -311,60 +745,258 @@ public final class Docx {
         .append(Math.round(p.bottom * 20))
         .append("\" w:left=\"")
         .append(Math.round(p.left * 20))
-        .append("\"/></w:sectPr></w:body></w:document>");
-    return b.toString();
+        .append("\" w:header=\"")
+        .append(Math.round(section.furniture.headerDistance * 20))
+        .append("\" w:footer=\"")
+        .append(Math.round(section.furniture.footerDistance * 20))
+        .append("\"/>");
+    if (section.pageStart > 0)
+      b.append("<w:pgNumType w:start=\"").append(section.pageStart).append("\"/>");
+    return b.append("</w:sectPr>").toString();
   }
 
-  private static void writeParagraph(final StringBuilder b, Paragraph p) {
+  private static Section readSection(
+      Map<String, byte[]> parts, Element e, long[] id, Set<String> warnings, DocxStyles styles)
+      throws IOException {
+    PageSpec page = PageSpec.A4;
+    String start = "nextPage";
+    int pageStart = 0;
+    if (e != null) {
+      Element size = Xml.child(e, "pgSz"),
+          margin = Xml.child(e, "pgMar"),
+          type = Xml.child(e, "type"),
+          numbers = Xml.child(e, "pgNumType");
+      try {
+        if (size != null && margin != null)
+          page =
+              new PageSpec(
+                  twips(size, "w", 11906),
+                  twips(size, "h", 16838),
+                  twips(margin, "top", 1080),
+                  twips(margin, "right", 1080),
+                  twips(margin, "bottom", 1080),
+                  twips(margin, "left", 1080));
+      } catch (RuntimeException ex) {
+        warnings.add("Invalid section geometry; using A4");
+      }
+      if (type != null) start = Xml.attr(type, "val", "nextPage");
+      if (!Arrays.asList("nextPage", "continuous", "oddPage", "evenPage").contains(start)) {
+        warnings.add("Unsupported section start: " + start);
+        start = "nextPage";
+      }
+      if (numbers != null) {
+        try {
+          pageStart = Integer.parseInt(Xml.attr(numbers, "start", "0"));
+        } catch (RuntimeException ex) {
+          warnings.add("Invalid page-number restart");
+        }
+        if (pageStart < 0 || pageStart > 1000000) {
+          pageStart = 0;
+          warnings.add("Invalid page-number restart");
+        }
+        if (!"decimal".equals(Xml.attr(numbers, "fmt", "decimal")))
+          warnings.add("Section page-number format");
+      }
+      for (Element child : Xml.children(e, null))
+        if (!Arrays.asList(
+                "pgSz",
+                "pgMar",
+                "type",
+                "pgNumType",
+                "titlePg",
+                "headerReference",
+                "footerReference",
+                "footnotePr",
+                "endnotePr")
+            .contains(Xml.local(child))) warnings.add("Section feature: " + Xml.local(child));
+    }
+    PageFurniture furniture =
+        DocxFurniture.read(
+            parts,
+            e,
+            id,
+            warnings,
+            DocxLists.read(parts.get("word/numbering.xml"), warnings),
+            styles);
+    return new Section(page, furniture, start, pageStart, NoteFormats.read(e, warnings));
+  }
+
+  static void writeParagraph(
+      final StringBuilder b,
+      Paragraph p,
+      DocxLists lists,
+      DocxTabs tabs,
+      final DocxLinks links,
+      DocxComments comments) {
+    writeParagraph(b, p, lists, tabs, links, comments, "");
+  }
+
+  private static void writeParagraph(
+      final StringBuilder b,
+      Paragraph p,
+      DocxLists lists,
+      DocxTabs tabs,
+      final DocxLinks links,
+      DocxComments comments,
+      String section) {
+    writeParagraph(b, p, lists, tabs, links, comments, section, "", "");
+  }
+
+  private static void writeParagraph(
+      StringBuilder b,
+      Paragraph p,
+      DocxLists lists,
+      DocxTabs tabs,
+      DocxLinks links,
+      DocxComments comments,
+      String section,
+      String prefix,
+      String suffix) {
     b.append("<w:p><w:pPr><w:pStyle w:val=\"")
         .append(Xml.escape(p.style))
         .append("\"/><w:jc w:val=\"")
-        .append(Xml.escape(p.align))
+        .append(Xml.escape("justify".equals(p.align) ? "both" : p.align))
         .append("\"/><w:spacing w:before=\"")
         .append(Math.round(p.before * 20))
         .append("\" w:after=\"")
         .append(Math.round(p.after * 20))
         .append("\" w:line=\"")
-        .append(Math.round(p.lineSpacing * 240))
-        .append("\" w:lineRule=\"auto\"/><w:ind w:left=\"")
-        .append(Math.round(p.indent * 20))
+        .append(Math.round(p.lineSpacing * ("auto".equals(p.format.lineRule) ? 240 : 20)))
+        .append("\" w:lineRule=\"")
+        .append(p.format.lineRule)
+        .append("\"/><w:ind w:left=\"")
+        .append(Math.round((p.indent + (p.list.isEmpty() ? 0 : 18 * (p.listLevel + 1))) * 20))
+        .append("\" w:right=\"")
+        .append(Math.round(p.format.rightIndent * 20))
+        .append(p.format.firstIndent < 0 ? "\" w:hanging=\"" : "\" w:firstLine=\"")
+        .append(Math.round(Math.abs(p.format.firstIndent) * 20))
         .append("\"/>");
+    if (lists.ids.containsKey(p))
+      b.append("<w:numPr><w:ilvl w:val=\"")
+          .append(p.listLevel)
+          .append("\"/><w:numId w:val=\"")
+          .append(lists.ids.get(p))
+          .append("\"/></w:numPr>");
     if (p.pageBreak) b.append("<w:pageBreakBefore/>");
     if (p.keepNext) b.append("<w:keepNext/>");
-    b.append("</w:pPr>");
-    p.text.visit(
-        new RichText.Visitor() {
-          public void run(int o, String text, TextStyle s) {
-            b.append("<w:r><w:rPr><w:rFonts w:ascii=\"")
-                .append(Xml.escape(s.font))
-                .append("\" w:hAnsi=\"")
-                .append(Xml.escape(s.font))
-                .append("\"/><w:sz w:val=\"")
-                .append(Math.round(s.size * 2))
-                .append("\"/><w:color w:val=\"")
-                .append(TextUtil.padded(s.color, 16, 6))
-                .append("\"/><w:shd w:fill=\"")
-                .append(TextUtil.padded(s.background, 16, 6))
-                .append("\"/>");
-            if (s.bold) b.append("<w:b/>");
-            if (s.italic) b.append("<w:i/>");
-            if (s.underline) b.append("<w:u w:val=\"single\"/>");
-            if (s.strike) b.append("<w:strike/>");
-            b.append("</w:rPr>");
-            String[] lines = TextUtil.split(text, '\n');
-            for (int i = 0; i < lines.length; i++) {
-              if (i > 0) b.append("<w:br/>");
-              String[] tabs = TextUtil.split(lines[i], '\t');
-              for (int j = 0; j < tabs.length; j++) {
-                if (j > 0) b.append("<w:tab/>");
-                b.append("<w:t xml:space=\"preserve\">")
-                    .append(Xml.escape(tabs[j]))
-                    .append("</w:t>");
-              }
-            }
-            b.append("</w:r>");
-          }
-        });
-    b.append("</w:p>");
+    if (p.format.outlineLevel >= 0)
+      b.append("<w:outlineLvl w:val=\"")
+          .append(p.format.outlineLevel == 0 ? 9 : p.format.outlineLevel - 1)
+          .append("\"/>");
+    b.append(p.format.keepLines ? "<w:keepLines/>" : "<w:keepLines w:val=\"0\"/>");
+    b.append(p.format.widowControl ? "<w:widowControl/>" : "<w:widowControl w:val=\"0\"/>");
+    tabs.write(b, p);
+    if (p.breakRevision != null) {
+      b.append("<w:rPr>");
+      for (Revision r = p.breakRevision; r != null; r = r.previous) {
+        RevisionFormats.start(b, r.previous(null));
+        RevisionFormats.end(b, r.previous(null));
+      }
+      b.append("</w:rPr>");
+    }
+    if (p.formatRevision != null) {
+      Revision change = p.formatRevision;
+      b.append("<w:pPrChange w:id=\"")
+          .append(Xml.escape(change.id))
+          .append("\" w:author=\"")
+          .append(Xml.escape(change.author))
+          .append("\" w:date=\"")
+          .append(Xml.escape(change.date))
+          .append("\">");
+      StringBuilder previous = new StringBuilder();
+      writeParagraph(
+          previous, p.previousFormat, lists, tabs, links, new DocxComments(Document.empty()));
+      String content = previous.toString();
+      b.append(content.substring(content.indexOf("<w:pPr>"), content.lastIndexOf("</w:pPr>") + 8));
+      b.append("</w:pPrChange>");
+    }
+    b.append(section).append("</w:pPr>");
+    b.append(prefix);
+    comments.content(b, p, links);
+    b.append(suffix).append("</w:p>");
+  }
+
+  static void writeRunProperties(StringBuilder b, TextStyle s) {
+    b.append("<w:rPr><w:rFonts w:ascii=\"")
+        .append(Xml.escape(s.font))
+        .append("\" w:hAnsi=\"")
+        .append(Xml.escape(s.font))
+        .append("\"/><w:sz w:val=\"")
+        .append(Math.round(s.size * 2))
+        .append("\"/><w:color w:val=\"")
+        .append(TextUtil.padded(s.color, 16, 6))
+        .append("\"/><w:shd w:fill=\"")
+        .append(TextUtil.padded(s.background, 16, 6))
+        .append("\"/>");
+    b.append(s.bold ? "<w:b/>" : "<w:b w:val=\"0\"/>");
+    b.append(s.italic ? "<w:i/>" : "<w:i w:val=\"0\"/>");
+    b.append("<w:u w:val=\"")
+        .append(s.characters.underlineStyle)
+        .append("\" w:color=\"")
+        .append(s.characters.value("underlineColor"))
+        .append("\"/>");
+    b.append(s.strike ? "<w:strike/>" : "<w:strike w:val=\"0\"/>");
+    String[] tags = {
+      "dstrike", "smallCaps", "caps", "vanish", "outline", "shadow", "emboss", "imprint"
+    };
+    boolean[] flags = {
+      s.characters.doubleStrike, s.characters.smallCaps, s.characters.allCaps, s.characters.hidden,
+      s.characters.outline, s.characters.shadow, s.characters.emboss, s.characters.engrave
+    };
+    for (int i = 0; i < tags.length; i++)
+      b.append("<w:")
+          .append(tags[i])
+          .append(" w:val=\"")
+          .append(flags[i] ? "1" : "0")
+          .append("\"/>");
+    b.append("<w:spacing w:val=\"")
+        .append(Math.round(s.characters.spacing * 20))
+        .append("\"/><w:w w:val=\"")
+        .append(Math.round(s.characters.scale))
+        .append("\"/><w:position w:val=\"")
+        .append(Math.round(s.characters.position * 2))
+        .append("\"/>");
+    b.append("<w:vertAlign w:val=\"").append(s.script).append("\"/>");
+    if (s.formatRevision != null) {
+      RevisionFormats.formatStart(b, s.formatRevision);
+      writeRunProperties(b, s.previousStyle);
+      b.append("</w:rPrChange>");
+    }
+    b.append("</w:rPr>");
+  }
+
+  static void writeRun(StringBuilder b, String text, TextStyle s, DocxLinks links) {
+    writeRun(b, text, s, links, s.revision != null && !s.revision.inserted());
+  }
+
+  static void writeRun(
+      StringBuilder b, String text, TextStyle s, DocxLinks links, boolean deleted) {
+    RevisionFormats.start(b, s.revision);
+    if (!s.link.isEmpty()) {
+      if (s.link.startsWith("#"))
+        b.append("<w:hyperlink w:anchor=\"").append(Xml.escape(s.link.substring(1))).append("\">");
+      else b.append("<w:hyperlink r:id=\"").append(Xml.escape(links.id(s.link))).append("\">");
+    }
+    b.append("<w:r>");
+    writeRunProperties(b, s);
+    String[] lines = TextUtil.split(text, '\n');
+    for (int i = 0; i < lines.length; i++) {
+      if (i > 0) b.append("<w:br/>");
+      String[] tabs = TextUtil.split(lines[i], '\t');
+      for (int j = 0; j < tabs.length; j++) {
+        if (j > 0) b.append("<w:tab/>");
+        String tag = deleted ? "delText" : "t";
+        b.append("<w:")
+            .append(tag)
+            .append(" xml:space=\"preserve\">")
+            .append(Xml.escape(tabs[j]))
+            .append("</w:")
+            .append(tag)
+            .append(">");
+      }
+    }
+    b.append("</w:r>");
+    if (!s.link.isEmpty()) b.append("</w:hyperlink>");
+    RevisionFormats.end(b, s.revision);
   }
 }

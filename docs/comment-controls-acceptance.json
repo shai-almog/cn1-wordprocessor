@@ -1,0 +1,129 @@
+{
+  "date": "2026-10-16",
+  "fullParity": false,
+  "artifactDirectory": "artifacts/parity-20261016-comment-controls",
+  "reactor": {
+    "tests": 356,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "nativeChecks": {
+    "total": 215,
+    "linux": {
+      "checks": 131,
+      "reports": [
+        "linux-input-comparison.json",
+        "linux-input-mailings.json",
+        "linux-input-keyboard.json",
+        "linux-native-field.json",
+        "linux-navigation.json",
+        "linux-typing.json",
+        "linux-graphemes.json",
+        "linux-comments.json"
+      ]
+    },
+    "mac": {
+      "checks": 42,
+      "reports": [
+        "mac-comments-final.json",
+        "mac-comparison.json",
+        "mac-mailings.json"
+      ]
+    },
+    "ios": {
+      "checks": 42,
+      "reports": [
+        "ios-comments.json",
+        "ios-comparison.json",
+        "ios-mailings.json"
+      ]
+    }
+  },
+  "phoneLayout": {
+    "screenshots": [
+      "ios-comment-controls.png",
+      "ios-edit-reply.png"
+    ],
+    "visuallyInspected": true,
+    "originalXmlRestored": true,
+    "includedInNativeCheckCount": false
+  },
+  "editedCommentCrossImport": {
+    "passed": 12,
+    "total": 12,
+    "bothDirections": true,
+    "renderingParityCertified": false
+  },
+  "commentNavigation": {
+    "passed": 20,
+    "total": 20,
+    "pairedScenarios": 5,
+    "bothReaders": true,
+    "markerPlacementMatches": true
+  },
+  "pairedDocumentCases": {
+    "passed": 59,
+    "total": 59,
+    "bothReaders": true
+  },
+  "reviewCrossImport": {
+    "passed": 20,
+    "total": 20
+  },
+  "frameworkRevision": "008f9ece62526d807c2064887ad8f8641d6195a4",
+  "frameworkPatches": {
+    "evidence": "docs/typing-acceptance.json",
+    "mac": "73d5950071f7bd0984ae02c126efd28c1579cd9e",
+    "linux": "120d445c7d48caf1331436d0c9904b16709479bb",
+    "newFrameworkChangesInThisBatch": false
+  },
+  "sourceFileCount": 336,
+  "sourceManifestSha256": "66641928471bac578d84e28df44ec65a27945c18d5a5126c2fc9754402328406",
+  "sourceArchiveSha256": "e4b616f5e3f7373b424201715dd704f492d8533c5d756f4f851c7e5a2cd201e7",
+  "artifacts": {
+    "linux-arm64-review": {
+      "bytes": 93108120,
+      "sha256": "3b259de3e6d5d4e8429e37736b511e5f1e12a4ff6a02139f2311c4260acd0a97"
+    },
+    "mac-arm64-review.tar.gz": {
+      "bytes": 12313323,
+      "sha256": "20a6430a70add674476ab6e151deda0ac1b2ea82208af4e03cb43a083aca7ecc"
+    },
+    "ios-arm64-simulator-debug.tar.gz": {
+      "bytes": 24430178,
+      "sha256": "23e289fc14dd619b08c81fa0e6f0a180d9e8e7e222ed9c2438dd43cc7b4185d3"
+    }
+  },
+  "macExecutableSha256": "b33bdd0d1e2bb7a56691e40768895cfea7e49ad5d6a046e627f3fd30f14210f1",
+  "iosExecutableSha256": "d9ec6dfa915d6bb07d2562a53f196a825f8857f2770c29d858be6e679da585da",
+  "limitations": [
+    "No full parity or matched performance claim.",
+    "Cross-cell and note/margin-story comment ranges unsupported.",
+    "Rich comment-body formatting, timestamps/mentions and full UI fidelity not certified.",
+    "Current-source Android/browser/Windows acceptance not performed.",
+    "iOS simulator MCP does not certify physical input. Linux uses Xvfb/XTest.",
+    "Artifact byte counts are not matched release-size, startup or RSS measurements.",
+    "Framework PRs still open; pending CI and Hugo rerun not counted as green."
+  ],
+  "processCleanup": {
+    "originalXmlRestored": true,
+    "recipientStateRestored": true,
+    "taskOwnedAppsStopped": true,
+    "linuxContainersStopped": true
+  },
+  "excludedRuns": {
+    "mac-comments.json": "Wrong test assumption: body cell context uses -1, not null; final 22 checks rerun successfully.",
+    "linux-build-offline-failed.log": "Maven plugin missing from offline cache; network-enabled build succeeded.",
+    "ios-layout-restoration.json": "Nested mobile dialog cleanup repaired; original XML and recovery verified, inspection rerun passed."
+  },
+  "linuxBuild": {
+    "architecture": "ARM64",
+    "compiler": "GNU 11.4.0 (cc)",
+    "configuration": "RelWithDebInfo",
+    "releaseLto": false,
+    "debugInfoRetained": true,
+    "previousCheckpointCompiler": "Clang/LLVM",
+    "sizeComparableWithPreviousCheckpoint": false
+  }
+}

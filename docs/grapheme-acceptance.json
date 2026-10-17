@@ -1,0 +1,130 @@
+{
+  "date": "2026-10-16",
+  "fullParity": false,
+  "artifactDirectory": "artifacts/parity-20261016-graphemes",
+  "reactor": {
+    "tests": 340,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "unicodeConformance": {
+    "version": "16.0.0",
+    "algorithm": "UAX29 revision45 default extended grapheme clusters",
+    "officialCases": 1093,
+    "forwardBackwardAndEveryUtf16Offset": true,
+    "JVM": true,
+    "fullCorpusOnOtherRuntimes": false,
+    "inputManifestSha256": "5a86bce9b3f7f90ff539f6caffa67157b62a405728bc3683cb59daabd62898da",
+    "deterministicGenerationVerified": true
+  },
+  "nativeChecks": {
+    "total": 136,
+    "linux": {
+      "checks": 109,
+      "reports": [
+        "linux-input-comparison.json",
+        "linux-input-mailings.json",
+        "linux-input-keyboard.json",
+        "linux-native-field.json",
+        "linux-navigation.json",
+        "linux-typing.json",
+        "linux-graphemes.json"
+      ]
+    },
+    "mac": {
+      "checks": 27,
+      "reports": [
+        "mac-graphemes.json",
+        "mac-comparison.json",
+        "mac-mailings.json"
+      ]
+    }
+  },
+  "browser": {
+    "method": "CUA Chrome native keyboard and accessibility observations; native textarea DOM read-only observations",
+    "origin": "http://127.0.0.1:19065/",
+    "checks": [
+      "combining-cluster-backspace",
+      "joined-emoji-forward-delete",
+      "emoji-delete-undo-restores-whole-sequence",
+      "shift-selection-emoji-replacement",
+      "indic-conjunct-backspace",
+      "regional-indicator-pairs-delete-independently",
+      "unicode-recovery-after-reload"
+    ],
+    "developerWarningsErrors": [],
+    "fullBrowserAcceptance": false,
+    "mobileBrowserInputCertified": false,
+    "staleBuildObservation": {
+      "text": "La\u0301R",
+      "operation": "Home, Right, Right, Backspace",
+      "oldResult": "L\u0301R",
+      "updatedResult": "LR",
+      "reloadAloneActivatedUpdate": false,
+      "allOldClientsClosedBeforeCurrentChecks": true
+    },
+    "visualEvidence": "CUA accessibility/DOM observations in tool transcript",
+    "testTabClosed": true,
+    "previewServerStopped": true,
+    "disposableFixtureCleared": true,
+    "recoverySavedAfterCleanup": true
+  },
+  "metricsBoundaryTests": {
+    "tests": 4,
+    "passed": true,
+    "generatedUnicodeTablesIncludedInApplicationTotals": true
+  },
+  "pairedDocumentCases": {
+    "passed": 59,
+    "total": 59,
+    "bothReaders": true,
+    "renderingParityCertified": false
+  },
+  "reviewCrossImport": {
+    "passed": 20,
+    "total": 20
+  },
+  "frameworkRevision": "008f9ece62526d807c2064887ad8f8641d6195a4",
+  "frameworkPatches": {
+    "evidence": "docs/typing-acceptance.json",
+    "mac": "73d5950071f7bd0984ae02c126efd28c1579cd9e",
+    "linux": "120d445c7d48caf1331436d0c9904b16709479bb",
+    "newFrameworkChangesInThisBatch": false
+  },
+  "sourceFileCount": 327,
+  "sourceManifestSha256": "a67654c74bc5d1371f8cb726f12bdf1cf1c9cc49c83febdc9f073ad26a429c4c",
+  "sourceArchiveSha256": "4247045b2d4cda0ffa849027282839b7697615eb09f4ff32d1240ace69ccddd8",
+  "artifacts": {
+    "linux-arm64-review": {
+      "bytes": 71796096,
+      "sha256": "9edcd81da135b03c7e4a1f17818e1e9d2d7d9c35c3c7958136406e0c6c72188b"
+    },
+    "mac-arm64-review.tar.gz": {
+      "bytes": 12289162,
+      "sha256": "4d6f0d78e6d93419f6b15aa22d43369e11543cd799477e7629147ee3217b4172"
+    },
+    "browser.zip": {
+      "bytes": 4387767,
+      "sha256": "5b61ef951cb15229d5a88c10199940dcca8e87523c33b5cf43cc5de289b6af81"
+    }
+  },
+  "macExecutableSha256": "2b9d855cd3468b14887bda1fff4f0f417e21c3c2fc893757d5b46122de4873a0",
+  "limitations": [
+    "No full Wordcraft parity or performance superiority claim.",
+    "No visual bidi, complex-script shaping or locale-specific word/line breaking certification.",
+    "Current-source Android, iOS and Windows grapheme acceptance remains incomplete.",
+    "Linux keyboard evidence uses Xvfb/XTest, not a physical keyboard/window manager.",
+    "Browser checks cover desktop Chrome only; full file/offline/mobile acceptance remains incomplete.",
+    "Review artifact bytes are not matched release-size, startup or RSS measurements.",
+    "Initial browser observations used the prior PWA bundle; current checks were repeated after closing all old clients."
+  ],
+  "processCleanup": {
+    "nativeOriginalXmlRestored": true,
+    "nativeAppsStopped": true,
+    "linuxContainersStopped": true,
+    "browserTestTabsClosed": true,
+    "browserFixtureClearedAndSaved": true,
+    "previewServerStopped": true
+  }
+}

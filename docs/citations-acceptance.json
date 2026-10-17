@@ -1,0 +1,134 @@
+{
+  "date": "2026-10-15",
+  "fullParity": false,
+  "frameworkRevision": "008f9ece62526d807c2064887ad8f8641d6195a4",
+  "wordcraftRevision": "159b84f54c74e9e82fb3109b758ae7dd6f4e3ab0",
+  "reactor": {
+    "tests": 283,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "artifactDirectory": "artifacts/parity-20261015-citations",
+  "platforms": {
+    "mac": {
+      "build": "passed",
+      "checks": [
+        "ribbon-create-source-and-insert-citation-with-pages",
+        "ribbon-bibliography-generates-source-entry",
+        "ribbon-source-edit-refreshes-bibliography",
+        "ribbon-style-refreshes-citations-and-bibliography",
+        "citation-style-and-source-state-share-atomic-undo",
+        "source-dialog-cancel-does-not-create-source",
+        "ribbon-remove-bibliography-keeps-source-and-citation"
+      ],
+      "regressionChecks": [
+        "ribbon-mark-citation-preserves-selection-text",
+        "ribbon-insert-authorities-title-and-leader",
+        "ribbon-update-picks-up-later-citation-without-duplicates",
+        "authority-update-single-undo-redo",
+        "authority-settings-cancel-preserves-document",
+        "ribbon-remove-authorities-retains-citation-marks",
+        "ribbon-mark-subentry-bold-mark-all-and-cross-reference",
+        "ribbon-index-run-in-right-aligned-hyphen-leaders",
+        "index-insertion-single-undo-redo",
+        "ribbon-update-adds-new-entry-without-duplicates",
+        "index-settings-cancel-preserves-document",
+        "ribbon-remove-index-retains-source-marks"
+      ],
+      "originalXmlRestored": true,
+      "artifactSha256": "6fbbc79c086908dbb4c6431644d2da257eb79a5e5229592e4840291188416d94",
+      "input": "Built-in MCP UI actions on native review app",
+      "actualKeyboard": "Author field accepts Rivera, Alex using native keyboard input; Cancel preserves exact original XML."
+    },
+    "ios": {
+      "build": "passed",
+      "checks": [
+        "ribbon-create-source-and-insert-citation-with-pages",
+        "ribbon-bibliography-generates-source-entry",
+        "ribbon-source-edit-refreshes-bibliography",
+        "ribbon-style-refreshes-citations-and-bibliography",
+        "citation-style-and-source-state-share-atomic-undo",
+        "source-dialog-cancel-does-not-create-source",
+        "ribbon-remove-bibliography-keeps-source-and-citation"
+      ],
+      "regressionChecks": [
+        "ribbon-mark-citation-preserves-selection-text",
+        "ribbon-insert-authorities-title-and-leader",
+        "ribbon-update-picks-up-later-citation-without-duplicates",
+        "authority-update-single-undo-redo",
+        "authority-settings-cancel-preserves-document",
+        "ribbon-remove-authorities-retains-citation-marks",
+        "ribbon-mark-subentry-bold-mark-all-and-cross-reference",
+        "ribbon-index-run-in-right-aligned-hyphen-leaders",
+        "index-insertion-single-undo-redo",
+        "ribbon-update-adds-new-entry-without-duplicates",
+        "index-settings-cancel-preserves-document",
+        "ribbon-remove-index-retains-source-marks"
+      ],
+      "originalXmlRestored": true,
+      "artifactSha256": "21f3d014532aa87435e8e2ab26c14e843e842772449cf0db70ad1593e7ac8547",
+      "input": "Built-in MCP UI actions on native review app"
+    },
+    "android": {
+      "build": "passed",
+      "checks": [
+        "ribbon-create-source-and-insert-citation-with-pages",
+        "ribbon-bibliography-generates-source-entry",
+        "ribbon-source-edit-refreshes-bibliography",
+        "ribbon-style-refreshes-citations-and-bibliography",
+        "citation-style-and-source-state-share-atomic-undo",
+        "source-dialog-cancel-does-not-create-source",
+        "ribbon-remove-bibliography-keeps-source-and-citation"
+      ],
+      "regressionChecks": [
+        "ribbon-mark-citation-preserves-selection-text",
+        "ribbon-insert-authorities-title-and-leader",
+        "ribbon-update-picks-up-later-citation-without-duplicates",
+        "authority-update-single-undo-redo",
+        "authority-settings-cancel-preserves-document",
+        "ribbon-remove-authorities-retains-citation-marks",
+        "ribbon-mark-subentry-bold-mark-all-and-cross-reference",
+        "ribbon-index-run-in-right-aligned-hyphen-leaders",
+        "index-insertion-single-undo-redo",
+        "ribbon-update-adds-new-entry-without-duplicates",
+        "index-settings-cancel-preserves-document",
+        "ribbon-remove-index-retains-source-marks"
+      ],
+      "originalXmlRestored": true,
+      "artifactSha256": "83292ae5808d6d7fdd7c2fea2b3de3a467986a09ea80243860b07aa0d31b15b1",
+      "input": "Built-in MCP UI actions on native review app"
+    },
+    "browser": {
+      "build": "passed",
+      "runtime": "Not accepted for this source",
+      "observations": [
+        "Existing preview origin restored the earlier Kilns recovery document but displayed an old index-only ribbon",
+        "Served JavaScript matched the new ZIP; an older tab retaining the previous service-worker version is the likely cause",
+        "Fresh loopback origin loaded the splash, then browser control timed out twice before ribbon or editing could be checked"
+      ],
+      "artifactSha256": "f102cde799537d60dbb7e104dd594eee5cdb49d2659cd194c56ce46e4b03ac2d"
+    }
+  },
+  "crossImport": {
+    "passed": 24,
+    "failed": 12,
+    "evidence": "cross-import/results.json",
+    "scope": "Twelve styles, with book and journal sources, in-text pages, sorted/numbered bibliography and edited DOCX regeneration",
+    "failure": "Wordcraft duplicates cached bibliography entries when regenerating our standard multi-paragraph BIBLIOGRAPHY range. All twelve own-app generation comparisons and all twelve Wordcraft-to-CN1 updates pass."
+  },
+  "limitations": [
+    "One bibliography per document; composite citations and unsupported switches retain cached results",
+    "Bibliography filters and unsupported styles reject regeneration",
+    "Source grouping is case-folded Unicode, not locale-specific collation",
+    "Citation collection and refresh cover body and table paragraphs; headers and note stories are not certified",
+    "Formatting follows the reference working subset, not full style-guide or CSL compliance; corporate author distinctions and advanced source roles are incomplete",
+    "Source libraries are document-owned; shared global sources, citation clipboard transfer and Zotero/CSL integration are not implemented",
+    "No joint convergence certification across all generated tables",
+    "Physical mobile keyboard/touch acceptance remains open",
+    "Current browser build compiled; fresh-origin runtime control timed out before feature acceptance",
+    "Windows/Linux execution, full catalog parity and final matched benchmarks remain incomplete"
+  ],
+  "sourceManifest": "source-sha256.json",
+  "sourceArchiveSha256": "02bbc2561162e6cc24eb34874523d148e6fd469b94eb189cffb62d35587f80a9"
+}

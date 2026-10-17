@@ -1,6 +1,7 @@
 package com.codenameone.wordprocessor.app;
 
 import com.codename1.io.FileSystemStorage;
+import com.codename1.system.NativeLookup;
 import com.codename1.ui.Dialog;
 import com.codename1.ui.Display;
 import com.codenameone.wordprocessor.WordProcessor;
@@ -17,6 +18,18 @@ public class Main extends com.codename1.system.Lifecycle {
     app.setFiles(
         new WordProcessor.Files() {
           public void open(WordProcessor.OpenCallback callback) {
+            choose(callback, "cn1doc,docx,txt,md,html,rtf,adoc");
+          }
+
+          public void openRecipients(WordProcessor.OpenCallback callback) {
+            choose(callback, "csv,tsv,txt,xlsx,xlsm,ods");
+          }
+
+          public void openImage(WordProcessor.OpenCallback callback) {
+            choose(callback, "png,jpg,jpeg");
+          }
+
+          private void choose(WordProcessor.OpenCallback callback, String extensions) {
             Display.getInstance()
                 .openFileChooser(
                     event -> {
@@ -42,7 +55,9 @@ public class Main extends com.codename1.system.Lifecycle {
                                       .callSerially(
                                           () ->
                                               callback.opened(
-                                                  path.substring(path.lastIndexOf('/') + 1), data));
+                                                  path.substring(path.lastIndexOf('/') + 1),
+                                                  path,
+                                                  data));
                                 } catch (IOException ex) {
                                   Display.getInstance()
                                       .callSerially(
@@ -52,37 +67,66 @@ public class Main extends com.codename1.system.Lifecycle {
                                 }
                               });
                     },
-                    "cn1doc,docx,txt,md,html,rtf,adoc");
+                    extensions);
           }
 
-          public void save(String name, byte[] bytes, WordProcessor.SaveCallback callback) {
+          public void save(
+              String name, String existingPath, byte[] bytes, WordProcessor.SaveCallback callback) {
             if (Display.getInstance().downloadBytesAsFile(name, bytes)) {
-              callback.saved(true, "download offered: " + name);
+              callback.saved(true, null, "download offered: " + name);
               return;
             }
             Display.getInstance()
                 .scheduleBackgroundTask(
                     () -> {
                       try {
-                        String path = FileSystemStorage.getInstance().getAppHomePath() + name;
-                        try (OutputStream out =
-                            FileSystemStorage.getInstance().openOutputStream(path)) {
-                          out.write(bytes);
+                        NativeFiles chooser = NativeLookup.create(NativeFiles.class);
+                        boolean nativeSave = chooser != null && chooser.isSupported();
+                        String selected = existingPath;
+                        if (nativeSave && selected == null) selected = chooser.chooseSaveFile(name);
+                        if (nativeSave && selected == null) {
+                          Display.getInstance()
+                              .callSerially(() -> callback.saved(false, null, null));
+                          return;
                         }
+                        final String path =
+                            nativeSave
+                                ? selected
+                                : FileSystemStorage.getInstance().getAppHomePath() + name;
+                        if (nativeSave) {
+                          String error = chooser.writeFile(path, bytes);
+                          if (error != null) throw new IOException(error);
+                        } else
+                          try (OutputStream out =
+                              FileSystemStorage.getInstance().openOutputStream(path)) {
+                            out.write(bytes);
+                          }
                         Display.getInstance()
                             .callSerially(
                                 () -> {
-                                  callback.saved(true, "local export: " + name);
-                                  Display.getInstance()
-                                      .share(path, null, "application/octet-stream");
+                                  callback.saved(
+                                      true,
+                                      nativeSave ? path : null,
+                                      nativeSave ? path : "local export: " + name);
+                                  if (!nativeSave)
+                                    Display.getInstance().share(path, null, mime(name));
                                 });
                       } catch (IOException ex) {
                         Display.getInstance()
-                            .callSerially(() -> callback.saved(false, ex.getMessage()));
+                            .callSerially(() -> callback.saved(false, null, ex.getMessage()));
                       }
                     });
           }
         });
+  }
+
+  private static String mime(String name) {
+    if (name.endsWith(".pdf")) return "application/pdf";
+    if (name.endsWith(".docx"))
+      return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+    if (name.endsWith(".txt")) return "text/plain";
+    if (name.endsWith(".html")) return "text/html";
+    return "application/octet-stream";
   }
 
   public void start() {

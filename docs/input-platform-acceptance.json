@@ -1,0 +1,100 @@
+{
+  "date": "2026-10-15",
+  "fullParity": false,
+  "frameworkRevision": "008f9ece62526d807c2064887ad8f8641d6195a4",
+  "artifactDirectory": "artifacts/parity-20261015-input-platforms",
+  "sourceManifestSha256": "42a6bc4580c4f98c57c2de22346046507eaa5fa222dbbb63b7ba00883dea6050",
+  "sourceArchiveSha256": "f67dd192ea2a2a1f1db3b15bc7b48c76bbe2f904f885b5d688dbc28894b7075e",
+  "reactor": {
+    "tests": 250,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "platforms": {
+    "mac": {
+      "artifactSha256": "02582492bf6c6b9839fb5250a4e653ea8d369dda2386ce1fe2004221035c7834",
+      "build": "passed",
+      "checks": [
+        "native-figures-title-label-leader-and-insert",
+        "follow-generated-caption-link",
+        "update-after-caption-edit",
+        "remove-and-single-undo",
+        "ribbon-add-text-outline-level",
+        "ribbon-mark-entry-retains-source",
+        "ribbon-combined-heading-outline-style-and-marked-sources",
+        "nested-style-apply-parent-cancel-is-nonmutating",
+        "update-retains-advanced-source-options",
+        "remove-and-single-undo",
+        "ribbon-rich-footnote-insert",
+        "ribbon-rich-endnote-insert",
+        "show-notes-edit-and-custom-mark",
+        "next-note-selects-atomic-reference",
+        "note-delete-and-single-undo"
+      ],
+      "originalXmlRestored": true,
+      "nativeKeyboard": "passed using actual native input"
+    },
+    "ios": {
+      "artifactSha256": "28fea4408c5690704786582912fb37b0bd8fe35b56f1d68d815df4789a9703d6",
+      "build": "passed",
+      "checks": [
+        "native-figures-title-label-leader-and-insert",
+        "follow-generated-caption-link",
+        "update-after-caption-edit",
+        "remove-and-single-undo",
+        "ribbon-add-text-outline-level",
+        "ribbon-mark-entry-retains-source",
+        "ribbon-combined-heading-outline-style-and-marked-sources",
+        "nested-style-apply-parent-cancel-is-nonmutating",
+        "update-retains-advanced-source-options",
+        "remove-and-single-undo",
+        "ribbon-rich-footnote-insert",
+        "ribbon-rich-endnote-insert",
+        "show-notes-edit-and-custom-mark",
+        "next-note-selects-atomic-reference",
+        "note-delete-and-single-undo"
+      ],
+      "originalXmlRestored": true,
+      "nativeKeyboard": "passed using actual native input"
+    },
+    "android": {
+      "artifactSha256": "3a91d6335afc9ce9e7b4e35f93413fa122184366a6942b2af5fff9795e18700b",
+      "build": "passed",
+      "checks": [
+        "native-figures-title-label-leader-and-insert",
+        "follow-generated-caption-link",
+        "update-after-caption-edit",
+        "remove-and-single-undo",
+        "ribbon-add-text-outline-level",
+        "ribbon-mark-entry-retains-source",
+        "ribbon-combined-heading-outline-style-and-marked-sources",
+        "nested-style-apply-parent-cancel-is-nonmutating",
+        "update-retains-advanced-source-options",
+        "remove-and-single-undo",
+        "ribbon-rich-footnote-insert",
+        "ribbon-rich-endnote-insert",
+        "show-notes-edit-and-custom-mark",
+        "next-note-selects-atomic-reference",
+        "note-delete-and-single-undo"
+      ],
+      "originalXmlRestored": true,
+      "nativeKeyboard": "not certified; workflows used built-in MCP UI actions"
+    },
+    "browser": {
+      "artifactSha256": "6116cdb968c8e88b85b2baec7b788fcbd7f7143e02318cb31d6e12346db5617b",
+      "build": "passed",
+      "checks": [],
+      "interaction": "Not tested: browser tool could not load its request-header policy; no application failure established."
+    }
+  },
+  "reviewAppsStopped": true,
+  "performanceComparison": "paused until feature/rendering parity",
+  "limitations": [
+    "Android emulator checks are not physical-device or native keyboard/touch certification.",
+    "One Android MCP transport disconnect occurred without an app crash; reconnect and all three restored-document workflows passed.",
+    "Browser interactive validation unavailable because the browser tool could not load its request-header policy.",
+    "Windows and Linux are not locally validated.",
+    "Full catalog parity and matched performance/source-size comparisons remain incomplete."
+  ]
+}

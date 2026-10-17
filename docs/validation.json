@@ -1,13 +1,77 @@
 {
   "schema": 1,
-  "recordedAt": "2026-10-13T12:38:18.830446+00:00",
+  "recordedAt": "2026-10-13T17:40:50.508791+00:00",
   "implementationState": "initial implementation; approved full parity plan incomplete",
   "javaTests": {
-    "tests": 52,
+    "tests": 77,
     "failures": 0,
     "errors": 0,
     "skipped": 0,
     "suites": [
+      {
+        "module": "formats",
+        "suite": "com.codenameone.wordprocessor.FormatTest",
+        "tests": 10,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "module": "formats",
+        "suite": "com.codenameone.wordprocessor.DocxFeaturesTest",
+        "tests": 6,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "module": "formats",
+        "suite": "com.codenameone.wordprocessor.PdfTest",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "module": "layout",
+        "suite": "com.codenameone.wordprocessor.LayoutTest",
+        "tests": 6,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "module": "desktop",
+        "suite": "com.codenameone.wordprocessor.McpTest",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "module": "document",
+        "suite": "com.codenameone.wordprocessor.EditingFeaturesTest",
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "module": "document",
+        "suite": "com.codenameone.wordprocessor.CommentsTest",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "module": "document",
+        "suite": "com.codenameone.wordprocessor.DocumentTextTest",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
       {
         "module": "document",
         "suite": "com.codenameone.wordprocessor.DocumentTest",
@@ -17,24 +81,8 @@
         "skipped": 0
       },
       {
-        "module": "layout",
-        "suite": "com.codenameone.wordprocessor.LayoutTest",
-        "tests": 3,
-        "failures": 0,
-        "errors": 0,
-        "skipped": 0
-      },
-      {
-        "module": "formats",
-        "suite": "com.codenameone.wordprocessor.FormatTest",
-        "tests": 9,
-        "failures": 0,
-        "errors": 0,
-        "skipped": 0
-      },
-      {
-        "module": "formats",
-        "suite": "com.codenameone.wordprocessor.PdfTest",
+        "module": "cli",
+        "suite": "com.codenameone.wordprocessor.McpTest",
         "tests": 3,
         "failures": 0,
         "errors": 0,
@@ -51,14 +99,6 @@
       {
         "module": "editor",
         "suite": "com.codenameone.wordprocessor.RecoveryTest",
-        "tests": 3,
-        "failures": 0,
-        "errors": 0,
-        "skipped": 0
-      },
-      {
-        "module": "cli",
-        "suite": "com.codenameone.wordprocessor.McpTest",
         "tests": 3,
         "failures": 0,
         "errors": 0,
@@ -90,7 +130,7 @@
   },
   "interoperability": {
     "plainTextFixture": "1000 paragraphs, identical CLI extraction output",
-    "sharedBehaviorProbes": "4 probes passed in both CLIs; zero complete catalog rows certified",
+    "sharedBehaviorProbes": "11 probes passed in both CLIs; bidirectional resolved-comment DOCX import checked; zero complete catalog rows certified",
     "pdf": "exported, inspected with pdfinfo/pdftotext and rendered with Poppler",
     "pdfArtifactSha256": "71f428e94ff843650995929e732b884ec15c53923f2e268c7ca31d3c85266697"
   },
@@ -98,19 +138,19 @@
     "wordcraftRevision": "159b84f54c74e9e82fb3109b758ae7dd6f4e3ab0",
     "catalogEntries": 502,
     "featureParity": "not-achieved",
-    "performanceGate": "not-evaluated",
+    "performanceGate": "Not certified: feature/output fidelity unmatched; see FEATURE-VALIDATION.md for the latest internal performance measurements",
     "sourceMetric": "o200k_base tokens in source; not agent usage",
     "sourceScopesMatched": false,
-    "startup": "ParparVM GUI unmeasured; retired GraalVM CLI timings are not application evidence"
+    "startup": "See docs/native-benchmarks.json: CPU document paint, not GPU presentation"
   },
   "checksNotRun": [
     "CI",
     "Android/iOS device build",
     "Windows/Linux execution",
     "full DOCX fidelity corpus",
-    "input-to-present or peak-memory comparison"
+    "input-to-present / GPU presentation latency"
   ],
-  "frameworkSourceChanged": false,
+  "frameworkSourceChanged": true,
   "remotePublished": false,
   "nativeApplication": {
     "build": "passed",
@@ -126,13 +166,47 @@
     ],
     "jvmRequired": false,
     "artifact": "app/common/target/mac-native/Build/Products/Release/Main.app/Contents/MacOS/Main",
-    "sha256": "578596e377e714816acec895eca34f544445b213c6d98fab69e43b89f445e9d7",
+    "sha256": "66efb697bac1556a32439589330058febaa262caf61019ce70f39d4f140d3c1f",
     "launchAndRender": "passed",
     "zipRecoveryCrcAndXml": "passed",
     "lifecycleRegression": "passed",
-    "keyboardImeUndoFileDialogs": "not-certified",
-    "automationLimitation": "cgWindowNotFound and windowNotFoundAtPosition interrupted interaction; debugger confirmed a live CN1MacWindow and subsequent screenshot rendered the recovered document",
-    "startupTiming": "not-measured",
-    "distributionSigning": "not-configured"
+    "keyboardImeUndoFileDialogs": "Native typing across paragraph breaks, formatting/style changes, undo/redo, DOCX export/reopen and PDF export passed; complex IME not certified",
+    "startupTiming": "See docs/native-benchmarks.json: CPU document paint, not GPU presentation",
+    "distributionSigning": "not-configured",
+    "nativeMenu": "Aqua-native File/Edit/Insert/Format/View/Tools menus present; duplicate toolbar absent; Word Count and Command-F execution verified",
+    "featureBatchUI": "Passed native heading/body and nested-list editing, rich keyboard clipboard/undo, comment entry/resolve/reopen, table-cell apply, insert-row/undo and ascending sort. Final build: five exact rapid-input probes, dialog sizing/contrast, repaint isolation and return to document checked. Complex IME and full accessibility remain uncertified.",
+    "saveWorkflow": "App-local export plus native share sheet; destination-selecting desktop Save As remains missing."
+  },
+  "nativeBenchmark": {
+    "report": "docs/NATIVE-BENCHMARKS.md",
+    "startupLaunches": 60,
+    "startupSuccesses": 60,
+    "workloadRuns": 6,
+    "workloadSuccesses": 6,
+    "docxFilesValidated": 30,
+    "metricBoundary": "Warm filesystem cache, fresh processes, CPU paint completion; GPU presentation not measured",
+    "historicalReport": "docs/NATIVE-BENCHMARKS.md",
+    "currentFeatureReport": "docs/FEATURE-VALIDATION.md"
+  },
+  "frameworkChanges": [
+    "Ports/MacPort/nativeSources/METALView.m: multiline pure-editor Tab and rich clipboard command routing",
+    "Ports/MacPort/nativeSources/CN1AppKitTextInput.m: synchronize Java state echoes on the AppKit main queue with session and edit-generation checks",
+    "Ports/MacPort/nativeSources/CN1AppKitWindows.m: restore key-window focus after modal input blocking ends if no other window has focus",
+    "CodenameOne/src/com/codename1/ui/Dialog.java: native dialog sizing resolves its owner, not its initial peer width",
+    "Ports/iOSPort/nativeSources/CodenameOne_GLViewController.m: macOS-only main-surface flush explicitly resets stale secondary-window rendering destination"
+  ],
+  "frameworkTests": {
+    "tests": 149,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "suites": [
+      "NativeWindowDialogTest",
+      "DialogInWindowTest",
+      "DialogTest",
+      "DialogBackdropTest"
+    ],
+    "java": "8",
+    "regression": "Native-window owner sizing: confirmed failure before fix and pass afterward"
   }
 }

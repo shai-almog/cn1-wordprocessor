@@ -1,0 +1,286 @@
+package com.codenameone.wordprocessor;
+
+import java.util.*;
+
+/** Immutable table geometry and per-cell appearance, independent of paragraph formatting. */
+public final class TableFormat {
+  public static final class Cell {
+    public static final Cell DEFAULT = new Cell(0xffffff, 0xa6a6a6, .5f, 6, 4, "top");
+    public final int background, borderColor;
+    public final float borderWidth, horizontalPadding, verticalPadding;
+    public final String vertical;
+
+    public Cell(
+        int background,
+        int borderColor,
+        float borderWidth,
+        float horizontalPadding,
+        float verticalPadding,
+        String vertical) {
+      if (!valid(borderWidth, 0, 12)
+          || !valid(horizontalPadding, 0, 72)
+          || !valid(verticalPadding, 0, 72)
+          || !("top".equals(vertical) || "center".equals(vertical) || "bottom".equals(vertical)))
+        throw new IllegalArgumentException("Invalid cell formatting");
+      this.background = background & 0xffffff;
+      this.borderColor = borderColor & 0xffffff;
+      this.borderWidth = borderWidth;
+      this.horizontalPadding = horizontalPadding;
+      this.verticalPadding = verticalPadding;
+      this.vertical = vertical;
+    }
+  }
+
+  /** Preferred width and placement in typographic points; auto uses measured contents. */
+  public static final class Sizing {
+    public static final Sizing DEFAULT = new Sizing("percent", 100, "left", 0, true);
+    public final String unit, align;
+    public final float width, indent;
+    public final boolean fixed;
+
+    public Sizing(String unit, float width, String align, float indent, boolean fixed) {
+      if (!("auto".equals(unit) || "points".equals(unit) || "percent".equals(unit))
+          || !valid(width, "auto".equals(unit) ? 0 : .01f, "percent".equals(unit) ? 100 : 10000)
+          || !valid(indent, -1584, 1584)
+          || !("left".equals(align) || "center".equals(align) || "right".equals(align)))
+        throw new IllegalArgumentException("Invalid table size or alignment");
+      this.unit = unit;
+      this.width = "auto".equals(unit) ? 0 : width;
+      this.align = align;
+      this.indent = indent;
+      this.fixed = fixed;
+    }
+
+    public float offset(float available, float actualWidth) {
+      return "center".equals(align)
+          ? (available - actualWidth) / 2
+          : "right".equals(align) ? available - actualWidth : indent;
+    }
+  }
+
+  /** Row height and pagination policy, retained independently of cell content. */
+  public static final class Row {
+    public static final Row DEFAULT = new Row(0, "auto", true);
+    public final float height;
+    public final String rule;
+    public final boolean allowBreak;
+
+    public Row(float height, String rule, boolean allowBreak) {
+      if (!("auto".equals(rule) || "atLeast".equals(rule) || "exact".equals(rule))
+          || !valid(height, "exact".equals(rule) ? .01f : 0, 10000))
+        throw new IllegalArgumentException("Invalid row height or rule");
+      this.height = "auto".equals(rule) ? 0 : height;
+      this.rule = this.height == 0 ? "auto" : rule;
+      this.allowBreak = allowBreak;
+    }
+  }
+
+  public final Sizing sizing;
+  private final Cell[][] cells;
+  private final float[] columns;
+  private final Row[] heights;
+  public final int headerRows;
+  public final String title, description;
+
+  public TableFormat(int rows, int columns) {
+    if (rows < 1 || rows > 1000 || columns < 1 || columns > 100)
+      throw new IllegalArgumentException("Invalid table size");
+    cells = new Cell[rows][columns];
+    this.columns = new float[columns];
+    heights = new Row[rows];
+    Arrays.fill(heights, Row.DEFAULT);
+    headerRows = 0;
+    title = description = "";
+    sizing = Sizing.DEFAULT;
+    Arrays.fill(this.columns, 1);
+    for (Cell[] row : cells) Arrays.fill(row, Cell.DEFAULT);
+  }
+
+  private TableFormat(
+      Cell[][] cells,
+      float[] columns,
+      Row[] heights,
+      int headers,
+      String title,
+      String description,
+      Sizing sizing) {
+    this.cells = cells;
+    this.columns = columns;
+    this.heights = heights;
+    this.headerRows = headers;
+    this.title = title;
+    this.description = description;
+    this.sizing = sizing;
+  }
+
+  // Arrays are newly allocated by the package's geometry operations and never exposed.
+  static TableFormat geometry(Cell[][] cells, float[] columns, Row[] heights, int headers) {
+    return new TableFormat(cells, columns, heights, headers, "", "", Sizing.DEFAULT);
+  }
+
+  /** Empty or whitespace-only strings clear metadata; null is not accepted. */
+  public TableFormat altText(String title, String description) {
+    if (title == null || description == null)
+      throw new IllegalArgumentException("Missing table alternative text");
+    return new TableFormat(
+        cells, columns, heights, headerRows, alt(title), alt(description), sizing);
+  }
+
+  public TableFormat sizing(Sizing value) {
+    if (value == null) throw new IllegalArgumentException("Missing table sizing");
+    return new TableFormat(cells, columns, heights, headerRows, title, description, value);
+  }
+
+  /** Preferred total width before content-driven adjustment. */
+  public float preferredWidth(float available) {
+    if ("percent".equals(sizing.unit)) return available * sizing.width / 100;
+    if ("points".equals(sizing.unit)) return sizing.width;
+    float total = 0;
+    for (float column : columns) total += column;
+    return total;
+  }
+
+  private static String alt(String value) {
+    if (value.trim().isEmpty()) return "";
+    int end = 0, count = 0;
+    while (end < value.length() && count++ < 10000) {
+      char ch = value.charAt(end++);
+      if (Character.isHighSurrogate(ch)
+          && end < value.length()
+          && Character.isLowSurrogate(value.charAt(end))) end++;
+    }
+    return value.substring(0, end);
+  }
+
+  public int rows() {
+    return cells.length;
+  }
+
+  public int columns() {
+    return columns.length;
+  }
+
+  public Cell cell(int row, int column) {
+    return cells[row][column];
+  }
+
+  public float column(int column) {
+    return columns[column];
+  }
+
+  public float minHeight(int row) {
+    return heights[row].height;
+  }
+
+  public Row row(int row) {
+    return heights[row];
+  }
+
+  public float columnFraction(int column) {
+    float sum = 0;
+    for (float width : columns) sum += width;
+    return columns[column] / sum;
+  }
+
+  public TableFormat cell(int row, int column, Cell value) {
+    if (value == null) throw new IllegalArgumentException("Missing cell format");
+    Cell[][] copy = cells.clone();
+    copy[row] = cells[row].clone();
+    copy[row][column] = value;
+    return new TableFormat(copy, columns, heights, headerRows, title, description, sizing);
+  }
+
+  public TableFormat column(int column, float weight) {
+    if (!valid(weight, .000001f, 10000)) throw new IllegalArgumentException("Invalid column width");
+    float[] copy = columns.clone();
+    copy[column] = weight;
+    return new TableFormat(cells, copy, heights, headerRows, title, description, sizing);
+  }
+
+  public TableFormat columnFraction(int column, float fraction) {
+    if (!valid(fraction, .001f, 1) || columns() > 1 && fraction >= 1)
+      throw new IllegalArgumentException("Column width must leave room for the other columns");
+    if (columns() == 1) return this;
+    float previous = columnFraction(column), total = 0;
+    for (float width : columns) total += width;
+    float[] copy = new float[columns()];
+    for (int c = 0; c < columns(); c++)
+      copy[c] =
+          total * (c == column ? fraction : columnFraction(c) * (1 - fraction) / (1 - previous));
+    return new TableFormat(cells, copy, heights, headerRows, title, description, sizing);
+  }
+
+  public TableFormat minHeight(int row, float height) {
+    return row(row, new Row(height, height == 0 ? "auto" : "atLeast", heights[row].allowBreak));
+  }
+
+  public TableFormat row(int row, Row value) {
+    if (value == null) throw new IllegalArgumentException("Missing row formatting");
+    Row[] copy = heights.clone();
+    copy[row] = value;
+    return new TableFormat(cells, columns, copy, headerRows, title, description, sizing);
+  }
+
+  public TableFormat distributeColumns() {
+    float[] equal = new float[columns.length];
+    float total = 0;
+    for (float width : columns) total += width;
+    Arrays.fill(equal, total / columns.length);
+    return new TableFormat(cells, equal, heights, headerRows, title, description, sizing);
+  }
+
+  public TableFormat distributeRows() {
+    float height = 18;
+    for (Row value : heights) height = Math.max(height, value.height);
+    Row[] equal = new Row[heights.length];
+    for (int r = 0; r < equal.length; r++)
+      equal[r] =
+          new Row(
+              height, "exact".equals(heights[r].rule) ? "exact" : "atLeast", heights[r].allowBreak);
+    return new TableFormat(cells, columns, equal, headerRows, title, description, sizing);
+  }
+
+  public TableFormat headerRows(int count) {
+    if (count < 0 || count > rows()) throw new IllegalArgumentException("Invalid header row count");
+    return new TableFormat(cells, columns, heights, count, title, description, sizing);
+  }
+
+  TableFormat change(boolean row, int at, boolean insert) {
+    int nr = rows() + (row ? (insert ? 1 : -1) : 0),
+        nc = columns() + (!row ? (insert ? 1 : -1) : 0);
+    TableFormat out = new TableFormat(nr, nc);
+    for (int r = 0; r < nr; r++) {
+      int oldR = row ? original(r, at, insert) : r;
+      if (oldR >= 0) out.heights[r] = heights[oldR];
+      for (int c = 0; c < nc; c++) {
+        int oldC = row ? c : original(c, at, insert);
+        if (oldR >= 0 && oldC >= 0) out.cells[r][c] = cells[oldR][oldC];
+      }
+    }
+    for (int c = 0; c < nc; c++) {
+      int oldC = row ? c : original(c, at, insert);
+      out.columns[c] = columns[oldC < 0 ? Math.min(at, columns() - 1) : oldC];
+    }
+    int headers = headerRows;
+    if (row && at < headers) headers += insert ? 1 : -1;
+    return out.headerRows(Math.min(headers, nr)).altText(title, description).sizing(sizing);
+  }
+
+  TableFormat reorder(int[] order) {
+    Cell[][] copy = new Cell[rows()][];
+    Row[] h = new Row[rows()];
+    for (int r = 0; r < order.length; r++) {
+      copy[r] = cells[order[r]];
+      h[r] = heights[order[r]];
+    }
+    return new TableFormat(copy, columns, h, headerRows, title, description, sizing);
+  }
+
+  private static int original(int n, int at, boolean insert) {
+    return insert ? n == at ? -1 : n > at ? n - 1 : n : n >= at ? n + 1 : n;
+  }
+
+  private static boolean valid(float x, float min, float max) {
+    return !Float.isNaN(x) && !Float.isInfinite(x) && x >= min && x <= max;
+  }
+}

@@ -404,8 +404,12 @@
       "feature": "Clear All Formatting",
       "wordcraftCommand": "format.clear",
       "wordcraftVerification": "not-run",
-      "cn1Status": "pending",
-      "evidence": []
+      "cn1Status": "partial",
+      "evidence": [
+        "docs/CHARACTER-FORMATTING.md",
+        "docs/character-formatting-acceptance.json",
+        "docs/text-effects-acceptance.json"
+      ]
     },
     {
       "tab": "Home",
@@ -430,18 +434,24 @@
       "group": "Font",
       "feature": "Underline",
       "wordcraftCommand": "format.underline",
-      "wordcraftVerification": "not-run",
-      "cn1Status": "pending",
-      "evidence": []
+      "wordcraftVerification": "paired-cli-docx-verified",
+      "cn1Status": "partial",
+      "evidence": [
+        "docs/CHARACTER-FORMATTING.md",
+        "docs/text-effects-acceptance.json"
+      ]
     },
     {
       "tab": "Home",
       "group": "Font",
       "feature": "Double Underline",
       "wordcraftCommand": "format.doubleUnderline",
-      "wordcraftVerification": "not-run",
-      "cn1Status": "pending",
-      "evidence": []
+      "wordcraftVerification": "paired-cli-docx-verified",
+      "cn1Status": "partial",
+      "evidence": [
+        "docs/CHARACTER-FORMATTING.md",
+        "docs/character-formatting-acceptance.json"
+      ]
     },
     {
       "tab": "Home",
@@ -475,18 +485,24 @@
       "group": "Font",
       "feature": "Text Effects Outline",
       "wordcraftCommand": "format.outline",
-      "wordcraftVerification": "not-run",
-      "cn1Status": "pending",
-      "evidence": []
+      "wordcraftVerification": "paired-cli-docx-verified",
+      "cn1Status": "partial",
+      "evidence": [
+        "docs/CHARACTER-FORMATTING.md",
+        "docs/text-effects-acceptance.json"
+      ]
     },
     {
       "tab": "Home",
       "group": "Font",
       "feature": "Text Effects Shadow",
       "wordcraftCommand": "format.shadow",
-      "wordcraftVerification": "not-run",
-      "cn1Status": "pending",
-      "evidence": []
+      "wordcraftVerification": "paired-cli-docx-verified",
+      "cn1Status": "partial",
+      "evidence": [
+        "docs/CHARACTER-FORMATTING.md",
+        "docs/text-effects-acceptance.json"
+      ]
     },
     {
       "tab": "Home",
@@ -530,89 +546,120 @@
       "feature": "Font Dialog",
       "wordcraftCommand": "format.fontDialog",
       "wordcraftVerification": "not-run",
-      "cn1Status": "pending",
-      "evidence": []
+      "cn1Status": "partial",
+      "evidence": [
+        "docs/CHARACTER-FORMATTING.md",
+        "docs/character-formatting-acceptance.json",
+        "docs/text-effects-acceptance.json"
+      ]
     },
     {
       "tab": "Home",
       "group": "Font",
       "feature": "Double Strikethrough",
       "wordcraftCommand": "format.doubleStrikethrough",
-      "wordcraftVerification": "not-run",
-      "cn1Status": "pending",
-      "evidence": []
+      "wordcraftVerification": "paired-cli-docx-verified",
+      "cn1Status": "partial",
+      "evidence": [
+        "docs/CHARACTER-FORMATTING.md",
+        "docs/character-formatting-acceptance.json"
+      ]
     },
     {
       "tab": "Home",
       "group": "Font",
       "feature": "Small Caps",
       "wordcraftCommand": "format.smallCaps",
-      "wordcraftVerification": "not-run",
-      "cn1Status": "pending",
-      "evidence": []
+      "wordcraftVerification": "paired-cli-docx-verified",
+      "cn1Status": "partial",
+      "evidence": [
+        "docs/CHARACTER-FORMATTING.md",
+        "docs/character-formatting-acceptance.json"
+      ]
     },
     {
       "tab": "Home",
       "group": "Font",
       "feature": "All Caps",
       "wordcraftCommand": "format.allCaps",
-      "wordcraftVerification": "not-run",
-      "cn1Status": "pending",
-      "evidence": []
+      "wordcraftVerification": "paired-cli-docx-verified",
+      "cn1Status": "partial",
+      "evidence": [
+        "docs/CHARACTER-FORMATTING.md",
+        "docs/character-formatting-acceptance.json"
+      ]
     },
     {
       "tab": "Home",
       "group": "Font",
       "feature": "Hidden",
       "wordcraftCommand": "format.hidden",
-      "wordcraftVerification": "not-run",
-      "cn1Status": "pending",
-      "evidence": []
+      "wordcraftVerification": "paired-cli-docx-verified",
+      "cn1Status": "partial",
+      "evidence": [
+        "docs/CHARACTER-FORMATTING.md",
+        "docs/character-formatting-acceptance.json"
+      ]
     },
     {
       "tab": "Home",
       "group": "Font",
       "feature": "Emboss",
       "wordcraftCommand": "format.emboss",
-      "wordcraftVerification": "not-run",
-      "cn1Status": "pending",
-      "evidence": []
+      "wordcraftVerification": "paired-cli-docx-verified",
+      "cn1Status": "partial",
+      "evidence": [
+        "docs/CHARACTER-FORMATTING.md",
+        "docs/text-effects-acceptance.json"
+      ]
     },
     {
       "tab": "Home",
       "group": "Font",
       "feature": "Engrave",
       "wordcraftCommand": "format.engrave",
-      "wordcraftVerification": "not-run",
-      "cn1Status": "pending",
-      "evidence": []
+      "wordcraftVerification": "paired-cli-docx-verified",
+      "cn1Status": "partial",
+      "evidence": [
+        "docs/CHARACTER-FORMATTING.md",
+        "docs/text-effects-acceptance.json"
+      ]
     },
     {
       "tab": "Home",
       "group": "Font",
       "feature": "Character Spacing",
       "wordcraftCommand": "format.spacing",
-      "wordcraftVerification": "not-run",
-      "cn1Status": "pending",
-      "evidence": []
+      "wordcraftVerification": "paired-cli-docx-verified",
+      "cn1Status": "partial",
+      "evidence": [
+        "docs/CHARACTER-FORMATTING.md",
+        "docs/character-formatting-acceptance.json"
+      ]
     },
     {
       "tab": "Home",
       "group": "Font",
       "feature": "Character Scale",
       "wordcraftCommand": "format.scale",
-      "wordcraftVerification": "not-run",
-      "cn1Status": "pending",
-      "evidence": []
+      "wordcraftVerification": "paired-cli-docx-verified",
+      "cn1Status": "partial",
+      "evidence": [
+        "docs/CHARACTER-FORMATTING.md",
+        "docs/character-formatting-acceptance.json"
+      ]
     },
     {
       "tab": "Home",
       "group": "Font",
       "feature": "Character Position",
       "wordcraftCommand": "format.position",
-      "wordcraftVerification": "not-run",
-      "cn1Status": "pending",
-      "evidence": []
+      "wordcraftVerification": "paired-cli-docx-verified",
+      "cn1Status": "partial",
+      "evidence": [
+        "docs/CHARACTER-FORMATTING.md",
+        "docs/character-formatting-acceptance.json"
+      ]
     },
     {
       "tab": "Home",
@@ -808,9 +855,12 @@
       "group": "Paragraph",
       "feature": "Line Spacing",
       "wordcraftCommand": "para.lineSpacing",
-      "wordcraftVerification": "not-run",
-      "cn1Status": "pending",
-      "evidence": []
+      "wordcraftVerification": "paired-cli-docx-verified",
+      "cn1Status": "partial",
+      "evidence": [
+        "docs/LINE-SPACING.md",
+        "docs/line-spacing-acceptance.json"
+      ]
     },
     {
       "tab": "Home",
@@ -1222,9 +1272,12 @@
       "group": "Tables",
       "feature": "Insert Table",
       "wordcraftCommand": "insert.table",
-      "wordcraftVerification": "not-run",
-      "cn1Status": "pending",
-      "evidence": []
+      "wordcraftVerification": "paired-cli-docx-verified",
+      "cn1Status": "partial",
+      "evidence": [
+        "docs/TABLE-SIZING.md",
+        "docs/table-sizing-acceptance.json"
+      ]
     },
     {
       "tab": "Insert",
@@ -1258,9 +1311,12 @@
       "group": "Tables",
       "feature": "Quick Tables",
       "wordcraftCommand": "table.quick",
-      "wordcraftVerification": "not-run",
-      "cn1Status": "pending",
-      "evidence": []
+      "wordcraftVerification": "paired-cli-docx-verified",
+      "cn1Status": "partial",
+      "evidence": [
+        "docs/TABLE-DATA.md",
+        "docs/table-data-acceptance.json"
+      ]
     },
     {
       "tab": "Insert",
@@ -2059,54 +2115,75 @@
       "group": "Table of Contents",
       "feature": "Table of Contents",
       "wordcraftCommand": "references.toc",
-      "wordcraftVerification": "not-run",
-      "cn1Status": "pending",
-      "evidence": []
+      "wordcraftVerification": "paired and cross-import source scenarios pass",
+      "cn1Status": "partial",
+      "evidence": [
+        "docs/toc-acceptance.json",
+        "docs/UI-ACCEPTANCE.md",
+        "docs/toc-sources-acceptance.json"
+      ],
+      "scope": "Heading styles, direct outlines, style mappings and TC sources; macOS and iPhone workflows; advanced field and other platform limits remain"
     },
     {
       "tab": "References",
       "group": "Table of Contents",
       "feature": "Add Text",
       "wordcraftCommand": "references.addText",
-      "wordcraftVerification": "not-run",
-      "cn1Status": "pending",
-      "evidence": []
+      "wordcraftVerification": "paired and cross-import source scenarios pass",
+      "cn1Status": "partial",
+      "evidence": [
+        "docs/toc-sources-acceptance.json"
+      ],
+      "scope": "Heading styles, direct outlines, style mappings and TC sources; macOS and iPhone workflows; advanced field and other platform limits remain"
     },
     {
       "tab": "References",
       "group": "Table of Contents",
       "feature": "Update Table",
       "wordcraftCommand": "references.updateToc",
-      "wordcraftVerification": "not-run",
-      "cn1Status": "pending",
-      "evidence": []
+      "wordcraftVerification": "paired and cross-import source scenarios pass",
+      "cn1Status": "partial",
+      "evidence": [
+        "docs/toc-acceptance.json",
+        "docs/UI-ACCEPTANCE.md",
+        "docs/toc-sources-acceptance.json"
+      ],
+      "scope": "Heading styles, direct outlines, style mappings and TC sources; macOS and iPhone workflows; advanced field and other platform limits remain"
     },
     {
       "tab": "References",
       "group": "Table of Contents",
       "feature": "Remove Table of Contents",
       "wordcraftCommand": "references.removeToc",
-      "wordcraftVerification": "not-run",
-      "cn1Status": "pending",
-      "evidence": []
+      "wordcraftVerification": "paired and cross-import scenarios pass",
+      "cn1Status": "partial",
+      "evidence": [
+        "docs/toc-acceptance.json",
+        "docs/UI-ACCEPTANCE.md"
+      ],
+      "scope": "macOS and iPhone simulator workflows; documented option/format limits; other platforms unverified"
     },
     {
       "tab": "References",
       "group": "Footnotes",
       "feature": "Insert Footnote",
       "wordcraftCommand": "references.footnote",
-      "wordcraftVerification": "not-run",
-      "cn1Status": "pending",
-      "evidence": []
+      "wordcraftVerification": "paired DOCX insertion and both-direction cross-import passed; full UI/rendering parity not certified",
+      "cn1Status": "partial",
+      "evidence": [
+        "docs/notes-acceptance.json"
+      ]
     },
     {
       "tab": "References",
       "group": "Footnotes",
       "feature": "Insert Endnote",
       "wordcraftCommand": "references.endnote",
-      "wordcraftVerification": "not-run",
-      "cn1Status": "pending",
-      "evidence": []
+      "wordcraftVerification": "paired DOCX insertion and both-direction cross-import passed; full UI/rendering parity not certified",
+      "cn1Status": "partial",
+      "evidence": [
+        "docs/notes-acceptance.json"
+      ]
     },
     {
       "tab": "References",
@@ -2114,8 +2191,10 @@
       "feature": "Next Footnote",
       "wordcraftCommand": "references.nextFootnote",
       "wordcraftVerification": "not-run",
-      "cn1Status": "pending",
-      "evidence": []
+      "cn1Status": "partial",
+      "evidence": [
+        "docs/notes-acceptance.json"
+      ]
     },
     {
       "tab": "References",
@@ -2123,17 +2202,22 @@
       "feature": "Show Notes",
       "wordcraftCommand": "references.notes",
       "wordcraftVerification": "not-run",
-      "cn1Status": "pending",
-      "evidence": []
+      "cn1Status": "partial",
+      "evidence": [
+        "docs/notes-acceptance.json"
+      ]
     },
     {
       "tab": "References",
       "group": "Footnotes",
       "feature": "Footnote Options",
       "wordcraftCommand": "references.noteOptions",
-      "wordcraftVerification": "not-run",
-      "cn1Status": "pending",
-      "evidence": []
+      "wordcraftVerification": "paired DOCX settings and edited two-way interchange: 20 checks",
+      "cn1Status": "partial",
+      "evidence": [
+        "docs/note-options-acceptance.json"
+      ],
+      "limitations": "11 number formats; regional/textual formats and broader complex-section/note-story fidelity remain incomplete."
     },
     {
       "tab": "References",
@@ -2149,36 +2233,44 @@
       "group": "Citations",
       "feature": "Insert Citation",
       "wordcraftCommand": "references.citation",
-      "wordcraftVerification": "not-run",
-      "cn1Status": "pending",
-      "evidence": []
+      "wordcraftVerification": "twelve-style-generation-and-import-pass; reverse-DOCX-update-fails",
+      "cn1Status": "partial",
+      "evidence": [
+        "docs/citations-acceptance.json"
+      ]
     },
     {
       "tab": "References",
       "group": "Citations",
       "feature": "Manage Sources",
       "wordcraftCommand": "references.sources",
-      "wordcraftVerification": "not-run",
-      "cn1Status": "pending",
-      "evidence": []
+      "wordcraftVerification": "twelve-style-generation-and-import-pass; reverse-DOCX-update-fails",
+      "cn1Status": "partial",
+      "evidence": [
+        "docs/citations-acceptance.json"
+      ]
     },
     {
       "tab": "References",
       "group": "Citations",
       "feature": "Style",
       "wordcraftCommand": "references.citationStyle",
-      "wordcraftVerification": "not-run",
-      "cn1Status": "pending",
-      "evidence": []
+      "wordcraftVerification": "twelve-style-generation-and-import-pass; reverse-DOCX-update-fails",
+      "cn1Status": "partial",
+      "evidence": [
+        "docs/citations-acceptance.json"
+      ]
     },
     {
       "tab": "References",
       "group": "Citations",
       "feature": "Bibliography",
       "wordcraftCommand": "references.bibliography",
-      "wordcraftVerification": "not-run",
-      "cn1Status": "pending",
-      "evidence": []
+      "wordcraftVerification": "twelve-style-generation-and-import-pass; reverse-DOCX-update-fails",
+      "cn1Status": "partial",
+      "evidence": [
+        "docs/citations-acceptance.json"
+      ]
     },
     {
       "tab": "References",
@@ -2194,18 +2286,26 @@
       "group": "Captions",
       "feature": "Insert Table of Figures",
       "wordcraftCommand": "references.tableOfFigures",
-      "wordcraftVerification": "not-run",
-      "cn1Status": "pending",
-      "evidence": []
+      "wordcraftVerification": "paired scenarios; reverse complex figure-field update fails",
+      "cn1Status": "partial",
+      "evidence": [
+        "docs/figures-acceptance.json",
+        "docs/UI-ACCEPTANCE.md"
+      ],
+      "scope": "macOS and iPhone simulator workflows; documented option/format limits; other platforms unverified"
     },
     {
       "tab": "References",
       "group": "Captions",
       "feature": "Update Table of Figures",
       "wordcraftCommand": "references.updateFigures",
-      "wordcraftVerification": "not-run",
-      "cn1Status": "pending",
-      "evidence": []
+      "wordcraftVerification": "paired scenarios; reverse complex figure-field update fails",
+      "cn1Status": "partial",
+      "evidence": [
+        "docs/figures-acceptance.json",
+        "docs/UI-ACCEPTANCE.md"
+      ],
+      "scope": "macOS and iPhone simulator workflows; documented option/format limits; other platforms unverified"
     },
     {
       "tab": "References",
@@ -2221,54 +2321,66 @@
       "group": "Index",
       "feature": "Mark Entry",
       "wordcraftCommand": "references.markEntry",
-      "wordcraftVerification": "not-run",
-      "cn1Status": "pending",
-      "evidence": []
+      "wordcraftVerification": "paired-scenarios-pass; reverse-DOCX-update-fails",
+      "cn1Status": "partial",
+      "evidence": [
+        "docs/index-acceptance.json"
+      ]
     },
     {
       "tab": "References",
       "group": "Index",
       "feature": "Insert Index",
       "wordcraftCommand": "references.index",
-      "wordcraftVerification": "not-run",
-      "cn1Status": "pending",
-      "evidence": []
+      "wordcraftVerification": "paired-scenarios-pass; reverse-DOCX-update-fails",
+      "cn1Status": "partial",
+      "evidence": [
+        "docs/index-acceptance.json"
+      ]
     },
     {
       "tab": "References",
       "group": "Index",
       "feature": "Update Index",
       "wordcraftCommand": "references.updateIndex",
-      "wordcraftVerification": "not-run",
-      "cn1Status": "pending",
-      "evidence": []
+      "wordcraftVerification": "paired-scenarios-pass; reverse-DOCX-update-fails",
+      "cn1Status": "partial",
+      "evidence": [
+        "docs/index-acceptance.json"
+      ]
     },
     {
       "tab": "References",
       "group": "Table of Authorities",
       "feature": "Mark Citation",
       "wordcraftCommand": "references.markCitation",
-      "wordcraftVerification": "not-run",
-      "cn1Status": "pending",
-      "evidence": []
+      "wordcraftVerification": "paired-scenarios-pass; reverse-DOCX-update-fails",
+      "cn1Status": "partial",
+      "evidence": [
+        "docs/authorities-acceptance.json"
+      ]
     },
     {
       "tab": "References",
       "group": "Table of Authorities",
       "feature": "Insert Table of Authorities",
       "wordcraftCommand": "references.tableOfAuthorities",
-      "wordcraftVerification": "not-run",
-      "cn1Status": "pending",
-      "evidence": []
+      "wordcraftVerification": "paired-scenarios-pass; reverse-DOCX-update-fails",
+      "cn1Status": "partial",
+      "evidence": [
+        "docs/authorities-acceptance.json"
+      ]
     },
     {
       "tab": "References",
       "group": "Table of Authorities",
       "feature": "Update Table",
       "wordcraftCommand": "references.updateAuthorities",
-      "wordcraftVerification": "not-run",
-      "cn1Status": "pending",
-      "evidence": []
+      "wordcraftVerification": "paired-scenarios-pass; reverse-DOCX-update-fails",
+      "cn1Status": "partial",
+      "evidence": [
+        "docs/authorities-acceptance.json"
+      ]
     },
     {
       "tab": "References",
@@ -2284,153 +2396,240 @@
       "group": "Create",
       "feature": "Envelopes",
       "wordcraftCommand": "mailings.envelopes",
-      "wordcraftVerification": "not-run",
-      "cn1Status": "pending",
-      "evidence": []
+      "wordcraftVerification": "paired CLI workflows and DOCX template cross-import; rendered/platform equivalence incomplete",
+      "cn1Status": "partial",
+      "evidence": [
+        "docs/mailings-acceptance.json",
+        "docs/MAILINGS.md",
+        "scripts/mailings-cross-import.py",
+        "scripts/live-mailings-smoke.py"
+      ]
     },
     {
       "tab": "Mailings",
       "group": "Create",
       "feature": "Labels",
       "wordcraftCommand": "mailings.labels",
-      "wordcraftVerification": "not-run",
-      "cn1Status": "pending",
-      "evidence": []
+      "wordcraftVerification": "paired CLI workflows and DOCX template cross-import; rendered/platform equivalence incomplete",
+      "cn1Status": "partial",
+      "evidence": [
+        "docs/mailings-acceptance.json",
+        "docs/MAILINGS.md",
+        "scripts/mailings-cross-import.py",
+        "scripts/live-mailings-smoke.py"
+      ]
     },
     {
       "tab": "Mailings",
       "group": "Start Mail Merge",
       "feature": "Start Mail Merge",
       "wordcraftCommand": "mailings.start",
-      "wordcraftVerification": "not-run",
-      "cn1Status": "pending",
-      "evidence": []
+      "wordcraftVerification": "paired CLI workflows and DOCX template cross-import; rendered/platform equivalence incomplete",
+      "cn1Status": "partial",
+      "evidence": [
+        "docs/mailings-acceptance.json",
+        "docs/MAILINGS.md",
+        "scripts/mailings-cross-import.py",
+        "scripts/live-mailings-smoke.py"
+      ]
     },
     {
       "tab": "Mailings",
       "group": "Start Mail Merge",
       "feature": "Select Recipients",
       "wordcraftCommand": "mailings.recipients",
-      "wordcraftVerification": "not-run",
-      "cn1Status": "pending",
-      "evidence": []
+      "wordcraftVerification": "paired CLI workflows and DOCX template cross-import; rendered/platform equivalence incomplete",
+      "cn1Status": "partial",
+      "evidence": [
+        "docs/mailings-acceptance.json",
+        "docs/MAILINGS.md",
+        "scripts/mailings-cross-import.py",
+        "scripts/live-mailings-smoke.py"
+      ]
     },
     {
       "tab": "Mailings",
       "group": "Start Mail Merge",
       "feature": "Edit Recipient List",
       "wordcraftCommand": "mailings.editRecipients",
-      "wordcraftVerification": "not-run",
-      "cn1Status": "pending",
-      "evidence": []
+      "wordcraftVerification": "paired CLI workflows and DOCX template cross-import; rendered/platform equivalence incomplete",
+      "cn1Status": "partial",
+      "evidence": [
+        "docs/mailings-acceptance.json",
+        "docs/MAILINGS.md",
+        "scripts/mailings-cross-import.py",
+        "scripts/live-mailings-smoke.py",
+        "docs/RECIPIENT-MANAGEMENT.md",
+        "docs/recipient-management-acceptance.json"
+      ]
     },
     {
       "tab": "Mailings",
       "group": "Write & Insert Fields",
       "feature": "Highlight Merge Fields",
       "wordcraftCommand": "mailings.highlightFields",
-      "wordcraftVerification": "not-run",
-      "cn1Status": "pending",
-      "evidence": []
+      "wordcraftVerification": "paired CLI workflows and DOCX template cross-import; rendered/platform equivalence incomplete",
+      "cn1Status": "partial",
+      "evidence": [
+        "docs/mailings-acceptance.json",
+        "docs/MAILINGS.md",
+        "scripts/mailings-cross-import.py",
+        "scripts/live-mailings-smoke.py"
+      ]
     },
     {
       "tab": "Mailings",
       "group": "Write & Insert Fields",
       "feature": "Address Block",
       "wordcraftCommand": "mailings.addressBlock",
-      "wordcraftVerification": "not-run",
-      "cn1Status": "pending",
-      "evidence": []
+      "wordcraftVerification": "paired CLI workflows and DOCX template cross-import; rendered/platform equivalence incomplete",
+      "cn1Status": "partial",
+      "evidence": [
+        "docs/mailings-acceptance.json",
+        "docs/MAILINGS.md",
+        "scripts/mailings-cross-import.py",
+        "scripts/live-mailings-smoke.py"
+      ]
     },
     {
       "tab": "Mailings",
       "group": "Write & Insert Fields",
       "feature": "Greeting Line",
       "wordcraftCommand": "mailings.greetingLine",
-      "wordcraftVerification": "not-run",
-      "cn1Status": "pending",
-      "evidence": []
+      "wordcraftVerification": "paired CLI workflows and DOCX template cross-import; rendered/platform equivalence incomplete",
+      "cn1Status": "partial",
+      "evidence": [
+        "docs/mailings-acceptance.json",
+        "docs/MAILINGS.md",
+        "scripts/mailings-cross-import.py",
+        "scripts/live-mailings-smoke.py"
+      ]
     },
     {
       "tab": "Mailings",
       "group": "Write & Insert Fields",
       "feature": "Insert Merge Field",
       "wordcraftCommand": "mailings.insertField",
-      "wordcraftVerification": "not-run",
-      "cn1Status": "pending",
-      "evidence": []
+      "wordcraftVerification": "paired CLI workflows and DOCX template cross-import; rendered/platform equivalence incomplete",
+      "cn1Status": "partial",
+      "evidence": [
+        "docs/mailings-acceptance.json",
+        "docs/MAILINGS.md",
+        "scripts/mailings-cross-import.py",
+        "scripts/live-mailings-smoke.py"
+      ]
     },
     {
       "tab": "Mailings",
       "group": "Write & Insert Fields",
       "feature": "Rules",
       "wordcraftCommand": "mailings.rules",
-      "wordcraftVerification": "not-run",
-      "cn1Status": "pending",
-      "evidence": []
+      "wordcraftVerification": "paired CLI workflows and DOCX template cross-import; rendered/platform equivalence incomplete",
+      "cn1Status": "partial",
+      "evidence": [
+        "docs/mailings-acceptance.json",
+        "docs/MAILINGS.md",
+        "scripts/mailings-cross-import.py",
+        "scripts/live-mailings-smoke.py"
+      ]
     },
     {
       "tab": "Mailings",
       "group": "Write & Insert Fields",
       "feature": "Match Fields",
       "wordcraftCommand": "mailings.matchFields",
-      "wordcraftVerification": "not-run",
-      "cn1Status": "pending",
-      "evidence": []
+      "wordcraftVerification": "paired CLI workflows and DOCX template cross-import; rendered/platform equivalence incomplete",
+      "cn1Status": "partial",
+      "evidence": [
+        "docs/mailings-acceptance.json",
+        "docs/MAILINGS.md",
+        "scripts/mailings-cross-import.py",
+        "scripts/live-mailings-smoke.py"
+      ]
     },
     {
       "tab": "Mailings",
       "group": "Preview Results",
       "feature": "Preview Results",
       "wordcraftCommand": "mailings.preview",
-      "wordcraftVerification": "not-run",
-      "cn1Status": "pending",
-      "evidence": []
+      "wordcraftVerification": "paired CLI workflows and DOCX template cross-import; rendered/platform equivalence incomplete",
+      "cn1Status": "partial",
+      "evidence": [
+        "docs/mailings-acceptance.json",
+        "docs/MAILINGS.md",
+        "scripts/mailings-cross-import.py",
+        "scripts/live-mailings-smoke.py"
+      ]
     },
     {
       "tab": "Mailings",
       "group": "Preview Results",
       "feature": "Next Record",
       "wordcraftCommand": "mailings.next",
-      "wordcraftVerification": "not-run",
-      "cn1Status": "pending",
-      "evidence": []
+      "wordcraftVerification": "paired CLI workflows and DOCX template cross-import; rendered/platform equivalence incomplete",
+      "cn1Status": "partial",
+      "evidence": [
+        "docs/mailings-acceptance.json",
+        "docs/MAILINGS.md",
+        "scripts/mailings-cross-import.py",
+        "scripts/live-mailings-smoke.py"
+      ]
     },
     {
       "tab": "Mailings",
       "group": "Preview Results",
       "feature": "Previous Record",
       "wordcraftCommand": "mailings.previous",
-      "wordcraftVerification": "not-run",
-      "cn1Status": "pending",
-      "evidence": []
+      "wordcraftVerification": "paired CLI workflows and DOCX template cross-import; rendered/platform equivalence incomplete",
+      "cn1Status": "partial",
+      "evidence": [
+        "docs/mailings-acceptance.json",
+        "docs/MAILINGS.md",
+        "scripts/mailings-cross-import.py",
+        "scripts/live-mailings-smoke.py"
+      ]
     },
     {
       "tab": "Mailings",
       "group": "Preview Results",
       "feature": "Find Recipient",
       "wordcraftCommand": "mailings.findRecipient",
-      "wordcraftVerification": "not-run",
-      "cn1Status": "pending",
-      "evidence": []
+      "wordcraftVerification": "paired CLI workflows and DOCX template cross-import; rendered/platform equivalence incomplete",
+      "cn1Status": "partial",
+      "evidence": [
+        "docs/mailings-acceptance.json",
+        "docs/MAILINGS.md",
+        "scripts/mailings-cross-import.py",
+        "scripts/live-mailings-smoke.py"
+      ]
     },
     {
       "tab": "Mailings",
       "group": "Preview Results",
       "feature": "Check for Errors",
       "wordcraftCommand": "mailings.checkErrors",
-      "wordcraftVerification": "not-run",
-      "cn1Status": "pending",
-      "evidence": []
+      "wordcraftVerification": "paired CLI workflows and DOCX template cross-import; rendered/platform equivalence incomplete",
+      "cn1Status": "partial",
+      "evidence": [
+        "docs/mailings-acceptance.json",
+        "docs/MAILINGS.md",
+        "scripts/mailings-cross-import.py",
+        "scripts/live-mailings-smoke.py"
+      ]
     },
     {
       "tab": "Mailings",
       "group": "Finish",
       "feature": "Finish & Merge",
       "wordcraftCommand": "mailings.finish",
-      "wordcraftVerification": "not-run",
-      "cn1Status": "pending",
-      "evidence": []
+      "wordcraftVerification": "paired CLI workflows and DOCX template cross-import; rendered/platform equivalence incomplete",
+      "cn1Status": "partial",
+      "evidence": [
+        "docs/mailings-acceptance.json",
+        "docs/MAILINGS.md",
+        "scripts/mailings-cross-import.py",
+        "scripts/live-mailings-smoke.py"
+      ]
     },
     {
       "tab": "Review",
@@ -2509,9 +2708,16 @@
       "group": "Comments",
       "feature": "New Comment",
       "wordcraftCommand": "review.newComment",
-      "wordcraftVerification": "not-run",
-      "cn1Status": "pending",
-      "evidence": []
+      "wordcraftVerification": "Paired cell-comment DOCX commands and both-direction cross-import pass; full UI/rendering parity not certified.",
+      "cn1Status": "partial",
+      "evidence": [
+        "docs/CELL-COMMENTS.md",
+        "docs/cell-comments-acceptance.json",
+        "scripts/cell-comments-cross-import.py",
+        "scripts/live-cell-comments-smoke.py",
+        "docs/COMMENT-CONTROLS.md",
+        "docs/comment-controls-acceptance.json"
+      ]
     },
     {
       "tab": "Review",
@@ -2519,26 +2725,39 @@
       "feature": "Delete",
       "wordcraftCommand": "review.deleteComment",
       "wordcraftVerification": "not-run",
-      "cn1Status": "pending",
-      "evidence": []
+      "cn1Status": "partial",
+      "evidence": [
+        "docs/CELL-COMMENTS.md",
+        "docs/cell-comments-acceptance.json",
+        "scripts/cell-comments-cross-import.py",
+        "scripts/live-cell-comments-smoke.py",
+        "docs/COMMENT-CONTROLS.md",
+        "docs/comment-controls-acceptance.json"
+      ]
     },
     {
       "tab": "Review",
       "group": "Comments",
       "feature": "Previous",
       "wordcraftCommand": "review.previousComment",
-      "wordcraftVerification": "not-run",
-      "cn1Status": "pending",
-      "evidence": []
+      "wordcraftVerification": "Paired body/table-cell navigation and wraparound match; both-reader DOCX marker placement checks pass. Full UI/rendering parity not certified.",
+      "cn1Status": "partial",
+      "evidence": [
+        "docs/COMMENT-CONTROLS.md",
+        "docs/comment-controls-acceptance.json"
+      ]
     },
     {
       "tab": "Review",
       "group": "Comments",
       "feature": "Next",
       "wordcraftCommand": "review.nextComment",
-      "wordcraftVerification": "not-run",
-      "cn1Status": "pending",
-      "evidence": []
+      "wordcraftVerification": "Paired body/table-cell navigation and wraparound match; both-reader DOCX marker placement checks pass. Full UI/rendering parity not certified.",
+      "cn1Status": "partial",
+      "evidence": [
+        "docs/COMMENT-CONTROLS.md",
+        "docs/comment-controls-acceptance.json"
+      ]
     },
     {
       "tab": "Review",
@@ -2546,26 +2765,47 @@
       "feature": "Show Comments",
       "wordcraftCommand": "review.comments",
       "wordcraftVerification": "not-run",
-      "cn1Status": "pending",
-      "evidence": []
+      "cn1Status": "partial",
+      "evidence": [
+        "docs/CELL-COMMENTS.md",
+        "docs/cell-comments-acceptance.json",
+        "scripts/cell-comments-cross-import.py",
+        "scripts/live-cell-comments-smoke.py",
+        "docs/COMMENT-CONTROLS.md",
+        "docs/comment-controls-acceptance.json"
+      ]
     },
     {
       "tab": "Review",
       "group": "Comments",
       "feature": "Resolve",
       "wordcraftCommand": "review.resolveComment",
-      "wordcraftVerification": "not-run",
-      "cn1Status": "pending",
-      "evidence": []
+      "wordcraftVerification": "Paired cell-comment DOCX commands and both-direction cross-import pass; full UI/rendering parity not certified.",
+      "cn1Status": "partial",
+      "evidence": [
+        "docs/CELL-COMMENTS.md",
+        "docs/cell-comments-acceptance.json",
+        "scripts/cell-comments-cross-import.py",
+        "scripts/live-cell-comments-smoke.py",
+        "docs/COMMENT-CONTROLS.md",
+        "docs/comment-controls-acceptance.json"
+      ]
     },
     {
       "tab": "Review",
       "group": "Comments",
       "feature": "Reply",
       "wordcraftCommand": "review.reply",
-      "wordcraftVerification": "not-run",
-      "cn1Status": "pending",
-      "evidence": []
+      "wordcraftVerification": "Paired cell-comment DOCX commands and both-direction cross-import pass; full UI/rendering parity not certified.",
+      "cn1Status": "partial",
+      "evidence": [
+        "docs/CELL-COMMENTS.md",
+        "docs/cell-comments-acceptance.json",
+        "scripts/cell-comments-cross-import.py",
+        "scripts/live-cell-comments-smoke.py",
+        "docs/COMMENT-CONTROLS.md",
+        "docs/comment-controls-acceptance.json"
+      ]
     },
     {
       "tab": "Review",
@@ -2671,9 +2911,14 @@
       "group": "Compare",
       "feature": "Compare",
       "wordcraftCommand": "review.compare",
-      "wordcraftVerification": "not-run",
-      "cn1Status": "pending",
-      "evidence": []
+      "wordcraftVerification": "48 paired and cross-import resolution checks: 42 pass; 6 Wordcraft-origin paragraph-break failures reproduce in its own reader",
+      "cn1Status": "partial",
+      "evidence": [
+        "docs/comparison-acceptance.json",
+        "docs/REVIEW-COMPARISON.md",
+        "scripts/comparison-cross-import.py",
+        "scripts/live-comparison-smoke.py"
+      ]
     },
     {
       "tab": "Review",
@@ -3193,18 +3438,27 @@
       "group": "Table",
       "feature": "Properties",
       "wordcraftCommand": "table.properties",
-      "wordcraftVerification": "not-run",
-      "cn1Status": "pending",
-      "evidence": []
+      "wordcraftVerification": "paired-cli-docx-verified",
+      "cn1Status": "partial",
+      "evidence": [
+        "docs/TABLE-SIZING.md",
+        "docs/table-sizing-acceptance.json",
+        "docs/TABLE-ROWS.md",
+        "docs/table-rows-acceptance.json"
+      ]
     },
     {
       "tab": "Table Layout",
       "group": "Table",
       "feature": "Alt Text",
       "wordcraftCommand": "table.altText",
-      "wordcraftVerification": "not-run",
-      "cn1Status": "pending",
-      "evidence": []
+      "wordcraftVerification": "paired-cli-docx-verified",
+      "cn1Status": "partial",
+      "evidence": [
+        "docs/TABLE-SPLITTING.md",
+        "docs/table-splitting-acceptance.json"
+      ],
+      "acceptanceBoundary": "Native Mac and iPhone UI plus pinned Wordcraft CLI/DOCX scenarios. Full catalog behavior and all-platform UI equivalence are not certified."
     },
     {
       "tab": "Table Layout",
@@ -3319,36 +3573,50 @@
       "group": "Merge",
       "feature": "Split Cells",
       "wordcraftCommand": "table.split",
-      "wordcraftVerification": "not-run",
-      "cn1Status": "pending",
-      "evidence": []
+      "wordcraftVerification": "paired-cli-docx-verified",
+      "cn1Status": "partial",
+      "evidence": [
+        "docs/TABLE-SPLITTING.md",
+        "docs/table-splitting-acceptance.json"
+      ],
+      "acceptanceBoundary": "Native Mac and iPhone UI plus pinned Wordcraft CLI/DOCX scenarios. Full catalog behavior and all-platform UI equivalence are not certified."
     },
     {
       "tab": "Table Layout",
       "group": "Merge",
       "feature": "Split Table",
       "wordcraftCommand": "table.splitTable",
-      "wordcraftVerification": "not-run",
-      "cn1Status": "pending",
-      "evidence": []
+      "wordcraftVerification": "paired-cli-docx-verified",
+      "cn1Status": "partial",
+      "evidence": [
+        "docs/TABLE-SPLITTING.md",
+        "docs/table-splitting-acceptance.json"
+      ],
+      "acceptanceBoundary": "Native Mac and iPhone UI plus pinned Wordcraft CLI/DOCX scenarios. Full catalog behavior and all-platform UI equivalence are not certified."
     },
     {
       "tab": "Table Layout",
       "group": "Cell Size",
       "feature": "AutoFit",
       "wordcraftCommand": "table.autofit",
-      "wordcraftVerification": "not-run",
-      "cn1Status": "pending",
-      "evidence": []
+      "wordcraftVerification": "paired-cli-docx-verified",
+      "cn1Status": "partial",
+      "evidence": [
+        "docs/TABLE-SIZING.md",
+        "docs/table-sizing-acceptance.json"
+      ]
     },
     {
       "tab": "Table Layout",
       "group": "Cell Size",
       "feature": "Row Height",
       "wordcraftCommand": "table.rowHeight",
-      "wordcraftVerification": "not-run",
-      "cn1Status": "pending",
-      "evidence": []
+      "wordcraftVerification": "paired-cli-docx-verified",
+      "cn1Status": "partial",
+      "evidence": [
+        "docs/TABLE-ROWS.md",
+        "docs/table-rows-acceptance.json"
+      ]
     },
     {
       "tab": "Table Layout",
@@ -3436,9 +3704,12 @@
       "group": "Data",
       "feature": "Formula",
       "wordcraftCommand": "table.formula",
-      "wordcraftVerification": "not-run",
-      "cn1Status": "pending",
-      "evidence": []
+      "wordcraftVerification": "paired-cli-docx-verified",
+      "cn1Status": "partial",
+      "evidence": [
+        "docs/TABLE-DATA.md",
+        "docs/table-data-acceptance.json"
+      ]
     },
     {
       "tab": "Equation",
@@ -4529,5 +4800,6 @@
       "cn1Status": "pending",
       "evidence": []
     }
-  ]
+  ],
+  "verificationUpdated": "2026-10-17"
 }

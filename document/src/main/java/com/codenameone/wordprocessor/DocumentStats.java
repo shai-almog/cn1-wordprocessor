@@ -44,13 +44,16 @@ public final class DocumentStats {
   }
 
   private int countText(RichText text) {
-    int count = 0;
-    boolean word = false;
-    for (int i = 0; i < text.length(); i++) {
-      boolean next = !Character.isWhitespace(text.charAt(i));
-      if (next && !word) count++;
-      word = next;
-    }
-    return count;
+    final int[] count = {0};
+    final boolean[] word = {false};
+    text.visit(
+        (offset, value, style) -> {
+          for (int i = 0; i < value.length(); i++) {
+            boolean next = !Character.isWhitespace(value.charAt(i));
+            if (next && !word[0]) count[0]++;
+            word[0] = next;
+          }
+        });
+    return count[0];
   }
 }

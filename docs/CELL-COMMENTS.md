@@ -1,0 +1,15 @@
+# Table-cell comments acceptance
+
+Comments now belong to body paragraphs or a range within one owning table cell. Stable paragraph IDs preserve their position across row insertion, merged-cell operations and paragraph splitting. Editing text updates the anchors; deleting the owning cell removes its comments, and undo restores them. The editor paints cell highlights from a cached paragraph index for the immutable document.
+
+The Review ribbon supports Add, Reply, Resolve/Reopen, Go to and Delete for these ranges. Go to enters the correct cell and selects its range. Native XML and DOCX retain authors, range markers, replies and resolution. Twelve paired DOCX checks create plain, replied and resolved cell comments in each implementation and reopen/rewrite them with the other reader. They check anchor offsets, thread relationships and resolution, not rendered layout.
+
+The final Java 8 reactor passes 350 tests with no failures, errors or skips. Ten new model/format tests cover anchor editing, row/merge changes, undo, replies, native/DOCX persistence and rejection of cross-cell ranges. The 59 paired document cases and 20 existing review interchange checks also pass.
+
+The final native batch passes 185 checks: Linux 121, macOS 32 and iPhone simulator 32. Each platform runs the same 12 cell-comment ribbon/dialog checks. Mac and iPhone also run seven comparison and thirteen Mailings checks; Linux additionally reruns keyboard, dialog input, navigation, typing and grapheme regressions. Cell highlights were visually inspected on Mac and iPhone. These are local Maven/ParparVM builds with the built-in MCP; Linux uses Xvfb/XTest. Physical devices, Windows and current-source Android/browser acceptance are not certified here.
+
+During the first iPhone Mailings run, an agent cleanup command terminated the app before the runner completed. This was an automation error, not an observed application crash. The interrupted recovery slots were backed up locally, the preserved original document was restored with a valid recovery checksum, and the running app verified exact original XML and empty recipient state. All thirteen Mailings checks were then rerun successfully; their runner exited before cleanup. The interrupted report is retained separately and excluded from passing counts.
+
+All final native runs restored their original XML and recipient state and awaited recovery. Task-owned native apps and Linux containers were stopped. Exact source/artifact hashes, build logs, final reports and failure/restoration evidence are in `artifacts/parity-20261016-cell-comments`; see `cell-comments-acceptance.json`. The iOS artifact is a Debug simulator app, Linux is a review build, and Mac includes opt-in debugging. Their byte counts are artifact provenance, not matched release benchmarks.
+
+The following [comment-controls checkpoint](COMMENT-CONTROLS.md) implements text editing and next/previous navigation. Cross-cell/story ranges and broader Word UI/rendering fidelity remain incomplete. Full parity and final startup, memory, source-size and performance comparisons remain incomplete.

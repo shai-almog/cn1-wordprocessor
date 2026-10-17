@@ -30,7 +30,7 @@ public final class Cli {
     }
     switch (args[0]) {
       case "commands":
-        for (Commands.Descriptor d : new Commands().descriptors())
+        for (Commands.Descriptor d : DocumentFiles.commands().descriptors())
           System.out.println(
               Json.write(
                   Json.object(
@@ -78,7 +78,7 @@ public final class Cli {
               params.put(e.getKey(), (String) e.getValue());
             }
           }
-        Macros.Preview preview = new Macros(new Commands()).preview(session, macro, params, null);
+        Macros.Preview preview = new Macros(DocumentFiles.commands()).preview(session, macro, params, null);
         if (has(args, "--preview")) {
           System.out.println(
               Json.write(

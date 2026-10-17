@@ -1,0 +1,28 @@
+{
+  "fullParity": false,
+  "javaTests": 384,
+  "nativeUiChecks": 16,
+  "nativeReports": [
+    "mac-bar-tabs",
+    "ios-bar-tabs"
+  ],
+  "barDocxChecks": {
+    "passed": 15,
+    "total": 16,
+    "failure": "Wordcraft truncates each tabs property to its first 64 entries and drops a following bar stop after the 64 clears for a style fallback interval. CN1 own roundtrip passes.",
+    "referenceSource": "https://github.com/storytold/wordcraft/blob/159b84f54c74e9e82fb3109b758ae7dd6f4e3ab0/crates/docx/src/read/props.rs#L285"
+  },
+  "tableDocxRegressionChecks": 48,
+  "pairedDocumentRegressionCases": 59,
+  "nativeBuildLogs": {
+    "mac": "tabs-native.log",
+    "ios": "tabs-ios-build.log"
+  },
+  "reactorLog": "tabs-reactor-final.log",
+  "rendering": "Mac and iPhone canvas screenshots inspected; Mac fixture PDF rendered independently with Poppler. Cross-reader DOCX checks are semantic, not rendered Wordcraft equivalence.",
+  "framework": "Same isolated 008f9ece-based snapshot and local Mac patch as table-selection-acceptance.json; no current upstream/release-baseline claim.",
+  "sourceManifest": "source-sha256.json",
+  "restored": true,
+  "appsStopped": true,
+  "remaining": "See docs/TAB-FIDELITY.md and docs/STATUS.md"
+}

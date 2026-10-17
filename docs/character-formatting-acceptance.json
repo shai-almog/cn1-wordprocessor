@@ -1,0 +1,62 @@
+{
+  "fullParity": false,
+  "scope": "Advanced character formatting and Word-style caret formatting",
+  "wordcraftRevision": "159b84f54c74e9e82fb3109b758ae7dd6f4e3ab0",
+  "frameworkBaseline": "isolated 008f9ece snapshot plus recorded Mac fixes",
+  "java8Tests": {
+    "tests": 507,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "nativeChecks": {
+    "mac-font": 23,
+    "mac-spacing": 21,
+    "ios-font": 23,
+    "ios-spacing": 21
+  },
+  "pairedCharacterChecks": 46,
+  "pdfChecks": {
+    "hiddenTextOmitted": true,
+    "wideScalesInkWidth": true,
+    "narrowScalesInkWidth": true,
+    "expandedIsWider": true,
+    "condensedIsNarrower": true,
+    "smallCapsChangesOnlyDisplay": true,
+    "allCapsChangesOnlyDisplay": true
+  },
+  "renderedEquivalence": false,
+  "sourceManifest": "../artifacts/parity-20261017-character-formatting/source-sha256.json",
+  "sourceManifestSha256": "292e439ee8b7dbc08cc268d2111d02068c2fe5156040d6f8b3063f2ef9b09030",
+  "macBinary": {
+    "buildPath": "/private/tmp/cn1-word-tables-20261016-xtUzBOG9/app/app/common/target/mac-native/Build/Products/Release/Main.app",
+    "reviewPath": "/private/tmp/cn1-word-navigation-20261016-wnZ8j9YN/MacNavigation.app",
+    "sha256": "3f2a43398ee9ac870ecdfb1402374fa6305ad92b8c242621e384a3299117399a",
+    "pidStopped": 31639,
+    "windowAndZoomRestored": true,
+    "dialogVisuallyInspected": true,
+    "fieldAndLeaderRastersInspected": true
+  },
+  "iosBinary": {
+    "buildPath": "/private/tmp/cn1-word-tables-20261016-xtUzBOG9/app/app/common/target/ios-native/Build/Products/Debug-iphonesimulator/Main.app/Main",
+    "installedPath": "/Users/shai/Library/Developer/CoreSimulator/Devices/0E472C6A-9375-4774-9EF0-B2CAA3ECC9FB/data/Containers/Bundle/Application/8AA1DC8D-7E36-442B-AA32-58DEC33BD980/Main.app/Main",
+    "sha256": "3b61705ce059cf1a821d24c08af3d413b904e784ca704b304cc499e2a3c01f9d",
+    "pidStopped": 35677,
+    "dialogVisuallyInspected": true,
+    "fieldAndLeaderRastersInspected": true
+  },
+  "cleanup": {
+    "appsStopped": true,
+    "originalsRestored": true,
+    "nativeChecks": 88,
+    "macWindowAndZoomRestored": true,
+    "iosDebugPort": 18765
+  },
+  "limitations": [
+    "Advanced text effects/underline variants/character borders/enclosures/phonetic guides",
+    "Full shaping, bidi and font fallback",
+    "Current release framework integration",
+    "Windows/Linux/Android/browser/physical-device acceptance",
+    "Remaining Wordcraft workflows and final performance/size comparison"
+  ]
+}

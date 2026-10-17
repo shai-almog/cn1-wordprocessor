@@ -1,0 +1,93 @@
+{
+  "date": "2026-10-15",
+  "fullParity": false,
+  "frameworkRevision": "008f9ece62526d807c2064887ad8f8641d6195a4",
+  "wordcraftRevision": "159b84f54c74e9e82fb3109b758ae7dd6f4e3ab0",
+  "artifactDirectory": "artifacts/parity-20261015-index",
+  "reactor": {
+    "tests": 267,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "crossImport": {
+    "passed": 6,
+    "failed": 2,
+    "evidence": "cross-import/results.json",
+    "failure": "Wordcraft duplicates cached entries when updating the standard multi-paragraph INDEX field exported by this app. Both exporters pass the two scenario checks, and Wordcraft exports update correctly here. This is not full two-way interoperability."
+  },
+  "platforms": {
+    "mac": {
+      "build": "passed",
+      "artifactSha256": "0683c96279b4ed087a78c64ac97a1b5fdb1d5b1cc833d0f0275262c1a102f11d",
+      "checks": [
+        "ribbon-mark-subentry-bold-mark-all-and-cross-reference",
+        "ribbon-index-run-in-right-aligned-hyphen-leaders",
+        "index-insertion-single-undo-redo",
+        "ribbon-update-adds-new-entry-without-duplicates",
+        "index-settings-cancel-preserves-document",
+        "ribbon-remove-index-retains-source-marks"
+      ],
+      "originalXmlRestored": true,
+      "evidence": "live-index-mac-expanded.json"
+    },
+    "ios": {
+      "build": "passed",
+      "artifactSha256": "605adaffecc1fec5d414540d90d5d2b394366400b3dbb99cd7e25d07b49ee936",
+      "checks": [
+        "ribbon-mark-subentry-bold-mark-all-and-cross-reference",
+        "ribbon-index-run-in-right-aligned-hyphen-leaders",
+        "index-insertion-single-undo-redo",
+        "ribbon-update-adds-new-entry-without-duplicates",
+        "index-settings-cancel-preserves-document",
+        "ribbon-remove-index-retains-source-marks"
+      ],
+      "originalXmlRestored": true,
+      "evidence": "live-index-ios1.json"
+    },
+    "android": {
+      "build": "passed",
+      "artifactSha256": "9168d06464cd37b656dba2d4e2713b2866623954dbaabed2a9aedb62e179908f",
+      "checks": [
+        "ribbon-mark-subentry-bold-mark-all-and-cross-reference",
+        "ribbon-index-run-in-right-aligned-hyphen-leaders",
+        "index-insertion-single-undo-redo",
+        "ribbon-update-adds-new-entry-without-duplicates",
+        "index-settings-cancel-preserves-document",
+        "ribbon-remove-index-retains-source-marks"
+      ],
+      "originalXmlRestored": true,
+      "evidence": "live-index-android1.json",
+      "inputBoundary": "Built-in MCP UI actions on emulator; physical touch/keyboard not certified"
+    },
+    "browser": {
+      "build": "passed",
+      "runtime": "partial",
+      "checks": [
+        "Chrome renders the editor ribbon and document canvas",
+        "Typed Kilns into body and inserted a paragraph",
+        "References ribbon and Mark Index Entry dialog opened"
+      ],
+      "limitations": [
+        "Startup and UI updates were visibly slow; no controlled timing was measured",
+        "Browser control detached during dialog typing; completion, save/reload and persistence checks not verified",
+        "Browser dialog title was exposed to accessibility but not painted in the observed screenshot",
+        "No mobile browser acceptance"
+      ],
+      "cleanup": "Close request failed after browser control detached. The agent-created temporary tab is left to tool session cleanup; Chrome was not killed.",
+      "artifactSha256": "26d06a61e9373dcf7d4b8cb4f2325873933202da738a6d87ceb8993521662e6e"
+    }
+  },
+  "limitations": [
+    "One index per document",
+    "Multiple columns are rejected, not approximated",
+    "Sorting uses case-folded Unicode text, not locale-specific collation",
+    "Custom INDEX separators, letter-heading formats and advanced switches cannot be regenerated",
+    "Mark All marks the first whole-word same-case match per paragraph, matching the reference command",
+    "Marks are empty-result XE fields; dedicated hidden-mark editing UI remains absent",
+    "Track-changes display and structural index insertion/removal are not fully certified",
+    "Browser, Windows, Linux, physical-device acceptance and final matched benchmarks remain incomplete"
+  ],
+  "sourceManifest": "source-sha256.json",
+  "sourceArchiveSha256": "8173a8af89113ceaf98b7132534226f00b42f4c555af2b2374b7b9e9e1fa5c48"
+}

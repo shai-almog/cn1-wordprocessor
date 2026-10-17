@@ -7,6 +7,49 @@ import org.junit.Test;
 
 public class AutomationTest {
   @Test
+  public void fieldCommandAndInvalidInstructionRollback() {
+    Session s = new Session(Document.empty());
+    Commands c = new Commands();
+    c.execute(s, "field.insert", Json.object("instruction", "TITLE", "result", "Report"));
+    assertEquals("Report", s.document().plainText());
+    Document before = s.document();
+    try {
+      c.execute(s, "field.insert", Json.object("instruction", ""));
+      fail();
+    } catch (IllegalArgumentException expected) {
+    }
+    assertSame(before, s.document());
+    s.undo();
+    assertEquals("", s.document().plainText());
+  }
+
+  @Test
+  public void findAndReplaceReachRichMergedCellParagraphsWithOneUndo() {
+    Commands c = new Commands();
+    Session s = new Session(Document.empty());
+    s.replace("needle body");
+    s.insertTable(2, 2);
+    s.setCell(1, 0, 0, "needle first\nneedle second");
+    s.setCell(1, 0, 1, "needle last");
+    s.mergeCells(1, 0, 0, 1, 2);
+    Document before = s.document();
+    java.util.List<java.util.Map<String, Object>> matches = Commands.find(before, "needle");
+    assertEquals(4, matches.size());
+    Commands.selectMatch(s, matches.get(2));
+    assertTrue(s.inCell());
+    assertEquals(1, s.selection().block);
+    assertEquals(
+        4,
+        c.execute(s, "replace.all", Json.object("text", "needle", "replacement", "replacement")));
+    assertFalse(s.document().plainText().contains("needle"));
+    assertEquals(4, Commands.find(s.document(), "replacement").size());
+    s.undo();
+    assertEquals(before.plainText(), s.document().plainText());
+    assertTrue(s.inCell());
+    assertEquals(1, s.selection().block);
+  }
+
+  @Test
   public void previewIsIsolatedAndUndoable() throws Exception {
     Session s = new Session(Document.empty());
     s.replace("Dear {{name}},");

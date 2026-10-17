@@ -7,7 +7,7 @@ import java.util.*;
 /** MCP 2025-06-18 stdio server. Single session; explicit filesystem root; no network listener. */
 public final class McpServer {
   private final Path root;
-  private final Commands commands = new Commands();
+  private final Commands commands = DocumentFiles.commands();
   private Session session = new Session(Document.empty());
   private Docx.Opened source;
   private final Map<String, Macros.Preview> previews = new LinkedHashMap<String, Macros.Preview>();

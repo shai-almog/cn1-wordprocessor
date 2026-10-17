@@ -1,0 +1,418 @@
+package com.codenameone.wordprocessor;
+
+import com.codename1.xml.Element;
+import java.util.*;
+
+/** Native and OOXML table formatting. Unsupported asymmetric borders/margins are reported. */
+final class TableFormats {
+  static void nativeXml(StringBuilder b, TableFormat f) {
+    b.append("<tableFormat headers=\"").append(f.headerRows).append("\"");
+    if (!f.title.isEmpty()) b.append(" title=\"").append(Xml.attribute(f.title)).append("\"");
+    if (!f.description.isEmpty())
+      b.append(" description=\"").append(Xml.attribute(f.description)).append("\"");
+    TableFormat.Sizing size = f.sizing;
+    if (!"percent".equals(size.unit)
+        || size.width != 100
+        || !"left".equals(size.align)
+        || size.indent != 0
+        || !size.fixed)
+      b.append(" widthUnit=\"")
+          .append(size.unit)
+          .append("\" width=\"")
+          .append(size.width)
+          .append("\" align=\"")
+          .append(size.align)
+          .append("\" indent=\"")
+          .append(size.indent)
+          .append("\" fixed=\"")
+          .append(size.fixed ? "true" : "false")
+          .append("\"");
+    b.append(">");
+    for (int c = 0; c < f.columns(); c++)
+      b.append("<column width=\"").append(f.column(c)).append("\"/>");
+    for (int r = 0; r < f.rows(); r++) {
+      b.append("<row height=\"").append(f.minHeight(r)).append("\"");
+      if ("exact".equals(f.row(r).rule)) b.append(" rule=\"exact\"");
+      if (!f.row(r).allowBreak) b.append(" allowBreak=\"false\"");
+      b.append(">");
+      for (int c = 0; c < f.columns(); c++) {
+        TableFormat.Cell v = f.cell(r, c);
+        b.append("<cell background=\"")
+            .append(hex(v.background))
+            .append("\" borderColor=\"")
+            .append(hex(v.borderColor))
+            .append("\" borderWidth=\"")
+            .append(v.borderWidth)
+            .append("\" horizontalPadding=\"")
+            .append(v.horizontalPadding)
+            .append("\" verticalPadding=\"")
+            .append(v.verticalPadding)
+            .append("\" vertical=\"")
+            .append(v.vertical)
+            .append("\"/>");
+      }
+      b.append("</row>");
+    }
+    b.append("</tableFormat>");
+  }
+
+  static TableFormat nativeRead(Element table, int rows, int columns) {
+    TableFormat f = new TableFormat(rows, columns);
+    Element props = Xml.child(table, "tableFormat");
+    if (props == null) return f;
+    if (Xml.children(props, "column").size() > columns || Xml.children(props, "row").size() > rows)
+      throw new IllegalArgumentException("Table format dimensions exceed the table");
+    for (Element row : Xml.children(props, "row"))
+      if (Xml.children(row, "cell").size() > columns)
+        throw new IllegalArgumentException("Table cell formats exceed the table width");
+    int c = 0, r = 0;
+    for (Element col : Xml.children(props, "column")) f = f.column(c++, number(col, "width", 1));
+    for (Element row : Xml.children(props, "row")) {
+      float height = number(row, "height", 0);
+      f =
+          f.row(
+              r,
+              new TableFormat.Row(
+                  height,
+                  Xml.attr(row, "rule", height == 0 ? "auto" : "atLeast"),
+                  !"false".equals(Xml.attr(row, "allowBreak", "true"))));
+      c = 0;
+      for (Element cell : Xml.children(row, "cell"))
+        f =
+            f.cell(
+                r,
+                c++,
+                new TableFormat.Cell(
+                    color(cell, "background", 0xffffff),
+                    color(cell, "borderColor", 0xa6a6a6),
+                    number(cell, "borderWidth", .5f),
+                    number(cell, "horizontalPadding", 6),
+                    number(cell, "verticalPadding", 4),
+                    Xml.attr(cell, "vertical", "top")));
+      r++;
+    }
+    f =
+        f.sizing(
+            new TableFormat.Sizing(
+                Xml.attr(props, "widthUnit", "percent"),
+                number(props, "width", 100),
+                Xml.attr(props, "align", "left"),
+                number(props, "indent", 0),
+                !"false".equals(Xml.attr(props, "fixed", "true"))));
+    return f.headerRows(Integer.parseInt(Xml.attr(props, "headers", "0")))
+        .altText(Xml.attr(props, "title", ""), Xml.attr(props, "description", ""));
+  }
+
+  static void sizingXml(StringBuilder b, TableFormat f) {
+    TableFormat.Sizing size = f.sizing;
+    b.append("<w:tblW w:type=\"")
+        .append("points".equals(size.unit) ? "dxa" : "percent".equals(size.unit) ? "pct" : "auto")
+        .append("\" w:w=\"")
+        .append(Math.round(size.width * ("percent".equals(size.unit) ? 50 : 20)))
+        .append("\"/><w:jc w:val=\"")
+        .append(size.align)
+        .append("\"/><w:tblInd w:type=\"dxa\" w:w=\"")
+        .append(Math.round(size.indent * 20))
+        .append("\"/><w:tblLayout w:type=\"")
+        .append(size.fixed ? "fixed" : "autofit")
+        .append("\"/>");
+  }
+
+  static String css(TableFormat f) {
+    TableFormat.Sizing size = f.sizing;
+    String width =
+        "auto".equals(size.unit) ? "auto" : size.width + ("points".equals(size.unit) ? "pt" : "%");
+    return "border-collapse:collapse;width:"
+        + width
+        + ";table-layout:"
+        + (size.fixed ? "fixed" : "auto")
+        + ";margin-left:"
+        + ("left".equals(size.align) ? size.indent + "pt" : "auto")
+        + ";margin-right:"
+        + ("center".equals(size.align) ? "auto" : "0");
+  }
+
+  static void alternativeXml(StringBuilder b, TableFormat format) {
+    if (!format.title.isEmpty())
+      b.append("<w:tblCaption w:val=\"").append(Xml.attribute(format.title)).append("\"/>");
+    if (!format.description.isEmpty())
+      b.append("<w:tblDescription w:val=\"")
+          .append(Xml.attribute(format.description))
+          .append("\"/>");
+  }
+
+  static void rowXml(StringBuilder b, TableFormat f, int r) {
+    b.append("<w:trPr>");
+    if (r < f.headerRows) b.append("<w:tblHeader/>");
+    if (f.minHeight(r) > 0)
+      b.append("<w:trHeight w:val=\"")
+          .append(Math.max(1, Math.round(f.minHeight(r) * 20)))
+          .append("\" w:hRule=\"")
+          .append(f.row(r).rule)
+          .append("\"/>");
+    if (!f.row(r).allowBreak) b.append("<w:cantSplit/>");
+    b.append("</w:trPr>");
+  }
+
+  static void cellXml(StringBuilder b, TableFormat.Cell v, float width) {
+    b.append("<w:tcW w:w=\"")
+        .append(Math.round(width * 20))
+        .append("\" w:type=\"dxa\"/>")
+        .append("<w:shd w:val=\"clear\" w:fill=\"")
+        .append(hex(v.background))
+        .append("\"/>")
+        .append("<w:vAlign w:val=\"")
+        .append(v.vertical)
+        .append("\"/><w:tcMar>");
+    for (String side : new String[] {"top", "bottom", "left", "right"})
+      b.append("<w:")
+          .append(side)
+          .append(" w:w=\"")
+          .append(
+              Math.round(
+                  ("top".equals(side) || "bottom".equals(side)
+                          ? v.verticalPadding
+                          : v.horizontalPadding)
+                      * 20))
+          .append("\" w:type=\"dxa\"/>");
+    b.append("</w:tcMar><w:tcBorders>");
+    for (String side : new String[] {"top", "bottom", "left", "right"})
+      b.append("<w:")
+          .append(side)
+          .append(" w:val=\"")
+          .append(v.borderWidth == 0 ? "nil" : "single")
+          .append("\" w:sz=\"")
+          .append(Math.round(v.borderWidth * 8))
+          .append("\" w:color=\"")
+          .append(hex(v.borderColor))
+          .append("\"/>");
+    b.append("</w:tcBorders>");
+  }
+
+  static Table readDocx(Element element, Table table, Set<String> warnings) {
+    TableFormat f = table.format;
+    Element grid = Xml.child(element, "tblGrid"), props = Xml.child(element, "tblPr");
+    int c = 0;
+    if (grid != null)
+      for (Element col : Xml.children(grid, "gridCol")) {
+        if (c < f.columns()) {
+          float width = number(col, "w", 20) / 20;
+          if (width > 0) f = f.column(c, width);
+        }
+        c++;
+      }
+    TableFormat.Cell base = new TableFormat.Cell(0xffffff, 0xa6a6a6, 0, 6, 4, "top");
+    if (props != null) {
+      Element title = Xml.child(props, "tblCaption"),
+          description = Xml.child(props, "tblDescription");
+      f =
+          f.altText(
+              title == null ? "" : Xml.attr(title, "val", ""),
+              description == null ? "" : Xml.attr(description, "val", ""));
+      base = readCell(props, base, "tblBorders", "tblCellMar", warnings);
+      for (Element prop : Xml.children(props, null)) {
+        String name = Xml.local(prop);
+        if (!"tblW".equals(name)
+            && !"tblBorders".equals(name)
+            && !"tblCellMar".equals(name)
+            && !"tblLayout".equals(name)
+            && !"jc".equals(name)
+            && !"tblInd".equals(name)
+            && !"tblCaption".equals(name)
+            && !"tblDescription".equals(name))
+          warnings.add("Table property requires conversion: " + name);
+      }
+      Element width = Xml.child(props, "tblW");
+      Element align = Xml.child(props, "jc"),
+          indent = Xml.child(props, "tblInd"),
+          layout = Xml.child(props, "tblLayout");
+      String unit = width == null ? "auto" : Xml.attr(width, "type", "auto");
+      float value = width == null ? 0 : number(width, "w", 0);
+      if ("pct".equals(unit)) {
+        unit = "percent";
+        value /= 50;
+      } else if ("dxa".equals(unit)) {
+        unit = "points";
+        value /= 20;
+      } else {
+        unit = "auto";
+        value = 0;
+      }
+      if (value <= 0) {
+        unit = "auto";
+        value = 0;
+      }
+      if ("percent".equals(unit) && value > 100) {
+        warnings.add("Table percentages above 100 are limited to the page width");
+        value = 100;
+      }
+      String alignment = align == null ? "left" : Xml.attr(align, "val", "left");
+      if ("start".equals(alignment)) alignment = "left";
+      if ("end".equals(alignment)) alignment = "right";
+      if (!("left".equals(alignment) || "center".equals(alignment) || "right".equals(alignment))) {
+        warnings.add("Unsupported table alignment: " + alignment);
+        alignment = "left";
+      }
+      float offset = indent == null ? 0 : number(indent, "w", 0) / 20;
+      if (indent != null && !"dxa".equals(Xml.attr(indent, "type", "dxa"))) {
+        warnings.add("Non-point table indentation requires conversion");
+        offset = 0;
+      }
+      boolean fixed = layout != null && "fixed".equals(Xml.attr(layout, "type", "autofit"));
+      f =
+          f.sizing(
+              new TableFormat.Sizing(
+                  unit,
+                  Math.min(10000, value),
+                  alignment,
+                  Math.max(-1584, Math.min(1584, offset)),
+                  fixed));
+    }
+    int r = 0, headers = 0;
+    for (Element row : Xml.children(element, "tr")) {
+      if (r >= f.rows()) break;
+      Element rp = Xml.child(row, "trPr"), h = rp == null ? null : Xml.child(rp, "trHeight");
+      if (h != null) {
+        String rule = Xml.attr(h, "hRule", "atLeast");
+        if (!("exact".equals(rule) || "auto".equals(rule) || "atLeast".equals(rule))) {
+          warnings.add("Unknown table row height rule: " + rule);
+          rule = "atLeast";
+        }
+        float height = Math.max(0, Math.min(10000, number(h, "val", 0) / 20));
+        if ("exact".equals(rule) && height == 0) rule = "auto";
+        f = f.row(r, new TableFormat.Row(height, rule, true));
+      }
+      if (rp != null) {
+        Element cantSplit = Xml.child(rp, "cantSplit");
+        if (cantSplit != null) {
+          String on = Xml.attr(cantSplit, "val", "true");
+          f =
+              f.row(
+                  r,
+                  new TableFormat.Row(
+                      f.row(r).height,
+                      f.row(r).rule,
+                      "0".equals(on) || "false".equals(on) || "off".equals(on)));
+        }
+        Element header = Xml.child(rp, "tblHeader");
+        if (header != null
+            && !"0".equals(Xml.attr(header, "val", "1"))
+            && !"false".equals(Xml.attr(header, "val", "1"))) {
+          if (headers == r) headers++;
+          else warnings.add("Non-contiguous repeated table headers require conversion");
+        }
+        for (Element property : Xml.children(rp, null))
+          if (!"tblHeader".equals(Xml.local(property))
+              && !"trHeight".equals(Xml.local(property))
+              && !"cantSplit".equals(Xml.local(property)))
+            warnings.add("Table row property: " + Xml.local(property));
+      }
+      c = 0;
+      for (Element cell : Xml.children(row, "tc")) {
+        Element cp = Xml.child(cell, "tcPr"), span = cp == null ? null : Xml.child(cp, "gridSpan");
+        int count = span == null ? 1 : Integer.parseInt(Xml.attr(span, "val", "1"));
+        TableFormat.Cell value =
+            cp == null ? base : readCell(cp, base, "tcBorders", "tcMar", warnings);
+        for (int i = 0; i < count && c < f.columns(); i++) f = f.cell(r, c++, value);
+      }
+      r++;
+    }
+    for (Table.Merge m : table.merges)
+      if (m.row < headers && m.row + m.rows > headers) {
+        warnings.add("Merged cell crosses repeated table header boundary; headers not repeated");
+        headers = 0;
+        break;
+      }
+    return table.format(f.headerRows(headers));
+  }
+
+  private static TableFormat.Cell readCell(
+      Element props,
+      TableFormat.Cell base,
+      String borderName,
+      String marginName,
+      Set<String> warnings) {
+    Element shade = Xml.child(props, "shd"),
+        align = Xml.child(props, "vAlign"),
+        borders = Xml.child(props, borderName),
+        margins = Xml.child(props, marginName);
+    int background = shade == null ? base.background : color(shade, "fill", base.background),
+        border = base.borderColor;
+    float stroke = base.borderWidth,
+        horizontal = base.horizontalPadding,
+        vertical = base.verticalPadding;
+    if (shade != null
+        && !"clear".equals(Xml.attr(shade, "val", "clear"))
+        && !"nil".equals(Xml.attr(shade, "val", "clear")))
+      warnings.add("Patterned table shading becomes a solid fill");
+    if (shade != null
+        && (shade.getAttribute("w:themeFill") != null || shade.getAttribute("themeFill") != null))
+      warnings.add("Theme table shading uses its fallback color");
+    if (borders != null) {
+      String first = null;
+      for (Element edge : Xml.children(borders, null)) {
+        String type = Xml.attr(edge, "val", "single");
+        float width = "nil".equals(type) || "none".equals(type) ? 0 : number(edge, "sz", 4) / 8;
+        int color = color(edge, "color", 0);
+        String signature = width + ":" + color;
+        if (first == null) {
+          first = signature;
+          stroke = width;
+          border = color;
+        } else if (!first.equals(signature))
+          warnings.add("Asymmetric table borders become uniform cell borders");
+        if (!("single".equals(type) || "nil".equals(type) || "none".equals(type)))
+          warnings.add("Decorative table borders become solid borders");
+      }
+    }
+    if (margins != null) {
+      Element left = Xml.child(margins, "left"),
+          right = Xml.child(margins, "right"),
+          top = Xml.child(margins, "top"),
+          bottom = Xml.child(margins, "bottom");
+      if (left == null) left = Xml.child(margins, "start");
+      if (right == null) right = Xml.child(margins, "end");
+      if (left != null) horizontal = number(left, "w", 120) / 20;
+      else if (right != null) horizontal = number(right, "w", 120) / 20;
+      if (top != null) vertical = number(top, "w", 80) / 20;
+      else if (bottom != null) vertical = number(bottom, "w", 80) / 20;
+      if (right != null && number(right, "w", 120) / 20 != horizontal
+          || bottom != null && number(bottom, "w", 80) / 20 != vertical)
+        warnings.add("Asymmetric cell margins become symmetric padding");
+    }
+    String valign = align == null ? base.vertical : Xml.attr(align, "val", "top");
+    if (!("top".equals(valign) || "center".equals(valign) || "bottom".equals(valign))) {
+      warnings.add("Unsupported vertical cell alignment: " + valign);
+      valign = "top";
+    }
+    return new TableFormat.Cell(background, border, stroke, horizontal, vertical, valign);
+  }
+
+  static String css(TableFormat.Cell cell) {
+    return "background:#"
+        + hex(cell.background)
+        + ";border:"
+        + cell.borderWidth
+        + "pt solid #"
+        + hex(cell.borderColor)
+        + ";padding:"
+        + cell.verticalPadding
+        + "pt "
+        + cell.horizontalPadding
+        + "pt;vertical-align:"
+        + ("center".equals(cell.vertical) ? "middle" : cell.vertical);
+  }
+
+  private static String hex(int value) {
+    return TextUtil.padded(value, 16, 6);
+  }
+
+  private static float number(Element e, String key, float fallback) {
+    return Float.parseFloat(Xml.attr(e, key, Float.toString(fallback)));
+  }
+
+  private static int color(Element e, String key, int fallback) {
+    String value = Xml.attr(e, key, "");
+    return value.length() == 6 ? Integer.parseInt(value, 16) : fallback;
+  }
+}

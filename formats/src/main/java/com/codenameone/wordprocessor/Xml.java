@@ -16,6 +16,38 @@ public final class Xml {
         .replace("'", "&apos;");
   }
 
+  /** XML attribute whitespace must use references to survive standard reader normalization. */
+  public static String attribute(String value) {
+    return escape(value).replace("\t", "&#9;").replace("\n", "&#10;").replace("\r", "&#13;");
+  }
+
+  static String write(Element element) {
+    StringBuilder out = new StringBuilder();
+    write(element, out);
+    return out.toString();
+  }
+
+  private static void write(Element element, StringBuilder out) {
+    if (element.isTextElement()) {
+      out.append(escape(element.getText()));
+      return;
+    }
+    out.append('<').append(element.getTagName());
+    java.util.Hashtable attributes = element.getAttributes();
+    if (attributes != null)
+      for (java.util.Enumeration names = attributes.keys(); names.hasMoreElements(); ) {
+        String name = (String) names.nextElement();
+        out.append(' ')
+            .append(name)
+            .append("=\"")
+            .append(escape((String) attributes.get(name)))
+            .append('"');
+      }
+    out.append('>');
+    for (int i = 0; i < element.getNumChildren(); i++) write(element.getChildAt(i), out);
+    out.append("</").append(element.getTagName()).append('>');
+  }
+
   public static Element parse(byte[] bytes) throws IOException {
     String encoding = "UTF-8";
     if (bytes.length > 1
@@ -46,19 +78,23 @@ public final class Xml {
     }
 
     boolean nameStart(char c) {
-      return c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c == '_' || c == ':'
+      return c >= 'a' && c <= 'z'
+          || c >= 'A' && c <= 'Z'
+          || c == '_'
+          || c == ':'
           || c > 127 && Character.isLetter(c);
     }
 
     String name() throws IOException {
       int start = pos;
-      if (pos >= s.length()
-          || !nameStart(s.charAt(pos)))
-        throw error("Expected XML name");
+      if (pos >= s.length() || !nameStart(s.charAt(pos))) throw error("Expected XML name");
       pos++;
       while (pos < s.length()) {
         char c = s.charAt(pos);
-        if (nameStart(c) || c >= '0' && c <= '9' || c == '-' || c == '.'
+        if (nameStart(c)
+            || c >= '0' && c <= '9'
+            || c == '-'
+            || c == '.'
             || c > 127 && Character.isDigit(c)) pos++;
         else break;
       }

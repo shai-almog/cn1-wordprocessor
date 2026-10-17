@@ -36,6 +36,7 @@ public final class DocumentDiff {
                 || p.after != q.after
                 || p.indent != q.indent
                 || p.lineSpacing != q.lineSpacing
+                || !p.format.lineRule.equals(q.format.lineRule)
                 || p.pageBreak != q.pageBreak
                 || p.keepNext != q.keepNext;
         if (!text && !format)

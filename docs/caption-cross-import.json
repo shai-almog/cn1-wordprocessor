@@ -1,0 +1,225 @@
+{
+  "checks": [
+    {
+      "id": "decimal-cn1",
+      "source": "/private/tmp/cn1-wordprocessor-20261014-mraljz0q/caption-probes-final/caption_decimal-wordcraft.docx",
+      "target": "cn1",
+      "importWarnings": [
+        "Character feature: kern",
+        "Section feature: cols",
+        "Character feature: spacing",
+        "Paragraph feature: contextualSpacing",
+        "Paragraph feature: outlineLvl",
+        "Paragraph feature: pBdr"
+      ],
+      "passed": true,
+      "assertions": {
+        "renumberedText": true,
+        "sequenceInstructions": true
+      },
+      "actualText": [
+        "Object",
+        "Figure 1: New",
+        "Figure 2: First",
+        "Figure 3: Second"
+      ],
+      "sha256": "ca45f3a6a3e2d4261c138999a23cd6221d722e4a9263184fb34654994d6adb42",
+      "artifact": "decimal-cn1.docx"
+    },
+    {
+      "id": "decimal-wordcraft",
+      "source": "/private/tmp/cn1-wordprocessor-20261014-mraljz0q/caption-probes-final/caption_decimal-cn1.docx",
+      "target": "wordcraft",
+      "passed": true,
+      "assertions": {
+        "renumberedText": true,
+        "sequenceInstructions": true
+      },
+      "actualText": [
+        "Object",
+        "Figure 1: New",
+        "Figure 2: First",
+        "Figure 3: Second"
+      ],
+      "sha256": "86f5a74501b6d49f1c72f6ac9d5d30fb0f164acfff994283d61c4a068c5bb910",
+      "artifact": "decimal-wordcraft.docx"
+    },
+    {
+      "id": "lower_roman-cn1",
+      "source": "/private/tmp/cn1-wordprocessor-20261014-mraljz0q/caption-probes-final/caption_lower_roman-wordcraft.docx",
+      "target": "cn1",
+      "importWarnings": [
+        "Character feature: kern",
+        "Section feature: cols",
+        "Character feature: spacing",
+        "Paragraph feature: contextualSpacing",
+        "Paragraph feature: outlineLvl",
+        "Paragraph feature: pBdr"
+      ],
+      "passed": true,
+      "assertions": {
+        "renumberedText": true,
+        "sequenceInstructions": true
+      },
+      "actualText": [
+        "Object",
+        "Figure i: New",
+        "Figure ii: First",
+        "Figure iii: Second"
+      ],
+      "sha256": "79388a74c9b2154948391919ba9728ca777dfddbc6fa2a487eff1e4c090af29b",
+      "artifact": "lower_roman-cn1.docx"
+    },
+    {
+      "id": "lower_roman-wordcraft",
+      "source": "/private/tmp/cn1-wordprocessor-20261014-mraljz0q/caption-probes-final/caption_lower_roman-cn1.docx",
+      "target": "wordcraft",
+      "passed": true,
+      "assertions": {
+        "renumberedText": true,
+        "sequenceInstructions": true
+      },
+      "actualText": [
+        "Object",
+        "Figure i: New",
+        "Figure ii: First",
+        "Figure iii: Second"
+      ],
+      "sha256": "fec99a5f10138a582403d08194c6001e627c253d6ce284e337031544fa631629",
+      "artifact": "lower_roman-wordcraft.docx"
+    },
+    {
+      "id": "upper_roman-cn1",
+      "source": "/private/tmp/cn1-wordprocessor-20261014-mraljz0q/caption-probes-final/caption_upper_roman-wordcraft.docx",
+      "target": "cn1",
+      "importWarnings": [
+        "Character feature: kern",
+        "Section feature: cols",
+        "Character feature: spacing",
+        "Paragraph feature: contextualSpacing",
+        "Paragraph feature: outlineLvl",
+        "Paragraph feature: pBdr"
+      ],
+      "passed": true,
+      "assertions": {
+        "renumberedText": true,
+        "sequenceInstructions": true
+      },
+      "actualText": [
+        "Object",
+        "Figure I: New",
+        "Figure II: First",
+        "Figure III: Second"
+      ],
+      "sha256": "c7f24d89f7d9acfdda322c3f0ec444b0d44e385f7c5acf548fa45ce5386f54fc",
+      "artifact": "upper_roman-cn1.docx"
+    },
+    {
+      "id": "upper_roman-wordcraft",
+      "source": "/private/tmp/cn1-wordprocessor-20261014-mraljz0q/caption-probes-final/caption_upper_roman-cn1.docx",
+      "target": "wordcraft",
+      "passed": true,
+      "assertions": {
+        "renumberedText": true,
+        "sequenceInstructions": true
+      },
+      "actualText": [
+        "Object",
+        "Figure I: New",
+        "Figure II: First",
+        "Figure III: Second"
+      ],
+      "sha256": "6d8412ebe5ccf7a99a36022aabad0ae5e3efd0061947e867bf218e0085fe9b01",
+      "artifact": "upper_roman-wordcraft.docx"
+    },
+    {
+      "id": "lower_letter-cn1",
+      "source": "/private/tmp/cn1-wordprocessor-20261014-mraljz0q/caption-probes-final/caption_lower_letter-wordcraft.docx",
+      "target": "cn1",
+      "importWarnings": [
+        "Character feature: kern",
+        "Section feature: cols",
+        "Character feature: spacing",
+        "Paragraph feature: contextualSpacing",
+        "Paragraph feature: outlineLvl",
+        "Paragraph feature: pBdr"
+      ],
+      "passed": true,
+      "assertions": {
+        "renumberedText": true,
+        "sequenceInstructions": true
+      },
+      "actualText": [
+        "Object",
+        "Figure a: New",
+        "Figure b: First",
+        "Figure c: Second"
+      ],
+      "sha256": "1058a9d3a2ce4f450fbf69a2fc65faa82ff260d4e39be408a71c90ddf10c5c67",
+      "artifact": "lower_letter-cn1.docx"
+    },
+    {
+      "id": "lower_letter-wordcraft",
+      "source": "/private/tmp/cn1-wordprocessor-20261014-mraljz0q/caption-probes-final/caption_lower_letter-cn1.docx",
+      "target": "wordcraft",
+      "passed": true,
+      "assertions": {
+        "renumberedText": true,
+        "sequenceInstructions": true
+      },
+      "actualText": [
+        "Object",
+        "Figure a: New",
+        "Figure b: First",
+        "Figure c: Second"
+      ],
+      "sha256": "a3d8fb960e32324a14d248e5accd48a9ac20819c305f03ede75971c1b6ecf20a",
+      "artifact": "lower_letter-wordcraft.docx"
+    },
+    {
+      "id": "upper_letter-cn1",
+      "source": "/private/tmp/cn1-wordprocessor-20261014-mraljz0q/caption-probes-final/caption_upper_letter-wordcraft.docx",
+      "target": "cn1",
+      "importWarnings": [
+        "Character feature: kern",
+        "Section feature: cols",
+        "Character feature: spacing",
+        "Paragraph feature: contextualSpacing",
+        "Paragraph feature: outlineLvl",
+        "Paragraph feature: pBdr"
+      ],
+      "passed": true,
+      "assertions": {
+        "renumberedText": true,
+        "sequenceInstructions": true
+      },
+      "actualText": [
+        "Object",
+        "Figure A: New",
+        "Figure B: First",
+        "Figure C: Second"
+      ],
+      "sha256": "3142fa37e1ab28ebce035cc2d38062b6aa12f689ac9e36e7fdf57f8f336c72f1",
+      "artifact": "upper_letter-cn1.docx"
+    },
+    {
+      "id": "upper_letter-wordcraft",
+      "source": "/private/tmp/cn1-wordprocessor-20261014-mraljz0q/caption-probes-final/caption_upper_letter-cn1.docx",
+      "target": "wordcraft",
+      "passed": true,
+      "assertions": {
+        "renumberedText": true,
+        "sequenceInstructions": true
+      },
+      "actualText": [
+        "Object",
+        "Figure A: New",
+        "Figure B: First",
+        "Figure C: Second"
+      ],
+      "sha256": "749c889e3e9f1727a252e257d885cbf98259b452136f6724aa060b59987837f6",
+      "artifact": "upper_letter-wordcraft.docx"
+    }
+  ],
+  "fullParity": false
+}

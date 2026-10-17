@@ -12,9 +12,52 @@ public class FormatTest {
     s.replace(" Hello & <world> 😀 שלום \nSecond paragraph");
     s.select(0, 1, 6);
     s.format("bold", "true");
+    int end = s.document().paragraph(0).text.length();
+    s.select(0, end, end);
     s.insertTable(2, 2);
     s.setCell(1, 0, 0, "Cell & text");
     return s;
+  }
+
+  @Test
+  public void simpleListsRoundTripWithIndentAndNumberingRelationships() throws Exception {
+    Session s = new Session(Document.empty());
+    s.replace("One\nTwo\nBody\nRestart\nBullet");
+    s.selectRange(0, 0, 1, 3);
+    s.paragraph("list", "number");
+    s.paragraph("indent", "18");
+    s.select(3, 0, 0);
+    s.paragraph("list", "number");
+    s.select(4, 0, 0);
+    s.paragraph("list", "bullet");
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    Docx.write(s.document(), out);
+    Docx.Opened opened = Docx.read(new ByteArrayInputStream(out.toByteArray()));
+    assertTrue(opened.warnings.toString(), opened.warnings.isEmpty());
+    assertEquals(s.document().plainText(), opened.document.plainText());
+    for (int i = 0; i < 5; i++) {
+      assertEquals(s.document().paragraph(i).list, opened.document.paragraph(i).list);
+      assertEquals(s.document().paragraph(i).indent, opened.document.paragraph(i).indent, 0.01);
+    }
+    java.util.Map<String, String> parts = new java.util.HashMap<String, String>();
+    ZipInputStream zin = new ZipInputStream(new ByteArrayInputStream(out.toByteArray()));
+    ZipEntry entry;
+    while ((entry = zin.getNextEntry()) != null) {
+      ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+      int c;
+      while ((c = zin.read()) != -1) bytes.write(c);
+      parts.put(entry.getName(), bytes.toString("UTF-8"));
+    }
+    assertTrue(parts.get("word/_rels/document.xml.rels").contains("Target=\"numbering.xml\""));
+    assertTrue(parts.get("[Content_Types].xml").contains("/word/numbering.xml"));
+    assertEquals(3, Xml.children(Xml.parse(parts.get("word/numbering.xml")), "num").size());
+    Session edited = new Session(opened.document);
+    edited.replace("Edited ");
+    out.reset();
+    Docx.write(edited.document(), opened, out, false);
+    assertEquals(
+        edited.document().plainText(),
+        Docx.read(new ByteArrayInputStream(out.toByteArray())).document.plainText());
   }
 
   @Test
@@ -22,13 +65,23 @@ public class FormatTest {
     assertEquals("text", Xml.text(Xml.parse("<étiquette_2 属性=\"ok\">text</étiquette_2>")));
     String text = "plain\ttext\nwith whitespace";
     assertEquals(text, Xml.text(Xml.parse("<a>" + text + "</a>")));
-    assertEquals("before & middle < after 😀", Xml.text(
-        Xml.parse("<a>before &amp; middle &lt; after &#x1f600;</a>")));
+    assertEquals(
+        "before & middle < after 😀",
+        Xml.text(Xml.parse("<a>before &amp; middle &lt; after &#x1f600;</a>")));
     assertEquals("beforeinsideafter", Xml.text(Xml.parse("<a>before<b>inside</b>after</a>")));
     assertEquals("", Xml.attr(Xml.parse("<a value=\"\"/>"), "value", "missing"));
-    for (String xml : new String[] {"<a value=\"\" value=\"second\"/>",
-        "<a>before\u0001after</a>", "<a>&amp;after\u0001</a>", "<a>&unknown;</a>"}) {
-      try { Xml.parse(xml); fail(xml); } catch (IOException expected) { }
+    for (String xml :
+        new String[] {
+          "<a value=\"\" value=\"second\"/>",
+          "<a>before\u0001after</a>",
+          "<a>&amp;after\u0001</a>",
+          "<a>&unknown;</a>"
+        }) {
+      try {
+        Xml.parse(xml);
+        fail(xml);
+      } catch (IOException expected) {
+      }
     }
   }
 
@@ -46,10 +99,16 @@ public class FormatTest {
   public void docxRoundTripPreservesTextAndFormatting() throws Exception {
     Session session = sample();
     session.select(0, 1, 6);
-    for (String[] property : new String[][] {{"font", "Arial"}, {"size", "15.5"},
-        {"color", "123456"}, {"background", "ffeedd"}, {"italic", "true"},
-        {"underline", "true"}, {"strike", "true"}})
-      session.format(property[0], property[1]);
+    for (String[] property :
+        new String[][] {
+          {"font", "Arial"},
+          {"size", "15.5"},
+          {"color", "123456"},
+          {"background", "ffeedd"},
+          {"italic", "true"},
+          {"underline", "true"},
+          {"strike", "true"}
+        }) session.format(property[0], property[1]);
     Document d = session.document();
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     Docx.write(d, out);
@@ -159,7 +218,7 @@ public class FormatTest {
     Session s = new Session(Document.empty());
     s.replace("link");
     s.select(0, 0, 4);
-    s.format("link", "https://example.com");
+    s.paragraph("list", "unsupported-custom-list");
     assertFalse(Docx.conversionWarnings(s.document(), null).isEmpty());
     try {
       Docx.write(s.document(), new ByteArrayOutputStream());

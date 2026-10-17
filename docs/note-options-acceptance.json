@@ -1,0 +1,84 @@
+{
+  "date": "2026-10-15",
+  "fullParity": false,
+  "frameworkRevision": "008f9ece62526d807c2064887ad8f8641d6195a4",
+  "wordcraftRevision": "159b84f54c74e9e82fb3109b758ae7dd6f4e3ab0",
+  "artifactDirectory": "artifacts/parity-20261015-note-options",
+  "reactor": {
+    "tests": 258,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "crossImport": {
+    "passed": 20,
+    "failed": 0,
+    "evidence": "artifacts/parity-20261015-note-options/cross-import/results.json"
+  },
+  "platforms": {
+    "mac": {
+      "build": "passed",
+      "artifactSha256": "c9d2ee33af002cae2debb97bb68f8f2af4745279df8df1680641240b3d789177",
+      "checks": [
+        "ribbon-footnote-format-start-page-restart-and-placement",
+        "ribbon-endnote-section-override",
+        "single-undo-and-redo-retain-note-settings",
+        "cancel-does-not-change-document"
+      ],
+      "originalXmlRestored": true,
+      "nativeVisualEvidence": "note-options-native-visual.json"
+    },
+    "ios": {
+      "build": "passed",
+      "artifactSha256": "5459f4a5d46a364fd472ab020ff1874eae18e04fa15eaa52be529166fe923d99",
+      "checks": [
+        "ribbon-footnote-format-start-page-restart-and-placement",
+        "ribbon-endnote-section-override",
+        "single-undo-and-redo-retain-note-settings",
+        "cancel-does-not-change-document"
+      ],
+      "originalXmlRestored": true,
+      "nativeVisualEvidence": "note-options-native-visual.json"
+    },
+    "android": {
+      "build": "passed",
+      "artifactSha256": "2c3a1bf341526ec5227f9d4bcc2ffbb91e305a592bd8247e767751d1afeec4b4",
+      "checks": [
+        "ribbon-footnote-format-start-page-restart-and-placement",
+        "ribbon-endnote-section-override",
+        "single-undo-and-redo-retain-note-settings",
+        "cancel-does-not-change-document",
+        "ribbon-rich-footnote-insert",
+        "ribbon-rich-endnote-insert",
+        "show-notes-edit-and-custom-mark",
+        "next-note-selects-atomic-reference",
+        "note-delete-and-single-undo"
+      ],
+      "originalXmlRestored": true,
+      "keyboard": "Not certified: built-in MCP UI actions, headless Android 14 ARM64 emulator."
+    },
+    "browser": {
+      "build": "passed",
+      "artifactSha256": "f232e1dff14bcefae8be7bac28295438e15eb65756ff61f3c0d89a22a6e5946e",
+      "interaction": "Unverified: browser-control tool could not load request-header policy."
+    }
+  },
+  "reviewAppsStopped": true,
+  "performanceComparison": "paused until feature/rendering parity",
+  "limitations": [
+    "Eleven supported numbering styles; regional/textual formats remain unsupported.",
+    "Roman display falls back to decimal above 3999; repeated-letter and Chicago labels are capped at 40 glyphs.",
+    "Plain-text/HTML exports use stored document-order labels, not page-resolved print labels.",
+    "Direct in-page note editing, tables/pictures/comments/bookmarks in note stories and custom continuation separators remain incomplete.",
+    "Broader complex-table/continuous-section fidelity, physical-device and Windows/Linux/browser interaction acceptance remain incomplete.",
+    "Citations/bibliography, index/authorities, broader review/object workflows and full catalog parity remain unfinished."
+  ],
+  "sourceManifestSha256": "52a1701c041d6255fe5f5cd1e91657fbe5983aca4b13d82fe883324a30caf87e",
+  "sourceArchiveSha256": "c3e054ed0c3222e8bfd79e0c227ae96f712731cd4e243356a83fbba3dd3d4f7d",
+  "reviewArchives": {
+    "mac-review.app.zip": "7bdd678422a3e57415bd950283808a3179f76d716273b0ec193b28e7803ebb39",
+    "ios-review.app.zip": "70b62be621f26a7a21652a7195c824146b3d9f68e3204a1b1c4030b5faaed48f",
+    "browser-review.zip": "76828f70505e63cd303f17bdfd553269970755bde4a4daccfa8a660fed622804",
+    "android-review.apk": "2c3a1bf341526ec5227f9d4bcc2ffbb91e305a592bd8247e767751d1afeec4b4"
+  }
+}

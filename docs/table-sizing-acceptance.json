@@ -1,0 +1,37 @@
+{
+  "fullParity": false,
+  "javaTests": 447,
+  "nativeUiChecks": 140,
+  "nativeReports": [
+    "mac-sizing-new-accepted",
+    "mac-sizing-insertion-accepted",
+    "mac-sizing-layout-accepted",
+    "mac-sizing-quick-accepted",
+    "mac-sizing-formula-accepted",
+    "ios-sizing-new-accepted",
+    "ios-sizing-insertion-accepted",
+    "ios-sizing-layout-accepted",
+    "ios-sizing-quick-accepted",
+    "ios-sizing-formula-accepted"
+  ],
+  "pairedSizingChecks": 36,
+  "pairedInsertionChecks": 15,
+  "tableLayoutRegressionChecks": 60,
+  "formulaRegressionChecks": 48,
+  "quickTableRegressionChecks": 15,
+  "pairedDocumentRegressionCases": 59,
+  "renderedFixture": "sizing-accepted-rendered/render-check.json",
+  "nativeBuildLogs": {
+    "mac": "sizing-accepted2-native.log",
+    "ios": "sizing-accepted2-ios.log"
+  },
+  "reactorLog": "sizing-accepted2-reactor.log",
+  "sourceManifest": "source-sha256.json",
+  "sourceFiles": 312,
+  "restored": true,
+  "appsStopped": true,
+  "framework": "Same isolated 008f9ece-based snapshot plus recorded local Mac fixes as table-selection/table-data acceptance. Not current release/master.",
+  "visualEvidence": "Native centered tables inspected on Mac at 100% and iPhone reflow. Native Mac window restored to original size and 214% zoom. Independent Poppler render compares one centered fixed-width fixture; not general rendered equivalence.",
+  "earlierFailures": "An initial AutoFit implementation depended on a pagination cache and was corrected before native builds. Paired sizing harness initially counted empty text elements differently; corrected to compare cell text. Insertion changed focus to the first cell; four existing fixtures were updated to explicitly position body caret. Native acceptance caught an invalid saved outer caret after table insertion; ordinary and Quick Table insertion now save the suffix paragraph caret before entering the cell. Review found and fixed automatic-grid normalization and cropped-table sizing/rounding defects. Earlier evidence is stored separately.",
+  "remaining": "Advanced tables, empty-prefix insertion behavior, shaping/bidi/font fallback, objects, review/reference workflows, release-baseline and all-platform validation, fair performance/source-size comparison. See docs/TABLE-SIZING.md and docs/STATUS.md."
+}

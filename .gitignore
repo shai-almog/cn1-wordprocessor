@@ -7,3 +7,6 @@ target/
 artifacts/
 __pycache__/
 *.pyc
+
+# Local Android build signing material
+/app/common/androidCerts/

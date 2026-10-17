@@ -65,26 +65,87 @@ public final class TextFormats {
             .append("</title></head><body>");
     for (Block block : doc.blocks) {
       if (block instanceof Paragraph) paragraph(b, (Paragraph) block);
-      else if (block instanceof Table) {
+      else if (block instanceof Picture) {
+        Picture pic = (Picture) block;
+        b.append("<p style=\"text-align:")
+            .append(pic.align)
+            .append("\"><img alt=\"")
+            .append(Xml.escape(pic.alt))
+            .append("\" style=\"width:")
+            .append(pic.width)
+            .append("pt;height:")
+            .append(pic.height)
+            .append("pt\" src=\"data:")
+            .append(pic.mime)
+            .append(";base64,")
+            .append(com.codename1.util.Base64.encodeNoNewline(pic.bytes()))
+            .append("\"></p>");
+      } else if (block instanceof Table) {
         Table t = (Table) block;
-        b.append("<table border=\"1\">");
+        b.append("<table style=\"").append(TableFormats.css(t.format)).append("\"");
+        if (!t.format.title.isEmpty())
+          b.append(" aria-label=\"").append(Xml.attribute(t.format.title)).append("\"");
+        if (!t.format.description.isEmpty())
+          b.append(" aria-description=\"").append(Xml.attribute(t.format.description)).append("\"");
+        b.append("><colgroup>");
+        for (int c = 0; c < t.columns(); c++)
+          b.append("<col style=\"width:").append(t.format.columnFraction(c) * 100).append("%\">");
+        b.append("</colgroup>");
         for (int r = 0; r < t.rows(); r++) {
-          b.append("<tr>");
+          if (r == 0 && t.format.headerRows > 0) b.append("<thead>");
+          b.append("<tr style=\"height:").append(t.format.minHeight(r)).append("pt\">");
           for (int c = 0; c < t.columns(); c++) {
-            b.append("<td>");
+            if (t.covered(r, c)) continue;
+            Table.Merge span = t.span(r, c);
+            b.append("<td rowspan=\"")
+                .append(span.rows)
+                .append("\" colspan=\"")
+                .append(span.columns)
+                .append("\" style=\"")
+                .append(TableFormats.css(t.format.cell(r, c)))
+                .append("\">");
             for (Paragraph p : t.cell(r, c)) paragraph(b, p);
             b.append("</td>");
           }
           b.append("</tr>");
+          if (r + 1 == t.format.headerRows) b.append("</thead>");
         }
         b.append("</table>");
       }
+    }
+    for (String kind : new String[] {"footnote", "endnote"}) {
+      boolean heading = false;
+      for (Note note : Notes.all(doc)) {
+        if (!kind.equals(note.kind)) continue;
+        if (!heading) {
+          b.append("<hr><section><h2>")
+              .append("footnote".equals(kind) ? "Footnotes" : "Endnotes")
+              .append("</h2>");
+          heading = true;
+        }
+        b.append("<div id=\"note-")
+            .append(Xml.escape(note.id))
+            .append("\"><a href=\"#reference-")
+            .append(Xml.escape(note.id))
+            .append("\">")
+            .append(Xml.escape(note.label))
+            .append("</a>");
+        for (Paragraph p : note.paragraphs) paragraph(b, p);
+        b.append("</div>");
+      }
+      if (heading) b.append("</section>");
     }
     return b.append("</body></html>").toString();
   }
 
   private static void paragraph(final StringBuilder b, Paragraph p) {
-    String tag = (p.style.length() == 8 && p.style.startsWith("Heading") && p.style.charAt(7) >= '1' && p.style.charAt(7) <= '6') ? "h" + p.style.substring(7) : "p";
+    String tag =
+        (p.style.length() == 8
+                && p.style.startsWith("Heading")
+                && p.style.charAt(7) >= '1'
+                && p.style.charAt(7) <= '6')
+            ? "h" + p.style.substring(7)
+            : "p";
     b.append('<')
         .append(tag)
         .append(" style=\"white-space:pre-wrap;text-align:")
@@ -93,31 +154,104 @@ public final class TextFormats {
         .append(p.after)
         .append("pt\">");
     p.text.visit(
-        (offset, text, s) -> {
-          if (!s.link.isEmpty()) b.append("<a href=\"").append(Xml.escape(s.link)).append("\">");
-          b.append("<span style=\"font-size:")
-              .append(s.size)
-              .append("pt;color:#")
-              .append(TextUtil.padded(s.color, 16, 6))
-              .append(";background-color:#")
-              .append(TextUtil.padded(s.background, 16, 6))
-              .append(";font-weight:")
-              .append(s.bold ? "bold" : "normal")
-              .append(";font-style:")
-              .append(s.italic ? "italic" : "normal")
-              .append(";text-decoration:")
-              .append(s.underline ? "underline " : "")
-              .append(s.strike ? "line-through" : "")
-              .append("\">")
-              .append(Xml.escape(text))
-              .append("</span>");
-          if (!s.link.isEmpty()) b.append("</a>");
+        new RichText.Visitor() {
+          public void note(int offset, Note note, TextStyle style) {
+            b.append("<sup id=\"reference-")
+                .append(Xml.escape(note.id))
+                .append("\"><a href=\"#note-")
+                .append(Xml.escape(note.id))
+                .append("\">")
+                .append(Xml.escape(note.label))
+                .append("</a></sup>");
+          }
+
+          public void run(int offset, String text, TextStyle s) {
+            if (!s.link.isEmpty()) b.append("<a href=\"").append(Xml.escape(s.link)).append("\">");
+            if (!"baseline".equals(s.script))
+              b.append("superscript".equals(s.script) ? "<sup>" : "<sub>");
+            b.append("<span style=\"font-size:")
+                .append(s.renderedSize())
+                .append("pt;color:#")
+                .append(TextUtil.padded(s.color, 16, 6))
+                .append(";background-color:#")
+                .append(TextUtil.padded(s.background, 16, 6))
+                .append(";font-weight:")
+                .append(s.bold ? "bold" : "normal")
+                .append(";font-style:")
+                .append(s.italic ? "italic" : "normal")
+                .append(";text-decoration:")
+                .append(s.hasUnderline() ? "underline " : "")
+                .append(s.strike || s.characters.doubleStrike ? "line-through" : "")
+                .append(
+                    s.characters.doubleUnderline || s.characters.doubleStrike
+                        ? ";text-decoration-style:double"
+                        : "")
+                .append(";text-decoration-color:")
+                .append(
+                    s.characters.underlineColor < 0
+                        ? "currentColor"
+                        : "#" + TextUtil.padded(s.characters.underlineColor, 16, 6))
+                .append(
+                    s.characters.underlineStyle.startsWith("wav")
+                        ? ";text-decoration-style:wavy"
+                        : s.characters.underlineStyle.startsWith("dot")
+                            ? ";text-decoration-style:dotted"
+                            : s.characters.underlineStyle.startsWith("dash")
+                                ? ";text-decoration-style:dashed"
+                                : "")
+                .append(
+                    s.characters.outline
+                        ? ";-webkit-text-stroke:.5pt"
+                              + " currentColor;-webkit-text-fill-color:transparent"
+                        : "")
+                .append(s.characters.shadow ? ";text-shadow:1pt 1pt #808080" : "")
+                .append(s.characters.emboss ? ";text-shadow:-1pt -1pt white,1pt 1pt #707070" : "")
+                .append(s.characters.engrave ? ";text-shadow:-1pt -1pt #707070,1pt 1pt white" : "")
+                .append(s.characters.smallCaps ? ";font-variant:small-caps" : "")
+                .append(s.characters.allCaps ? ";text-transform:uppercase" : "")
+                .append(s.characters.hidden ? ";display:none" : "")
+                .append(";letter-spacing:")
+                .append(s.characters.spacing)
+                .append("pt")
+                .append(";position:relative;top:")
+                .append(-s.characters.position)
+                .append("pt")
+                .append(";font-stretch:")
+                .append(s.characters.scale)
+                .append('%')
+                .append("\">")
+                .append(Xml.escape(text))
+                .append("</span>");
+            if (!"baseline".equals(s.script))
+              b.append("superscript".equals(s.script) ? "</sup>" : "</sub>");
+            if (!s.link.isEmpty()) b.append("</a>");
+          }
         });
     b.append("</").append(tag).append('>');
   }
 
   public static String write(Document d, RichTextFormat format) {
-    if (format == RichTextFormat.PLAIN_TEXT) return d.plainText();
+    if (format == RichTextFormat.PLAIN_TEXT) {
+      StringBuilder text = new StringBuilder(d.plainText());
+      for (String kind : new String[] {"footnote", "endnote"}) {
+        boolean heading = false;
+        for (Note note : Notes.all(d))
+          if (kind.equals(note.kind)) {
+            if (!heading) {
+              text.append("\n\n").append("footnote".equals(kind) ? "Footnotes" : "Endnotes");
+              heading = true;
+            }
+            text.append('\n').append(note.label).append(" ").append(note.plainText());
+          }
+      }
+      return text.toString();
+    }
+    if (format != RichTextFormat.HTML)
+      for (Block block : d.blocks)
+        if (block instanceof Picture)
+          throw new IllegalArgumentException(
+              "This format cannot preserve embedded pictures. Use DOCX, HTML, PDF or"
+                  + " CN1 document.");
     String html = html(d);
     return format == RichTextFormat.HTML ? html : RichTextImporter.fromHtml(html, format);
   }

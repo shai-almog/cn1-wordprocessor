@@ -9,7 +9,9 @@ p.add_argument('--out',type=Path,default=Path('docs/COMPARISON.md'))
 a=p.parse_args()
 metrics=json.loads((a.artifacts/'source-metrics.json').read_text())
 cli=json.loads((a.artifacts/'cli-comparison.json').read_text())
-probes=json.loads((a.artifacts/'parity-probes/results.json').read_text())
+probe_path=a.artifacts/'feature-parity-20261013-input/results.json'
+if not probe_path.exists(): probe_path=a.artifacts/'parity-probes/results.json'
+probes=json.loads(probe_path.read_text())
 java=metrics['cn1Java'];rust=metrics['wordcraftRust']
 j=java['applicationTotal'];r=rust['applicationTotal']
 rows=[('Application files',j['files'],r['files']),
@@ -44,7 +46,7 @@ text+='''The CN1 implementation delegates platform UI/input/storage and several 
 for row in probes['probes']:
     text+='| '+row['id']+' | '+('Pass' if row['cn1']['passed'] else 'Fail')+' | '+('Pass' if row['wordcraft']['passed'] else 'Fail')+' |\n'
 text+='''
-These probes inspect CLI-generated DOCX paragraphs, direct bold formatting, replacement text and table dimensions. They do not cover GUI interaction, shaped rendering or all edge cases, and certify zero full catalog rows. The broader [502-row catalog](../benchmarks/baseline.json) remains pending. [Probe artifact hashes](parity-probes.json) make the exercised outputs identifiable.
+These probes inspect CLI-generated DOCX text, bold ranges, hyperlinks, nested numbering, keep-with-next, table dimensions/structure/sorting and comment ranges/resolution. Bidirectional resolved-comment import is also checked; see [feature acceptance](FEATURE-VALIDATION.md). They do not cover GUI interaction, shaped rendering or all edge cases, and certify zero full catalog rows. The broader [502-row catalog](../benchmarks/baseline.json) remains pending. [Probe artifact hashes](parity-probes.json) make the exercised outputs identifiable.
 
 ## Performance measured so far
 
@@ -65,17 +67,17 @@ if warm_path.exists():
         text+=f"| {label} | {warm['cn1'][key]:.2f} ms | {warm['wordcraft'][key]:.2f} ms |\n"
     text+='\nCN1 is faster for this simple, warmed import workload. Both outputs are byte-identical. Startup, disk I/O, layout, rendering and memory measurement are excluded; normal GC/reference destruction applies. The readers support different broader format scopes, so this result does not establish full DOCX performance/fidelity parity. [Raw warmed samples and linked-library hashes](warm-import.json).\n'
 text+='''
-The [CN1 model/layout timings](model-layout.json) separately exercise warmed edits with synthetic metrics. They cannot be compared to font-shaped Wordcraft layout timings and do not measure input-to-present latency or peak memory. The overall performance gate is not evaluated.
+The [CN1 model/layout timings](model-layout.json) separately exercise warmed edits with synthetic metrics. They cannot be compared to font-shaped Wordcraft layout timings and do not measure input-to-present latency or peak memory. See [native GUI measurements](NATIVE-BENCHMARKS.md) for startup, RSS and operation timings. The overall parity/performance gate remains unmet.
 
 ## Platforms
 
 | Platform | CN1 application evidence | Wordcraft evidence inspected |
 | --- | --- | --- |
-| macOS | ParparVM AppKit/Metal application; see current native validation | Release CLI built and exercised; GUI untested here |
+| macOS | ParparVM AppKit/Metal application; see current native validation | Release CLI and native GUI built; scripted GUI workload exercised on macOS |
 | Windows | CN1 native target; application execution untested | Declared target and workflow source; execution untested here |
 | Linux | CN1 native target; application execution untested | Declared target and workflow source; execution untested here |
 | BSD | No app support claimed | Declared target and FreeBSD workflow; execution untested here |
-| Browser | JavaScript build passed; live interaction unverified | WebAssembly target exists; not built/tested here |
+| Browser | Earlier JavaScript build passed; current feature batch and live interaction unverified | WebAssembly target exists; not built/tested here |
 | Android | CN1 profile/lifecycle present; no device build/test | No advertised app target in inspected README/workspace |
 | iOS | CN1 profile/lifecycle present; no device build/test | No advertised app target in inspected README/workspace |
 

@@ -1,0 +1,90 @@
+{
+  "date": "2026-10-16",
+  "fullParity": false,
+  "artifactDirectory": "artifacts/parity-20261016-recipients",
+  "reactor": {
+    "tests": 361,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "nativeChecks": {
+    "total": 44,
+    "mac": {
+      "checks": 22,
+      "reports": [
+        "mac-recipients-complete.json",
+        "mac-mailings-complete.json"
+      ]
+    },
+    "iosSimulator": {
+      "checks": 22,
+      "reports": [
+        "ios-recipients-complete.json",
+        "ios-mailings-complete.json"
+      ]
+    }
+  },
+  "nativeBuildLogs": [
+    "mac-build-complete.log",
+    "ios-build-complete.log"
+  ],
+  "pairedMailings": {
+    "checks": 13,
+    "passed": 13,
+    "wordcraftRevision": "159b84f54c74e9e82fb3109b758ae7dd6f4e3ab0",
+    "newRecipientManagerComparedWithWordcraft": false
+  },
+  "frameworkRevision": "008f9ece62526d807c2064887ad8f8641d6195a4",
+  "frameworkPatches": {
+    "evidence": "docs/typing-acceptance.json",
+    "mac": "73d5950071f7bd0984ae02c126efd28c1579cd9e",
+    "linux": "120d445c7d48caf1331436d0c9904b16709479bb",
+    "newFrameworkChangesInThisBatch": false
+  },
+  "frameworkRepository": "/private/tmp/cn1-word-navigation-20261016-wnZ8j9YN/mac-maven",
+  "latestFrameworkMasterRebuild": false,
+  "sourceFileCount": 338,
+  "sourceManifestSha256": "501216825e051cdcb978dc07a09485a6a2193ffac6ecbce01326ee8ecc63d1c7",
+  "sourceArchiveSha256": "aac9a2e8691e5581a9333fb1544221ab8b2cab4c5cdb9226955a577f4ade8cd4",
+  "macExecutableSha256": "c6aa60690b8f94f41d1d712a0aad796dd0ec4e91784d355a53eef18b0d883047",
+  "iosExecutableSha256": "df3e8f4f9fd46c6c24c9f419ee653976bf2abb5b611b1a1a4c64efd996f679ce",
+  "visualInspection": [
+    "mac-recipients-complete.png",
+    "ios-recipients-complete.png"
+  ],
+  "artifacts": {
+    "mac-arm64-review.tar.gz": {
+      "bytes": 12350349,
+      "sha256": "c0ffcadd1c7d6516d9365f73d9cad0e0c6c34771f5b163e94a707b6b01e5cfa8"
+    },
+    "ios-arm64-simulator-debug.tar.gz": {
+      "bytes": 24504050,
+      "sha256": "6740b07ceaf20631f81420f84d6485fddbcbfc1afa4e3c5d239ce82048ab367c"
+    }
+  },
+  "processCleanup": {
+    "originalXmlRestored": true,
+    "recipientStateRestored": true,
+    "taskOwnedAppsStopped": true,
+    "listener18765Closed": true,
+    "staleReview16Stopped": true,
+    "unrelatedAppsPreserved": true
+  },
+  "limitations": [
+    "One filter and one text sort key only; no numeric or locale-aware sorting.",
+    "Recipient data and settings are session-only and not saved in documents/recovery.",
+    "Current-source Linux, Android, browser and Windows acceptance not performed.",
+    "MCP and simulator checks do not certify physical keyboard/touch or device behavior.",
+    "Cross-cell ranges, advanced fields/objects/typography and broader Word fidelity remain incomplete.",
+    "No performance or full parity claim."
+  ],
+  "earlierRuns": {
+    "focused.log": "Sandbox Mac graphics crash before automation tests.",
+    "reactor.log": "Wrong FlowLayout helper name; corrected.",
+    "mac-recipients.log": "Listener startup race before test setup.",
+    "mac-recipients.json": "Workflow passed but screenshot exposed unstyled recreated row labels; fixed.",
+    "mac-recipients-final.json": "Styled UI accepted before source-list readback addition.",
+    "ios-recipients.json": "Initial native run before source-list readback addition."
+  }
+}

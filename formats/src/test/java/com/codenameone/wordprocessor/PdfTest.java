@@ -27,8 +27,10 @@ public class PdfTest {
     // AFM advances: H=722, e=556, l=222, o=556; bold H=722,e=556,l=278,o=611.
     assertEquals(22.78f, metrics.width("Hello", normal), .001f);
     assertEquals(24.45f, metrics.width("Hello", normal.with("bold", "true")), .001f);
-    assertEquals(metrics.width("Hello", normal),
-        metrics.width("Hello", normal.with("italic", "true")), .001f);
+    assertEquals(
+        metrics.width("Hello", normal),
+        metrics.width("Hello", normal.with("italic", "true")),
+        .001f);
     assertEquals(5.56f, metrics.width("€", normal), .001f);
     assertEquals(metrics.width(" ", normal), metrics.width("\t", normal), .001f);
     Session s = new Session(Document.empty());
@@ -63,6 +65,23 @@ public class PdfTest {
   }
 
   @Test
+  public void nestedBulletLevelsExportWithoutUnsupportedGlyphFailure() throws Exception {
+    Session s = new Session(Document.empty());
+    s.replace("First\nSecond\nThird");
+    s.selectRange(0, 0, 2, 5);
+    s.paragraph("list", "bullet");
+    for (int i = 0; i < 3; i++) {
+      s.select(i, 0, 0);
+      s.paragraph("listLevel", String.valueOf(i));
+    }
+    String pdf = new String(PdfExporter.write(s.document()), "ISO-8859-1");
+    for (String text : new String[] {"First", "Second", "Third"})
+      assertTrue(pdf.contains("(" + text + ") Tj"));
+    assertTrue("Hollow circle marker", pdf.contains("h S\n"));
+    assertTrue("Square marker", pdf.contains("re f\n"));
+  }
+
+  @Test
   public void unsupportedGlyphIsRejectedRatherThanDropped() throws Exception {
     Session s = new Session(Document.empty());
     s.replace("שלום");
@@ -71,6 +90,25 @@ public class PdfTest {
       fail();
     } catch (IOException expected) {
       assertTrue(expected.getMessage().contains("does not cover"));
+    }
+  }
+
+  @Test
+  public void overflowingHeadersCannotSilentlyExportTruncatedPdf() throws Exception {
+    StringBuilder text = new StringBuilder("Header");
+    for (int i = 0; i < 100; i++) text.append("\nToo much");
+    Document d =
+        Document.empty()
+            .furniture(
+                PageFurniture.EMPTY.story(
+                    "header",
+                    new Sequence<Paragraph>()
+                        .append(new Paragraph("h", RichText.of(text.toString())))));
+    try {
+      PdfExporter.write(d);
+      fail("A truncated document must not be exported");
+    } catch (IOException expected) {
+      assertTrue(expected.getMessage().contains("Header on page 1 does not fit"));
     }
   }
 }

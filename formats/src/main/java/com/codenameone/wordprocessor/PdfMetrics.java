@@ -1,10 +1,11 @@
 package com.codenameone.wordprocessor;
 
-/** Metrics for the four Helvetica faces actually emitted by PdfExporter, without AWT.
- * Width data derived from Adobe Core 14 AFM files (1997), reduced to WinAnsi advances.
- * Copyright (c) 1985, 1987, 1989, 1990, 1997 Adobe Systems Incorporated.
- * All Rights Reserved. See notices/Adobe-AFM-MustRead.html.
- * Kerning is deliberately absent because the exporter emits unkerned PDF strings.
+/**
+ * Metrics for the four Helvetica faces actually emitted by PdfExporter, without AWT. Width data
+ * derived from Adobe Core 14 AFM files (1997), reduced to WinAnsi advances. Copyright (c) 1985,
+ * 1987, 1989, 1990, 1997 Adobe Systems Incorporated. All Rights Reserved. See
+ * notices/Adobe-AFM-MustRead.html. Kerning is deliberately absent because the exporter emits
+ * unkerned PDF strings.
  */
 final class PdfMetrics implements LayoutEngine.Metrics {
   private static final int[] REGULAR = {
@@ -54,6 +55,10 @@ final class PdfMetrics implements LayoutEngine.Metrics {
       }
     }
     return units * style.size / 1000f;
+  }
+
+  public float ascent(TextStyle style) {
+    return style.renderedSize();
   }
 
   public float height(TextStyle style) {

@@ -8,17 +8,35 @@
       "cn1": {
         "declared": true,
         "build": "Maven mac-source + ParparVM + Xcode Release; ARM64 AppKit/Metal application",
-        "exercise": "native launch/render, File tab and ZIP recovery verified; keyboard/IME and open/save dialogs not certified",
+        "exercise": "Native ribbon, Aqua OS menus, Command-F, word count, typing across paragraph breaks, styles, bullets, undo/redo, DOCX export/native chooser reopen and PDF export exercised. Complex IME and full fidelity not certified. Thirteen Mailings workflows and seven citation regressions pass, with original XML and recipient state restored. Current build also passes seven comparison workflows and thirteen Mailings regressions with exact XML restoration. The navigation checkpoint passes 32 native Mac checks (12 navigation, 20 comparison/Mailings). The typing checkpoint passes 32 Mac paragraph/typing/formatting/paste and ribbon checks. The table-cell comment checkpoint passes 32 native checks, including twelve cell-comment ribbon workflows, with original XML and recipient state restored. Full platform parity remains uncertified. The preceding grapheme checkpoint has separately dated keyboard evidence; see grapheme-acceptance.json. The comment-controls checkpoint passes 42 native checks, including 22 comment edit/navigation workflows; docs/comment-controls-acceptance.json records exact scope and restoration. The 2026-10-16 recipient-management checkpoint passes 22 native MCP checks; see docs/recipient-management-acceptance.json.",
         "evidence": [
           "scripts/build-native.sh",
           "app/common/src/main/java/com/codenameone/wordprocessor/app/Main.java",
-          "docs/validation.json"
+          "docs/validation.json",
+          "docs/UI-ACCEPTANCE.md",
+          "docs/toc-acceptance.json",
+          "docs/figures-acceptance.json",
+          "docs/notes-acceptance.json",
+          "docs/toc-sources-acceptance.json",
+          "docs/input-platform-acceptance.json",
+          "docs/note-options-acceptance.json",
+          "docs/index-acceptance.json",
+          "docs/authorities-acceptance.json",
+          "docs/citations-acceptance.json",
+          "docs/mailings-acceptance.json",
+          "docs/comparison-acceptance.json",
+          "docs/navigation-acceptance.json",
+          "docs/typing-acceptance.json",
+          "docs/cell-comments-acceptance.json",
+          "docs/grapheme-acceptance.json",
+          "docs/comment-controls-acceptance.json",
+          "docs/recipient-management-acceptance.json"
         ]
       },
       "wordcraft": {
         "declared": true,
-        "build": "release CLI built locally",
-        "exercise": "CLI probes and text extraction; GUI not tested",
+        "build": "Cargo release CLI and ARM64 native GUI built locally",
+        "exercise": "CLI probes and native GUI benchmark workload; full interactive feature parity not certified",
         "evidence": [
           "README.md",
           "apps/wordcraft-cli/src/main.rs"
@@ -50,10 +68,17 @@
       "platform": "Linux",
       "cn1": {
         "declared": true,
-        "build": "Codename One target; native application not built or tested on this platform",
-        "exercise": "not tested",
+        "build": "Linux ARM64 builds through the standard local Maven/ParparVM target in an isolated Ubuntu 22.04 container. The review binary uses RelWithDebInfo without release LTO and opt-in loopback MCP; it is not a performance/release-size baseline.",
+        "exercise": "Thirty-seven Linux checks pass: seven comparison, thirteen Mailings, thirteen XTest document keyboard/Unicode/clipboard checks and four dialog input/focus/field-isolation checks. Exact original XML and Mailings recipient state were restored. Xvfb without a window manager does not certify title controls, physical input, printing or native file dialogs. The navigation checkpoint passes 59 native Linux checks (22 navigation, 37 existing regressions). The typing checkpoint passes 73 checks including GTK menu accelerator dispatch and paragraph/typing undo. The table-cell comment checkpoint passes 121 native checks, including twelve cell-comment ribbon workflows, with original XML and recipient state restored. Full platform parity remains uncertified. The preceding grapheme checkpoint has separately dated keyboard evidence; see grapheme-acceptance.json. The comment-controls checkpoint passes 131 native checks, including 22 comment edit/navigation workflows; docs/comment-controls-acceptance.json records exact scope and restoration.",
         "evidence": [
-          "app/common/src/main/java/com/codenameone/wordprocessor/app/Main.java"
+          "scripts/build-linux.sh",
+          "docs/LINUX.md",
+          "docs/comparison-acceptance.json",
+          "docs/navigation-acceptance.json",
+          "docs/typing-acceptance.json",
+          "docs/cell-comments-acceptance.json",
+          "docs/grapheme-acceptance.json",
+          "docs/comment-controls-acceptance.json"
         ]
       },
       "wordcraft": {
@@ -88,12 +113,21 @@
       "platform": "Browser",
       "cn1": {
         "declared": true,
-        "build": "JavaScript bundle compiled before native migration; current changes not rebuilt for browser",
-        "exercise": "unverified; browser automation unavailable",
+        "build": "Last verified build: grapheme checkpoint, ParparVM JavaScript. Table-cell comment source has not been rebuilt or accepted in the browser.",
+        "exercise": "Current browser UI: real multiline text entry, document comparison, accept/undo/reject and recovery across reload pass. Revision markup visually checked; developer warnings/errors empty. Earlier Mailings workflows also passed. Broader and mobile-browser acceptance incomplete. The current typing source passes nine desktop Chrome keyboard/recovery checks, including paragraph movement and grouped undo/redo. The preceding grapheme checkpoint has separately dated keyboard evidence; see grapheme-acceptance.json. Comment editing/navigation source is not accepted on this platform yet.",
         "evidence": [
           "scripts/build-web.sh",
           "app/common/src/main/java/com/codenameone/wordprocessor/app/Main.java",
-          "docs/validation.json"
+          "docs/validation.json",
+          "docs/input-platform-acceptance.json",
+          "docs/note-options-acceptance.json",
+          "docs/index-acceptance.json",
+          "docs/authorities-acceptance.json",
+          "docs/citations-acceptance.json",
+          "docs/mailings-acceptance.json",
+          "docs/comparison-acceptance.json",
+          "docs/typing-acceptance.json",
+          "docs/grapheme-acceptance.json"
         ]
       },
       "wordcraft": {
@@ -110,11 +144,20 @@
       "platform": "Android",
       "cn1": {
         "declared": true,
-        "build": "CN1 lifecycle and platform profile; device binary not built",
-        "exercise": "not tested; no connected device/emulator",
+        "build": "Maven android-source + Gradle local debug APK; Android 14 ARM64 emulator. Physical device not tested.",
+        "exercise": "15 built-in MCP native UI checks cover caption lists, advanced TOC sources and rich notes; exact XML restored. Native keyboard/touch not certified. Final note-settings workflow and rich-note regression also pass. Thirteen Mailings workflows and seven citation regressions pass, with original XML and recipient state restored. Current build also passes seven comparison workflows and thirteen Mailings regressions with exact XML restoration. The current typing source passes 20 emulator MCP ribbon checks; physical typing/touch and new typing-group behavior on Android remain uncertified. Table-cell comment and grapheme source have not been rebuilt/accepted on Android. Comment editing/navigation source is not accepted on this platform yet.",
         "evidence": [
           "app/common/pom.xml",
-          "app/common/src/main/java/com/codenameone/wordprocessor/app/Main.java"
+          "app/common/src/main/java/com/codenameone/wordprocessor/app/Main.java",
+          "scripts/build-android.sh",
+          "docs/input-platform-acceptance.json",
+          "docs/note-options-acceptance.json",
+          "docs/index-acceptance.json",
+          "docs/authorities-acceptance.json",
+          "docs/citations-acceptance.json",
+          "docs/mailings-acceptance.json",
+          "docs/comparison-acceptance.json",
+          "docs/typing-acceptance.json"
         ]
       },
       "wordcraft": {
@@ -131,11 +174,26 @@
       "platform": "iOS",
       "cn1": {
         "declared": true,
-        "build": "CN1 lifecycle and platform profile; device binary not built",
-        "exercise": "not tested",
+        "build": "Maven ios-source + ParparVM + Xcode Debug ARM64 simulator; iPhone 17 Pro / iOS 26.3. Physical device not tested.",
+        "exercise": "Native keyboard/dialogs, case conversion, bookmarks/references, TOC and caption lists exercised through native UI and built-in MCP. Full mobile parity remains incomplete. Thirteen Mailings workflows and seven citation regressions pass, with original XML and recipient state restored. Current build also passes seven comparison workflows and thirteen Mailings regressions with exact XML restoration. The table-cell comment checkpoint passes 32 native checks, including twelve cell-comment ribbon workflows, with original XML and recipient state restored. Full platform parity remains uncertified. The comment-controls checkpoint passes 42 native checks, including 22 comment edit/navigation workflows; docs/comment-controls-acceptance.json records exact scope and restoration. The 2026-10-16 recipient-management checkpoint passes 22 native MCP checks; see docs/recipient-management-acceptance.json.",
         "evidence": [
           "app/common/pom.xml",
-          "app/common/src/main/java/com/codenameone/wordprocessor/app/Main.java"
+          "app/common/src/main/java/com/codenameone/wordprocessor/app/Main.java",
+          "docs/UI-ACCEPTANCE.md",
+          "docs/toc-acceptance.json",
+          "docs/figures-acceptance.json",
+          "docs/notes-acceptance.json",
+          "docs/toc-sources-acceptance.json",
+          "docs/input-platform-acceptance.json",
+          "docs/note-options-acceptance.json",
+          "docs/index-acceptance.json",
+          "docs/authorities-acceptance.json",
+          "docs/citations-acceptance.json",
+          "docs/mailings-acceptance.json",
+          "docs/comparison-acceptance.json",
+          "docs/cell-comments-acceptance.json",
+          "docs/comment-controls-acceptance.json",
+          "docs/recipient-management-acceptance.json"
         ]
       },
       "wordcraft": {

@@ -7,3 +7,7 @@ Do not mark Wordcraft catalog rows complete without reproducible equivalent beha
 Never add, dispatch or rerun native/GraalVM CI jobs. Native tests are local only. The native-test label is banned. No credentials, local recovery documents, generated app artifacts or internal operational logs belong in source control.
 
 Honor the user's Git/PR settings in ~/.codex/config.toml when opening PRs. Do not invent a PR title prefix or draft preference. Local implementation does not authorize public release.
+
+Use an isolated Maven repository for every custom Codename One snapshot and app build. Never use ~/.m2 or a common external cache path such as /tmp/local-cn1. The build scripts source scripts/maven-env.sh: use the project-local default or a unique external path recorded in .local/maven-repo-path. Always pass that same repository explicitly to framework Maven commands.
+
+Keep at most one agent-owned native review app running. Reuse and replace the existing review bundle after quitting it; do not create a new running bundle for each iteration. Terminate simulator test apps when acceptance ends. Identify exact PIDs/bundle IDs before cleanup and preserve unrelated user applications and documents.

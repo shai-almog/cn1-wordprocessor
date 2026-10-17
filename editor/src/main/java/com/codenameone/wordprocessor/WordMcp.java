@@ -1,0 +1,136 @@
+package com.codenameone.wordprocessor;
+
+import com.codename1.ai.Tool;
+import com.codename1.mcp.MCP;
+import com.codename1.ui.Display;
+import java.io.InputStream;
+import java.util.*;
+
+/** Opt-in live diagnostics using Codename One's built-in MCP server and UI tools. */
+final class WordMcp {
+  interface Context {
+    Session session();
+
+    Map<String, Object> layout();
+
+    void beforeCommand();
+
+    void changed();
+  }
+
+  private static boolean started;
+
+  static void start(Commands commands, Context context) throws Exception {
+    if (started) return;
+    Properties config = new Properties();
+    try (InputStream in =
+        Display.getInstance()
+            .getResourceAsStream(WordMcp.class, "/wordprocessor-agent.properties")) {
+      if (in == null) return; // Normal builds have no listener or published domain tools.
+      config.load(in);
+    }
+    int port = Integer.parseInt(config.getProperty("port"));
+    if (port < 1024 || port > 65535) throw new IllegalArgumentException("Invalid agent-debug port");
+    final LiveCommands live = new LiveCommands(commands);
+    MCP.getServer().setServerInfo("CN1 Word Processor development", "1");
+    MCP.addTool(
+        new Tool(
+            "word_snapshot",
+            "Inspect the live document, selection and stateId. Optional xml includes native model"
+                + " XML.",
+            "{\"type\":\"object\",\"properties\":{\"xml\":{\"type\":\"boolean\"}}}",
+            json ->
+                onEdt(
+                    () -> {
+                      Map<String, Object> state = live.snapshot(context.session());
+                      if (Boolean.TRUE.equals(Json.parse(json).get("xml")))
+                        state.put("xml", DocumentXml.write(context.session().document()));
+                      return state;
+                    })));
+    MCP.addTool(
+        new Tool(
+            "word_layout",
+            "Inspect visible native editor cell and line geometry and selection; bounds are display"
+                + " pixels; line heights and clipping heights are also reported in points.",
+            "{\"type\":\"object\",\"properties\":{}}",
+            json -> onEdt(() -> context.layout())));
+    MCP.addTool(
+        new Tool(
+            "word_commands",
+            "List the command schemas used by the live editor.",
+            "{\"type\":\"object\",\"properties\":{}}",
+            json -> {
+              List<Object> list = new ArrayList<Object>();
+              for (Commands.Descriptor d : commands.descriptors())
+                list.add(
+                    Json.object("id", d.id, "description", d.description, "arguments", d.schema()));
+              return Json.write(list);
+            }));
+    MCP.addTool(
+        new Tool(
+            "word_command",
+            "Execute one editor command against the observed stateId. Uses the live document and"
+                + " its normal undo history; refuses stale state and active dialogs.",
+            "{\"type\":\"object\",\"properties\":{\"stateId\":{\"type\":\"string\"},\"command\":{\"type\":\"string\"},\"args\":{\"type\":\"object\"}},\"required\":[\"stateId\",\"command\"]}",
+            json ->
+                onEdt(
+                    () -> {
+                      Map<String, Object> args = Json.parse(json);
+                      context.beforeCommand();
+                      Session session = context.session();
+                      String before = live.stateId(session);
+                      Object values = args.get("args");
+                      if (values != null && !(values instanceof Map))
+                        throw new IllegalArgumentException("args must be an object");
+                      Map<String, Object> response =
+                          live.execute(
+                              session,
+                              (String) args.get("stateId"),
+                              (String) args.get("command"),
+                              values == null
+                                  ? Collections.<String, Object>emptyMap()
+                                  : (Map<String, Object>) values);
+                      if (!before.equals(live.stateId(session))) context.changed();
+                      return response;
+                    })));
+    // The resource is present only in the explicitly requested local agent-debug profile.
+    // Native mac-source Release is used for review, so this controlled build opts in here.
+    MCP.setAllowOnReleaseBuilds(true);
+    try {
+      MCP.startSocketServer(port);
+      started = true;
+    } catch (RuntimeException ex) {
+      MCP.setAllowOnReleaseBuilds(false);
+      throw ex;
+    }
+  }
+
+  private interface Action {
+    Object run() throws Exception;
+  }
+
+  private static String onEdt(Action action) throws Exception {
+    final Object[] result = new Object[1];
+    final Exception[] error = new Exception[1];
+    Runnable run =
+        () -> {
+          try {
+            result[0] = action.run();
+          } catch (Exception ex) {
+            error[0] = ex;
+          }
+        };
+    if (Display.getInstance().isEdt()) run.run();
+    else Display.getInstance().callSeriallyAndWait(run);
+    if (error[0] != null) throw error[0];
+    return Json.write(result[0]);
+  }
+
+  static void stop() {
+    if (started) {
+      MCP.stop();
+      started = false;
+      MCP.setAllowOnReleaseBuilds(false);
+    }
+  }
+}

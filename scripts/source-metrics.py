@@ -71,6 +71,9 @@ def git_revision(root):
 
 def group_java(path):
     parts = path.parts
+    if path.as_posix() in ('document/src/main/java/com/codenameone/wordprocessor/WordCharacters.java',
+                          'document/src/main/java/com/codenameone/wordprocessor/GraphemeProperties.java'):
+        return 'generatedApplication'
     if parts[0] == 'benchmarks':
         return 'benchmarks'
     if path.name.startswith('test-'):
@@ -178,7 +181,7 @@ def measure(root, side, encoding, work):
                 if filename in ('header','SUM') or not isinstance(counts,dict) or 'code' not in counts: continue
                 relative=Path(filename).relative_to(prefix)
                 by_path[str(relative)][variant+'CodeLines']=counts['code']
-    application_groups = ['application','platformGlue'] if side == 'java' else ['application']
+    application_groups = ['application','platformGlue','generatedApplication'] if side == 'java' else ['application']
     total = {k:sum(groups.get(g,{}).get(k,0) for g in application_groups)
              for k in ['files','bytes','sourceTokens','testPrunedTokens','explicitTestItemsRemoved']}
     total['rawCodeLines'] = sum(groups[g]['rawLoc']['code'] for g in application_groups if g in groups)
@@ -206,12 +209,12 @@ def main():
     with tempfile.TemporaryDirectory(prefix='wordprocessor-metrics-') as temp:
         cn1=measure(args.cn1.resolve(),'java',encoding,Path(temp))
         rust=measure(args.wordcraft.resolve(),'rust',encoding,Path(temp))
-    report={'schema':1,'tokenizer':'o200k_base','packages':versions,
+    report={'schema':2,'tokenizer':'o200k_base','packages':versions,
             'clocVersion':subprocess.check_output(['cloc','--version'],text=True).strip(),
             'tokenDefinition':'Sum of separately tokenized UTF-8 file contents, including comments and whitespace; no filenames or chat framing; no minification.',
             'locDefinition':'cloc code lines excluding comments and blanks; --skip-uniqueness counts every selected source file.',
             'testPruning':'Rust AST removes explicit #[cfg(test)] and #[test] items, plus identified external test modules. Files rejected by the parser remain completely unpruned and are listed. This is a conservative test-pruned estimate, not resolution of all cfg/features or macro expansion.',
-            'scope':'Java libraries + command-line tools + CN1 lifecycle glue versus Rust crates/apps source. Framework/dependency source, assets, docs, generated outputs and build artifacts excluded. Tests, examples, benchmarks, build tooling reported separately.',
+            'scope':'Java libraries + command-line tools + CN1 lifecycle glue versus Rust crates/apps source. Framework/dependency source, assets, docs, generated build outputs and build artifacts excluded. Checked-in generated application source is included in totals and reported as generatedApplication. Tests, examples, benchmarks and build tooling are reported separately.',
             'matchedFeatureScope':False,'languageSuperiorityEstablished':False,
             'cn1Java':cn1,'wordcraftRust':rust}
     args.out.parent.mkdir(parents=True,exist_ok=True)

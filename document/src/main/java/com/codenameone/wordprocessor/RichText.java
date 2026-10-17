@@ -6,6 +6,30 @@ import java.util.*;
 public final class RichText {
   public interface Visitor {
     void run(int offset, String text, TextStyle style);
+
+    default void field(int offset, InlineField field, TextStyle style) {
+      run(offset, field.display(), style);
+    }
+
+    default void note(int offset, Note note, TextStyle style) {
+      run(offset, note.label, style);
+    }
+  }
+
+  public interface StyleMapper {
+    TextStyle map(TextStyle style);
+  }
+
+  public interface FieldMapper {
+    InlineField map(int offset, InlineField field);
+  }
+
+  public interface NoteMapper {
+    Note map(int offset, Note note);
+  }
+
+  public interface TextMapper {
+    String map(String text);
   }
 
   private static final int CHUNK = 256;
@@ -14,9 +38,23 @@ public final class RichText {
     final Node l, r;
     final String text;
     final TextStyle style;
+    final InlineField field;
+    final Note note;
     final int length, height;
+    final boolean hasNotes;
 
     Node(String s, TextStyle t) {
+      this(s, t, null);
+    }
+
+    Node(String s, TextStyle t, InlineField field) {
+      this(s, t, field, null);
+    }
+
+    Node(String s, TextStyle t, InlineField field, Note note) {
+      this.note = note;
+      hasNotes = note != null;
+      this.field = field;
       l = r = null;
       text = s;
       style = t;
@@ -25,6 +63,9 @@ public final class RichText {
     }
 
     Node(Node a, Node b) {
+      note = null;
+      hasNotes = a.hasNotes || b.hasNotes;
+      field = null;
       l = a;
       r = b;
       text = null;
@@ -35,13 +76,20 @@ public final class RichText {
   }
 
   private final Node root;
+  private final TextStyle emptyStyle;
 
   public RichText() {
     root = null;
+    emptyStyle = TextStyle.DEFAULT;
   }
 
   private RichText(Node n) {
+    this(n, TextStyle.DEFAULT);
+  }
+
+  private RichText(Node n, TextStyle style) {
     root = n;
+    emptyStyle = style;
   }
 
   public static RichText of(String s) {
@@ -50,7 +98,7 @@ public final class RichText {
 
   public static RichText of(String s, TextStyle t) {
     if (s == null || t == null) throw new NullPointerException();
-    return new RichText(build(s, t, 0, s.length()));
+    return new RichText(build(s, t, 0, s.length()), t);
   }
 
   private static Node build(String s, TextStyle t, int a, int b) {
@@ -72,8 +120,14 @@ public final class RichText {
   private static Node join(Node a, Node b) {
     if (a == null) return b;
     if (b == null) return a;
-    if (a.text != null && b.text != null && a.style.equals(b.style) && a.length + b.length <= CHUNK)
-      return new Node(a.text + b.text, a.style);
+    if (a.text != null
+        && b.text != null
+        && a.field == null
+        && b.field == null
+        && a.note == null
+        && b.note == null
+        && a.style.equals(b.style)
+        && a.length + b.length <= CHUNK) return new Node(a.text + b.text, a.style);
     if (h(a) > h(b) + 1) return balance(new Node(a.l, join(a.r, b)));
     if (h(b) > h(a) + 1) return balance(new Node(join(a, b.l), b.r));
     return new Node(a, b);
@@ -110,6 +164,205 @@ public final class RichText {
     }
     Node[] s = split(n.r, at - k);
     return new Node[] {join(n.l, s[0]), s[1]};
+  }
+
+  public static RichText field(InlineField field, TextStyle style) {
+    if (field == null || style == null) throw new NullPointerException();
+    return new RichText(new Node(InlineField.OBJECT, style, field), style);
+  }
+
+  public static RichText note(Note note, TextStyle style) {
+    if (note == null || style == null) throw new NullPointerException();
+    return new RichText(new Node(InlineField.OBJECT, style, null, note), style);
+  }
+
+  public boolean hasNotes() { return root != null && root.hasNotes; }
+
+  public Note noteAt(int offset) {
+    Node n = leafAt(offset);
+    return n == null ? null : n.note;
+  }
+
+  public boolean objectAt(int offset) {
+    Node n = leafAt(offset);
+    return n != null && (n.field != null || n.note != null);
+  }
+
+  public String displayAt(int offset, String ordinary) {
+    Node n = leafAt(offset);
+    return n == null ? ordinary : n.field != null ? n.field.display() : n.note != null ? n.note.label : ordinary;
+  }
+
+  public RichText mapNotes(NoteMapper mapper) {
+    Node value = notes(root, 0, mapper);
+    return value == root ? this : new RichText(value, emptyStyle);
+  }
+
+  private static Node notes(Node n, int offset, NoteMapper mapper) {
+    if (n == null || !n.hasNotes) return n;
+    if (n.text != null) {
+      if (n.note == null) return n;
+      Note value = mapper.map(offset, n.note);
+      if (value == null) throw new IllegalArgumentException("Missing note");
+      return value == n.note ? n : new Node(n.text, n.style, null, value);
+    }
+    Node left = notes(n.l, offset, mapper), right = notes(n.r, offset + len(n.l), mapper);
+    return left == n.l && right == n.r ? n : join(left, right);
+  }
+
+  private Node leafAt(int offset) {
+    if (offset < 0 || offset >= length()) return null;
+    Node n = root;
+    while (n.text == null) {
+      int k = len(n.l);
+      if (offset < k) n = n.l;
+      else { offset -= k; n = n.r; }
+    }
+    return n;
+  }
+
+  public InlineField fieldAt(int offset) {
+    if (offset < 0 || offset >= length()) return null;
+    Node n = root;
+    while (n.text == null) {
+      int k = len(n.l);
+      if (offset < k) n = n.l;
+      else {
+        offset -= k;
+        n = n.r;
+      }
+    }
+    return n.field;
+  }
+
+  public RichText mapStyles(StyleMapper mapper) {
+    return new RichText(transform(root, 0, mapper, null, null), mapper.map(emptyStyle));
+  }
+
+  public RichText mapFields(FieldMapper mapper) {
+    Node mapped = transform(root, 0, null, mapper, null);
+    return mapped == root ? this : new RichText(mapped, emptyStyle);
+  }
+
+  public RichText mapText(TextMapper mapper) {
+    return new RichText(transform(root, 0, null, null, mapper), emptyStyle);
+  }
+
+  /** Case and similar text transformations retain old text for review; fields remain atomic. */
+  public RichText trackedMapText(
+      final TextMapper mapper, final Revision insertion, final Revision deletion) {
+    if (insertion == null) return mapText(mapper);
+    final RichText[] result = {of("", emptyStyle)};
+    visit(
+        new Visitor() {
+          public void run(int offset, String text, TextStyle style) {
+            String changed =
+                style.revision != null && !style.revision.inserted() ? text : mapper.map(text);
+            RichText original = of(text, style);
+            result[0] =
+                result[0].concat(
+                    changed.equals(text)
+                        ? original
+                        : of(changed, style.clean().revision(insertion))
+                            .concat(original.deleted(deletion)));
+          }
+
+          public void field(int offset, InlineField field, TextStyle style) {
+            result[0] = result[0].concat(RichText.field(field, style));
+          }
+
+          public void note(int offset, Note note, TextStyle style) {
+            result[0] = result[0].concat(RichText.note(note, style));
+          }
+        });
+    return result[0];
+  }
+
+  private static Node transform(
+      Node n, int offset, StyleMapper styles, FieldMapper fields, TextMapper texts) {
+    if (n == null) return null;
+    if (n.text != null) {
+      TextStyle style = styles == null ? n.style : styles.map(n.style);
+      InlineField field = n.field == null || fields == null ? n.field : fields.map(offset, n.field);
+      if (n.field != null && field == null) throw new IllegalArgumentException("Missing field");
+      String text = n.field == null && n.note == null && texts != null ? texts.map(n.text) : n.text;
+      if (style == n.style && field == n.field && text == n.text) return n;
+      return field == null && n.note == null
+          ? build(text, style, 0, text.length())
+          : new Node(InlineField.OBJECT, style, field, n.note);
+    }
+    Node left = transform(n.l, offset, styles, fields, texts),
+        right = transform(n.r, offset + len(n.l), styles, fields, texts);
+    return left == n.l && right == n.r ? n : join(left, right);
+  }
+
+  /** Transform or remove whole leaves while preserving atomic field identity. */
+  public RichText review(final String id, final boolean accept) {
+    if (root == null) return of("", emptyStyle.reviewFormat(id, accept));
+    final RichText[] result = {of("", styleAt(0).clean())};
+    visit(
+        new Visitor() {
+          private TextStyle style(TextStyle s) {
+            Revision r = s.revision;
+            if (r != null) {
+              Revision.Resolution result = r.resolve(id, accept);
+              if (result.removed) return null;
+              s = s.revision(result.remaining);
+            }
+            return s.reviewFormat(id, accept);
+          }
+
+          public void run(int offset, String text, TextStyle s) {
+            TextStyle next = style(s);
+            if (next != null) result[0] = result[0].concat(of(text, next));
+          }
+
+          public void field(int offset, InlineField field, TextStyle s) {
+            TextStyle next = style(s);
+            if (next != null) result[0] = result[0].concat(RichText.field(field, next));
+          }
+
+          public void note(int offset, Note note, TextStyle s) {
+            TextStyle next = style(s);
+            if (next != null) result[0] = result[0].concat(RichText.note(note, next));
+          }
+        });
+    return result[0];
+  }
+
+  /** Deleting one's unaccepted insertion cancels it; existing text becomes a deletion. */
+  public RichText deleted(final Revision deletion) {
+    final RichText[] result = {new RichText()};
+    visit(
+        new Visitor() {
+          private TextStyle style(TextStyle s) {
+            Revision r = s.revision;
+            if (r != null && r.inserted() && r.author.equals(deletion.author)) return null;
+            return r != null && !r.inserted() ? s : s.revision(deletion.previous(r));
+          }
+
+          public void run(int offset, String text, TextStyle s) {
+            TextStyle next = style(s);
+            if (next != null) result[0] = result[0].concat(of(text, next));
+          }
+
+          public void field(int offset, InlineField field, TextStyle s) {
+            TextStyle next = style(s);
+            if (next != null) result[0] = result[0].concat(RichText.field(field, next));
+          }
+
+          public void note(int offset, Note note, TextStyle s) {
+            TextStyle next = style(s);
+            if (next != null) result[0] = result[0].concat(RichText.note(note, next));
+          }
+        });
+    return result[0];
+  }
+
+  public String plainText() {
+    final StringBuilder out = new StringBuilder();
+    visit((offset, text, style) -> out.append(text));
+    return out.toString();
   }
 
   public int length() {
@@ -149,7 +402,7 @@ public final class RichText {
   }
 
   public TextStyle styleAt(int i) {
-    if (length() == 0) return TextStyle.DEFAULT;
+    if (length() == 0) return emptyStyle;
     i = Math.max(0, Math.min(length() - 1, i));
     Node n = root;
     while (n.text == null) {
@@ -165,38 +418,47 @@ public final class RichText {
 
   public RichText slice(int a, int b) {
     range(a, b);
-    return new RichText(split(split(root, b)[0], a)[1]);
+    return new RichText(split(split(root, b)[0], a)[1], styleAt(a));
   }
 
   public RichText concat(RichText r) {
-    return new RichText(join(root, r.root));
+    return new RichText(join(root, r.root), r.emptyStyle);
   }
 
   public RichText replace(int a, int b, RichText r) {
     range(a, b);
     Node[] l = split(root, a), right = split(l[1], b - a);
-    return new RichText(join(join(l[0], r.root), right[1]));
+    return new RichText(join(join(l[0], r.root), right[1]), r.emptyStyle);
   }
 
   public RichText format(int a, int b, final String key, final String value) {
     range(a, b);
     Node[] l = split(root, a), r = split(l[1], b - a);
-    return new RichText(join(join(l[0], map(r[0], key, value)), r[1]));
+    return new RichText(join(join(l[0], map(r[0], key, value)), r[1]), emptyStyle.with(key, value));
+  }
+
+  public RichText format(
+      int a, int b, final String key, final String value, final Revision change) {
+    if (change == null) return format(a, b, key, value);
+    return replace(a, b, slice(a, b).mapStyles(s -> s.trackedWith(key, value, change)));
   }
 
   private Node map(Node n, String k, String v) {
     if (n == null) return null;
-    if (n.text != null) return new Node(n.text, n.style.with(k, v));
+    if (n.text != null) return new Node(n.text, n.style.with(k, v), n.field, n.note);
     return join(map(n.l, k, v), map(n.r, k, v));
   }
 
   public void visit(Visitor visitor) {
-    visit(root, 0, visitor);
+    if (root == null) visitor.run(0, "", emptyStyle);
+    else visit(root, 0, visitor);
   }
 
   private void visit(Node n, int offset, Visitor v) {
     if (n == null) return;
-    if (n.text != null) v.run(offset, n.text, n.style);
+    if (n.note != null) v.note(offset, n.note, n.style);
+    else if (n.field != null) v.field(offset, n.field, n.style);
+    else if (n.text != null) v.run(offset, n.text, n.style);
     else {
       visit(n.l, offset, v);
       visit(n.r, offset + len(n.l), v);
@@ -209,6 +471,14 @@ public final class RichText {
         new Visitor() {
           public void run(int o, String s, TextStyle t) {
             b.append(s);
+          }
+
+          public void field(int o, InlineField field, TextStyle t) {
+            b.append(InlineField.OBJECT);
+          }
+
+          public void note(int o, Note note, TextStyle t) {
+            b.append(InlineField.OBJECT);
           }
         });
     return b.toString();

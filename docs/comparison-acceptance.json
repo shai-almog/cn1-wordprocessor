@@ -1,0 +1,287 @@
+{
+  "date": "2026-10-16",
+  "fullParity": false,
+  "frameworkRevision": "008f9ece62526d807c2064887ad8f8641d6195a4",
+  "linuxFrameworkPatch": {
+    "baseline": "008f9ece62526d807c2064887ad8f8641d6195a4",
+    "reviewBase": "b5ed7e4ed3e3e4a5875eb72bfae6d268b177b3ca",
+    "reviewCommit": "4f7df906b82fdb3310fad609372e26add5896149",
+    "reviewWorktreeDiffersFromCommit": false,
+    "patchSha256": "123916177a584d408660470ba4e9d6395f595fa0ddce783d2a6049f448056eb9",
+    "reviewPatchSha256": "9dce69733903f42fa2c3f7a4b21559127ef4664fe9da75999ab6fec4f1376288",
+    "buildFiles": {
+      "Ports/LinuxPort/nativeSources/cn1_linux_desktopwindow.c": "2d80f0936ba9a94d1d9a1e15986efe0283ee8f634d3159c1b269156ca37d5d83",
+      "Ports/LinuxPort/nativeSources/cn1_linux_edit.c": "1b6287822f05b1e53d91823cc3cab8274e61e1aa3c820fcbd81c272fc00c883b",
+      "Ports/LinuxPort/nativeSources/cn1_linux_gfx.h": "d5e4f68156944bb4f98beb9352453af2a0b241f27c6305721ef0a7366c44e50d",
+      "Ports/LinuxPort/nativeSources/cn1_linux_services.c": "2e041ff024f45a6d066580a88f10d6f5e3ad6812f6d720d3c99ccf00b25b2a08",
+      "Ports/LinuxPort/nativeSources/cn1_linux_socket.c": "20fb048fd0a31ca9f9b8f50e8cd68f66e13f64c6b3312c4304f8c08057037407",
+      "Ports/LinuxPort/nativeSources/cn1_linux_text_input.c": "2a89d48660bf8c4c217fcfb52a4a0d3eafa158e8c7baf0356bc179f1a597c95e",
+      "Ports/LinuxPort/nativeSources/cn1_linux_window.c": "7b6cb701f41fad7602ed48f1b7c9a101785bed3afb26d94542dc6f7e52b72844",
+      "Ports/LinuxPort/src/com/codename1/impl/linux/LinuxImplementation.java": "0519b81fe4dab330a51c17749d8fc82af8ef4d9b6c9f837f4a854d9786c9ea45",
+      "Ports/LinuxPort/src/com/codename1/impl/linux/LinuxNative.java": "e15dfb25b25fa8e466498000e54ca74a4745998026198f5d9a9c214b7ce11a9b",
+      "Ports/LinuxPort/src/com/codename1/impl/linux/LinuxSocket.java": "89fa5e065a943174f729b0bb9eca580b4fc03e9a24f06e56af2db3ac872e998e",
+      "Ports/LinuxPort/src/com/codename1/impl/linux/LinuxTextInput.java": "a231a6624d71bc7156f796fe7562c3aa5152b50a7119a6f6e368ee0cbb25281f",
+      "docs/developer-guide/MCP-Headless-API.asciidoc": "24073eec07961c8d7f0a5dd46926f2572fd1baea477625e24e7324156df4e278",
+      "docs/developer-guide/Rich-Text-And-Code-Editing.asciidoc": "965db18e78c60f28b4eacbd77fbb60f82bbd1aa0d65f1638487cf613ebeb87d6",
+      "maven/linux/src/test/java/com/codename1/impl/linux/LinuxSocketMetadataTest.java": "f5cee35aeac1fc2394de0a96055ad0e2643b5e8661544de457cbba6800cbba48",
+      "maven/linux/src/test/java/com/codename1/impl/linux/LinuxTextInputTest.java": "e50aca686b4aeeda68df42a64155b7e6e091d9b8ab7f00260ee1c62652d10263",
+      "maven/linux/src/test/native/LinuxSocketTest.c": "9f9b1d6c55f1f6d4598b1f057e388ed3d3ccc17e417c9936d053c2ab83fd8fad",
+      "maven/linux/src/test/native/LinuxTextInputTest.c": "6a5202e032d4d0a7fd796d9cc5bea8eed4458f66e0741cd542f04d8a6c22b917",
+      "maven/linux/src/test/native/run-linux-socket-tests.sh": "03c086a3c44acd30156963f43352e7de9b832d3adc3a0d8de70d3a22ec4033cb",
+      "maven/linux/src/test/native/run-linux-text-input-tests.sh": "25e0a85730710791372f4904241287b39bffcfddff53d0134a9c659187b89f1a"
+    },
+    "reviewFiles": {
+      "Ports/LinuxPort/nativeSources/cn1_linux_desktopwindow.c": "2d80f0936ba9a94d1d9a1e15986efe0283ee8f634d3159c1b269156ca37d5d83",
+      "Ports/LinuxPort/nativeSources/cn1_linux_edit.c": "1b6287822f05b1e53d91823cc3cab8274e61e1aa3c820fcbd81c272fc00c883b",
+      "Ports/LinuxPort/nativeSources/cn1_linux_gfx.h": "d5e4f68156944bb4f98beb9352453af2a0b241f27c6305721ef0a7366c44e50d",
+      "Ports/LinuxPort/nativeSources/cn1_linux_services.c": "2e041ff024f45a6d066580a88f10d6f5e3ad6812f6d720d3c99ccf00b25b2a08",
+      "Ports/LinuxPort/nativeSources/cn1_linux_socket.c": "20fb048fd0a31ca9f9b8f50e8cd68f66e13f64c6b3312c4304f8c08057037407",
+      "Ports/LinuxPort/nativeSources/cn1_linux_text_input.c": "2a89d48660bf8c4c217fcfb52a4a0d3eafa158e8c7baf0356bc179f1a597c95e",
+      "Ports/LinuxPort/nativeSources/cn1_linux_window.c": "7b6cb701f41fad7602ed48f1b7c9a101785bed3afb26d94542dc6f7e52b72844",
+      "Ports/LinuxPort/src/com/codename1/impl/linux/LinuxImplementation.java": "0519b81fe4dab330a51c17749d8fc82af8ef4d9b6c9f837f4a854d9786c9ea45",
+      "Ports/LinuxPort/src/com/codename1/impl/linux/LinuxNative.java": "e15dfb25b25fa8e466498000e54ca74a4745998026198f5d9a9c214b7ce11a9b",
+      "Ports/LinuxPort/src/com/codename1/impl/linux/LinuxSocket.java": "89fa5e065a943174f729b0bb9eca580b4fc03e9a24f06e56af2db3ac872e998e",
+      "Ports/LinuxPort/src/com/codename1/impl/linux/LinuxTextInput.java": "a231a6624d71bc7156f796fe7562c3aa5152b50a7119a6f6e368ee0cbb25281f",
+      "docs/developer-guide/MCP-Headless-API.asciidoc": "24073eec07961c8d7f0a5dd46926f2572fd1baea477625e24e7324156df4e278",
+      "docs/developer-guide/Rich-Text-And-Code-Editing.asciidoc": "965db18e78c60f28b4eacbd77fbb60f82bbd1aa0d65f1638487cf613ebeb87d6",
+      "maven/linux/src/test/java/com/codename1/impl/linux/LinuxSocketMetadataTest.java": "f5cee35aeac1fc2394de0a96055ad0e2643b5e8661544de457cbba6800cbba48",
+      "maven/linux/src/test/java/com/codename1/impl/linux/LinuxTextInputTest.java": "e50aca686b4aeeda68df42a64155b7e6e091d9b8ab7f00260ee1c62652d10263",
+      "maven/linux/src/test/native/LinuxSocketTest.c": "9f9b1d6c55f1f6d4598b1f057e388ed3d3ccc17e417c9936d053c2ab83fd8fad",
+      "maven/linux/src/test/native/LinuxTextInputTest.c": "6a5202e032d4d0a7fd796d9cc5bea8eed4458f66e0741cd542f04d8a6c22b917",
+      "maven/linux/src/test/native/run-linux-socket-tests.sh": "03c086a3c44acd30156963f43352e7de9b832d3adc3a0d8de70d3a22ec4033cb",
+      "maven/linux/src/test/native/run-linux-text-input-tests.sh": "25e0a85730710791372f4904241287b39bffcfddff53d0134a9c659187b89f1a"
+    },
+    "buildSourceArchiveSha256": "1fdad51b5399311b24ac630f19f6ab554e9d081ec4bb95b184ec9a00f892ebdc",
+    "scope": "Linux loopback socket transport, GTK TextInputClient bridge, native clipboard/edit UTF-8 conversion, local regression tests and developer guide. Only Linux artifacts use this isolated patch. Not merged upstream.",
+    "installedPortArtifacts": {
+      "codenameone-linux-8.0-SNAPSHOT.jar": "8fef28f4b521e9148d55da2614253512352992cdef2602bf04942ab128b33f8f",
+      "codenameone-linux-8.0-SNAPSHOT-sources.jar": "a13223b6caad1b6f161b9c6fc4afafb665e00eed5c8b54ecb3b1494e96bec487",
+      "codenameone-linux-8.0-SNAPSHOT-bundle.jar": "0a0f32b6b263f0558d8a6964e0fa85fcd17bc335103b2a55e5e1a818ee38fa0c"
+    },
+    "installedNativeSourceVerified": true
+  },
+  "wordcraftRevision": "159b84f54c74e9e82fb3109b758ae7dd6f4e3ab0",
+  "reactor": {
+    "tests": 308,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "countCorrection": {
+      "previouslyReported": 311,
+      "actualReactorTests": 308,
+      "reason": "Three stale desktop/target reports were outside the Maven reactor; retained build3.log sums to 308."
+    }
+  },
+  "artifactDirectory": "artifacts/parity-20261016-comparison",
+  "platforms": {
+    "mac": {
+      "build": "passed",
+      "checks": [
+        "ribbon-comparison-produces-authored-insertions-deletions-and-paragraph-revisions",
+        "ribbon-accept-all-produces-exact-revised-paragraphs",
+        "ribbon-reject-all-restores-exact-original-paragraphs",
+        "comparison-is-one-undo-redo-step",
+        "comparison-cancel-preserves-original",
+        "ribbon-character-level-comparison",
+        "ribbon-ignore-case-adopts-revised-spelling-without-revisions"
+      ],
+      "regressionChecks": [
+        "ribbon-recipient-list-loads-quoted-csv",
+        "ribbon-inserts-editable-merge-field",
+        "ribbon-preview-and-recipient-navigation",
+        "ribbon-find-recipient",
+        "ribbon-if-rule-previews-each-record",
+        "ribbon-merge-field-shading",
+        "ribbon-address-field-mapping-and-undo",
+        "recipient-dialog-cancel-keeps-list",
+        "ribbon-finish-creates-independent-merged-letters",
+        "finish-undo-redo-restores-template-and-recipient-state",
+        "ribbon-add-envelope-section-and-undo",
+        "ribbon-single-label-position-and-undo",
+        "native-xlsx-worksheet-selection-and-date-import"
+      ],
+      "originalXmlRestored": true,
+      "originalMergeStateRestored": true,
+      "artifactSha256": "d954c37e3cbdaec7d0e6eaa56c4b7ffb8d3fc7228bb832b72ebbd04e2e72b33e",
+      "method": "Built-in MCP UI actions on native review application",
+      "physicalMobileInputCertified": false
+    },
+    "ios": {
+      "build": "passed",
+      "checks": [
+        "ribbon-comparison-produces-authored-insertions-deletions-and-paragraph-revisions",
+        "ribbon-accept-all-produces-exact-revised-paragraphs",
+        "ribbon-reject-all-restores-exact-original-paragraphs",
+        "comparison-is-one-undo-redo-step",
+        "comparison-cancel-preserves-original",
+        "ribbon-character-level-comparison",
+        "ribbon-ignore-case-adopts-revised-spelling-without-revisions"
+      ],
+      "regressionChecks": [
+        "ribbon-recipient-list-loads-quoted-csv",
+        "ribbon-inserts-editable-merge-field",
+        "ribbon-preview-and-recipient-navigation",
+        "ribbon-find-recipient",
+        "ribbon-if-rule-previews-each-record",
+        "ribbon-merge-field-shading",
+        "ribbon-address-field-mapping-and-undo",
+        "recipient-dialog-cancel-keeps-list",
+        "ribbon-finish-creates-independent-merged-letters",
+        "finish-undo-redo-restores-template-and-recipient-state",
+        "ribbon-add-envelope-section-and-undo",
+        "ribbon-single-label-position-and-undo",
+        "native-xlsx-worksheet-selection-and-date-import"
+      ],
+      "originalXmlRestored": true,
+      "originalMergeStateRestored": true,
+      "artifactSha256": "967c278a7283a5f50d2839e6b37f2271e462d9fd1d3b839fe8de6110f7e874be",
+      "method": "Built-in MCP UI actions on native review application",
+      "physicalMobileInputCertified": false
+    },
+    "android": {
+      "build": "passed",
+      "checks": [
+        "ribbon-comparison-produces-authored-insertions-deletions-and-paragraph-revisions",
+        "ribbon-accept-all-produces-exact-revised-paragraphs",
+        "ribbon-reject-all-restores-exact-original-paragraphs",
+        "comparison-is-one-undo-redo-step",
+        "comparison-cancel-preserves-original",
+        "ribbon-character-level-comparison",
+        "ribbon-ignore-case-adopts-revised-spelling-without-revisions"
+      ],
+      "regressionChecks": [
+        "ribbon-recipient-list-loads-quoted-csv",
+        "ribbon-inserts-editable-merge-field",
+        "ribbon-preview-and-recipient-navigation",
+        "ribbon-find-recipient",
+        "ribbon-if-rule-previews-each-record",
+        "ribbon-merge-field-shading",
+        "ribbon-address-field-mapping-and-undo",
+        "recipient-dialog-cancel-keeps-list",
+        "ribbon-finish-creates-independent-merged-letters",
+        "finish-undo-redo-restores-template-and-recipient-state",
+        "ribbon-add-envelope-section-and-undo",
+        "ribbon-single-label-position-and-undo",
+        "native-xlsx-worksheet-selection-and-date-import"
+      ],
+      "originalXmlRestored": true,
+      "originalMergeStateRestored": true,
+      "artifactSha256": "7794bbb876979e4f5950c1b949803aa52a52df5ef9eb7eb78c53b9f5379523a4",
+      "method": "Built-in MCP UI actions on native review application",
+      "physicalMobileInputCertified": false
+    },
+    "browser": {
+      "build": "passed",
+      "runtime": "Current-source comparison/accept/undo/reject/recovery workflow passed",
+      "artifactSha256": "59aa7cba719bb02d905f50227c99278ae9cb49bca96479f393dc760c0f5c8350",
+      "evidence": "browser-ui.json"
+    },
+    "linux": {
+      "build": "passed",
+      "architecture": "aarch64",
+      "distribution": "Ubuntu 22.04",
+      "java": "Temurin 8u504",
+      "compiler": "Clang 14 / lld 14",
+      "nativeCompiler": "ParparVM through Maven local-linux-device",
+      "configuration": "RelWithDebInfo, linux.debug=true, no release LTO, agent-debug on loopback port 18768",
+      "releaseArtifact": false,
+      "performanceBaseline": false,
+      "buildDescription": "Linux ARM64 builds through the standard local Maven/ParparVM target in an isolated Ubuntu 22.04 container. The review binary uses RelWithDebInfo without release LTO and opt-in loopback MCP; it is not a performance/release-size baseline.",
+      "runtimeDescription": "Thirty-seven Linux checks pass: seven comparison, thirteen Mailings, thirteen XTest document keyboard/Unicode/clipboard checks and four dialog input/focus/field-isolation checks. Exact original XML and Mailings recipient state were restored. Xvfb without a window manager does not certify title controls, physical input, printing or native file dialogs.",
+      "comparisonChecks": [
+        "ribbon-comparison-produces-authored-insertions-deletions-and-paragraph-revisions",
+        "ribbon-accept-all-produces-exact-revised-paragraphs",
+        "ribbon-reject-all-restores-exact-original-paragraphs",
+        "comparison-is-one-undo-redo-step",
+        "comparison-cancel-preserves-original",
+        "ribbon-character-level-comparison",
+        "ribbon-ignore-case-adopts-revised-spelling-without-revisions"
+      ],
+      "mailingsChecks": [
+        "ribbon-recipient-list-loads-quoted-csv",
+        "ribbon-inserts-editable-merge-field",
+        "ribbon-preview-and-recipient-navigation",
+        "ribbon-find-recipient",
+        "ribbon-if-rule-previews-each-record",
+        "ribbon-merge-field-shading",
+        "ribbon-address-field-mapping-and-undo",
+        "recipient-dialog-cancel-keeps-list",
+        "ribbon-finish-creates-independent-merged-letters",
+        "finish-undo-redo-restores-template-and-recipient-state",
+        "ribbon-add-envelope-section-and-undo",
+        "ribbon-single-label-position-and-undo",
+        "native-xlsx-worksheet-selection-and-date-import"
+      ],
+      "keyboardChecks": [
+        "native-x11-text-commit",
+        "native-shift-selection-and-replacement",
+        "native-backspace",
+        "native-undo",
+        "native-redo",
+        "native-return-and-multiline-entry",
+        "native-paragraph-navigation-and-forward-delete",
+        "native-select-all-and-cut",
+        "native-paste-from-gtk-clipboard",
+        "native-gtk-unicode-composition",
+        "native-unicode-cut",
+        "native-unicode-clipboard-round-trip",
+        "native-document-input-resumes-after-window-focus-return"
+      ],
+      "dialogChecks": [
+        "dialog-editfield-preserves-bmp-and-supplementary-unicode",
+        "dialog-input-resumes-after-native-window-focus-return",
+        "switching-dialog-fields-routes-input-to-new-owner",
+        "native-field-keystrokes-do-not-edit-document-canvas"
+      ],
+      "originalXmlRestored": true,
+      "originalMergeStateRestored": true,
+      "physicalKeyboardCertified": false,
+      "windowManagerCertified": false,
+      "nativeTextAreaOverlayCertified": false,
+      "evidence": [
+        "linux-input-comparison.json",
+        "linux-input-mailings.json",
+        "linux-input-keyboard.json",
+        "linux-native-field.json"
+      ],
+      "runtimeImage": "cn1-word-review-rf0kgr-runtime:20261016",
+      "runtimeImageSha256": "32100299ddcfceb601e35221446556199d8bbc4683ec4c87d2cb170bca4f2eb5",
+      "sourceAndPatch": "linux-framework-provenance.json",
+      "artifactSha256": "177c3206775ecaed135cfa7ede5c0e00605f1d63f0634da67219bf5b9c3556b5"
+    }
+  },
+  "crossImport": {
+    "passed": 42,
+    "failed": 6,
+    "evidence": "cross-import/results.json",
+    "cn1Origin": {
+      "passed": 24,
+      "failed": 0
+    },
+    "failureExplanation": "Six Wordcraft-origin whole-paragraph cases omit tracked paragraph-break metadata; unwanted empty paragraphs also occur when Wordcraft reads its own output. Failures retained, not normalized away.",
+    "scope": "Text resolution after accept/reject in both readers; not pixel/geometry parity."
+  },
+  "pdf": {
+    "renderer": "Poppler",
+    "checks": [
+      "Pending comparison renders blue underlined insertion and red struck deletion",
+      "Accepted comparison renders revised three paragraphs without marks",
+      "Rejected comparison renders original two paragraphs without marks"
+    ],
+    "scope": "Simple CLI-exported fixture, not complex layout or embedded-font parity"
+  },
+  "limitations": [
+    "Comparison of section boundaries, comments/bookmarks, pictures and fields/notes is rejected",
+    "Table insertion/deletion/geometry changes and empty table-boundary insertion are rejected",
+    "Headers/footers, page geometry and style definitions are retained from original and not compared",
+    "Only direct formatting in unchanged paragraphs is compared",
+    "Combine, move detection and structural revisions remain incomplete",
+    "Character mode preserves surrogate pairs but is not full grapheme segmentation",
+    "Bounded LCS falls back to whole-range replacement for large unmatched regions",
+    "UI comparison clears its file association; raw automation commands do not provide this host Save As policy",
+    "Physical mobile input, Windows and complete desktop/browser workflows remain unverified",
+    "Final matched benchmarks and superiority claims remain blocked on parity"
+  ],
+  "sourceManifest": "source-sha256.json",
+  "sourceArchiveSha256": "db70a3bb79cd8a1b3a51c37ef42d2f3104422bb30a86946247a18d9a36f710e4"
+}

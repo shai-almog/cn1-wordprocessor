@@ -47,6 +47,12 @@
  </plugins>
     </pluginManagement>
   </build>
+ <profiles>
+    <profile>
+      <id>agent-debug</id>
+      <properties><wordprocessor.agent.port>18765</wordprocessor.agent.port></properties>
+    </profile>
+  </profiles>
  <dependencies>
     <dependency>
       <groupId>junit</groupId>

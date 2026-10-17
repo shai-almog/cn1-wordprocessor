@@ -37,8 +37,14 @@ public final class TextUtil {
     StringBuilder out = new StringBuilder();
     for (int i = 0; i < title.length(); i++) {
       char c = title.charAt(i);
-      out.append(c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z'
-          || c >= '0' && c <= '9' || c == '_' || c == '-' ? c : '_');
+      out.append(
+          c >= 'a' && c <= 'z'
+                  || c >= 'A' && c <= 'Z'
+                  || c >= '0' && c <= '9'
+                  || c == '_'
+                  || c == '-'
+              ? c
+              : '_');
     }
     return out.toString();
   }
@@ -47,8 +53,8 @@ public final class TextUtil {
     if (id.length() < 2 || id.charAt(0) < 'a' || id.charAt(0) > 'z') return false;
     for (int i = 1; i < id.length(); i++) {
       char c = id.charAt(i);
-      if (!(c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z'
-          || c >= '0' && c <= '9' || c == '.')) return false;
+      if (!(c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c >= '0' && c <= '9' || c == '.'))
+        return false;
     }
     return true;
   }

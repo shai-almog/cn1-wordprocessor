@@ -1,0 +1,73 @@
+{
+  "date": "2026-10-15",
+  "fullParity": false,
+  "frameworkRevision": "008f9ece62526d807c2064887ad8f8641d6195a4",
+  "wordcraftRevision": "159b84f54c74e9e82fb3109b758ae7dd6f4e3ab0",
+  "artifactDirectory": "artifacts/parity-20261015-toc-sources",
+  "reactor": {
+    "tests": 249,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "sourceManifestSha256": "b8e23f99bc1bb7ded22f5a71d5959c3255b51ba24fcaba7c87f21ef261cea093",
+  "sourceArchiveSha256": "481420de4983a10da39e241c1e3e4da80dfe2d3e4968ac7b3182202984b7e78c",
+  "crossImport": {
+    "passed": 24,
+    "failed": 0,
+    "evidence": "artifacts/parity-20261015-toc-sources/cross-import/results.json"
+  },
+  "native": {
+    "mac": {
+      "build": "Maven + ParparVM + Xcode (local)",
+      "binarySha256": "7b3989e76450c14e220dc2ec947fd60373c43f95e14b4d37fb482565d3e79c11",
+      "checks": [
+        "ribbon-add-text-outline-level",
+        "ribbon-mark-entry-retains-source",
+        "ribbon-combined-heading-outline-style-and-marked-sources",
+        "nested-style-apply-parent-cancel-is-nonmutating",
+        "update-retains-advanced-source-options",
+        "remove-and-single-undo"
+      ],
+      "keyboardChecks": [
+        "native-ribbon-mark-entry",
+        "native-keyboard-text",
+        "native-keyboard-level-nine",
+        "native-mark-button",
+        "popup-text-contrast-visual-check"
+      ],
+      "originalXmlRestored": true,
+      "notesRegression": true
+    },
+    "ios": {
+      "build": "Maven + ParparVM + Xcode (local)",
+      "binarySha256": "882f22c2c229d5f6c06c527784317144ce3bb7e00342d4a0f08b0be3c9d8ee24",
+      "checks": [
+        "ribbon-add-text-outline-level",
+        "ribbon-mark-entry-retains-source",
+        "ribbon-combined-heading-outline-style-and-marked-sources",
+        "nested-style-apply-parent-cancel-is-nonmutating",
+        "update-retains-advanced-source-options",
+        "remove-and-single-undo"
+      ],
+      "keyboardChecks": [
+        "software-keyboard-text",
+        "done-dismisses-keyboard",
+        "native-level-selection",
+        "native-mark-button",
+        "safe-area-actions-visible"
+      ],
+      "originalXmlRestored": true,
+      "notesRegression": true
+    }
+  },
+  "reviewAppsStopped": true,
+  "performanceComparison": "paused until feature/rendering parity",
+  "limitations": [
+    "Imported TOC level ranges other than 1 through N, per-level page-number suppression and unsupported switches",
+    "Custom formatting of generated entries and multiple tables of contents",
+    "Direct in-page TC editing and complex field result formatting",
+    "Windows/Linux/Android/browser interaction remains unverified",
+    "Full Wordcraft catalog parity is not certified"
+  ]
+}

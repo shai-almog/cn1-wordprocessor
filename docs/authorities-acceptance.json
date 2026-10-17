@@ -1,0 +1,102 @@
+{
+  "date": "2026-10-15",
+  "fullParity": false,
+  "frameworkRevision": "008f9ece62526d807c2064887ad8f8641d6195a4",
+  "wordcraftRevision": "159b84f54c74e9e82fb3109b758ae7dd6f4e3ab0",
+  "reactor": {
+    "tests": 272,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "artifactDirectory": "artifacts/parity-20261015-authorities",
+  "platforms": {
+    "mac": {
+      "build": "passed",
+      "checks": [
+        "ribbon-mark-citation-preserves-selection-text",
+        "ribbon-insert-authorities-title-and-leader",
+        "ribbon-update-picks-up-later-citation-without-duplicates",
+        "authority-update-single-undo-redo",
+        "authority-settings-cancel-preserves-document",
+        "ribbon-remove-authorities-retains-citation-marks"
+      ],
+      "indexRegressionChecks": [
+        "ribbon-mark-subentry-bold-mark-all-and-cross-reference",
+        "ribbon-index-run-in-right-aligned-hyphen-leaders",
+        "index-insertion-single-undo-redo",
+        "ribbon-update-adds-new-entry-without-duplicates",
+        "index-settings-cancel-preserves-document",
+        "ribbon-remove-index-retains-source-marks"
+      ],
+      "originalXmlRestored": true,
+      "artifactSha256": "00b15f0e0af3fa73f100bad69dd612b053a57f1c02c1391dda7e81b7cc41859b",
+      "input": "Built-in MCP UI actions on native review app"
+    },
+    "ios": {
+      "build": "passed",
+      "checks": [
+        "ribbon-mark-citation-preserves-selection-text",
+        "ribbon-insert-authorities-title-and-leader",
+        "ribbon-update-picks-up-later-citation-without-duplicates",
+        "authority-update-single-undo-redo",
+        "authority-settings-cancel-preserves-document",
+        "ribbon-remove-authorities-retains-citation-marks"
+      ],
+      "indexRegressionChecks": [
+        "ribbon-mark-subentry-bold-mark-all-and-cross-reference",
+        "ribbon-index-run-in-right-aligned-hyphen-leaders",
+        "index-insertion-single-undo-redo",
+        "ribbon-update-adds-new-entry-without-duplicates",
+        "index-settings-cancel-preserves-document",
+        "ribbon-remove-index-retains-source-marks"
+      ],
+      "originalXmlRestored": true,
+      "artifactSha256": "aecf2924252b627c20fddfd8ff31872997086f88c31d1296ce773fdf86e6aa2a",
+      "input": "Built-in MCP UI actions on native review app"
+    },
+    "android": {
+      "build": "passed",
+      "checks": [
+        "ribbon-mark-citation-preserves-selection-text",
+        "ribbon-insert-authorities-title-and-leader",
+        "ribbon-update-picks-up-later-citation-without-duplicates",
+        "authority-update-single-undo-redo",
+        "authority-settings-cancel-preserves-document",
+        "ribbon-remove-authorities-retains-citation-marks"
+      ],
+      "indexRegressionChecks": [
+        "ribbon-mark-subentry-bold-mark-all-and-cross-reference",
+        "ribbon-index-run-in-right-aligned-hyphen-leaders",
+        "index-insertion-single-undo-redo",
+        "ribbon-update-adds-new-entry-without-duplicates",
+        "index-settings-cancel-preserves-document",
+        "ribbon-remove-index-retains-source-marks"
+      ],
+      "originalXmlRestored": true,
+      "artifactSha256": "619c78ebbc089ebaa205b08251df6ea129542c026e2ba083d2343411cce67fec",
+      "input": "Built-in MCP UI actions on native review app"
+    },
+    "browser": {
+      "build": "passed",
+      "runtime": "Current source not accepted; earlier index build partially exercised in Chrome, see index-acceptance.json",
+      "artifactSha256": "3dc811eca3338f4f9004b30367121792b9f835a75919b30b1c4390fc57c6ca13"
+    }
+  },
+  "crossImport": {
+    "passed": 6,
+    "failed": 2,
+    "evidence": "cross-import/results.json",
+    "failure": "Wordcraft duplicates cached entries when updating our standard multi-paragraph TOA export; its exports update correctly here."
+  },
+  "limitations": [
+    "One authority table; short forms, categories, passim and custom TOA switches are not implemented",
+    "Unicode case-folded ordering, not language-specific collation",
+    "No full multi-table pagination convergence certification",
+    "Physical mobile keyboard/touch acceptance remains open",
+    "Browser dialog-title color and HTML5 mobile-layout changes compile but await browser acceptance",
+    "Windows/Linux execution, full catalog parity and final matched benchmarks remain incomplete"
+  ],
+  "sourceManifest": "source-sha256.json",
+  "sourceArchiveSha256": "5c24a920f7634ea1f9ee6c385d6506af9f1438c3cf318134056cc5682feb2adb"
+}
