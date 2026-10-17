@@ -3428,6 +3428,39 @@ public class WordProcessor {
       if (!editor.isReflow()) editor.setReflow(true);
       zoomTo(editor.getZoom());
     });
+    view("view.draft", "Draft: reflowed text without headers, footers or page decoration", "value?:boolean", a -> {
+      boolean on = a.containsKey("value") ? (Boolean) a.get("value") : !editor.isDraft();
+      editor.setDraft(on);
+      if (editor.isReflow() != on) editor.setReflow(on);
+      zoomTo(editor.getZoom());
+    });
+    view("view.darkMode", "Switch the page between light and dark", "value?:boolean", a ->
+        editor.setDarkPage(a.containsKey("value") ? (Boolean) a.get("value") : !editor.isDarkPage()));
+    view("view.gridlines", "Show or hide 18pt gridlines", "value?:boolean", a ->
+        editor.setGridlines(a.containsKey("value") ? (Boolean) a.get("value") : !editor.isGridlines()));
+    view("view.focus", "Focus mode: hide the ribbon and status bar", "value?:boolean", a ->
+        focus(a.containsKey("value") ? (Boolean) a.get("value") : !ribbon.isHidden()));
+    view("view.readMode", "Read mode: full screen, pages side by side, no editing", "value?:boolean", a -> {
+      boolean on = a.containsKey("value") ? (Boolean) a.get("value") : !editor.isViewOnly();
+      editor.setViewOnly(on);
+      focus(on);
+      editor.fitPages(on ? 2 : 1);
+      zoomTo(editor.getZoom());
+    });
+    view("view.immersive", "Immersive reader: focus mode with reflowed, enlarged text", "value?:boolean", a -> {
+      boolean on = a.containsKey("value") ? (Boolean) a.get("value") : !(ribbon.isHidden() && editor.isReflow());
+      focus(on);
+      editor.setReflow(on);
+      zoomTo(on ? Math.max(1.5f, editor.getZoom()) : 1);
+    });
+    view("view.sideToSide", "Lay pages out horizontally", "", a -> {
+      editor.setPagesAcross(Math.max(1, editor.layout().pages.size()));
+      zoomTo(editor.getZoom());
+    });
+    view("view.vertical", "Lay pages out vertically", "", a -> {
+      editor.setPagesAcross(1);
+      zoomTo(editor.getZoom());
+    });
   }
 
   /** Line- and screen-relative caret movement needs the editor's layout, so it lives here. */
@@ -3468,8 +3501,19 @@ public class WordProcessor {
               "zoom", Math.round(editor.getZoom() * 100),
               "pagesAcross", editor.getPagesAcross(),
               "reflow", editor.isReflow(),
-              "marks", editor.isShowMarks());
+              "marks", editor.isShowMarks(),
+              "dark", editor.isDarkPage(),
+              "draft", editor.isDraft(),
+              "gridlines", editor.isGridlines(),
+              "readMode", editor.isViewOnly(),
+              "focus", ribbon.isHidden());
         });
+  }
+
+  private void focus(boolean on) {
+    ribbon.setHidden(on);
+    footer.setHidden(on);
+    form.revalidate();
   }
 
   private void zoomTo(float zoom) {

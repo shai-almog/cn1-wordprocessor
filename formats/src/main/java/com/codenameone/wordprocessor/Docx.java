@@ -103,7 +103,7 @@ public final class Docx {
     Element background = Xml.child(root, "background");
     if (background != null) {
       String fill = Xml.attr(background, "color", "auto");
-      if (fill.length() == 6 && fill.matches("[0-9A-Fa-f]{6}")) {
+      if (TextUtil.hex(fill, 6)) {
         // Word's page color is document-wide; the model stores it per section.
         int rgb = Integer.parseInt(fill, 16);
         for (Map.Entry<String, Section> sec : sections.entrySet())

@@ -20,7 +20,7 @@ final class FileCommands implements Commands.Extension {
     c.register(
         "file.properties",
         "Read or set summary properties (title, author, subject, keywords, description, category, company, manager)",
-        spec.substring(1),
+        spec.toString().substring(1),
         true,
         (s, a) -> {
           DocumentProperties p = s.document().properties;

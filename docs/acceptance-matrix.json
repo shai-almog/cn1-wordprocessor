@@ -10,8 +10,8 @@
   "not-applicable"
  ],
  "counts": {
-  "unverified": 288,
-  "missing": 186,
+  "unverified": 297,
+  "missing": 177,
   "partial": 13,
   "certified": 0,
   "reference-stub": 15,
@@ -197,7 +197,7 @@
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "file.protect (Protect Document) App command registered; needs native acceptance evidence."
+   "notes": "file.protect (Protect Document) App command registered; needs native acceptance evidence. Native Mac check 2026-10-17 over MCP: rendered/enforced, undo restored the XML."
   },
   {
    "tab": "File",
@@ -2453,7 +2453,7 @@
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "design.watermark (Watermark) App command registered; needs native acceptance evidence."
+   "notes": "design.watermark (Watermark) App command registered; needs native acceptance evidence. Native Mac check 2026-10-17 over MCP: rendered/enforced, undo restored the XML."
   },
   {
    "tab": "Design",
@@ -2465,7 +2465,7 @@
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "design.pageColor (Page Color) App command registered; needs native acceptance evidence."
+   "notes": "design.pageColor (Page Color) App command registered; needs native acceptance evidence. Native Mac check 2026-10-17 over MCP: rendered/enforced, undo restored the XML."
   },
   {
    "tab": "Design",
@@ -2477,7 +2477,7 @@
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "design.pageBorders (Page Borders) App command registered; needs native acceptance evidence."
+   "notes": "design.pageBorders (Page Borders) App command registered; needs native acceptance evidence. Native Mac check 2026-10-17 over MCP: rendered/enforced, undo restored the XML."
   },
   {
    "tab": "Layout",
@@ -3624,12 +3624,12 @@
    "group": "Views",
    "feature": "Read Mode",
    "command": "view.readMode",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "view.readMode",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "view.readMode (Read Mode)"
+   "notes": "Editor view command; not in the CLI registry."
   },
   {
    "tab": "View",
@@ -3672,60 +3672,60 @@
    "group": "Views",
    "feature": "Draft",
    "command": "view.draft",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "view.draft",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "view.draft (Draft)"
+   "notes": "Editor view command; not in the CLI registry."
   },
   {
    "tab": "View",
    "group": "Immersive",
    "feature": "Focus",
    "command": "view.focus",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "view.focus",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "view.focus (Focus)"
+   "notes": "Editor view command; not in the CLI registry."
   },
   {
    "tab": "View",
    "group": "Immersive",
    "feature": "Immersive Reader",
    "command": "view.immersive",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "view.immersive",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "view.immersive (Immersive Reader)"
+   "notes": "Editor view command; not in the CLI registry."
   },
   {
    "tab": "View",
    "group": "Page Movement",
    "feature": "Vertical",
    "command": "view.vertical",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "view.vertical",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "view.vertical (Vertical)"
+   "notes": "Editor view command; not in the CLI registry."
   },
   {
    "tab": "View",
    "group": "Page Movement",
    "feature": "Side to Side",
    "command": "view.sideToSide",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "view.sideToSide",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "view.sideToSide (Side to Side)"
+   "notes": "Editor view command; not in the CLI registry."
   },
   {
    "tab": "View",
@@ -3744,12 +3744,12 @@
    "group": "Show",
    "feature": "Gridlines",
    "command": "view.gridlines",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "view.gridlines",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "view.gridlines (Gridlines)"
+   "notes": "Editor view command; not in the CLI registry. Native Mac check 2026-10-17 over MCP: rendered/enforced, undo restored the XML."
   },
   {
    "tab": "View",
@@ -3852,12 +3852,12 @@
    "group": "Dark Mode",
    "feature": "Switch Modes",
    "command": "view.darkMode",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "view.darkMode",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "view.darkMode (Switch Modes)"
+   "notes": "Editor view command; not in the CLI registry."
   },
   {
    "tab": "View",
@@ -5880,12 +5880,12 @@
    "group": "Fields",
    "feature": "Show Field Codes",
    "command": "view.fieldCodes",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "view.fieldCodes",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "view.fieldCodes (Field Codes)"
+   "notes": "view.fieldCodes (Field Codes) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Editing",

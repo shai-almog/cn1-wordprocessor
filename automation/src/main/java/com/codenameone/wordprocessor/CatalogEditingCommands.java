@@ -134,7 +134,12 @@ final class CatalogEditingCommands implements Commands.Extension {
             }
           }
           if (end == 0) throw new IllegalArgumentException("No character before the caret");
-          int cp = text.codePointBefore(end);
+          // String.codePointBefore is unavailable on ParparVM.
+          char low = text.charAt(end - 1);
+          int cp =
+              Character.isLowSurrogate(low) && end >= 2 && Character.isHighSurrogate(text.charAt(end - 2))
+                  ? Character.toCodePoint(text.charAt(end - 2), low)
+                  : low;
           String code = Integer.toHexString(cp).toUpperCase();
           while (code.length() < 4) code = "0" + code;
           s.select(x.block, end - Character.charCount(cp), end);
@@ -166,6 +171,22 @@ final class CatalogEditingCommands implements Commands.Extension {
         });
 
     c.register(
+        "view.fieldCodes",
+        "Alt+F9: show field codes instead of results for every field, or switch back",
+        "value?:boolean",
+        true,
+        (s, a) -> {
+          final boolean[] any = {false};
+          s.mapFields(
+              (p, offset, f) -> {
+                any[0] |= f.showCode;
+                return f;
+              });
+          final boolean show = a.containsKey("value") ? (Boolean) a.get("value") : !any[0];
+          s.mapFields((p, offset, f) -> f.showCode(show));
+          return show;
+        });
+    c.register(
         "insert.blankPage",
         "Insert a blank page at the caret",
         "",
@@ -184,8 +205,10 @@ final class CatalogEditingCommands implements Commands.Extension {
         true,
         (s, a) -> {
           String name = Commands.str(a, "name");
-          if (!name.matches("[A-Za-z][A-Za-z0-9]{0,39}"))
-            throw new IllegalArgumentException("Invalid property name");
+          boolean valid = !name.isEmpty() && name.length() <= 40 && Character.isLetter(name.charAt(0));
+          for (int i = 0; i < name.length(); i++)
+            valid &= name.charAt(i) < 128 && Character.isLetterOrDigit(name.charAt(i));
+          if (!valid) throw new IllegalArgumentException("Invalid property name");
           String value = "title".equalsIgnoreCase(name) ? s.document().title : "";
           s.insertField(new InlineField("DOCPROPERTY " + name, value, false, false));
           return null;

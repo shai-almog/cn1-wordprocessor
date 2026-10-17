@@ -26,6 +26,13 @@ public final class TextUtil {
     return out.append(text).toString();
   }
 
+  /** True when text is exactly length hex digits (String.matches is unavailable on ParparVM). */
+  public static boolean hex(String text, int length) {
+    if (text == null || text.length() != length) return false;
+    for (int i = 0; i < length; i++) if (Character.digit(text.charAt(i), 16) < 0) return false;
+    return true;
+  }
+
   public static boolean digits(String text, int start) {
     if (start >= text.length()) return false;
     for (int i = start; i < text.length(); i++)

@@ -461,6 +461,53 @@ public final class EditorSurface extends Container
     return showMarks;
   }
 
+  private boolean darkPage, gridlines, draft, viewOnly;
+
+  /** Word's "Switch Modes": a dark page with light text; colors in the document are unchanged. */
+  public void setDarkPage(boolean value) {
+    darkPage = value;
+    repaint();
+  }
+
+  public boolean isDarkPage() {
+    return darkPage;
+  }
+
+  public void setGridlines(boolean value) {
+    gridlines = value;
+    repaint();
+  }
+
+  public boolean isGridlines() {
+    return gridlines;
+  }
+
+  /** Draft view: no headers, footers, watermark or page color. */
+  public void setDraft(boolean value) {
+    draft = value;
+    repaint();
+  }
+
+  public boolean isDraft() {
+    return draft;
+  }
+
+  /** Read mode: navigation and selection only. */
+  public void setViewOnly(boolean value) {
+    viewOnly = value;
+  }
+
+  public boolean isViewOnly() {
+    return viewOnly;
+  }
+
+  /** Text color as painted: dark ink turns light on a dark page. */
+  private int ink(int rgb) {
+    if (!darkPage) return rgb;
+    int r = rgb >> 16 & 255, g = rgb >> 8 & 255, b = rgb & 255;
+    return (r * 299 + g * 587 + b * 114) / 1000 < 110 ? 0xffffff - (rgb & 0xffffff) : rgb;
+  }
+
   public void setShowMarks(boolean value) {
     showMarks = value;
     repaint();
@@ -867,10 +914,24 @@ public final class EditorSurface extends Container
       if (y + ph < g.getClipY() || y > g.getClipY() + g.getClipHeight()) continue;
       g.setColor(OfficeTheme.chrome(0xd1d9e2));
       g.fillRect(x + 3, y + 4, pw, ph);
-      g.setColor(page.decor.pageColor < 0 ? 0xffffff : page.decor.pageColor);
+      g.setColor(
+          darkPage
+              ? 0x1f1f1f
+              : draft || page.decor.pageColor < 0 ? 0xffffff : page.decor.pageColor);
       g.fillRect(x, y, pw, ph);
-      paintDecor(g, page, x, y, scale);
-      g.setColor(0x242424);
+      if (!draft) paintDecor(g, page, x, y, scale);
+      if (gridlines) {
+        g.setColor(darkPage ? 0x3a4654 : 0xd8e4f0);
+        int left = x + Math.round(page.spec.left * scale),
+            right = x + Math.round((page.spec.width - page.spec.right) * scale),
+            top = y + Math.round(page.spec.top * scale),
+            bottom = y + Math.round((page.spec.height - page.spec.bottom) * scale);
+        for (float gy = page.spec.top; gy <= page.spec.height - page.spec.bottom; gy += 18)
+          g.drawLine(left, y + Math.round(gy * scale), right, y + Math.round(gy * scale));
+        for (float gx = page.spec.left; gx <= page.spec.width - page.spec.right; gx += 18)
+          g.drawLine(x + Math.round(gx * scale), top, x + Math.round(gx * scale), bottom);
+      }
+      g.setColor(ink(0x242424));
       for (float[] rule : page.columnRules)
         g.drawLine(
             x + Math.round(rule[0] * scale),
@@ -931,6 +992,8 @@ public final class EditorSurface extends Container
             nx, ny, nx + Math.round(Math.min(144, page.spec.contentWidth() / 3) * scale), ny);
       }
       for (LayoutEngine.Line line : page.allLines()) {
+        if (draft && line.block != -2 && (page.header.contains(line) || page.footer.contains(line)))
+          continue;
         int clipX = g.getClipX(),
             clipY = g.getClipY(),
             clipW = g.getClipWidth(),
@@ -944,7 +1007,7 @@ public final class EditorSurface extends Container
         int lx = x + Math.round(line.x * scale), ly = y + Math.round(line.y * scale);
         if (!line.marker.isEmpty()) {
           g.setFont(font(TextStyle.DEFAULT, zoom));
-          g.setColor(0x242424);
+          g.setColor(ink(0x242424));
           g.drawString(
               line.marker, lx - Math.round(18 * scale), ly + Math.round(line.markerOffset * scale));
         }
@@ -1034,7 +1097,7 @@ public final class EditorSurface extends Container
             g.setColor(span.style.background);
             g.fillRect(sx, sy, Math.round(span.width * scale), f.getHeight());
           }
-          g.setColor(span.style.color);
+          g.setColor(ink(span.style.color));
           drawCharacters(g, span, f, scale, sx, sy);
           if (span.style.hasUnderline()) {
             GeneralPath path = new GeneralPath();
@@ -1046,9 +1109,10 @@ public final class EditorSurface extends Container
                   path.lineTo(sx + x2 * scale, sy + f.getAscent() + y2 * scale);
                 });
             g.setColor(
-                span.style.characters.underlineColor < 0
-                    ? span.style.color
-                    : span.style.characters.underlineColor);
+                ink(
+                    span.style.characters.underlineColor < 0
+                        ? span.style.color
+                        : span.style.characters.underlineColor));
             g.drawShape(
                 path,
                 new Stroke(
@@ -1058,7 +1122,7 @@ public final class EditorSurface extends Container
                     1));
           }
           if (span.style.strike || span.style.characters.doubleStrike) {
-            g.setColor(span.style.color);
+            g.setColor(ink(span.style.color));
             int decorationY = sy + f.getAscent() - Math.round(span.glyphStyle.size * .35f * scale);
             g.drawLine(sx, decorationY, sx + Math.round(span.width * scale), decorationY);
             if (span.style.characters.doubleStrike)
@@ -1070,7 +1134,7 @@ public final class EditorSurface extends Container
           }
         }
         if (showMarks) paintMarks(g, line, lx, ly, scale);
-        g.setColor(0x242424);
+        g.setColor(ink(0x242424));
         for (float bar : line.barTabs)
           g.fillRect(
               lx + Math.round(bar * scale),
@@ -1737,7 +1801,7 @@ public final class EditorSurface extends Container
    */
   public boolean readOnly() {
     String mode = session.document().properties.protection;
-    return "readOnly".equals(mode) || "comments".equals(mode);
+    return viewOnly || "readOnly".equals(mode) || "comments".equals(mode);
   }
 
   @Override
