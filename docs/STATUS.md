@@ -351,3 +351,15 @@ in the editor and the PDF, and map to DOCX `w:pgNumType w:fmt` and `w:lnNumType`
 - `w:lnNumType w:start` and `w:distance` are not kept.
 - Per-paragraph suppression (`w:suppressLineNumbers`) is not supported.
 - Page vertical alignment (`w:vAlign`) is not implemented.
+
+## Multilevel and custom lists
+
+`listFormat` is `base[|template]`. The base is a number format, `outline` (levels cycle 1/a/i),
+`legal` (1.1.1.) or `bullet`. The template is Word `lvlText` (`%1)`, `(%1)`, `%1.%2.`) or a bullet
+symbol. Commands: `para.multilevel`, `para.defineNumber`, `para.defineBullet`, `list.define`.
+DOCX writes the numFmt and lvlText for each level and reads custom lvlText back as a template.
+
+**Limitations:**
+- Per-level indents, fonts and `w:suff` are not modelled.
+- A template's ancestor counters use the formats seen at those levels.
+- Picture bullets are not supported.

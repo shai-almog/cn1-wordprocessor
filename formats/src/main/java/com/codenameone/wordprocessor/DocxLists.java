@@ -94,10 +94,14 @@ final class DocxLists {
         .contains(format)) d.format = format;
     else warnings.add("Numbering format: " + format);
     if (start != null) d.start = Math.max(1, Integer.parseInt(Xml.attr(start, "val", "1")));
-    if (label != null
-        && !"bullet".equals(d.kind)
-        && !("%" + (level + 1) + ".").equals(Xml.attr(label, "val", "")))
-      warnings.add("Custom list label is approximated");
+    String text = label == null ? null : Xml.attr(label, "val", "");
+    boolean bullet = "bullet".equals(d.kind);
+    if (text != null
+        && !text.equals(bullet ? ListNumbers.BULLETS[level % 3] : "%" + (level + 1) + ".")) {
+      String custom = (bullet ? "bullet" : d.format) + "|" + text;
+      if (!text.isEmpty() && ListNumbers.valid(custom)) d.format = custom;
+      else warnings.add("Custom list label is approximated");
+    }
     return d;
   }
 
@@ -182,17 +186,26 @@ final class DocxLists {
       b.append("<w:abstractNum w:abstractNumId=\"")
           .append(id)
           .append("\"><w:multiLevelType w:val=\"multilevel\"/>");
+      Paragraph sample = null;
+      for (Paragraph p : g.levels) if (p != null && sample == null) sample = p;
       for (int level = 0; level < 9; level++) {
         Paragraph p = g.levels[level];
+        // Unused levels follow the group's multilevel preset (outline/legal) when there is one.
+        String fmt =
+            p != null ? p.listFormat : sample != null ? ListNumbers.base(sample.listFormat) : "decimal";
         boolean bullet = p != null && "bullet".equals(p.list);
         b.append("<w:lvl w:ilvl=\"")
             .append(level)
             .append("\"><w:start w:val=\"")
             .append(g.starts[level])
             .append("\"/><w:numFmt w:val=\"")
-            .append(bullet ? "bullet" : p == null ? "decimal" : p.listFormat)
+            .append(bullet ? "bullet" : ListNumbers.levelFormat(fmt, level))
             .append("\"/><w:lvlText w:val=\"")
-            .append(bullet ? new String[] {"•", "◦", "▪"}[level % 3] : "%" + (level + 1) + ".")
+            .append(
+                Xml.escape(
+                    bullet
+                        ? (ListNumbers.template(fmt) != null ? ListNumbers.template(fmt) : ListNumbers.BULLETS[level % 3])
+                        : ListNumbers.levelText(fmt, level)))
             .append("\"/><w:lvlJc w:val=\"left\"/></w:lvl>");
       }
       b.append("</w:abstractNum><w:num w:numId=\"")

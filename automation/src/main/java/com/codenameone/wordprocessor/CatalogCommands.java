@@ -401,6 +401,68 @@ final class CatalogCommands implements Commands.Extension {
           return null;
         });
     c.register(
+        "para.multilevel",
+        "Multilevel list: outline (1. a. i.), legal (1.1.1.) or bullets; off removes the list",
+        "kind:string",
+        true,
+        (s, a) -> {
+          String kind = Commands.str(a, "kind");
+          if ("off".equals(kind)) {
+            s.paragraph("list", "");
+            return null;
+          }
+          if ("bullets".equals(kind)) {
+            s.paragraph("list", "bullet");
+            s.paragraph("listFormat", "decimal");
+            return null;
+          }
+          if (!"outline".equals(kind) && !"legal".equals(kind))
+            throw new IllegalArgumentException("Kind must be outline, legal, bullets or off");
+          s.paragraph("list", "number");
+          s.paragraph("listFormat", kind);
+          return null;
+        });
+    c.register(
+        "para.defineNumber",
+        "Define a number format: format (decimal, lowerLetter, ...) and a Word label like %1) or (%1)",
+        "format:string,label?:string",
+        true,
+        (s, a) -> {
+          String f = Commands.str(a, "format");
+          String value = a.containsKey("label") ? f + "|" + Commands.str(a, "label") : f;
+          if (!ListNumbers.valid(value) || "bullet".equals(f))
+            throw new IllegalArgumentException("Invalid number format or label");
+          s.paragraph("list", "number");
+          s.paragraph("listFormat", value);
+          return null;
+        });
+    c.register(
+        "para.defineBullet",
+        "Define a bullet character (any symbol, e.g. \u2713 or \u2794)",
+        "symbol:string",
+        true,
+        (s, a) -> {
+          String v = "bullet|" + Commands.str(a, "symbol");
+          if (!ListNumbers.valid(v)) throw new IllegalArgumentException("Invalid bullet symbol");
+          s.paragraph("list", "bullet");
+          s.paragraph("listFormat", v);
+          return null;
+        });
+    c.register(
+        "list.define",
+        "Define the caret list: kind outline|legal|bullets|number with optional format and label",
+        "kind:string,format?:string,label?:string",
+        true,
+        (s, a) ->
+            "number".equals(Commands.str(a, "kind"))
+                ? c.execute(
+                    s,
+                    "para.defineNumber",
+                    a.containsKey("label")
+                        ? Json.object("format", a.containsKey("format") ? a.get("format") : "decimal", "label", a.get("label"))
+                        : Json.object("format", a.containsKey("format") ? a.get("format") : "decimal"))
+                : c.execute(s, "para.multilevel", Json.object("kind", a.get("kind"))));
+    c.register(
         "para.listLevel",
         "Set the list level (0-8)",
         "level:integer",

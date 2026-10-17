@@ -10,8 +10,8 @@
   "not-applicable"
  ],
  "counts": {
-  "unverified": 302,
-  "missing": 172,
+  "unverified": 306,
+  "missing": 168,
   "partial": 13,
   "certified": 0,
   "reference-stub": 15,
@@ -888,24 +888,24 @@
    "group": "Paragraph",
    "feature": "Multilevel List",
    "command": "para.multilevel",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "para.multilevel",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "para.multilevel (Multilevel List)"
+   "notes": "para.multilevel (Multilevel List) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Home",
    "group": "Paragraph",
    "feature": "Define New Multilevel List",
    "command": "list.define",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "list.define",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "list.define (Define New Multilevel List)"
+   "notes": "list.define (Define New Multilevel List) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Home",
@@ -936,24 +936,24 @@
    "group": "Paragraph",
    "feature": "Define New Bullet",
    "command": "para.defineBullet",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "para.defineBullet",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "para.defineBullet (Define New Bullet)"
+   "notes": "para.defineBullet (Define New Bullet) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Home",
    "group": "Paragraph",
    "feature": "Define New Number Format",
    "command": "para.defineNumber",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "para.defineNumber",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "para.defineNumber (Define New Number Format)"
+   "notes": "para.defineNumber (Define New Number Format) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Home",

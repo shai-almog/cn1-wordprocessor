@@ -114,9 +114,7 @@ public final class Paragraph implements Block {
         || level > 8
         || start < 0
         || start > 1000000
-        || !java.util.Arrays.asList(
-                "decimal", "lowerLetter", "upperLetter", "lowerRoman", "upperRoman")
-            .contains(format)) throw new IllegalArgumentException("Invalid list properties");
+        || !ListNumbers.valid(format)) throw new IllegalArgumentException("Invalid list properties");
     listLevel = level;
     listStart = start;
     listFormat = format;
