@@ -7,6 +7,10 @@ import com.codename1.ui.plaf.*;
 /** Shared desktop ribbon styling in logical pixels, including Retina displays. */
 final class OfficeTheme {
   static final int BLUE = 0x185abd, INK = 0x242424, LINE = 0xd9d9d9, PAPER = 0xffffff;
+  // Office palette (light); dark/contrast go through chrome().
+  static final int ACCENT = 0x3b5bdb, ACCENT_TEXT = 0x2b47b5, RIBBON = 0xf9f9f9, STRIP = 0xf0f0f0,
+      CANVAS = 0xe6e6e6, BORDER = 0xe1e1e1, BORDER_STRONG = 0xc8c8c8, INPUT_BORDER = 0x8a8a8a,
+      DIM = 0x616161, GROUP_LABEL = 0x707070, HOVER = 0xe6e6e6, PRESSED = 0xd6d6d6, CHECKED = 0xdde3f8;
 
   static boolean mobile() {
     return !Display.getInstance().isDesktop()
@@ -44,7 +48,33 @@ final class OfficeTheme {
       props.put(id + ".border", "ComboBoxPopup".equals(id)
           ? Border.createLineBorder(1, LINE) : Border.createEmpty());
     }
+    // Thin overlay scrollbars: transparent track, rounded gray thumb (Office/macOS style).
+    for (String id : new String[] {"Scroll", "HorizontalScroll", "DesktopScroll", "DesktopHorizontalScroll"}) {
+      props.put(id + ".transparency", "0");
+      props.put(id + ".bgType", Byte.valueOf(Style.BACKGROUND_NONE));
+      props.put(id + ".border", Border.createEmpty());
+      // The track's cross-axis padding is the bar's thickness: 3pt + 3pt, an 6pt thumb.
+      int t = px(3);
+      props.put(id + ".padding", id.contains("Horizontal") ? t + ",0," + t + ",0" : "0," + t + ",0," + t);
+      props.put(id + ".margin", "0,0,0,0");
+    }
+    for (String id : new String[] {"ScrollThumb", "HorizontalScrollThumb", "DesktopScrollThumb",
+        "DesktopHorizontalScrollThumb"}) {
+      props.put(id + ".bgColor", "a8a8a8");
+      props.put(id + ".transparency", "200");
+      props.put(id + ".bgType", Byte.valueOf(Style.BACKGROUND_NONE));
+      props.put(id + ".border", OfficeBorder.of(-1, 3));
+      props.put(id + ".margin", "0,0,0,0");
+      // Desktop thumbs darken on hover (selected) and drag (pressed), as AppKit overlay bars do.
+      props.put(id + ".padding", "0,0,0,0");
+      props.put(id + ".sel#derive", id);
+      props.put(id + ".sel#bgColor", "8a8a8a");
+      props.put(id + ".press#derive", id);
+      props.put(id + ".press#bgColor", "707070");
+    }
     UIManager.getInstance().addThemeProps(props);
+    // The look and feel caches its scrollbar labels; rebuild them so the thin bars apply.
+    UIManager.getInstance().getLookAndFeel().refreshTheme(false);
     if (UIManager.getInstance().getLookAndFeel() instanceof DefaultLookAndFeel) {
       Style icon = new Style();
       icon.setFgColor(INK);
@@ -74,7 +104,7 @@ final class OfficeTheme {
     c.getAllStyles().setBgTransparency(255);
   }
 
-  static Label label(String text, int size, int color) {
+  static Label label(String text, float size, int color) {
     Label l = new Label(text);
     l.getAllStyles().setBgTransparency(0);
     space(l, 0, 0, 0, 0);
@@ -89,15 +119,32 @@ final class OfficeTheme {
       b.setPreferredH(px(44));
       b.setFocusable(false);
     }
-    b.getAllStyles().setBorder(Border.createEmpty());
+    // Rounded 4pt state fills: transparent at rest, hover, pressed (Office ribbon buttons).
+    b.getAllStyles().setBorder(OfficeBorder.of(-1, 4));
     b.getAllStyles().setFont(font(12, false));
     b.getDisabledStyle().setBgTransparency(0);
     b.getUnselectedStyle().setFgColor(INK);
     b.getUnselectedStyle().setBgTransparency(0);
-    b.getSelectedStyle().setBgColor(0xe8f0fb);
+    b.getSelectedStyle().setBgColor(HOVER);
     b.getSelectedStyle().setBgTransparency(255);
-    b.getPressedStyle().setBgColor(0xd3e2f7);
+    b.getPressedStyle().setBgColor(PRESSED);
     b.getPressedStyle().setBgTransparency(255);
+  }
+
+  /** Checked toggle (Bold, Format Painter, current view): checked fill with a soft accent edge. */
+  static void checked(Button b, boolean on) {
+    b.getUnselectedStyle().setBgTransparency(on ? 255 : 0);
+    b.getUnselectedStyle().setBgColor(CHECKED);
+    b.getUnselectedStyle().setBorder(OfficeBorder.of(on ? 0x8c9dea : -1, 4));
+  }
+
+  /** Framed button (Comments, Editing): white with an input border, rounded 4pt. */
+  static void framed(Button b) {
+    button(b);
+    b.getUnselectedStyle().setBgColor(PAPER);
+    b.getUnselectedStyle().setBgTransparency(255);
+    b.getAllStyles().setBorder(OfficeBorder.of(INPUT_BORDER, 4));
+    b.getSelectedStyle().setBorder(OfficeBorder.of(BORDER_STRONG, 4));
   }
 
   private static final String ICON = "officeTheme.icon";
@@ -127,11 +174,11 @@ final class OfficeTheme {
   static Container group(String caption, Component content) {
     Container c = new Container(new BorderLayout());
     space(c, 3, 2, 8, 8);
-    surface(c, 0xfafafa);
+    surface(c, RIBBON);
     c.getAllStyles()
-        .setBorder(Border.createCompoundBorder(null, null, null, Border.createLineBorder(1, LINE)));
+        .setBorder(Border.createCompoundBorder(null, null, null, Border.createLineBorder(1, BORDER)));
     c.add(BorderLayout.CENTER, content);
-    Label l = label(caption, 11, 0x666666);
+    Label l = label(caption, 11, GROUP_LABEL);
     l.setAlignment(Component.CENTER);
     space(l, 3, 0, 0, 0);
     c.add(BorderLayout.SOUTH, l);
@@ -172,7 +219,7 @@ final class OfficeTheme {
 
   static Container groups(Component... groups) {
     final GroupScroller row = new GroupScroller(groups);
-    surface(row, 0xfafafa);
+    surface(row, RIBBON);
     space(row, 3, 3, 5, 5);
     row.setScrollableX(true);
     row.setScrollVisible(false);
@@ -204,16 +251,18 @@ final class OfficeTheme {
           }
         };
     frame.add(BorderLayout.WEST, left).add(BorderLayout.CENTER, row).add(BorderLayout.EAST, right);
-    frame.setPreferredH(px(mobile() ? 144 : 92));
+    surface(frame, RIBBON);
+    frame.getAllStyles().setBorder(Border.createCompoundBorder(null, Border.createLineBorder(1, BORDER), null, null));
+    frame.setPreferredH(px(mobile() ? 144 : 94));
     return frame;
   }
 
   static void field(Component c, int width) {
     c.getAllStyles().setFont(font(13, false));
     c.getAllStyles().setFgColor(INK);
-    space(c, 4, 4, 6, 6);
-    surface(c, 0xfafafa);
-    c.getAllStyles().setBorder(Border.createLineBorder(1, 0xbebebe));
+    space(c, 3, 3, 6, 6);
+    surface(c, PAPER);
+    c.getAllStyles().setBorder(OfficeBorder.of(INPUT_BORDER, 4));
     c.setPreferredW(px(width));
   }
 
@@ -238,8 +287,10 @@ final class OfficeTheme {
 
   /** Reads the OS appearance; returns true when it changed since the last call. */
   static boolean refreshAppearance() {
+    // Office Theme (File > Options): follow the OS, or pin the chrome light or dark.
+    String theme = AppOptions.get("officeTheme");
     Boolean os = CN.isDarkMode();
-    boolean d = os != null && os.booleanValue();
+    boolean d = "dark".equals(theme) || !"light".equals(theme) && os != null && os.booleanValue();
     boolean c = Display.getInstance().isHighContrastEnabled();
     if (d == dark && c == contrast) return false;
     dark = d;

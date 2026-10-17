@@ -9,7 +9,7 @@ final class OfficeTitleBar extends Toolbar {
   OfficeTitleBar(Component content) {
     this.content = content;
     setTitleCentered(false);
-    OfficeTheme.surface(this, 0xf2f2f2);
+    OfficeTheme.surface(this, OfficeTheme.STRIP);
     // Toolbar adds measured native-control insets from the current OS/DPI.
     OfficeTheme.space(this, 2, 2, 8, 8);
     getAllStyles().setBorder(com.codename1.ui.plaf.Border.createEmpty());

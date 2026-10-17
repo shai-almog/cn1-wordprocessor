@@ -38,6 +38,7 @@ public class WordProcessor {
   private final Commands commands = new Commands();
   private EditorSurface editor;
   private Label status, zoomValue;
+  private Button readView, printView, webView;
   private Label mergeStatus;
   private Container workspace, navigation, footer;
   private boolean backstage;
@@ -266,15 +267,15 @@ public class WordProcessor {
     documentPane.add(BorderLayout.CENTER, editor);
     workspace.add(BorderLayout.CENTER, documentPane);
     form.add(BorderLayout.CENTER, workspace);
-    status = OfficeTheme.label("", 11, 0x555555);
-    zoomValue = OfficeTheme.label("100%", 11, 0x444444);
+    status = OfficeTheme.label("", 11, OfficeTheme.DIM);
+    zoomValue = OfficeTheme.label("100%", 11, OfficeTheme.DIM);
     footer = new Container(new BorderLayout());
-    OfficeTheme.surface(footer, 0xf7f7f7);
-    OfficeTheme.space(footer, 3, 3, 12, 12);
+    OfficeTheme.surface(footer, OfficeTheme.STRIP);
+    OfficeTheme.space(footer, 4, 4, 12, 12);
     footer
         .getAllStyles()
         .setBorder(
-            Border.createCompoundBorder(Border.createLineBorder(1, 0xd6d6d6), null, null, null));
+            Border.createCompoundBorder(Border.createLineBorder(1, OfficeTheme.BORDER), null, null, null));
     footer.add(BorderLayout.CENTER, status);
     zoomSlider = new Slider();
     zoomSlider.setEditable(true);
@@ -282,7 +283,7 @@ public class WordProcessor {
     zoomSlider.setMinValue(35);
     zoomSlider.setMaxValue(250);
     zoomSlider.setProgress(100);
-    zoomSlider.setPreferredW(OfficeTheme.px(115));
+    zoomSlider.setPreferredW(OfficeTheme.px(110));
     zoomSlider.setPreferredH(OfficeTheme.px(18));
     OfficeTheme.space(zoomSlider, 6, 6, 0, 0);
     for (Style s :
@@ -297,7 +298,7 @@ public class WordProcessor {
         new Style[] {
           zoomSlider.getSliderFullUnselectedStyle(), zoomSlider.getSliderFullSelectedStyle()
         }) {
-      s.setBgColor(OfficeTheme.BLUE);
+      s.setBgColor(OfficeTheme.ACCENT);
       s.setBgTransparency(255);
       s.setBorder(Border.createEmpty());
     }
@@ -318,6 +319,10 @@ public class WordProcessor {
     footer.add(
         BorderLayout.EAST,
         OfficeTheme.row(
+            statusIcon("Focus", FontImage.MATERIAL_CENTER_FOCUS_STRONG, "view.focus"),
+            readView = statusIcon("Read Mode", FontImage.MATERIAL_MENU_BOOK, "view.readMode"),
+            printView = statusIcon("Print Layout", FontImage.MATERIAL_DESCRIPTION, "view.printLayout"),
+            webView = statusIcon("Web Layout", FontImage.MATERIAL_LANGUAGE, "view.webLayout"),
             button("\u2212", () -> zoom(-.1f)), zoomSlider, button("+", () -> zoom(.1f)), zoomValue));
     if (OfficeTheme.mobile()) {
       footer.removeAll();
@@ -350,7 +355,8 @@ public class WordProcessor {
                 .callSerially(
                     () -> {
                       configureMobileViewport();
-                      editor.fitWidth();
+                      // Desktop keeps the chosen zoom on resize, as Word does; phones refit.
+                      if (OfficeTheme.mobile()) editor.fitWidth();
                       updateStatus();
                       ruler.repaint();
                     }));
@@ -385,7 +391,8 @@ public class WordProcessor {
             })
         .schedule(500, true, form);
     startAgentDebugging();
-    editor.fitWidth();
+    if (OfficeTheme.mobile()) editor.fitWidth();
+    else zoomTo(1f);
     updateStatus();
     Display.getInstance()
         .callSerially(
@@ -410,6 +417,8 @@ public class WordProcessor {
     form.revalidate();
   }
 
+  private OfficeSwitch autoSave;
+
   private Container titleBar() {
     quickUndo =
         iconButton("", FontImage.MATERIAL_UNDO, () -> run("edit.undo", Json.object()), false);
@@ -422,15 +431,35 @@ public class WordProcessor {
     Container header =
         new Container(new BorderLayout(BorderLayout.CENTER_BEHAVIOR_CENTER_ABSOLUTE));
     OfficeTheme.space(header, 0, 0, 0, 0);
-    header.add(BorderLayout.WEST, OfficeTheme.row(save, quickUndo, quickRedo));
+    // AutoSave (Word's title-bar switch): saves the open file automatically; with no file yet
+    // turning it on asks where to save first.
+    Label autoLabel = OfficeTheme.label("AutoSave", 11, OfficeTheme.DIM);
+    autoSave = new OfficeSwitch("AutoSave");
+    autoSave.setOn(AppOptions.flag("autosave"));
+    autoSave.addActionListener(e -> {
+      boolean on = !AppOptions.flag("autosave");
+      AppOptions.set("autosave", String.valueOf(on));
+      autoSave.setOn(on);
+      if (on && filePath == null) saveDocument(true);
+    });
+    Container auto = OfficeTheme.row(autoLabel, autoSave);
+    OfficeTheme.space(auto, 0, 0, 0, 8);
+    autoLabel.getAllStyles().setMarginUnit(Style.UNIT_TYPE_PIXELS);
+    autoLabel.getAllStyles().setMargin(0, 0, 0, OfficeTheme.px(6));
+    header.add(BorderLayout.WEST, OfficeTheme.row(auto, save, quickUndo, quickRedo));
     documentTitle = button(session.document().title + " \u25be", this::rename);
     documentTitle.setAccessibilityText("Document name");
     documentTitle.getAllStyles().setFont(OfficeTheme.font(12, true));
     header.add(BorderLayout.CENTER, documentTitle);
     Button search =
-        iconButton("Search commands", FontImage.MATERIAL_SEARCH, this::searchCommands, false);
-    search.getAllStyles().setBorder(Border.createLineBorder(1, 0xd5d5d5));
-    OfficeTheme.surface(search, 0xfafafa);
+        iconButton("Search commands and help", FontImage.MATERIAL_SEARCH, this::searchCommands, false);
+    search.setAccessibilityText("Search commands");
+    search.getAllStyles().setBorder(OfficeBorder.of(OfficeTheme.BORDER, 6));
+    search.getUnselectedStyle().setFgColor(OfficeTheme.DIM);
+    OfficeTheme.surface(search, OfficeTheme.RIBBON);
+    search.getSelectedStyle().setBgColor(OfficeTheme.PAPER);
+    search.setAlignment(Component.LEFT);
+    search.setPreferredW(OfficeTheme.px(260));
     header.add(BorderLayout.EAST, search);
     return header;
   }
@@ -701,6 +730,16 @@ public class WordProcessor {
     }
   }
 
+  /** Status bar view toggle: 22x20 icon button, rounded 3pt, checked when it is the current view. */
+  private Button statusIcon(String name, char icon, String command) {
+    Button b = iconButton("", icon, () -> run(command, new HashMap<String, Object>()), false);
+    b.setAccessibilityText(name);
+    OfficeTheme.icon(b, icon, 14, OfficeTheme.DIM);
+    OfficeTheme.space(b, 3, 3, 4, 4);
+    b.getAllStyles().setBorder(OfficeBorder.of(-1, 3));
+    return b;
+  }
+
   private Button iconButton(String name, char icon, Runnable action, boolean large) {
     Button b = button(name, action);
     b.setAccessibilityText(name.isEmpty() ? iconName(icon) : name);
@@ -767,8 +806,7 @@ public class WordProcessor {
 
   private void togglePainter() {
     paintStyle = paintStyle == null ? session.activeStyle() : null;
-    painterButton.getUnselectedStyle().setBgTransparency(paintStyle == null ? 0 : 255);
-    painterButton.getUnselectedStyle().setBgColor(0xdce8fa);
+    OfficeTheme.checked(painterButton, paintStyle != null);
     status.setText(
         paintStyle == null ? "Format Painter cancelled" : "Select text to apply the copied formatting");
     editor.startInput();
@@ -861,13 +899,18 @@ public class WordProcessor {
             toggleMarks());
     Container styles =
         OfficeTheme.row(
-            styleTile("Normal", 0, 15),
-            styleTile("No Spacing", -1, 15),
-            styleTile("Heading 1", 1, 19),
-            styleTile("Heading 2", 2, 17),
-            styleTile("Title", 3, 23),
-            styleTile("Subtitle", 4, 16));
-    styles.setPreferredW(OfficeTheme.px(180));
+            styleTile("Normal", 0, 11),
+            styleTile("No Spacing", -1, 11),
+            styleTile("Heading 1", 1, 13),
+            styleTile("Heading 2", 2, 12),
+            styleTile("Title", 3, 17),
+            styleTile("Subtitle", 4, 12));
+    // Gallery well: six 74pt tiles on a 76pt step inside a rounded white frame.
+    OfficeTheme.space(styles, 3, 3, 3, 3);
+    OfficeTheme.surface(styles, OfficeTheme.PAPER);
+    styles.getAllStyles().setBorder(OfficeBorder.of(OfficeTheme.BORDER, 4));
+    styles.setPreferredW(OfficeTheme.px(6 * 76 + 6));
+    styles.setPreferredH(OfficeTheme.px(66));
     styles.setScrollableX(true);
     styles.setScrollVisible(false);
     Button moreStyles = button("\u25be", this::moreStyles);
@@ -1148,17 +1191,21 @@ public class WordProcessor {
   private Container styleTile(String name, int level, int size) {
     Button preview = button("AaBbCcDd", () -> applyStyle(name, level));
     preview.setAccessibilityText(name);
-    OfficeTheme.space(preview, 5, 5, 6, 6);
+    OfficeTheme.space(preview, 4, 2, 3, 3);
     preview.getAllStyles().setFont(OfficeTheme.font(size, level == 1 || level == 2));
     preview.getAllStyles().setFgColor(level == 1 || level == 2 ? 0x185568 : OfficeTheme.INK);
-    Label caption = OfficeTheme.label(name, 11, 0x444444);
+    preview.getAllStyles().setBgTransparency(0);
+    preview.getAllStyles().setBorder(Border.createEmpty());
+    Label caption = OfficeTheme.label(name, 10.5f, OfficeTheme.INK);
     caption.setAlignment(Component.CENTER);
     Container c = BoxLayout.encloseY(preview, caption);
-    OfficeTheme.space(c, 4, 4, 3, 3);
+    OfficeTheme.space(c, 2, 2, 2, 2);
+    c.getAllStyles().setMarginUnit(Style.UNIT_TYPE_PIXELS);
+    c.getAllStyles().setMargin(0, 0, 0, OfficeTheme.px(2));
     c.setLeadComponent(preview);
-    c.setPreferredW(OfficeTheme.px(86));
-    c.setPreferredH(OfficeTheme.px(61));
-    c.getAllStyles().setBorder(Border.createLineBorder(1, 0xe0e0e0));
+    c.setPreferredW(OfficeTheme.px(74));
+    c.setPreferredH(OfficeTheme.px(60));
+    c.getAllStyles().setBorder(OfficeBorder.of(-1, 3));
     styleTiles.put(name, c);
     return c;
   }
@@ -5215,16 +5262,19 @@ public class WordProcessor {
                 : "    |    " + editor.layout().warnings.get(0))
             + (filePath != null && fileDocument == session.document()
                 ? "    |    Saved"
-                : savedRevision == session.revision() ? "    |    Recovery saved" : ""));
+                : ""));
     if (trackingButton != null) {
-      trackingButton
-          .getUnselectedStyle()
-          .setBgTransparency(session.document().trackChanges ? 255 : 0);
-      trackingButton.getUnselectedStyle().setBgColor(0xdce8fa);
+      OfficeTheme.checked(trackingButton, session.document().trackChanges);
       trackingButton.setAccessibilityText(
           session.document().trackChanges ? "Track Changes on" : "Track Changes off");
     }
     syncingControls = true;
+    if (printView != null) {
+      boolean read = editor.isViewOnly();
+      OfficeTheme.checked(readView, read);
+      OfficeTheme.checked(printView, !read && !editor.isReflow());
+      OfficeTheme.checked(webView, !read && editor.isReflow());
+    }
     if (zoomValue != null) zoomValue.setText(Math.round(editor.getZoom() * 100) + "%");
     if (zoomSlider != null) zoomSlider.setProgress(Math.round(editor.getZoom() * 100));
     TextStyle style = session.activeStyle();
@@ -5250,23 +5300,21 @@ public class WordProcessor {
                       ? style.italic
                       : "underline".equals(property) ? style.hasUnderline() : style.strike;
       Button b = formatButtons.get(property);
-      b.getUnselectedStyle().setBgTransparency(active ? 255 : 0);
-      b.getUnselectedStyle().setBgColor(0xdce8fa);
+      OfficeTheme.checked(b, active);
     }
     if (documentTitle != null) {
       String title =
           session.document().title
               + (filePath != null && fileDocument == session.document()
                   ? " \u2014 Saved"
-                  : savedRevision == session.revision()
-                      ? " \u2014 Recovery saved"
-                      : " \u2014 Unsaved changes")
+                  : filePath != null || session.canUndo() ? " \u2014 Edited" : " \u2014 Not saved")
               + " \u25be";
       if (!title.equals(documentTitle.getText())) {
         documentTitle.setText(title);
         documentTitle.getParent().revalidate();
       }
     }
+    if (autoSave != null) autoSave.setOn(AppOptions.flag("autosave"));
     if (quickUndo != null) quickUndo.setEnabled(session.canUndo());
     if (quickRedo != null) quickRedo.setEnabled(session.canRedo());
     Block selectedBlock = session.editingDocument().blocks.get(session.selection().block);
@@ -5274,11 +5322,10 @@ public class WordProcessor {
         selectedBlock instanceof Paragraph ? ((Paragraph) selectedBlock).style : "";
     for (Map.Entry<String, Container> entry : styleTiles.entrySet()) {
       boolean selected = entry.getKey().replace(" ", "").equals(selectedStyle.replace(" ", ""));
-      OfficeTheme.surface(entry.getValue(), selected ? 0xe5eafa : 0xffffff);
-      entry
-          .getValue()
-          .getAllStyles()
-          .setBorder(Border.createLineBorder(1, selected ? OfficeTheme.BLUE : 0xe0e0e0));
+      Container tile = entry.getValue();
+      tile.getAllStyles().setBgColor(OfficeTheme.CHECKED);
+      tile.getAllStyles().setBgTransparency(selected ? 255 : 0);
+      tile.getAllStyles().setBorder(OfficeBorder.of(selected ? OfficeTheme.ACCENT : -1, 3));
     }
     syncingControls = false;
     ribbon.repaint();

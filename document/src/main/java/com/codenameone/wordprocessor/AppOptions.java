@@ -39,6 +39,7 @@ public final class AppOptions {
     d.put("printMarkup", "true");
     d.put("showComments", "true");
     d.put("hideInk", "false");
+    d.put("officeTheme", "system");
     DEFAULTS = Collections.unmodifiableMap(d);
   }
 

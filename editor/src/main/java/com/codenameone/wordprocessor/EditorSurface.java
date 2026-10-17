@@ -805,7 +805,7 @@ public final class EditorSurface extends Container
           if (input != null) host.updateTextInputState(input, getEditingState());
         });
     setUIID("DocumentCanvas");
-    getAllStyles().setBgColor(0xe7e7e7);
+    getAllStyles().setBgColor(OfficeTheme.CANVAS);
     getAllStyles().setBgTransparency(255);
     engine = new LayoutEngine(fontMetrics);
     commands.setLayoutEngine(engine);
@@ -1124,8 +1124,13 @@ public final class EditorSurface extends Container
           pw = Math.round(page.spec.width * scale),
           ph = Math.round(page.spec.height * scale);
       if (y + ph < g.getClipY() || y > g.getClipY() + g.getClipHeight()) continue;
-      g.setColor(OfficeTheme.chrome(0xd1d9e2));
-      g.fillRect(x + 3, y + 4, pw, ph);
+      // Flat page shadow: 2pt down, 1.5pt larger, black at 13%.
+      int grow = Math.max(1, Math.round(1.5f * scale)), drop = Math.round(2 * scale);
+      int alpha = g.getAlpha();
+      g.setAlpha(0x22);
+      g.setColor(0);
+      g.fillRect(x - grow, y + drop - grow, pw + 2 * grow, ph + 2 * grow);
+      g.setAlpha(alpha);
       g.setColor(
           darkPage
               ? 0x1f1f1f

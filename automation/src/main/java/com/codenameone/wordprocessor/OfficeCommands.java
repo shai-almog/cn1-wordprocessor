@@ -590,6 +590,8 @@ final class OfficeCommands implements Commands.Extension {
       throw new IllegalArgumentException("Numerals are arabic, hindi, context or system");
     if ("units".equals(key) && !java.util.Arrays.asList("inches", "centimeters", "millimeters", "points", "picas").contains(value))
       throw new IllegalArgumentException("Units are inches, centimeters, millimeters, points or picas");
+    if ("officeTheme".equals(key) && !java.util.Arrays.asList("system", "light", "dark").contains(value))
+      throw new IllegalArgumentException("Office Theme is system, light or dark");
     if ("autosaveMinutes".equals(key)) {
       int m;
       try {

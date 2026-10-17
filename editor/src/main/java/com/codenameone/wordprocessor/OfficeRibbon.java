@@ -21,11 +21,26 @@ final class OfficeRibbon extends Container {
   private int selectedIndex;
   private final List<Container> pages = new ArrayList<Container>();
 
+  /** Active tab: a 3pt rounded accent bar, 16pt narrower than the tab, 2pt above its bottom. */
+  private static final Border INDICATOR =
+      new Border() {
+        @Override
+        public void paint(com.codename1.ui.Graphics g, Component c) {
+          int inset = OfficeTheme.px(8), h = OfficeTheme.px(3);
+          boolean aa = g.isAntiAliased();
+          g.setAntiAliased(true);
+          g.setColor(OfficeTheme.chrome(OfficeTheme.ACCENT));
+          g.fillRoundRect(c.getX() + inset, c.getY() + c.getHeight() - h - OfficeTheme.px(1),
+              c.getWidth() - 2 * inset, h, OfficeTheme.px(4), OfficeTheme.px(4));
+          g.setAntiAliased(aa);
+        }
+      };
+
   OfficeRibbon() {
     super(new BorderLayout());
-    OfficeTheme.surface(this, 0xffffff);
-    OfficeTheme.surface(tabs, 0xf5f5f5);
-    OfficeTheme.space(tabs, 0, 0, 10, 10);
+    OfficeTheme.surface(this, OfficeTheme.RIBBON);
+    OfficeTheme.surface(tabs, OfficeTheme.STRIP);
+    OfficeTheme.space(tabs, 0, 0, 8, 10);
     tabs.setScrollableX(!OfficeTheme.mobile());
     if (OfficeTheme.mobile()) {
       OfficeTheme.field(mobileTabs, 130);
@@ -38,7 +53,7 @@ final class OfficeRibbon extends Container {
           });
     }
     tabs.setScrollVisible(false);
-    OfficeTheme.surface(strip, 0xf5f5f5);
+    OfficeTheme.surface(strip, OfficeTheme.STRIP);
     strip.add(BorderLayout.CENTER, tabs);
     OfficeTheme.button(collapse);
     collapse.setAccessibilityText("Collapse ribbon");
@@ -47,14 +62,14 @@ final class OfficeRibbon extends Container {
     add(BorderLayout.CENTER, body);
     getAllStyles()
         .setBorder(
-            Border.createCompoundBorder(null, Border.createLineBorder(1, 0xc8c8c8), null, null));
+            Border.createCompoundBorder(null, Border.createLineBorder(1, OfficeTheme.BORDER), null, null));
   }
 
   void addActionTab(String title, Runnable action) {
     Button b = new Button(title);
     OfficeTheme.button(b);
     OfficeTheme.space(b, 6, 6, 9, 9);
-    b.getAllStyles().setFont(OfficeTheme.font(13, false));
+    b.getAllStyles().setFont(OfficeTheme.font(12.5f, false));
     b.setPreferredW(OfficeTheme.px(52));
     b.addActionListener(e -> action.run());
     tabs.add(b);
@@ -76,7 +91,7 @@ final class OfficeRibbon extends Container {
     Button b = new Button(title);
     OfficeTheme.button(b);
     OfficeTheme.space(b, 6, 6, 9, 9);
-    b.getAllStyles().setFont(OfficeTheme.font(13, false));
+    b.getAllStyles().setFont(OfficeTheme.font(12.5f, false));
     b.addActionListener(e -> select(index));
     b.getSemantics().setRole(AccessibilityRole.TAB).setSelected(Boolean.FALSE);
     tabs.getSemantics().setRole(AccessibilityRole.TAB_LIST).setLabel("Ribbon tabs");
@@ -145,17 +160,9 @@ final class OfficeRibbon extends Container {
       Button b = buttons.get(i);
       boolean selected = i == index;
       b.getSemantics().setSelected(Boolean.valueOf(selected));
-      b.getUnselectedStyle().setFgColor(selected ? OfficeTheme.BLUE : OfficeTheme.INK);
-      b.getUnselectedStyle().setFont(OfficeTheme.font(13, selected));
-      b.getUnselectedStyle()
-          .setBorder(
-              selected
-                  ? Border.createCompoundBorder(
-                      null,
-                      Border.createLineBorder(OfficeTheme.px(3), OfficeTheme.BLUE),
-                      null,
-                      null)
-                  : Border.createEmpty());
+      b.getUnselectedStyle().setFgColor(selected ? OfficeTheme.ACCENT_TEXT : OfficeTheme.INK);
+      b.getUnselectedStyle().setFont(OfficeTheme.font(12.5f, selected));
+      b.getUnselectedStyle().setBorder(selected ? INDICATOR : OfficeBorder.of(-1, 4));
     }
     revalidate();
     repaint();
