@@ -26,10 +26,15 @@ public final class TextUtil {
     return out.append(text).toString();
   }
 
+  /** ASCII hex digit; ParparVM's Character.digit accepts some non-ASCII letters. */
+  public static boolean hex(char c) {
+    return c >= '0' && c <= '9' || c >= 'a' && c <= 'f' || c >= 'A' && c <= 'F';
+  }
+
   /** True when text is exactly length hex digits (String.matches is unavailable on ParparVM). */
   public static boolean hex(String text, int length) {
     if (text == null || text.length() != length) return false;
-    for (int i = 0; i < length; i++) if (Character.digit(text.charAt(i), 16) < 0) return false;
+    for (int i = 0; i < length; i++) if (!hex(text.charAt(i))) return false;
     return true;
   }
 

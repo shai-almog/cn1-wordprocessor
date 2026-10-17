@@ -196,3 +196,10 @@ Application settings (design choices, hyphenation, and others) persist in native
 - Picture compression rewrites the stored image bytes via the platform image codec (PNG stays PNG; others become JPEG at 0.85).
 - Spelling and hyphenation use bundled public-domain Moby word data and CC0 Liang patterns (see `third-party/README.md`).
 - Encrypted .docx: agile encryption written as a CFB v3 container (DataSpaces, EncryptionInfo 4.4, EncryptedPackage); read supports CFB v3/v4 and SHA-512 agile only.
+
+## Native XML round-trip hardening (2026-10-17)
+
+Native certification loads every recorded before-state through native XML, so the round-trip must be exact:
+- Header and footer stories now each get their own id set. Previously a header paragraph could reuse a body id and fail the duplicate-id check on reload.
+- Drawing attributes map C0 control characters to U+E000 and up on write and back on read. Raw control characters are illegal in XML 1.0.
+- `word_load` loads a document without undo history; history is never serialized (see `.cn1doc` above).

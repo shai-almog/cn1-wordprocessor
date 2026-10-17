@@ -95,20 +95,25 @@ public final class Sha512 {
     }
     for (int i = 16; i < 80; i++) {
       long a = w[i - 15], b = w[i - 2];
-      long s0 = Long.rotateRight(a, 1) ^ Long.rotateRight(a, 8) ^ (a >>> 7);
-      long s1 = Long.rotateRight(b, 19) ^ Long.rotateRight(b, 61) ^ (b >>> 6);
+      long s0 = rotr(a, 1) ^ rotr(a, 8) ^ (a >>> 7);
+      long s1 = rotr(b, 19) ^ rotr(b, 61) ^ (b >>> 6);
       w[i] = w[i - 16] + s0 + w[i - 7] + s1;
     }
     long a = h[0], b = h[1], c = h[2], d = h[3], e = h[4], f = h[5], g = h[6], hh = h[7];
     for (int i = 0; i < 80; i++) {
-      long s1 = Long.rotateRight(e, 14) ^ Long.rotateRight(e, 18) ^ Long.rotateRight(e, 41);
+      long s1 = rotr(e, 14) ^ rotr(e, 18) ^ rotr(e, 41);
       long ch = (e & f) ^ (~e & g);
       long t1 = hh + s1 + ch + K[i] + w[i];
-      long s0 = Long.rotateRight(a, 28) ^ Long.rotateRight(a, 34) ^ Long.rotateRight(a, 39);
+      long s0 = rotr(a, 28) ^ rotr(a, 34) ^ rotr(a, 39);
       long maj = (a & b) ^ (a & c) ^ (b & c);
       long t2 = s0 + maj;
       hh = g; g = f; f = e; e = d + t1; d = c; c = b; b = a; a = t1 + t2;
     }
     h[0] += a; h[1] += b; h[2] += c; h[3] += d; h[4] += e; h[5] += f; h[6] += g; h[7] += hh;
+  }
+
+  // ParparVM's java.lang.Long has no rotateRight.
+  private static long rotr(long x, int n) {
+    return (x >>> n) | (x << (64 - n));
   }
 }

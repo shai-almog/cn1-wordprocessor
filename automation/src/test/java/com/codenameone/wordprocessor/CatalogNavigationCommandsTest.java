@@ -135,6 +135,12 @@ public class CatalogNavigationCommandsTest {
     assertEquals(2, f.get("header").size());
     assertEquals("center", f.get("header").get(0).align);
     assertEquals("Confidential", f.get("firstFooter").get(0).text.plainText());
+    try {
+      // Header and footer stories number their paragraphs independently (both hf0).
+      DocumentXml.read(DocumentXml.write(s.document()));
+    } catch (java.io.IOException ex) {
+      throw new AssertionError(ex);
+    }
     s.sectionBreak("nextPage");
     assertEquals(Boolean.FALSE, run(s, "layout.linkToPrevious", "story", "header"));
     assertTrue(s.activeSection().raw.furniture.stories.containsKey("header"));

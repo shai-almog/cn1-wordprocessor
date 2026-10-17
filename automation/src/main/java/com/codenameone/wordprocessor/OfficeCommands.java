@@ -8,7 +8,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
-import java.util.WeakHashMap;
 
 /**
  * Backstage and application workflows: options, AutoSave, AutoCorrect, numerals, print markup,
@@ -43,10 +42,10 @@ final class OfficeCommands implements Commands.Extension {
     }
   }
 
-  private static final Map<Session, List<Version>> VERSIONS = new WeakHashMap<Session, List<Version>>();
-  private static final Map<Session, List<Object>> RECORDING = new WeakHashMap<Session, List<Object>>();
-  private static final Map<Session, int[]> READING = new WeakHashMap<Session, int[]>();
-  private static final Map<Session, String> PASSWORDS = new WeakHashMap<Session, String>();
+  private static final SessionMap<List<Version>> VERSIONS = new SessionMap<List<Version>>();
+  private static final SessionMap<List<Object>> RECORDING = new SessionMap<List<Object>>();
+  private static final SessionMap<int[]> READING = new SessionMap<int[]>();
+  private static final SessionMap<String> PASSWORDS = new SessionMap<String>();
 
   /** The password Word documents saved from this session are encrypted with, or null. */
   public static String password(Session s) {

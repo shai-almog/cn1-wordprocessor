@@ -830,7 +830,7 @@ final class DrawingCommands implements Commands.Extension {
 
   private String[] defaultPen(String tool) {
     for (int i = pens.size() - 1; i >= 0; i--)
-      if (pens.get(i).startsWith(tool + ",")) return pens.get(i).split(",");
+      if (pens.get(i).startsWith(tool + ",")) return TextUtil.split(pens.get(i), ',');
     return new String[] {tool, "000000", "1"};
   }
 

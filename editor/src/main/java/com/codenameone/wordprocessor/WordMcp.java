@@ -57,6 +57,42 @@ final class WordMcp {
             json -> onEdt(() -> context.layout())));
     MCP.addTool(
         new Tool(
+            "word_load",
+            "Replace the live document with native model XML and restore a recorded selection,"
+                + " cell, review author and tracking state (clears history). Used to replay recorded cases.",
+            "{\"type\":\"object\",\"properties\":{\"xml\":{\"type\":\"string\"},\"state\":{\"type\":\"object\"}},\"required\":[\"xml\"]}",
+            json ->
+                onEdt(
+                    () -> {
+                      Map<String, Object> args = Json.parse(json);
+                      context.beforeCommand();
+                      Session session = context.session();
+                      session.leaveCell();
+                      session.loadDocument(DocumentXml.read((String) args.get("xml")));
+                      Map<String, Object> st = (Map<String, Object>) args.get("state");
+                      if (st != null) {
+                        if (st.get("reviewAuthor") instanceof String)
+                          session.reviewAuthor((String) st.get("reviewAuthor"));
+                        session.trackFormatting(Boolean.TRUE.equals(st.get("trackFormatting")));
+                        int cell = num(st, "cellBlock");
+                        if (cell >= 0)
+                          session.enterCell(cell, num(st, "cellRow"), num(st, "cellColumn"));
+                        session.selectRange(
+                            num(st, "anchorBlock"), num(st, "anchor"), num(st, "block"), num(st, "caret"));
+                        Map<String, Object> cs = (Map<String, Object>) st.get("cellSelection");
+                        if (cs != null)
+                          session.selectCells(
+                              num(cs, "block"),
+                              num(cs, "anchorRow"),
+                              num(cs, "anchorColumn"),
+                              num(cs, "focusRow"),
+                              num(cs, "focusColumn"));
+                      }
+                      context.changed();
+                      return live.snapshot(session);
+                    })));
+    MCP.addTool(
+        new Tool(
             "word_commands",
             "List the command schemas used by the live editor.",
             "{\"type\":\"object\",\"properties\":{}}",
@@ -104,6 +140,11 @@ final class WordMcp {
       MCP.setAllowOnReleaseBuilds(false);
       throw ex;
     }
+  }
+
+  private static int num(Map<String, Object> m, String k) {
+    Object v = m.get(k);
+    return v instanceof Number ? ((Number) v).intValue() : -1;
   }
 
   private interface Action {

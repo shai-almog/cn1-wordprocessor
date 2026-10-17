@@ -123,7 +123,8 @@ final class CatalogEditingCommands implements Commands.Extension {
           Selection x = s.selection();
           String text = s.document().paragraph(x.block).text.plainText();
           int end = x.caret, start = end;
-          while (start > 0 && end - start < 6 && Character.digit(text.charAt(start - 1), 16) >= 0) start--;
+          // ASCII-only test: ParparVM's Character.digit accepts some non-ASCII letters (e.g. U+00E9).
+          while (start > 0 && end - start < 6 && hexDigit(text.charAt(start - 1))) start--;
           int codeStart = start >= 2 && text.regionMatches(true, start - 2, "U+", 0, 2) ? start - 2 : start;
           if (start < end) {
             int cp = Integer.parseInt(text.substring(start, end), 16);
@@ -240,5 +241,9 @@ final class CatalogEditingCommands implements Commands.Extension {
 
   private static String hex(int rgb) {
     return Integer.toHexString(0x1000000 | (rgb & 0xffffff)).substring(1);
+  }
+
+  private static boolean hexDigit(char c) {
+    return c >= '0' && c <= '9' || c >= 'a' && c <= 'f' || c >= 'A' && c <= 'F';
   }
 }

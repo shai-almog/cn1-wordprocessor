@@ -4,6 +4,32 @@ The approved target is a standalone application and reusable Java libraries, tar
 
 ## Latest verified scope
 
+**Native catalog certification (2026-10-17).** All 487 implementable Wordcraft catalog rows are `certified` in [the matrix](acceptance-matrix.json). The remaining 15 are `reference-stub`. Evidence is in [native-certification.json](native-certification.json), produced by `scripts/native-certify.py` and `scripts/certify-matrix.py` against the Mac native ParparVM app over the live MCP. It covers 466 commands:
+
+- **415 rows by native replay.** A JUnit `RunListener` (`ReplayRecorder`, `-Dreplay.out`) records each command executed by the JVM tests: the before-document, selection, arguments, after-document and after-selection. `scripts/native-cert/CaseFinder.java` generates cases for commands no test exercised. The native app loads each before-state (`word_load`), runs the command, and must produce the same document XML (revision dates masked) and selection.
+- **22 rows by scripted sequences.** These cover state that the XML does not carry: undo/redo, Go Back, Repeat, Undo To, macro recording, templates, pens, mail-merge navigation and view toggles. View toggles are checked through the view-state result, not through rendering.
+- **50 rows by UI activation.** The ribbon control (or its Search commands entry, with argument prompts filled) is activated through accessibility. It must produce an observable effect: a native panel or sheet (Open/Save/Print), a window, or a change to the document, selection, layout, accessible text or stable pixels. The harness's own Search window does not count. Error dialogs fail the case.
+
+Certification fixed real native defects:
+- ParparVM lacks `WeakHashMap`, `Long.rotateRight` and `String.split`. The first is replaced by `SessionMap`; the other two by local helpers.
+- On ParparVM, `Character.digit` accepts non-ASCII letters, which broke Alt+X.
+- Painting object lines (pictures, charts, equations) for proofing, revision bars, paragraph marks, accessibility and caret stops crashed with "Select a paragraph".
+- Header and footer ids collided in the native XML.
+- C0 control characters were written raw in drawing attributes.
+- About a dozen catalog rows had been matched only to an unrelated label (Go To, Editor, Sort, Select Objects, Position, Split, Matrix and others). They now have real commands, a Customize Keyboard dialog included.
+
+**Limits of this evidence:**
+- **Mac only.** iOS, Android, JS, Linux and Windows have not been re-run against this catalog.
+- **Replay proves native/JVM equivalence of this app,** not equivalence to Wordcraft's own behavior row by row.
+- **Normalized comparisons:**
+  - `table.autofit` ignores measured widths (native font metrics differ from the JVM's PDF metrics).
+  - `picture.compress` requires the crop to be applied and the image re-encoded, but not a smaller size (the fixture is 68 bytes).
+  - `table.eraser` compares the document only: the native editor keeps the caret in the merged cell.
+  - `references.researcher` queries live Wikipedia and requires a website source to be added.
+- **UI-activation rows prove that the control is wired and does something visible,** not that every dialog option works. Rendering-only toggles (dark page, markup, table gridlines) are checked through view state.
+- **`arrange.position` sets only horizontal placement and wrap.** There is no vertical positioning.
+- **Format Painter is applied on pointer release.** Certification checks arming and cancelling, not the drag.
+
 **Codename One 7.0.278 baseline (2026-10-17).** The app now builds against the released 7.0.278 framework instead of the isolated snapshot; all reactor tests pass and the Maven `mac-source` ParparVM build runs natively. `.mvn/maven.config` works around Surefire 3.0.0-M5 resolving the CN1 test provider only from Central.
 
 **Native integration (Mac native build, verified through the app MCP and the real macOS pasteboard):**

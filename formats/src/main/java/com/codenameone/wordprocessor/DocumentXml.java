@@ -136,7 +136,7 @@ public final class DocumentXml {
               .append(look.transparency).append(',').append(look.colorMode).append(',')
               .append(look.effect).append(',').append(look.backgroundTolerance).append('"');
         if (picture.drawing != null)
-          b.append(" drawing=\"").append(Xml.attribute(picture.drawing.encode())).append('"');
+          b.append(" drawing=\"").append(Xml.attribute(controlsOut(picture.drawing.encode()))).append('"');
         b.append(">")
             .append(com.codename1.util.Base64.encodeNoNewline(picture.bytes()))
             .append("</picture>");
@@ -237,8 +237,10 @@ public final class DocumentXml {
       String key = Xml.attr(story, "key", "");
       if (stories.containsKey(key)) throw new IOException("Duplicate header/footer story");
       Sequence<Paragraph> paragraphs = new Sequence<Paragraph>();
+      // Header and footer stories are separate id spaces: both start at hf0.
+      Set<String> storyIds = new HashSet<String>();
       for (Element para : Xml.children(story, "p"))
-        paragraphs = paragraphs.append(readParagraph(para, ids));
+        paragraphs = paragraphs.append(readParagraph(para, storyIds));
       stories.put(key, paragraphs);
     }
     return new PageFurniture(
@@ -469,7 +471,7 @@ public final class DocumentXml {
             Picture last = (Picture) blocks.get(blocks.size() - 1);
             blocks =
                 blocks.set(
-                    blocks.size() - 1, last.drawing(Drawing.decode(Xml.attr(c, "drawing", ""))));
+                    blocks.size() - 1, last.drawing(Drawing.decode(controlsIn(Xml.attr(c, "drawing", "")))));
           }
         } else if ("bookmark".equals(Xml.local(c))) {
           Bookmark mark =
@@ -562,6 +564,28 @@ public final class DocumentXml {
     } catch (IllegalArgumentException ex) {
       throw new IOException("Invalid document values", ex);
     }
+  }
+
+  /**
+   * Drawing encodings use C0 separators (0x1E/0x1F), which XML 1.0 cannot carry even as character
+   * references; map them to the private-use range U+E000.. and back.
+   */
+  static String controlsOut(String v) {
+    StringBuilder b = new StringBuilder(v.length());
+    for (int i = 0; i < v.length(); i++) {
+      char c = v.charAt(i);
+      b.append(c < 0x20 && c != '\t' && c != '\n' && c != '\r' ? (char) ('\ue000' + c) : c);
+    }
+    return b.toString();
+  }
+
+  static String controlsIn(String v) {
+    StringBuilder b = new StringBuilder(v.length());
+    for (int i = 0; i < v.length(); i++) {
+      char c = v.charAt(i);
+      b.append(c >= '\ue000' && c < '\ue020' ? (char) (c - '\ue000') : c);
+    }
+    return b.toString();
   }
 
   private static String id(Element e, Set<String> ids) throws IOException {

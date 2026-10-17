@@ -324,7 +324,7 @@ public final class EditorSurface extends Container
     Set<String> seen = new HashSet<String>();
     for (LayoutEngine.Page page : layout().pages)
       for (LayoutEngine.Line line : page.lines) {
-        if (line.block < 0) continue;
+        if (!textLine(line)) continue;
         int top = pageY(line.page) + Math.round(line.y * scale()) - getScrollY(),
             height = Math.round(line.height * scale());
         if (top + height < 0 || top > getHeight() || !seen.add(line.paragraphId)) continue;
@@ -736,7 +736,7 @@ public final class EditorSurface extends Container
         g.drawString(mark, (a + b - g.getFont().stringWidth(mark)) / 2, baseline);
       }
     }
-    if (line.block >= 0) {
+    if (textLine(line)) {
       Paragraph paragraph = lineParagraph(line);
       if (paragraph.breakRevision == null && line.end == paragraph.text.length())
         g.drawString(
@@ -1288,7 +1288,8 @@ public final class EditorSurface extends Container
               Math.max(1, Math.round((offsetX(line, b) - offsetX(line, a)) * scale)),
               Math.round(line.height * scale));
         }
-        if (!exporting && line.block >= 0 && AppOptions.flag("checkSpelling")) {
+        // Object lines (pictures, charts, equations) have no paragraph to proof.
+        if (!exporting && textLine(line) && AppOptions.flag("checkSpelling")) {
           // Proofing marks: red wavy for spelling, blue for grammar.
           int base = ly + Math.round(line.height * scale) - 2;
           for (Proofing.Issue issue : proofIssues(lineParagraph(line))) {
@@ -1304,7 +1305,7 @@ public final class EditorSurface extends Container
         boolean revised = false;
         for (LayoutEngine.Span span : line.spans)
           revised |= span.style.revision != null || span.style.formatRevision != null;
-        if (line.block >= 0) {
+        if (textLine(line)) {
           Paragraph paragraph = lineParagraph(line);
           revised |= paragraph.formatRevision != null;
           if (paragraph.breakRevision != null && line.end == paragraph.text.length()) {
@@ -1328,7 +1329,7 @@ public final class EditorSurface extends Container
           g.setFont(f);
           int sx = lx + Math.round(span.x * scale), sy = ly + Math.round(span.top * scale);
           if (session.mergeData().highlight
-              && line.block >= 0
+              && textLine(line)
               && InlineField.OBJECT.equals(span.text)) {
             InlineField field = lineParagraph(line).text.fieldAt(span.start);
             if (field != null && MailMerge.placeholder(field.instruction) != null) {
@@ -1533,6 +1534,12 @@ public final class EditorSurface extends Container
       proofCache.put(p, issues);
     }
     return issues;
+  }
+
+  /** Object lines (pictures, charts, equations) have no backing paragraph. */
+  private boolean textLine(LayoutEngine.Line line) {
+    return line.block >= 0
+        && (line.row >= 0 || session.document().blocks.get(line.block) instanceof Paragraph);
   }
 
   private Paragraph lineParagraph(LayoutEngine.Line line) {
@@ -2434,7 +2441,7 @@ public final class EditorSurface extends Container
       for (LayoutEngine.Line line : page.lines) {
         int y = top + pageY(line.page) + Math.round(line.y * scale);
         int height = Math.round(line.height * scale);
-        if (editingBlock(line) < 0 || y + height < viewportY() || y > viewportY() + getHeight())
+        if (editingBlock(line) < 0 || !textLine(line) || y + height < viewportY() || y > viewportY() + getHeight())
           continue;
         int base = index.absolute(editingBlock(line), 0);
         Paragraph paragraph = lineParagraph(line);

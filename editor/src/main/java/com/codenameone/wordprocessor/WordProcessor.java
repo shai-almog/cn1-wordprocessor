@@ -462,6 +462,28 @@ public class WordProcessor {
             choice.setAlignment(Component.LEFT);
             results.add(choice);
           }
+          // Every registered command is reachable here by its Word name, id or description.
+          if (filter.length() >= 2) {
+            Map<String, String> labels = commandLabels();
+            int shown = 0;
+            for (Commands.Descriptor d : commands.descriptors()) {
+              String label = labels.containsKey(d.id) ? labels.get(d.id) : d.description;
+              if (shown >= 60
+                  || !(label.toLowerCase().contains(filter)
+                      || d.id.toLowerCase().contains(filter)
+                      || d.description.toLowerCase().contains(filter))) continue;
+              shown++;
+              Button choice =
+                  button(
+                      label,
+                      () -> {
+                        dialog.dispose();
+                        Display.getInstance().callSerially(() -> promptArgs(d, new ArrayList<String>(d.parameters.keySet()), 0, new LinkedHashMap<String, Object>()));
+                      });
+              choice.setAlignment(Component.LEFT);
+              results.add(choice);
+            }
+          }
           if (results.getComponentCount() == 0)
             results.add(OfficeTheme.label("No matching commands", 13, 0x666666));
           results.revalidate();
@@ -473,6 +495,56 @@ public class WordProcessor {
     dialog.add(BorderLayout.SOUTH, button("Close", dialog::dispose));
     styleDialogBody(dialog.getContentPane());
     showOfficeDialog(dialog);
+  }
+
+  private Map<String, String> commandLabels;
+
+  private Map<String, String> commandLabels() {
+    if (commandLabels == null) {
+      commandLabels = new HashMap<String, String>();
+      try (java.io.InputStream in =
+          Display.getInstance().getResourceAsStream(WordProcessor.class, "/command-labels.properties")) {
+        if (in != null) {
+          com.codename1.io.Properties p = new com.codename1.io.Properties();
+          p.load(in);
+          for (Object k : p.keySet()) commandLabels.put((String) k, p.getProperty((String) k));
+        }
+      } catch (java.io.IOException ex) {
+        // Fall back to command descriptions.
+      }
+    }
+    return commandLabels;
+  }
+
+  /** Ask for required arguments one at a time (optional ones are skipped), then run. */
+  private void promptArgs(Commands.Descriptor d, java.util.List<String> keys, int i, Map<String, Object> args) {
+    while (i < keys.size() && !d.required.contains(keys.get(i))) i++;
+    if (i == keys.size()) {
+      run(d.id, args);
+      return;
+    }
+    final String key = keys.get(i);
+    final int next = i + 1;
+    final String type = d.parameters.get(key);
+    prompt(
+        key + " (" + type + ")",
+        "",
+        v -> {
+          args.put(key, parseArgument(type, v.trim()));
+          promptArgs(d, keys, next, args);
+        });
+  }
+
+  static Object parseArgument(String type, String v) {
+    if ("integer".equals(type)) return Integer.valueOf(Integer.parseInt(v));
+    if ("number".equals(type)) return Double.valueOf(Double.parseDouble(v));
+    if ("boolean".equals(type)) return Boolean.valueOf("true".equalsIgnoreCase(v) || "yes".equalsIgnoreCase(v));
+    if ("string".equals(type)) return v;
+    try {
+      return Json.parse("{\"v\":" + v + "}").get("v");
+    } catch (java.io.IOException ex) {
+      throw new IllegalArgumentException("Enter a JSON value for " + type);
+    }
   }
 
   private void styleCombo(ComboBox<String> combo) {
@@ -693,21 +765,21 @@ public class WordProcessor {
     return b;
   }
 
+  private void togglePainter() {
+    paintStyle = paintStyle == null ? session.activeStyle() : null;
+    painterButton.getUnselectedStyle().setBgTransparency(paintStyle == null ? 0 : 255);
+    painterButton.getUnselectedStyle().setBgColor(0xdce8fa);
+    status.setText(
+        paintStyle == null ? "Format Painter cancelled" : "Select text to apply the copied formatting");
+    editor.startInput();
+  }
+
   private Container home() {
     painterButton =
         iconButton(
             "Format Painter",
             FontImage.MATERIAL_FORMAT_PAINT,
-            () -> {
-              paintStyle = paintStyle == null ? session.activeStyle() : null;
-              painterButton.getUnselectedStyle().setBgTransparency(paintStyle == null ? 0 : 255);
-              painterButton.getUnselectedStyle().setBgColor(0xdce8fa);
-              status.setText(
-                  paintStyle == null
-                      ? "Format Painter cancelled"
-                      : "Select text to apply the copied formatting");
-              editor.startInput();
-            },
+            this::togglePainter,
             false);
     editor.addPointerReleasedListener(e -> applyPaintStyle());
     Container clipboard =
@@ -3597,7 +3669,26 @@ public class WordProcessor {
       if (acceptOpenDialog == null || !editingFurniture) throw new IllegalStateException("No header or footer is being edited");
       Display.getInstance().callSerially(acceptOpenDialog);
     });
-    view("view.newWindow", "New Window: open (or close) a second synchronized view of this document", "", a -> toggleSecondView());
+    view("view.newWindow", "New Window: open (or close) a second synchronized view of this document", "", a -> toggleSecondView(BorderLayout.EAST));
+    view("view.split", "Split: show (or remove) a second pane of this document below the first", "", a -> toggleSecondView(BorderLayout.SOUTH));
+    // Word ids for actions that are otherwise only ribbon, backstage or menu items.
+    view("file.new", "New blank document", "", a -> newDocument());
+    view("file.open", "Open a document with the platform file picker", "", a -> open());
+    view("file.save", "Save the document", "", a -> saveDocument(false));
+    view("file.saveAs", "Save As with the platform file picker", "", a -> saveDocument(true));
+    view("file.print", "Print through the platform print dialog", "", a -> printDocument());
+    view("file.close", "Close the document (asking to save changes) and start a blank one", "", a -> newDocument());
+    view("edit.formatPainter", "Format Painter: copy the formatting at the selection, apply to the next selection", "", a -> togglePainter());
+    view("edit.find", "Find and Replace pane", "", a -> find());
+    view("edit.replace", "Find and Replace pane", "", a -> find());
+    view("insert.picture", "Insert a picture with the platform file picker", "", a -> insertPicture());
+    view("insert.crossReference", "Cross-reference dialog", "", a -> crossReferenceDialog());
+    view("tools.macros", "Macros: record, preview and run command macros", "", a -> macroDialog());
+    view("para.tabs", "Tabs dialog for the selected paragraphs", "", a -> {
+      final java.util.List<TabStop>[] tabs = new java.util.List[] {session.document().paragraph(session.selection().block).format.tabs};
+      editTabs(tabs);
+      paragraph("tabs", TabStop.encode(tabs[0]));
+    });
     commands.register("file.exportPng", "Export the current page (or page N, 1-based) as a PNG image; returns base64", "page?:integer,width?:integer", false, (x, a) -> {
       int page = a.containsKey("page") ? ((Number) a.get("page")).intValue() - 1 : currentPage();
       int width = a.containsKey("width") ? ((Number) a.get("width")).intValue() : 1240;
@@ -3646,6 +3737,8 @@ public class WordProcessor {
         }
         AppOptions.set("keys.custom", joinComma(bindings));
         installCustomKeys();
+      } else {
+        Display.getInstance().callSerially(this::customizeKeyboardDialog);
       }
     });
     view("view.vertical", "Lay pages out vertically", "", a -> {
@@ -3663,7 +3756,7 @@ public class WordProcessor {
 
   private Container secondPane;
 
-  private void toggleSecondView() {
+  private void toggleSecondView(String side) {
     Container documentPane = editor.getParent();
     if (secondView != null) {
       secondPane.remove();
@@ -3677,7 +3770,9 @@ public class WordProcessor {
       secondPane.add(BorderLayout.NORTH, title);
       secondPane.add(BorderLayout.CENTER, secondView);
       secondPane.setPreferredW(Math.max(OfficeTheme.px(240), documentPane.getWidth() / 2));
-      documentPane.add(BorderLayout.EAST, secondPane);
+      if (BorderLayout.SOUTH.equals(side))
+        secondPane.setPreferredH(Math.max(OfficeTheme.px(200), documentPane.getHeight() / 2));
+      documentPane.add(side, secondPane);
     }
     form.revalidate();
   }
@@ -3701,6 +3796,28 @@ public class WordProcessor {
     StringBuilder b = new StringBuilder();
     for (String v : values) b.append(b.length() == 0 ? "" : ",").append(v);
     return b.toString();
+  }
+
+  /** Customize Keyboard dialog: current assignments plus a shortcut and the command it runs. */
+  private void customizeKeyboardDialog() {
+    Container body = BoxLayout.encloseY();
+    java.util.List<String> bindings = optionList("keys.custom");
+    body.add(new Label(bindings.isEmpty() ? "No custom shortcuts" : "Current shortcuts"));
+    for (String b : bindings) body.add(new Label(b.replace("=", "  ->  ")));
+    TextField keys = new TextField("", "Press new shortcut, e.g. ctrl+shift+K", 24, TextField.ANY);
+    TextField command = new TextField("", "Command, e.g. format.bold", 24, TextField.ANY);
+    keys.setAccessibilityText("Shortcut");
+    command.setAccessibilityText("Command");
+    com.codename1.ui.CheckBox remove = new com.codename1.ui.CheckBox("Remove this shortcut");
+    body.add(new Label("Shortcut")).add(keys).add(new Label("Command")).add(command).add(remove);
+    if (!showDialog("Customize Keyboard", body, "Assign", "Close") || keys.getText().trim().isEmpty()) return;
+    try {
+      commands.execute(session, "tools.customizeKeyboard", Json.object(
+          "keys", keys.getText().trim(), "command", command.getText().trim(), "remove", remove.isSelected()));
+      status.setText(remove.isSelected() ? "Shortcut removed" : "Shortcut assigned");
+    } catch (IllegalArgumentException ex) {
+      showDialog("Customize Keyboard", ex.getMessage(), "OK", null);
+    }
   }
 
   private java.util.List<String> commandIds() {
@@ -3802,6 +3919,10 @@ public class WordProcessor {
               "draft", editor.isDraft(),
               "gridlines", editor.isGridlines(),
               "readMode", editor.isViewOnly(),
+              "markup", editor.getMarkup(),
+              "tableGridlines", editor.isTableGridlines(),
+              "outline", editor.getOutline() != null,
+              "painter", paintStyle != null,
               "focus", ribbon.isHidden());
         });
   }

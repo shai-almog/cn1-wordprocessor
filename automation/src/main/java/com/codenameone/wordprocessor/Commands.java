@@ -85,6 +85,7 @@ public final class Commands {
     new WorkflowCommands().register(this);
     new ProofingCommands().register(this);
     new OfficeCommands().register(this);
+    new WordAliasCommands().register(this);
   }
 
   /** Bind automation to the host's print layout, independent of viewport reflow. */
@@ -135,7 +136,36 @@ public final class Commands {
   /** Caret {block, offset} after the most recent edits, newest last, for edit.goBack. */
   final List<int[]> editSpots = new java.util.ArrayList<int[]>();
 
+  /** Observes every outermost execute call; used by tests to record native replay cases. */
+  public interface Tracer {
+    Object begin(Session session, String id, Map<String, Object> args);
+
+    void end(Object token, Session session, Object result, Throwable error);
+  }
+
+  public static Tracer tracer;
+
+  private int traceDepth;
+
   public Object execute(final Session session, String id, final Map<String, Object> args) {
+    Tracer t = tracer;
+    if (t == null || traceDepth > 0) return run(session, id, args);
+    Object token = t.begin(session, id, args);
+    traceDepth++;
+    Object result;
+    try {
+      result = run(session, id, args);
+    } catch (RuntimeException ex) {
+      traceDepth--;
+      t.end(token, session, null, ex);
+      throw ex;
+    }
+    traceDepth--;
+    t.end(token, session, result, null);
+    return result;
+  }
+
+  private Object run(final Session session, String id, final Map<String, Object> args) {
     final Descriptor d = commands.get(id);
     if (d == null) throw new IllegalArgumentException("Unknown command: " + id);
     for (String required : d.required)

@@ -162,6 +162,12 @@ public class DrawingCommandsTest {
     Drawing g = drawing(s, a);
     assertEquals("canvas", g.kind);
     assertTrue(DrawingOps.build(g, 144, 150).paths.size() >= 2);
+    try {
+      // Group encodings use C0 separators; recovery XML must still read back.
+      assertEquals("canvas", drawing(new Session(DocumentXml.read(DocumentXml.write(s.document()))), a).kind);
+    } catch (java.io.IOException ex) {
+      throw new AssertionError(ex);
+    }
     assertEquals(2, run(s, "arrange.group", "block", a, "ungroup", true));
     assertEquals("shape", drawing(s, a).kind);
     assertEquals("icon", drawing(s, a + 1).kind);

@@ -1,0 +1,3470 @@
+{
+ "generated": "2026-10-17",
+ "app": "Mac native (ParparVM) agent-debug build driven over the live MCP",
+ "runs": [
+  {
+   "run": "run23.json",
+   "started": "2026-10-17T20:44:54"
+  },
+  {
+   "run": "run24.json",
+   "started": "2026-10-17T20:49:28"
+  }
+ ],
+ "passed": 466,
+ "total": 466,
+ "results": {
+  "arrange.align": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "arrange.bringForward": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.DrawingCommandsTest.chartsSmartArtEquationsInkAndArrange"
+   ]
+  },
+  "arrange.group": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.DrawingCommandsTest.groupAndUngroup"
+   ]
+  },
+  "arrange.position": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.CertificationCasesTest.positionAndSelectObjects"
+   ]
+  },
+  "arrange.rotate": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.PictureCommandsTest.cropBorderRotateSizeAltAndReset"
+   ]
+  },
+  "arrange.rotation": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "arrange.selectionPane": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.DrawingCommandsTest.chartsSmartArtEquationsInkAndArrange"
+   ]
+  },
+  "arrange.sendBackward": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "arrange.wrap": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.DrawingCommandsTest.chartsSmartArtEquationsInkAndArrange",
+    "com.codenameone.wordprocessor.DrawingCommandsTest.squareWrapNarrowsTextBesideTheObjectAndFrontTakesNoSpace"
+   ]
+  },
+  "caret.docEnd": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.CatalogNavigationCommandsTest.caretSelectionAndFind"
+   ]
+  },
+  "caret.docStart": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.CatalogNavigationCommandsTest.caretSelectionAndFind",
+    "com.codenameone.wordprocessor.CatalogNavigationCommandsTest.fieldsLockUnlinkAndStep"
+   ]
+  },
+  "caret.end": {
+   "mode": "ui",
+   "ok": true,
+   "observed": [
+    "selection",
+    "accessibility"
+   ],
+   "path": "search",
+   "control": "Line End",
+   "tab": "Editing"
+  },
+  "caret.home": {
+   "mode": "ui",
+   "ok": true,
+   "observed": [
+    "selection",
+    "accessibility"
+   ],
+   "path": "search",
+   "control": "Line Start",
+   "tab": "Editing"
+  },
+  "caret.pageDown": {
+   "mode": "ui",
+   "ok": true,
+   "observed": [
+    "selection",
+    "layout",
+    "accessibility"
+   ],
+   "path": "search",
+   "control": "Page Down",
+   "tab": "Editing"
+  },
+  "caret.pageUp": {
+   "mode": "ui",
+   "ok": true,
+   "observed": [
+    "selection",
+    "accessibility"
+   ],
+   "path": "search",
+   "control": "Page Up",
+   "tab": "Editing"
+  },
+  "caret.paraDown": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "caret.paraUp": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "caret.wordLeft": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "caret.wordRight": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.CatalogNavigationCommandsTest.caretSelectionAndFind"
+   ]
+  },
+  "chart.dataLabels": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.DrawingCommandsTest.chartsSmartArtEquationsInkAndArrange"
+   ]
+  },
+  "chart.editData": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.DrawingCommandsTest.chartsSmartArtEquationsInkAndArrange"
+   ]
+  },
+  "chart.legend": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.DrawingCommandsTest.chartsSmartArtEquationsInkAndArrange"
+   ]
+  },
+  "chart.title": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.DrawingCommandsTest.chartsSmartArtEquationsInkAndArrange"
+   ]
+  },
+  "chart.type": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.DrawingCommandsTest.chartsSmartArtEquationsInkAndArrange"
+   ]
+  },
+  "design.effects": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.LayoutDesignCommandsTest.designRestylesHeadingsAndRecordsSettings"
+   ]
+  },
+  "design.pageBorders": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.DesignCommandsTest.pageColorWatermarkAndBordersRoundTripAndUndo"
+   ]
+  },
+  "design.pageColor": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.DesignCommandsTest.pageColorWatermarkAndBordersRoundTripAndUndo"
+   ]
+  },
+  "design.paragraphSpacing": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.LayoutDesignCommandsTest.designRestylesHeadingsAndRecordsSettings"
+   ]
+  },
+  "design.setDefault": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.LayoutDesignCommandsTest.designRestylesHeadingsAndRecordsSettings"
+   ]
+  },
+  "design.styleSet": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.LayoutDesignCommandsTest.designRestylesHeadingsAndRecordsSettings"
+   ]
+  },
+  "design.theme": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.LayoutDesignCommandsTest.designRestylesHeadingsAndRecordsSettings"
+   ]
+  },
+  "design.themeColors": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.LayoutDesignCommandsTest.designRestylesHeadingsAndRecordsSettings"
+   ]
+  },
+  "design.themeFonts": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.LayoutDesignCommandsTest.designRestylesHeadingsAndRecordsSettings"
+   ]
+  },
+  "design.watermark": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.DesignCommandsTest.pageColorWatermarkAndBordersRoundTripAndUndo",
+    "com.codenameone.wordprocessor.FileCommandsTest.exportPdfAndCompatibility"
+   ]
+  },
+  "developer.buildingBlock": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.DeveloperCommandsTest.controlsInsertChangeAndRoundTrip"
+   ]
+  },
+  "developer.checkBox": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.DeveloperCommandsTest.controlsInsertChangeAndRoundTrip"
+   ]
+  },
+  "developer.comboBox": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.DeveloperCommandsTest.controlsInsertChangeAndRoundTrip"
+   ]
+  },
+  "developer.datePicker": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.DeveloperCommandsTest.controlsInsertChangeAndRoundTrip"
+   ]
+  },
+  "developer.designMode": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.DeveloperCommandsTest.controlsInsertChangeAndRoundTrip"
+   ]
+  },
+  "developer.dropDown": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.DeveloperCommandsTest.controlsInsertChangeAndRoundTrip"
+   ]
+  },
+  "developer.picture": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.DeveloperCommandsTest.controlsInsertChangeAndRoundTrip"
+   ]
+  },
+  "developer.plainText": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.DeveloperCommandsTest.controlsInsertChangeAndRoundTrip"
+   ]
+  },
+  "developer.properties": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.DeveloperCommandsTest.controlsInsertChangeAndRoundTrip"
+   ]
+  },
+  "developer.repeatingSection": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.DeveloperCommandsTest.controlsInsertChangeAndRoundTrip"
+   ]
+  },
+  "developer.richText": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.DeveloperCommandsTest.controlsInsertChangeAndRoundTrip"
+   ]
+  },
+  "draw.addPen": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "draw.eraser": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.DrawingCommandsTest.chartsSmartArtEquationsInkAndArrange"
+   ]
+  },
+  "draw.highlighter": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.DrawingCommandsTest.chartsSmartArtEquationsInkAndArrange"
+   ]
+  },
+  "draw.inkToShape": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.DrawingCommandsTest.chartsSmartArtEquationsInkAndArrange"
+   ]
+  },
+  "draw.lasso": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.DrawingCommandsTest.chartsSmartArtEquationsInkAndArrange"
+   ]
+  },
+  "draw.pen": {
+   "mode": "sequence",
+   "ok": true
+  },
+  "draw.pencil": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "draw.replay": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.DrawingCommandsTest.chartsSmartArtEquationsInkAndArrange"
+   ]
+  },
+  "draw.select": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.CertificationCasesTest.positionAndSelectObjects"
+   ]
+  },
+  "edit.advancedFind": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.WorkflowCommandsTest.advancedFindWildcardsCaseAndWholeWords"
+   ]
+  },
+  "edit.clipboardPane": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.WorkflowCommandsTest.clipboardPaneRecordsCopiesAndPastes"
+   ]
+  },
+  "edit.copy": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.CertificationCasesTest.pasteFromOfficeClipboard",
+    "com.codenameone.wordprocessor.WorkflowCommandsTest.clipboardPaneRecordsCopiesAndPastes"
+   ]
+  },
+  "edit.copyFormat": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.CatalogEditingCommandsTest.formatPainterCopiesCharacterAndParagraphFormat"
+   ]
+  },
+  "edit.cut": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.CatalogCommandsTest.editingSelectionAndTableCommands"
+   ]
+  },
+  "edit.find": {
+   "mode": "ui",
+   "ok": true,
+   "observed": [
+    "nativeWindow"
+   ],
+   "control": "Find",
+   "tab": "Home",
+   "nativeWindows": [
+    "Find and replace",
+    "Untitled \u2014 CN1 Word Processor"
+   ]
+  },
+  "edit.findNext": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.CatalogNavigationCommandsTest.caretSelectionAndFind"
+   ]
+  },
+  "edit.findPrevious": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.CatalogNavigationCommandsTest.caretSelectionAndFind"
+   ]
+  },
+  "edit.formatPainter": {
+   "mode": "sequence",
+   "ok": true
+  },
+  "edit.goBack": {
+   "mode": "sequence",
+   "ok": true
+  },
+  "edit.goto": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.WordAliasCommandsTest.goToHeadingsBookmarksAndPages"
+   ]
+  },
+  "edit.paste": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.CatalogCommandsTest.editingSelectionAndTableCommands"
+   ]
+  },
+  "edit.pasteFormat": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.CatalogEditingCommandsTest.formatPainterCopiesCharacterAndParagraphFormat"
+   ]
+  },
+  "edit.pasteMerge": {
+   "mode": "sequence",
+   "ok": true
+  },
+  "edit.pasteSpecial": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "edit.pasteText": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "edit.redo": {
+   "mode": "sequence",
+   "ok": true
+  },
+  "edit.repeat": {
+   "mode": "sequence",
+   "ok": true
+  },
+  "edit.replace": {
+   "mode": "ui",
+   "ok": true,
+   "observed": [
+    "nativeWindow"
+   ],
+   "control": "Replace",
+   "tab": "Home",
+   "nativeWindows": [
+    "Find and replace",
+    "Untitled \u2014 CN1 Word Processor"
+   ]
+  },
+  "edit.replaceAll": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "edit.undo": {
+   "mode": "sequence",
+   "ok": true
+  },
+  "edit.undoTo": {
+   "mode": "sequence",
+   "ok": true
+  },
+  "equation.convert": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.DrawingCommandsTest.chartsSmartArtEquationsInkAndArrange"
+   ]
+  },
+  "equation.display": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "equation.inputFormat": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "equation.insertStructure": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.WordAliasCommandsTest.linkFieldAndEquationStructure"
+   ]
+  },
+  "equation.insertSymbol": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.DrawingCommandsTest.chartsSmartArtEquationsInkAndArrange"
+   ]
+  },
+  "equation.justify": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.DrawingCommandsTest.chartsSmartArtEquationsInkAndArrange"
+   ]
+  },
+  "equation.normalText": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "equation.number": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.DrawingCommandsTest.chartsSmartArtEquationsInkAndArrange"
+   ]
+  },
+  "equation.structure": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.DrawingCommandsTest.chartsSmartArtEquationsInkAndArrange"
+   ]
+  },
+  "fields.lock": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.CatalogNavigationCommandsTest.fieldsLockUnlinkAndStep"
+   ]
+  },
+  "fields.next": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.CatalogNavigationCommandsTest.fieldsLockUnlinkAndStep"
+   ]
+  },
+  "fields.previous": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "fields.setCode": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "fields.toggleCode": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.CatalogNavigationCommandsTest.fieldsLockUnlinkAndStep"
+   ]
+  },
+  "fields.unlink": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.CatalogNavigationCommandsTest.fieldsLockUnlinkAndStep"
+   ]
+  },
+  "fields.unlock": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "file.accessibility": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.FileCommandsTest.accessibilityFindsAltTextHeadingOrderAndContrast"
+   ]
+  },
+  "file.autosave": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.OfficeCommandsTest.optionsValidateAndPersist"
+   ]
+  },
+  "file.close": {
+   "mode": "ui",
+   "ok": true,
+   "observed": [
+    "nativeWindow"
+   ],
+   "control": "Close",
+   "tab": "File",
+   "nativeWindows": [
+    "Save changes?",
+    "Untitled \u2014 CN1 Word Processor"
+   ]
+  },
+  "file.compatibility": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.FileCommandsTest.exportPdfAndCompatibility"
+   ]
+  },
+  "file.encrypt": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.OfficeCommandsTest.encryptedShareDecryptsWithThePassword"
+   ]
+  },
+  "file.exportPdf": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.FileCommandsTest.exportPdfAndCompatibility"
+   ]
+  },
+  "file.exportPng": {
+   "mode": "sequence",
+   "ok": true
+  },
+  "file.info": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.WordAliasCommandsTest.wordCountInfoDistributeAndPageSetup"
+   ]
+  },
+  "file.inspect": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.FileCommandsTest.inspectorRemovesCommentsHiddenTextAndProperties"
+   ]
+  },
+  "file.new": {
+   "mode": "ui",
+   "ok": true,
+   "observed": [
+    "nativeWindow"
+   ],
+   "control": "New",
+   "tab": "File",
+   "nativeWindows": [
+    "Save changes?",
+    "Untitled \u2014 CN1 Word Processor"
+   ]
+  },
+  "file.newFromTemplate": {
+   "mode": "sequence",
+   "ok": true
+  },
+  "file.open": {
+   "mode": "ui",
+   "ok": true,
+   "observed": [
+    "nativeWindow"
+   ],
+   "control": "Open",
+   "tab": "File",
+   "nativeWindows": [
+    "Save changes?",
+    "Untitled \u2014 CN1 Word Processor"
+   ]
+  },
+  "file.options": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.OfficeCommandsTest.optionsValidateAndPersist"
+   ]
+  },
+  "file.print": {
+   "mode": "ui",
+   "ok": true,
+   "observed": [
+    "nativeWindow"
+   ],
+   "control": "Print",
+   "tab": "File",
+   "nativeWindows": [
+    "Print",
+    "Untitled \u2014 CN1 Word Processor"
+   ]
+  },
+  "file.printMarkup": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.OfficeCommandsTest.printMarkupResolvesRevisionsWhenOff"
+   ]
+  },
+  "file.properties": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.FileCommandsTest.inspectorRemovesCommentsHiddenTextAndProperties",
+    "com.codenameone.wordprocessor.FileCommandsTest.propertiesAndProtection"
+   ]
+  },
+  "file.protect": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.FileCommandsTest.propertiesAndProtection"
+   ]
+  },
+  "file.recover": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.OfficeCommandsTest.versionsSaveRestoreAndCompare"
+   ]
+  },
+  "file.save": {
+   "mode": "ui",
+   "ok": true,
+   "observed": [
+    "nativeWindow"
+   ],
+   "control": "Save",
+   "tab": "File",
+   "nativeWindows": [
+    "Save",
+    "Untitled \u2014 CN1 Word Processor"
+   ]
+  },
+  "file.saveAs": {
+   "mode": "ui",
+   "ok": true,
+   "observed": [
+    "nativeWindow"
+   ],
+   "control": "Save As",
+   "tab": "File",
+   "nativeWindows": [
+    "Save As",
+    "Untitled \u2014 CN1 Word Processor"
+   ]
+  },
+  "file.saveTemplate": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.OfficeCommandsTest.templatesSaveCreateAttachAndUpdate"
+   ]
+  },
+  "file.share": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.OfficeCommandsTest.encryptedShareDecryptsWithThePassword"
+   ]
+  },
+  "file.versions": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.OfficeCommandsTest.versionsSaveRestoreAndCompare"
+   ]
+  },
+  "format.allCaps": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "format.bold": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.CatalogCommandsTest.characterCommandsToggleAndStep"
+   ]
+  },
+  "format.border": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.CharacterDecorationTest.decorationsApplyUndoAndRoundTrip"
+   ]
+  },
+  "format.changeCase": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "format.charStyle": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "format.clear": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.CatalogCommandsTest.characterCommandsToggleAndStep"
+   ]
+  },
+  "format.color": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.CatalogCommandsTest.characterCommandsToggleAndStep"
+   ]
+  },
+  "format.doubleStrikethrough": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "format.doubleUnderline": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "format.emboss": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "format.enclose": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.CharacterDecorationTest.decorationsApplyUndoAndRoundTrip"
+   ]
+  },
+  "format.engrave": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "format.font": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "format.fontDialog": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "format.growFont": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.CatalogCommandsTest.characterCommandsToggleAndStep"
+   ]
+  },
+  "format.hidden": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "format.highlight": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "format.italic": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "format.outline": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "format.phonetic": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.CharacterDecorationTest.decorationsApplyUndoAndRoundTrip"
+   ]
+  },
+  "format.position": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "format.scale": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "format.shading": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.CharacterDecorationTest.decorationsApplyUndoAndRoundTrip"
+   ]
+  },
+  "format.shadow": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "format.shrinkFont": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.CatalogCommandsTest.characterCommandsToggleAndStep"
+   ]
+  },
+  "format.size": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.CatalogCommandsTest.characterCommandsToggleAndStep"
+   ]
+  },
+  "format.smallCaps": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.CatalogCommandsTest.characterCommandsToggleAndStep"
+   ]
+  },
+  "format.spacing": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "format.strikethrough": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "format.subscript": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "format.superscript": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.CatalogCommandsTest.characterCommandsToggleAndStep"
+   ]
+  },
+  "format.textEffects": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.CharacterDecorationTest.decorationsApplyUndoAndRoundTrip"
+   ]
+  },
+  "format.underline": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "hf.next": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.CertificationCasesTest.headerNavigation"
+   ]
+  },
+  "hf.position": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.CatalogNavigationCommandsTest.headersFootersLinkingAndPosition"
+   ]
+  },
+  "hf.previous": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.CertificationCasesTest.headerNavigation"
+   ]
+  },
+  "insert.autoText": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "insert.blankPage": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "insert.bookmark": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.WordAliasCommandsTest.goToHeadingsBookmarksAndPages"
+   ]
+  },
+  "insert.canvas": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.DrawingCommandsTest.chartsSmartArtEquationsInkAndArrange"
+   ]
+  },
+  "insert.chart": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.DrawingCommandsTest.chartsSmartArtEquationsInkAndArrange"
+   ]
+  },
+  "insert.closeHeader": {
+   "mode": "ui",
+   "ok": true,
+   "observed": [
+    "nativeWindow"
+   ],
+   "control": "Close Header and Footer",
+   "tab": "Insert",
+   "nativeWindows": [
+    "Cannot complete action",
+    "Untitled \u2014 CN1 Word Processor"
+   ]
+  },
+  "insert.coverPage": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.WorkflowCommandsTest.coverPageInsertsAndRemoves"
+   ]
+  },
+  "insert.crossReference": {
+   "mode": "ui",
+   "ok": true,
+   "observed": [
+    "nativeWindow"
+   ],
+   "control": "Cross-reference",
+   "tab": "Insert",
+   "nativeWindows": [
+    "Cross-reference",
+    "Untitled \u2014 CN1 Word Processor"
+   ]
+  },
+  "insert.dateTime": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "insert.docProperty": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "insert.dropCap": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.DropCapTest.droppedLetterIndentsTheFirstLinesOnly",
+    "com.codenameone.wordprocessor.DropCapTest.persistsInNativeXmlAndDocx"
+   ]
+  },
+  "insert.editFooter": {
+   "mode": "ui",
+   "ok": true,
+   "observed": [
+    "nativeWindow"
+   ],
+   "control": "Edit Footer",
+   "tab": "Insert",
+   "nativeWindows": [
+    "Footer",
+    "Untitled \u2014 CN1 Word Processor"
+   ]
+  },
+  "insert.editHeader": {
+   "mode": "ui",
+   "ok": true,
+   "observed": [
+    "nativeWindow"
+   ],
+   "control": "Edit Header",
+   "tab": "Insert",
+   "nativeWindows": [
+    "Header",
+    "Untitled \u2014 CN1 Word Processor"
+   ]
+  },
+  "insert.equation": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.DrawingCommandsTest.chartsSmartArtEquationsInkAndArrange"
+   ]
+  },
+  "insert.field": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.WordAliasCommandsTest.linkFieldAndEquationStructure"
+   ]
+  },
+  "insert.footer": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.CatalogNavigationCommandsTest.headersFootersLinkingAndPosition"
+   ]
+  },
+  "insert.header": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.CatalogNavigationCommandsTest.headersFootersLinkingAndPosition"
+   ]
+  },
+  "insert.horizontalLine": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.CatalogCommandsTest.bordersShadingAndHorizontalLine"
+   ]
+  },
+  "insert.icon": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.DrawingCommandsTest.groupAndUngroup"
+   ]
+  },
+  "insert.link": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.WordAliasCommandsTest.linkFieldAndEquationStructure"
+   ]
+  },
+  "insert.object": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "insert.pageBreak": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "insert.pageNumber": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.CatalogNavigationCommandsTest.fieldsLockUnlinkAndStep",
+    "com.codenameone.wordprocessor.SectionNumberingTest.romanPageNumbersAndLineNumbersLayoutAndRoundTrip"
+   ]
+  },
+  "insert.picture": {
+   "mode": "ui",
+   "ok": true,
+   "observed": [
+    "accessibility"
+   ],
+   "path": "ribbon",
+   "control": "Pictures",
+   "tab": "Insert"
+  },
+  "insert.quickParts": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "insert.removeFooter": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.CatalogNavigationCommandsTest.headersFootersLinkingAndPosition"
+   ]
+  },
+  "insert.removeHeader": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "insert.removeLink": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "insert.shape": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.DrawingCommandsTest.shapesTextBoxesAndWordArtFormatAndUndo",
+    "com.codenameone.wordprocessor.DrawingCommandsTest.squareWrapNarrowsTextBesideTheObjectAndFrontTakesNoSpace"
+   ]
+  },
+  "insert.signatureLine": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "insert.smartArt": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.DrawingCommandsTest.chartsSmartArtEquationsInkAndArrange"
+   ]
+  },
+  "insert.spreadsheet": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.WorkflowCommandsTest.spreadsheetEvaluatesFormulas"
+   ]
+  },
+  "insert.symbol": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "insert.table": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.CatalogNavigationCommandsTest.outlineSectionAndTableProperties",
+    "com.codenameone.wordprocessor.CatalogNavigationCommandsTest.tableBorderGalleryAndStyles"
+   ]
+  },
+  "insert.textBox": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.DrawingCommandsTest.shapesTextBoxesAndWordArtFormatAndUndo"
+   ]
+  },
+  "insert.textFromFile": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "insert.wordArt": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.DrawingCommandsTest.shapesTextBoxesAndWordArtFormatAndUndo"
+   ]
+  },
+  "layout.break": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "layout.columns": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "layout.differentFirstPage": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.CatalogNavigationCommandsTest.outlineSectionAndTableProperties"
+   ]
+  },
+  "layout.differentOddEven": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "layout.documentGrid": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.LayoutDesignCommandsTest.sectionLayoutAffectsPaginationAndRoundTrips"
+   ]
+  },
+  "layout.hyphenation": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.LayoutDesignCommandsTest.sectionLayoutAffectsPaginationAndRoundTrips"
+   ]
+  },
+  "layout.lineNumbers": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.SectionNumberingTest.romanPageNumbersAndLineNumbersLayoutAndRoundTrip"
+   ]
+  },
+  "layout.linkToPrevious": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.CatalogNavigationCommandsTest.headersFootersLinkingAndPosition"
+   ]
+  },
+  "layout.margins": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.WordAliasCommandsTest.wordCountInfoDistributeAndPageSetup"
+   ]
+  },
+  "layout.orientation": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.WordAliasCommandsTest.wordCountInfoDistributeAndPageSetup"
+   ]
+  },
+  "layout.pageNumberFormat": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.SectionNumberingTest.romanPageNumbersAndLineNumbersLayoutAndRoundTrip"
+   ]
+  },
+  "layout.pageSetup": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.LayoutDesignCommandsTest.sectionLayoutAffectsPaginationAndRoundTrips"
+   ]
+  },
+  "layout.sectionRtl": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.LayoutDesignCommandsTest.sectionLayoutAffectsPaginationAndRoundTrips"
+   ]
+  },
+  "layout.size": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.CatalogNavigationCommandsTest.outlineSectionAndTableProperties"
+   ]
+  },
+  "layout.textDirection": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.LayoutDesignCommandsTest.sectionLayoutAffectsPaginationAndRoundTrips"
+   ]
+  },
+  "layout.verticalAlign": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.LayoutDesignCommandsTest.sectionLayoutAffectsPaginationAndRoundTrips"
+   ]
+  },
+  "list.define": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "mailings.addressBlock": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "mailings.checkErrors": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "mailings.editRecipients": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.RecipientManagementTest.previewNavigationFindAndFinishUseTheSelectedOrderAndUndoAsOneChange"
+   ]
+  },
+  "mailings.envelopes": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "mailings.findRecipient": {
+   "mode": "sequence",
+   "ok": true
+  },
+  "mailings.finish": {
+   "mode": "sequence",
+   "ok": true
+  },
+  "mailings.greetingLine": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "mailings.highlightFields": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "mailings.insertField": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.MailingsCommandsTest.typedListsPreviewSearchAndFinishUseOneHistoryEntry"
+   ]
+  },
+  "mailings.labels": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "mailings.matchFields": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "mailings.next": {
+   "mode": "sequence",
+   "ok": true
+  },
+  "mailings.preview": {
+   "mode": "sequence",
+   "ok": true
+  },
+  "mailings.previous": {
+   "mode": "sequence",
+   "ok": true
+  },
+  "mailings.recipients": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.CertificationCasesTest.mailingsPrevious",
+    "com.codenameone.wordprocessor.MailingsCommandsTest.invalidRowsDoNotReplaceRecipients"
+   ]
+  },
+  "mailings.rules": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "mailings.start": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.MailingsCommandsTest.typedListsPreviewSearchAndFinishUseOneHistoryEntry",
+    "com.codenameone.wordprocessor.RecipientManagementTest.previewNavigationFindAndFinishUseTheSelectedOrderAndUndoAsOneChange"
+   ]
+  },
+  "object.altText": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "outline.close": {
+   "mode": "sequence",
+   "ok": true
+  },
+  "outline.collapse": {
+   "mode": "ui",
+   "ok": true,
+   "observed": [
+    "layout",
+    "pixels",
+    "accessibility"
+   ],
+   "path": "search",
+   "control": "Collapse",
+   "tab": "Outlining"
+  },
+  "outline.demote": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.CatalogNavigationCommandsTest.outlineSectionAndTableProperties"
+   ]
+  },
+  "outline.demoteToBody": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.CatalogNavigationCommandsTest.outlineSectionAndTableProperties"
+   ]
+  },
+  "outline.expand": {
+   "mode": "ui",
+   "ok": true,
+   "observed": [
+    "layout",
+    "pixels",
+    "accessibility"
+   ],
+   "path": "search",
+   "control": "Expand",
+   "tab": "Outlining"
+  },
+  "outline.firstLineOnly": {
+   "mode": "ui",
+   "ok": true,
+   "observed": [
+    "pixels",
+    "accessibility"
+   ],
+   "path": "search",
+   "control": "Show First Line Only",
+   "tab": "Outlining"
+  },
+  "outline.level": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "outline.moveDown": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.CatalogEditingCommandsTest.moveParagraphsUpAndDownWithUndo"
+   ]
+  },
+  "outline.moveUp": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "outline.promote": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.CatalogNavigationCommandsTest.outlineSectionAndTableProperties"
+   ]
+  },
+  "outline.promoteToHeading1": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.CatalogNavigationCommandsTest.outlineSectionAndTableProperties"
+   ]
+  },
+  "outline.showFormatting": {
+   "mode": "ui",
+   "ok": true,
+   "observed": [
+    "layout",
+    "pixels",
+    "accessibility"
+   ],
+   "path": "search",
+   "control": "Show Text Formatting",
+   "tab": "Outlining"
+  },
+  "outline.showLevel": {
+   "mode": "ui",
+   "ok": true,
+   "observed": [
+    "layout",
+    "pixels",
+    "accessibility"
+   ],
+   "path": "search",
+   "control": "Show Level",
+   "tab": "Outlining"
+  },
+  "para.addSpaceBefore": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "para.alignCenter": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.CatalogCommandsTest.paragraphListAndStyleCommands"
+   ]
+  },
+  "para.alignLeft": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "para.alignRight": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "para.asianTypography": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.LayoutDesignCommandsTest.paragraphDirectionMirrorsAndRoundTrips"
+   ]
+  },
+  "para.borders": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.CatalogCommandsTest.bordersShadingAndHorizontalLine"
+   ]
+  },
+  "para.bullets": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "para.defineBullet": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.MultilevelListTest.customNumberAndBulletRoundTrip"
+   ]
+  },
+  "para.defineNumber": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.MultilevelListTest.customNumberAndBulletRoundTrip"
+   ]
+  },
+  "para.demote": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "para.dialog": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.LayoutDesignCommandsTest.paragraphDirectionMirrorsAndRoundTrips"
+   ]
+  },
+  "para.distribute": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.WordAliasCommandsTest.wordCountInfoDistributeAndPageSetup"
+   ]
+  },
+  "para.hangingIndent": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "para.heading1": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "para.heading2": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.CatalogCommandsTest.paragraphListAndStyleCommands"
+   ]
+  },
+  "para.heading3": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "para.indent": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.CatalogCommandsTest.paragraphListAndStyleCommands"
+   ]
+  },
+  "para.indents": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "para.justify": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "para.keepLines": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.CatalogCommandsTest.paragraphListAndStyleCommands"
+   ]
+  },
+  "para.keepNext": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "para.lineSpacing": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.CatalogCommandsTest.paragraphListAndStyleCommands"
+   ]
+  },
+  "para.listLevel": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "para.ltr": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.LayoutDesignCommandsTest.paragraphDirectionMirrorsAndRoundTrips"
+   ]
+  },
+  "para.moveDown": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "para.moveUp": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.CatalogEditingCommandsTest.moveParagraphsUpAndDownWithUndo"
+   ]
+  },
+  "para.multilevel": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.MultilevelListTest.outlineAndLegalLabels"
+   ]
+  },
+  "para.normal": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "para.numbering": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.CatalogCommandsTest.paragraphListAndStyleCommands"
+   ]
+  },
+  "para.outdent": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.CatalogCommandsTest.paragraphListAndStyleCommands"
+   ]
+  },
+  "para.outlineLevel": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "para.pageBreakBefore": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "para.promote": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "para.removeSpaceAfter": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "para.restartNumbering": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "para.rtl": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.LayoutDesignCommandsTest.paragraphDirectionMirrorsAndRoundTrips"
+   ]
+  },
+  "para.setNumberingValue": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.CatalogCommandsTest.paragraphListAndStyleCommands"
+   ]
+  },
+  "para.shading": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.CatalogCommandsTest.bordersShadingAndHorizontalLine"
+   ]
+  },
+  "para.sort": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.WordAliasCommandsTest.sortParagraphsAlphabeticallyAndNumericallyAsOneUndoStep"
+   ]
+  },
+  "para.spacing": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "para.style": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "para.tabs": {
+   "mode": "ui",
+   "ok": true,
+   "observed": [
+    "windows",
+    "pixels",
+    "accessibility"
+   ],
+   "path": "search",
+   "control": "Tabs",
+   "tab": "Home"
+  },
+  "para.widowControl": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "picture.altText": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.PictureCommandsTest.cropBorderRotateSizeAltAndReset"
+   ]
+  },
+  "picture.border": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.PictureCommandsTest.cropBorderRotateSizeAltAndReset"
+   ]
+  },
+  "picture.change": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.PictureCommandsTest.adjustmentsRoundTripThroughDocxAndNativeXml"
+   ]
+  },
+  "picture.color": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.PictureCommandsTest.adjustmentsRoundTripThroughDocxAndNativeXml"
+   ]
+  },
+  "picture.compress": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.PictureCommandsTest.compressUsesCodecAndResetsCrop"
+   ],
+   "rule": "The native codec really resamples (the JVM test uses a fake codec): the crop must be applied\nand the picture re-encoded. Size is not compared: the 68-byte fixture is below any encoder's overhead."
+  },
+  "picture.corrections": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.PictureCommandsTest.adjustmentsRoundTripThroughDocxAndNativeXml"
+   ]
+  },
+  "picture.crop": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.PictureCommandsTest.compressUsesCodecAndResetsCrop",
+    "com.codenameone.wordprocessor.PictureCommandsTest.cropBorderRotateSizeAltAndReset"
+   ]
+  },
+  "picture.effects": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.PictureCommandsTest.effectsAndBackgroundRoundTrip"
+   ]
+  },
+  "picture.removeBackground": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.PictureCommandsTest.effectsAndBackgroundRoundTrip"
+   ]
+  },
+  "picture.reset": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.PictureCommandsTest.cropBorderRotateSizeAltAndReset"
+   ]
+  },
+  "picture.size": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.DrawingCommandsTest.shapesTextBoxesAndWordArtFormatAndUndo",
+    "com.codenameone.wordprocessor.PictureCommandsTest.cropBorderRotateSizeAltAndReset"
+   ]
+  },
+  "picture.style": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.PictureCommandsTest.adjustmentsRoundTripThroughDocxAndNativeXml"
+   ]
+  },
+  "picture.transparency": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.PictureCommandsTest.adjustmentsRoundTripThroughDocxAndNativeXml"
+   ]
+  },
+  "references.addText": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.ContentsCommandsTest.sourcesAreValidatedAndCommandsPreserveSelectedText"
+   ]
+  },
+  "references.bibliography": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.CitationCommandsTest.sourceCitationAndBibliographyCommandsAreTransactional"
+   ]
+  },
+  "references.caption": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.CertificationCasesTest.referenceTablesUpdateAndRemove"
+   ]
+  },
+  "references.citation": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.CitationCommandsTest.sourceCitationAndBibliographyCommandsAreTransactional"
+   ]
+  },
+  "references.citationStyle": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.CitationCommandsTest.sourceCitationAndBibliographyCommandsAreTransactional"
+   ]
+  },
+  "references.endnote": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.NoteCommandsTest.updateConvertNavigateAndRollback"
+   ]
+  },
+  "references.footnote": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.NoteCommandsTest.updateConvertNavigateAndRollback"
+   ]
+  },
+  "references.index": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.IndexCommandsTest.markInsertUpdateRemoveAndUnsupportedColumnsAreAtomic"
+   ]
+  },
+  "references.markCitation": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.CertificationCasesTest.referenceTablesUpdateAndRemove"
+   ]
+  },
+  "references.markEntry": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.IndexCommandsTest.markInsertUpdateRemoveAndUnsupportedColumnsAreAtomic"
+   ]
+  },
+  "references.nextFootnote": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "references.noteOptions": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.NoteCommandsTest.optionsCommandIsAtomicAndReportsEffectiveSettings"
+   ]
+  },
+  "references.notes": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.NoteCommandsTest.optionsCommandIsAtomicAndReportsEffectiveSettings"
+   ]
+  },
+  "references.removeToc": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.CertificationCasesTest.referenceTablesUpdateAndRemove"
+   ]
+  },
+  "references.researcher": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.OfficeCommandsTest.researcherCitesAResult"
+   ],
+   "rule": "Researcher queries live Wikipedia natively (the JVM test uses a fixed answer): a website source must be added."
+  },
+  "references.sources": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.CitationCommandsTest.sourceCitationAndBibliographyCommandsAreTransactional"
+   ]
+  },
+  "references.tableOfAuthorities": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.CertificationCasesTest.referenceTablesUpdateAndRemove"
+   ]
+  },
+  "references.tableOfFigures": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.CertificationCasesTest.referenceTablesUpdateAndRemove"
+   ]
+  },
+  "references.toc": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.CertificationCasesTest.referenceTablesUpdateAndRemove",
+    "com.codenameone.wordprocessor.ContentsCommandsTest.sourcesAreValidatedAndCommandsPreserveSelectedText"
+   ]
+  },
+  "references.updateAuthorities": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.CertificationCasesTest.referenceTablesUpdateAndRemove"
+   ]
+  },
+  "references.updateFields": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.CitationCommandsTest.sourceCitationAndBibliographyCommandsAreTransactional",
+    "com.codenameone.wordprocessor.TableFormulaCommandsTest.sourceEditAndUpdateFieldsRecalculateAndUndoPreservesCell"
+   ]
+  },
+  "references.updateFigures": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.CertificationCasesTest.referenceTablesUpdateAndRemove"
+   ]
+  },
+  "references.updateIndex": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.IndexCommandsTest.markInsertUpdateRemoveAndUnsupportedColumnsAreAtomic"
+   ]
+  },
+  "references.updateToc": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.CertificationCasesTest.referenceTablesUpdateAndRemove"
+   ]
+  },
+  "review.accept": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "review.acceptAll": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "review.changes": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "review.combine": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.OfficeCommandsTest.combineAddsReviewerChanges"
+   ]
+  },
+  "review.comments": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.OfficeCommandsTest.hideInkAltPaneShareAndComments"
+   ]
+  },
+  "review.compare": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.ComparisonCommandsTest.commandUndoRedoAndDocxRetainBothVersions",
+    "com.codenameone.wordprocessor.ComparisonCommandsTest.failureAndCancelledPreviewPreserveOriginal"
+   ]
+  },
+  "review.deleteComment": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.WordAliasCommandsTest.commentActionsUseTheCommentAtTheSelection"
+   ]
+  },
+  "review.editor": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "review.hideInk": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.OfficeCommandsTest.hideInkAltPaneShareAndComments"
+   ]
+  },
+  "review.language": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.CharacterDecorationTest.decorationsApplyUndoAndRoundTrip"
+   ]
+  },
+  "review.markup": {
+   "mode": "sequence",
+   "ok": true
+  },
+  "review.newComment": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "review.nextChange": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "review.nextComment": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "review.previousChange": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "review.previousComment": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "review.readAloud": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.OfficeCommandsTest.readAloudWalksSentences"
+   ]
+  },
+  "review.reject": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "review.rejectAll": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "review.reply": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.WordAliasCommandsTest.commentActionsUseTheCommentAtTheSelection"
+   ]
+  },
+  "review.resolveComment": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.WordAliasCommandsTest.commentActionsUseTheCommentAtTheSelection"
+   ]
+  },
+  "review.restrict": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "review.showMarkup": {
+   "mode": "sequence",
+   "ok": true
+  },
+  "review.spelling": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.ProofingCommandsTest.changeIgnoreAndAddToDictionary"
+   ]
+  },
+  "review.thesaurus": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.ProofingCommandsTest.thesaurusLooksUpAndReplaces"
+   ]
+  },
+  "review.trackChanges": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "review.trackingOptions": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "review.wordCount": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.WordAliasCommandsTest.wordCountInfoDistributeAndPageSetup"
+   ]
+  },
+  "select.all": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.CatalogCommandsTest.editingSelectionAndTableCommands"
+   ]
+  },
+  "select.column": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "select.extend": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "select.objects": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.DrawingCommandsTest.chartsSmartArtEquationsInkAndArrange"
+   ]
+  },
+  "select.paragraph": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "select.sentence": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.CatalogNavigationCommandsTest.caretSelectionAndFind"
+   ]
+  },
+  "select.similar": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "select.word": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.CatalogNavigationCommandsTest.caretSelectionAndFind"
+   ]
+  },
+  "shape.alignText": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.DrawingCommandsTest.shapesTextBoxesAndWordArtFormatAndUndo"
+   ]
+  },
+  "shape.effects": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.DrawingCommandsTest.shapesTextBoxesAndWordArtFormatAndUndo"
+   ]
+  },
+  "shape.fill": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.DrawingCommandsTest.shapesTextBoxesAndWordArtFormatAndUndo"
+   ]
+  },
+  "shape.link": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.DrawingCommandsTest.shapesTextBoxesAndWordArtFormatAndUndo"
+   ]
+  },
+  "shape.outline": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.DrawingCommandsTest.shapesTextBoxesAndWordArtFormatAndUndo"
+   ]
+  },
+  "shape.textDirection": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.DrawingCommandsTest.shapesTextBoxesAndWordArtFormatAndUndo"
+   ]
+  },
+  "smartArt.addShape": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.DrawingCommandsTest.chartsSmartArtEquationsInkAndArrange"
+   ]
+  },
+  "smartArt.colors": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.DrawingCommandsTest.chartsSmartArtEquationsInkAndArrange"
+   ]
+  },
+  "smartArt.demote": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.DrawingCommandsTest.chartsSmartArtEquationsInkAndArrange"
+   ]
+  },
+  "smartArt.layout": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.DrawingCommandsTest.chartsSmartArtEquationsInkAndArrange"
+   ]
+  },
+  "smartArt.promote": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.DrawingCommandsTest.chartsSmartArtEquationsInkAndArrange"
+   ]
+  },
+  "smartArt.reset": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.DrawingCommandsTest.chartsSmartArtEquationsInkAndArrange"
+   ]
+  },
+  "smartArt.textPane": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.DrawingCommandsTest.chartsSmartArtEquationsInkAndArrange"
+   ]
+  },
+  "styles.apply": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "styles.create": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.CertificationCasesTest.stylesDelete"
+   ]
+  },
+  "styles.delete": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.CertificationCasesTest.stylesDelete"
+   ]
+  },
+  "styles.inspector": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "styles.manage": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "styles.modify": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.CharacterCommandsTest.styleUpdateKeepsDirectCharacterOverrides"
+   ]
+  },
+  "styles.pane": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "styles.updateToMatch": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "table.altText": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.TableAlternativeTextTest.structureFormattingClipboardAndSplittingKeepAlternativeText",
+    "com.codenameone.wordprocessor.TableAlternativeTextTest.titleAndDescriptionCanBeEditedIndependentlyClearedAndUndone"
+   ]
+  },
+  "table.autofit": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.TableSizingCommandsTest.contentsAndFixedWidthsUseActiveSectionAndUndo"
+   ],
+   "rule": "Column widths come from native font metrics (the JVM uses PDF metrics); structure must match."
+  },
+  "table.borderPainter": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.TableStyleCommandsTest.painterDrawAndEraser"
+   ]
+  },
+  "table.borders": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.CatalogNavigationCommandsTest.tableBorderGalleryAndStyles"
+   ]
+  },
+  "table.cellAlign": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.TableLayoutCommandsTest.allNineAlignmentsAffectEveryCellParagraphAndPreserveCaretSelection",
+    "com.codenameone.wordprocessor.TableLayoutCommandsTest.rectangularAlignmentPreservesRangeAndInvalidValuesDoNothing"
+   ]
+  },
+  "table.cellMargins": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.CatalogNavigationCommandsTest.outlineSectionAndTableProperties"
+   ]
+  },
+  "table.columnWidth": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.TableTextCommandsTest.textToTableDeleteCellsAndWidth"
+   ]
+  },
+  "table.deleteCells": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.TableTextCommandsTest.textToTableDeleteCellsAndWidth"
+   ]
+  },
+  "table.deleteColumn": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "table.deleteRow": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "table.deleteStyle": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.TableStyleCommandsTest.customStylesLookAndRoundTrip"
+   ]
+  },
+  "table.deleteTable": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.CatalogCommandsTest.editingSelectionAndTableCommands"
+   ]
+  },
+  "table.distributeColumns": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.TableLayoutCommandsTest.distributePreservesCellStylesAndRangeWithUndo",
+    "com.codenameone.wordprocessor.TableSizingCommandsTest.automaticGridWidthsSurviveColumnEditsAndCellClipboard"
+   ]
+  },
+  "table.distributeRows": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.TableLayoutCommandsTest.distributePreservesCellStylesAndRangeWithUndo",
+    "com.codenameone.wordprocessor.TableRowsCommandsTest.rowRulesFollowInsertionCropSplitAndDistribution"
+   ]
+  },
+  "table.draw": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.TableStyleCommandsTest.painterDrawAndEraser"
+   ]
+  },
+  "table.eraser": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.TableStyleCommandsTest.painterDrawAndEraser"
+   ],
+   "rule": "The native editor keeps the caret in the merged cell (as Word does); the JVM session leaves the table. Document must match."
+  },
+  "table.formula": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.TableFormulaCommandsTest.allSixAggregatesInsertRealFieldsWithOneStepUndoRedo",
+    "com.codenameone.wordprocessor.TableFormulaCommandsTest.sourceEditAndUpdateFieldsRecalculateAndUndoPreservesCell"
+   ]
+  },
+  "table.fromText": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.TableTextCommandsTest.textToTableDeleteCellsAndWidth"
+   ]
+  },
+  "table.insertColumnLeft": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.CatalogCommandsTest.editingSelectionAndTableCommands",
+    "com.codenameone.wordprocessor.TableLayoutCommandsTest.insertionMovesCaretAndUndoRestoresOriginalCell"
+   ]
+  },
+  "table.insertColumnRight": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.TableLayoutCommandsTest.insertionMovesCaretAndUndoRestoresOriginalCell",
+    "com.codenameone.wordprocessor.TableLayoutCommandsTest.rightInsertionUsesMergedCellEdge"
+   ]
+  },
+  "table.insertRowAbove": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.TableLayoutCommandsTest.insertionMovesCaretAndUndoRestoresOriginalCell",
+    "com.codenameone.wordprocessor.TableSizingCommandsTest.structuralChangesRetainPlacement"
+   ]
+  },
+  "table.insertRowBelow": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.TableLayoutCommandsTest.insertedRowsInheritCaretRowHeightAndCellAppearance",
+    "com.codenameone.wordprocessor.TableLayoutCommandsTest.rowAndColumnLimitsAreIndependentAndFailuresAreAtomic"
+   ]
+  },
+  "table.look": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.TableStyleCommandsTest.customStylesLookAndRoundTrip"
+   ]
+  },
+  "table.merge": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "table.modifyStyle": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.TableStyleCommandsTest.customStylesLookAndRoundTrip"
+   ]
+  },
+  "table.newStyle": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.TableStyleCommandsTest.customStylesLookAndRoundTrip"
+   ]
+  },
+  "table.properties": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.TableRowsCommandsTest.heightPropertiesAndUndoPreserveCaret",
+    "com.codenameone.wordprocessor.TableRowsCommandsTest.rowRulesFollowInsertionCropSplitAndDistribution"
+   ]
+  },
+  "table.quick": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.QuickTableCommandsTest.repeatedInsertionsHaveUniqueStableIds"
+   ]
+  },
+  "table.repeatHeader": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.CatalogNavigationCommandsTest.outlineSectionAndTableProperties"
+   ]
+  },
+  "table.rowHeight": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.TableRowsCommandsTest.rowHeightCommandValidatesAtomically"
+   ]
+  },
+  "table.rtl": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.TableStyleCommandsTest.customStylesLookAndRoundTrip"
+   ]
+  },
+  "table.selectCell": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.TableSelectionCommandsTest.contextualCommandsAndLiveTokensRespectCellRectangles"
+   ]
+  },
+  "table.selectColumn": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.TableSelectionCommandsTest.contextualCommandsAndLiveTokensRespectCellRectangles"
+   ]
+  },
+  "table.selectRow": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "table.selectTable": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.TableSelectionCommandsTest.contextualCommandsAndLiveTokensRespectCellRectangles",
+    "com.codenameone.wordprocessor.TableSelectionCommandsTest.deletingSelectedRowsOrColumnsIsOneUndoStepAndAllRemovesTable"
+   ]
+  },
+  "table.shading": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.CatalogNavigationCommandsTest.outlineSectionAndTableProperties"
+   ]
+  },
+  "table.sort": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "table.split": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.TableAlternativeTextTest.structureFormattingClipboardAndSplittingKeepAlternativeText",
+    "com.codenameone.wordprocessor.TableSplittingTest.commentsFollowOriginalParagraphsAcrossBothSplits"
+   ]
+  },
+  "table.splitTable": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.TableRowsCommandsTest.rowRulesFollowInsertionCropSplitAndDistribution",
+    "com.codenameone.wordprocessor.TableSizingCommandsTest.structuralChangesRetainPlacement"
+   ]
+  },
+  "table.style": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.CatalogNavigationCommandsTest.tableBorderGalleryAndStyles",
+    "com.codenameone.wordprocessor.TableStyleCommandsTest.customStylesLookAndRoundTrip"
+   ]
+  },
+  "table.textDirection": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.TableStyleCommandsTest.customStylesLookAndRoundTrip"
+   ]
+  },
+  "table.toText": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "table.viewGridlines": {
+   "mode": "sequence",
+   "ok": true
+  },
+  "text.backspace": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "text.columnBreak": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "text.delete": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "text.deleteWordBack": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.CatalogNavigationCommandsTest.caretSelectionAndFind"
+   ]
+  },
+  "text.deleteWordForward": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "text.insert": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.LiveCommandsTest.liveEditsShareUndoAndRejectStaleSelections",
+    "com.codenameone.wordprocessor.OfficeCommandsTest.recordMacroAndReplay"
+   ]
+  },
+  "text.lineBreak": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "text.nbHyphen": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "text.nbsp": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "text.newParagraph": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.CatalogEditingCommandsTest.repeatGoBackAndUnicodeToggle"
+   ]
+  },
+  "text.optionalHyphen": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "text.tab": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "text.toggleUnicode": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.CatalogEditingCommandsTest.repeatGoBackAndUnicodeToggle"
+   ]
+  },
+  "tools.autocorrect": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.OfficeCommandsTest.autocorrectEntriesAndRules"
+   ]
+  },
+  "tools.customizeKeyboard": {
+   "mode": "ui",
+   "ok": true,
+   "observed": [
+    "nativeWindow"
+   ],
+   "control": "Customize Keyboard",
+   "tab": "Tools",
+   "nativeWindows": [
+    "Customize Keyboard",
+    "Untitled \u2014 CN1 Word Processor",
+    "sheet"
+   ]
+  },
+  "tools.customizeRibbon": {
+   "mode": "ui",
+   "ok": true,
+   "observed": [
+    "accessibility"
+   ],
+   "path": "search",
+   "control": "Customize Ribbon",
+   "tab": "Tools"
+  },
+  "tools.macros": {
+   "mode": "ui",
+   "ok": true,
+   "observed": [
+    "windows",
+    "accessibility"
+   ],
+   "path": "search",
+   "control": "Macros",
+   "tab": "View"
+  },
+  "tools.recordMacro": {
+   "mode": "sequence",
+   "ok": true
+  },
+  "tools.search": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.OfficeCommandsTest.tellMeFindsAndRunsCommands"
+   ]
+  },
+  "tools.templates": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.OfficeCommandsTest.templatesSaveCreateAttachAndUpdate"
+   ]
+  },
+  "view.altTextPane": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.OfficeCommandsTest.hideInkAltPaneShareAndComments"
+   ]
+  },
+  "view.darkMode": {
+   "mode": "sequence",
+   "ok": true
+  },
+  "view.draft": {
+   "mode": "ui",
+   "ok": true,
+   "observed": [
+    "layout",
+    "accessibility"
+   ],
+   "path": "search",
+   "control": "Draft",
+   "tab": "View"
+  },
+  "view.fieldCodes": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "view.focus": {
+   "mode": "ui",
+   "ok": true,
+   "observed": [
+    "layout",
+    "accessibility"
+   ],
+   "path": "search",
+   "control": "Focus",
+   "tab": "View"
+  },
+  "view.gridlines": {
+   "mode": "ui",
+   "ok": true,
+   "observed": [
+    "pixels"
+   ],
+   "path": "search",
+   "control": "Gridlines",
+   "tab": "View"
+  },
+  "view.immersive": {
+   "mode": "ui",
+   "ok": true,
+   "observed": [
+    "nativeWindow"
+   ],
+   "control": "Immersive Reader",
+   "tab": "View",
+   "nativeWindows": [
+    "Untitled \u2014 CN1 Word Processor",
+    "sheet"
+   ]
+  },
+  "view.marks": {
+   "mode": "ui",
+   "ok": true,
+   "observed": [
+    "pixels"
+   ],
+   "path": "search",
+   "control": "Show/Hide Marks",
+   "tab": "Home"
+  },
+  "view.multiplePages": {
+   "mode": "ui",
+   "ok": true,
+   "observed": [
+    "layout",
+    "pixels",
+    "accessibility"
+   ],
+   "path": "search",
+   "control": "Multiple Pages",
+   "tab": "View"
+  },
+  "view.navigationPane": {
+   "mode": "ui",
+   "ok": true,
+   "observed": [
+    "layout",
+    "pixels",
+    "accessibility"
+   ],
+   "path": "search",
+   "control": "Navigation Pane",
+   "tab": "View"
+  },
+  "view.newWindow": {
+   "mode": "ui",
+   "ok": true,
+   "observed": [
+    "layout",
+    "pixels",
+    "accessibility"
+   ],
+   "path": "search",
+   "control": "New Window",
+   "tab": "View"
+  },
+  "view.numeral": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.OfficeCommandsTest.optionsValidateAndPersist"
+   ]
+  },
+  "view.onePage": {
+   "mode": "sequence",
+   "ok": true
+  },
+  "view.outline": {
+   "mode": "ui",
+   "ok": true,
+   "observed": [
+    "layout",
+    "pixels",
+    "accessibility"
+   ],
+   "path": "search",
+   "control": "Outline",
+   "tab": "View"
+  },
+  "view.pageWidth": {
+   "mode": "ui",
+   "ok": true,
+   "observed": [
+    "layout",
+    "pixels"
+   ],
+   "path": "search",
+   "control": "Page Width",
+   "tab": "View"
+  },
+  "view.printLayout": {
+   "mode": "ui",
+   "ok": true,
+   "observed": [
+    "pixels"
+   ],
+   "path": "search",
+   "control": "Print Layout",
+   "tab": "View"
+  },
+  "view.readMode": {
+   "mode": "ui",
+   "ok": true,
+   "observed": [
+    "layout",
+    "pixels"
+   ],
+   "path": "search",
+   "control": "Read Mode",
+   "tab": "View"
+  },
+  "view.ruler": {
+   "mode": "ui",
+   "ok": true,
+   "observed": [
+    "layout",
+    "pixels"
+   ],
+   "path": "search",
+   "control": "Ruler",
+   "tab": "View"
+  },
+  "view.sideToSide": {
+   "mode": "ui",
+   "ok": true,
+   "observed": [
+    "pixels"
+   ],
+   "path": "search",
+   "control": "Side to Side",
+   "tab": "View"
+  },
+  "view.split": {
+   "mode": "ui",
+   "ok": true,
+   "observed": [
+    "layout",
+    "pixels",
+    "accessibility"
+   ],
+   "path": "search",
+   "control": "Split",
+   "tab": "View"
+  },
+  "view.vertical": {
+   "mode": "ui",
+   "ok": true,
+   "observed": [
+    "pixels"
+   ],
+   "path": "search",
+   "control": "Vertical",
+   "tab": "View"
+  },
+  "view.webLayout": {
+   "mode": "ui",
+   "ok": true,
+   "observed": [
+    "layout",
+    "pixels"
+   ],
+   "path": "search",
+   "control": "Web Layout",
+   "tab": "View"
+  },
+  "view.zoom": {
+   "mode": "ui",
+   "ok": true,
+   "observed": [
+    "layout",
+    "pixels"
+   ],
+   "path": "search",
+   "control": "Zoom",
+   "tab": "View"
+  },
+  "view.zoom100": {
+   "mode": "ui",
+   "ok": true,
+   "observed": [
+    "layout",
+    "pixels"
+   ],
+   "path": "search",
+   "control": "100%",
+   "tab": "View"
+  },
+  "view.zoomIn": {
+   "mode": "ui",
+   "ok": true,
+   "observed": [
+    "layout",
+    "pixels"
+   ],
+   "path": "search",
+   "control": "Zoom In",
+   "tab": "View"
+  },
+  "view.zoomOut": {
+   "mode": "ui",
+   "ok": true,
+   "observed": [
+    "layout",
+    "pixels"
+   ],
+   "path": "search",
+   "control": "Zoom Out",
+   "tab": "View"
+  },
+  "wordArt.style": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "wordArt.textFill": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "CaseFinder"
+   ]
+  },
+  "wordArt.textOutline": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.DrawingCommandsTest.shapesTextBoxesAndWordArtFormatAndUndo"
+   ]
+  },
+  "wordArt.transform": {
+   "mode": "replay",
+   "ok": true,
+   "tests": [
+    "com.codenameone.wordprocessor.DrawingCommandsTest.shapesTextBoxesAndWordArtFormatAndUndo"
+   ]
+  }
+ }
+}

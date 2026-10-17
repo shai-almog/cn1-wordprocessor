@@ -15,7 +15,7 @@ final class CatalogCommands implements Commands.Extension {
     8, 9, 10, 10.5f, 11, 12, 14, 16, 18, 20, 22, 24, 26, 28, 36, 48, 72
   };
 
-  private static final List<String> ALIGN = Arrays.asList("left", "center", "right", "both");
+  private static final List<String> ALIGN = Arrays.asList("left", "center", "right", "both", "distribute");
 
   public void register(final Commands c) {
     // Character formatting.

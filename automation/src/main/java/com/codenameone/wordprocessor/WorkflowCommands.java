@@ -7,7 +7,6 @@ import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.WeakHashMap;
 
 /**
  * Editing workflows that span several features: header/footer section navigation, extend,
@@ -17,7 +16,7 @@ import java.util.WeakHashMap;
  */
 final class WorkflowCommands implements Commands.Extension {
   /** Office clipboard: the last 24 copied fragments per session, newest first. */
-  private static final Map<Session, List<Document>> CLIPBOARD = new WeakHashMap<Session, List<Document>>();
+  private static final SessionMap<List<Document>> CLIPBOARD = new SessionMap<List<Document>>();
 
   static final int CLIPBOARD_SIZE = 24;
 

@@ -309,6 +309,13 @@ public final class Session {
     }
   }
 
+  private final java.util.HashMap<Object, Object> attachments = new java.util.HashMap<Object, Object>();
+
+  /** Per-session state owned by command extensions (see SessionMap); not part of the document. */
+  public java.util.Map<Object, Object> attachments() {
+    return attachments;
+  }
+
   public Session(Document d) {
     document = d;
     mergeData = MergeData.EMPTY;

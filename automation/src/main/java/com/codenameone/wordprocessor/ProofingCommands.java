@@ -6,7 +6,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.WeakHashMap;
 
 /**
  * English proofing commands: {@code review.spelling} (check, next, ignore, ignoreAll, add, change,
@@ -16,7 +15,7 @@ import java.util.WeakHashMap;
  * proofing language is set to something other than English are skipped.
  */
 final class ProofingCommands implements Commands.Extension {
-  private static final Map<Session, Set<String>> ONCE = new WeakHashMap<Session, Set<String>>();
+  private static final SessionMap<Set<String>> ONCE = new SessionMap<Set<String>>();
 
   private static final class Found {
     final int block;
