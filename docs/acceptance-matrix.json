@@ -10,8 +10,8 @@
   "not-applicable"
  ],
  "counts": {
-  "unverified": 450,
-  "missing": 37,
+  "unverified": 486,
+  "missing": 1,
   "partial": 0,
   "certified": 0,
   "reference-stub": 15,
@@ -84,12 +84,12 @@
    "group": "Backstage",
    "feature": "Print Markup",
    "command": "file.printMarkup",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "file.printMarkup",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "file.printMarkup (Print Markup)"
+   "notes": "file.printMarkup (Print Markup) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "File",
@@ -144,48 +144,48 @@
    "group": "Backstage",
    "feature": "Export Image",
    "command": "file.exportPng",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "file.exportPng",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "file.exportPng (Export Page as PNG)"
+   "notes": "Editor command (registered by WordProcessor, not the headless registry); needs native acceptance evidence."
   },
   {
    "tab": "File",
    "group": "Backstage",
    "feature": "Options",
    "command": "file.options",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "file.options",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "file.options (Options)"
+   "notes": "file.options (Options) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "File",
    "group": "Options",
    "feature": "Numerals",
    "command": "view.numeral",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "view.numeral",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "view.numeral (Numerals)"
+   "notes": "view.numeral (Numerals) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "File",
    "group": "Backstage",
    "feature": "Share",
    "command": "file.share",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "file.share",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "file.share (Share)"
+   "notes": "file.share (Share) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "File",
@@ -240,48 +240,48 @@
    "group": "Backstage",
    "feature": "Version History",
    "command": "file.versions",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "file.versions",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "file.versions (Version History)"
+   "notes": "file.versions (Version History) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "File",
    "group": "Backstage",
    "feature": "Recover Unsaved",
    "command": "file.recover",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "file.recover",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "file.recover (Recover Unsaved Documents)"
+   "notes": "file.recover (Recover Unsaved Documents) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "File",
    "group": "Backstage",
    "feature": "New from Template",
    "command": "file.newFromTemplate",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "file.newFromTemplate",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "file.newFromTemplate (New from Template)"
+   "notes": "file.newFromTemplate (New from Template) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "File",
    "group": "Backstage",
    "feature": "Save as Template",
    "command": "file.saveTemplate",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "file.saveTemplate",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "file.saveTemplate (Save as Template)"
+   "notes": "file.saveTemplate (Save as Template) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Quick Access",
@@ -336,24 +336,24 @@
    "group": "Toolbar",
    "feature": "AutoSave",
    "command": "file.autosave",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "file.autosave",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "file.autosave (AutoSave)"
+   "notes": "file.autosave (AutoSave) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Title Bar",
    "group": "Search",
    "feature": "Search (Tell Me)",
    "command": "tools.search",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "tools.search",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "tools.search (Search)"
+   "notes": "tools.search (Search) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Home",
@@ -1980,12 +1980,12 @@
    "group": "Header & Footer",
    "feature": "Close Header and Footer",
    "command": "insert.closeHeader",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "insert.closeHeader",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "insert.closeHeader (Close Header and Footer)"
+   "notes": "Editor command (registered by WordProcessor, not the headless registry); needs native acceptance evidence."
   },
   {
    "tab": "Insert",
@@ -2100,12 +2100,12 @@
    "group": "Text",
    "feature": "Drop Cap",
    "command": "insert.dropCap",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "insert.dropCap",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "insert.dropCap (Drop Cap)"
+   "notes": "insert.dropCap (Drop Cap) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Insert",
@@ -2856,12 +2856,12 @@
    "group": "Research",
    "feature": "Researcher",
    "command": "references.researcher",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "references.researcher",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "references.researcher (Researcher)"
+   "notes": "references.researcher (Researcher) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "References",
@@ -3252,24 +3252,24 @@
    "group": "Proofing",
    "feature": "Spelling & Grammar",
    "command": "review.spelling",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "review.spelling",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "review.spelling (Spelling & Grammar)"
+   "notes": "review.spelling (Spelling & Grammar) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Review",
    "group": "Proofing",
    "feature": "Thesaurus",
    "command": "review.thesaurus",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "review.thesaurus",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "review.thesaurus (Thesaurus)"
+   "notes": "review.thesaurus (Thesaurus) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Review",
@@ -3288,12 +3288,12 @@
    "group": "Speech",
    "feature": "Read Aloud",
    "command": "review.readAloud",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "review.readAloud",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "review.readAloud (Read Aloud)"
+   "notes": "review.readAloud (Read Aloud) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Review",
@@ -3312,12 +3312,12 @@
    "group": "Accessibility",
    "feature": "Alt Text",
    "command": "view.altTextPane",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "view.altTextPane",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "view.altTextPane (Alt Text Pane)"
+   "notes": "view.altTextPane (Alt Text Pane) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Review",
@@ -3396,12 +3396,12 @@
    "group": "Comments",
    "feature": "Show Comments",
    "command": "review.comments",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "review.comments",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "review.comments (Show Comments)"
+   "notes": "review.comments (Show Comments) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Review",
@@ -3576,12 +3576,12 @@
    "group": "Compare",
    "feature": "Combine",
    "command": "review.combine",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "review.combine",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "review.combine (Combine)"
+   "notes": "review.combine (Combine) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Review",
@@ -3612,12 +3612,12 @@
    "group": "Ink",
    "feature": "Hide Ink",
    "command": "review.hideInk",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "review.hideInk",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "review.hideInk (Hide Ink)"
+   "notes": "review.hideInk (Hide Ink) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "View",
@@ -3864,12 +3864,12 @@
    "group": "Window",
    "feature": "New Window",
    "command": "view.newWindow",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "view.newWindow",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "view.newWindow (New Window)"
+   "notes": "Editor command (registered by WordProcessor, not the headless registry); needs native acceptance evidence."
   },
   {
    "tab": "View",
@@ -3948,12 +3948,12 @@
    "group": "Macros",
    "feature": "Record Macro",
    "command": "tools.recordMacro",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "tools.recordMacro",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "tools.recordMacro (Record Macro)"
+   "notes": "tools.recordMacro (Record Macro) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "View",
@@ -4944,84 +4944,84 @@
    "group": "Outline Tools",
    "feature": "Expand",
    "command": "outline.expand",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "outline.expand",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "outline.expand (Expand)"
+   "notes": "Editor command (registered by WordProcessor, not the headless registry); needs native acceptance evidence."
   },
   {
    "tab": "Outlining",
    "group": "Outline Tools",
    "feature": "Collapse",
    "command": "outline.collapse",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "outline.collapse",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "outline.collapse (Collapse)"
+   "notes": "Editor command (registered by WordProcessor, not the headless registry); needs native acceptance evidence."
   },
   {
    "tab": "Outlining",
    "group": "Outline Tools",
    "feature": "Show Level",
    "command": "outline.showLevel",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "outline.showLevel",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "outline.showLevel (Show Level)"
+   "notes": "Editor command (registered by WordProcessor, not the headless registry); needs native acceptance evidence."
   },
   {
    "tab": "Outlining",
    "group": "Outline Tools",
    "feature": "Show Text Formatting",
    "command": "outline.showFormatting",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "outline.showFormatting",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "outline.showFormatting (Show Text Formatting)"
+   "notes": "Editor command (registered by WordProcessor, not the headless registry); needs native acceptance evidence."
   },
   {
    "tab": "Outlining",
    "group": "Outline Tools",
    "feature": "Show First Line Only",
    "command": "outline.firstLineOnly",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "outline.firstLineOnly",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "outline.firstLineOnly (Show First Line Only)"
+   "notes": "Editor command (registered by WordProcessor, not the headless registry); needs native acceptance evidence."
   },
   {
    "tab": "Outlining",
    "group": "Close",
    "feature": "Close Outline View",
    "command": "outline.close",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "outline.close",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "outline.close (Close Outline View)"
+   "notes": "Editor command (registered by WordProcessor, not the headless registry); needs native acceptance evidence."
   },
   {
    "tab": "Picture Format",
    "group": "Adjust",
    "feature": "Remove Background",
    "command": "picture.removeBackground",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "picture.removeBackground",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "picture.removeBackground (Remove Background)"
+   "notes": "picture.removeBackground (Remove Background) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Picture Format",
@@ -5052,12 +5052,12 @@
    "group": "Adjust",
    "feature": "Artistic Effects",
    "command": "picture.effects",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "picture.effects",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "picture.effects (Artistic Effects)"
+   "notes": "picture.effects (Artistic Effects) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Picture Format",
@@ -5076,12 +5076,12 @@
    "group": "Adjust",
    "feature": "Compress Pictures",
    "command": "picture.compress",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "picture.compress",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "picture.compress (Compress Pictures)"
+   "notes": "picture.compress (Compress Pictures) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Picture Format",
@@ -5976,12 +5976,12 @@
    "group": "Proofing",
    "feature": "AutoCorrect Options",
    "command": "tools.autocorrect",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "tools.autocorrect",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "tools.autocorrect (AutoCorrect Options)"
+   "notes": "tools.autocorrect (AutoCorrect Options) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Tools",
@@ -6000,24 +6000,24 @@
    "group": "Customize",
    "feature": "Customize Ribbon",
    "command": "tools.customizeRibbon",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "tools.customizeRibbon",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "tools.customizeRibbon (Customize Ribbon)"
+   "notes": "Editor command (registered by WordProcessor, not the headless registry); needs native acceptance evidence."
   },
   {
    "tab": "Tools",
    "group": "Customize",
    "feature": "Customize Keyboard",
    "command": "tools.customizeKeyboard",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "tools.customizeKeyboard",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "tools.customizeKeyboard (Customize Keyboard)"
+   "notes": "Editor command (registered by WordProcessor, not the headless registry); needs native acceptance evidence."
   },
   {
    "tab": "Tools",
@@ -6036,12 +6036,12 @@
    "group": "Templates",
    "feature": "Templates and Add-ins",
    "command": "tools.templates",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "tools.templates",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "tools.templates (Templates and Add-ins)"
+   "notes": "tools.templates (Templates and Add-ins) App command registered; needs native acceptance evidence."
   }
  ]
 }

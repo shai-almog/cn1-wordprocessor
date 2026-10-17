@@ -413,3 +413,17 @@ Limits:
 - `WorkflowCommands`: header/footer section navigation, extend/similar/column selection, Advanced Find with Word wildcards, a 24-item Office clipboard fed by copy/cut, Paste Special/merge formatting, font dialog, character styles, the styles pane, inspector and manager, cover pages, Quick Parts/AutoText galleries, Insert Text from File, and embedded spreadsheets as formula tables.
 - Limitations: the Office clipboard is per-process and in-memory. The spreadsheet is a Word table with field formulas, not an embedded OLE workbook. Wildcard find does not support `{n,m}` repetition or `@`.
 - Matrix: 450 unverified, 37 missing, 0 partial (all unverified rows still need native evidence before certification).
+
+## 2026-10-17 backstage, proofing, pictures and drop caps
+- Proofing: `review.spelling` (check, next, ignore, add to dictionary, change all), cheap grammar checks (repeated word, a/an, capitalization, spacing), `review.thesaurus` (a small built-in table, like the reference), and automatic hyphenation in layout when the `hyphenation` setting is `automatic`. Limitations: table cells are not proofed. There is no on-canvas wavy underline yet; issues are listed and selected. Suggestions scan the whole word list (O(n)), so they are fine on demand but not per keystroke. Layout hyphenation skips words containing tabs or objects.
+- Pictures: artistic effects (blur, sharpen, posterize, negative, glow edges, pencil sketch), background removal (border flood fill with a tolerance) and compression (resample to a target ppi and drop cropped areas). Compression has only been exercised with a fake codec in tests, not with the native codec.
+- Drop caps: dropped or in-margin, 1-10 lines, distance and font; the layout narrows exactly the dropped lines. Not supported inside table cells.
+- Backstage/application:
+  - Word Options persist per user in app storage: user name, units, AutoSave, numerals, proofing and AutoCorrect.
+  - AutoSave saves to the open file at the configured interval and records version-history snapshots. Version history is in memory per session and is lost when the app quits; the crash-recovery store is separate.
+  - Templates: built-in Letter, Memo, Report and Resume plus user templates, with attach and update-styles.
+  - Also: Tell Me search, macro recording and replay (top-level editing commands only), AutoCorrect as you type, the numeral display mode, Print Markup (PDF export and print resolve changes when it is off), Share (.docx/.pdf payload), Hide Ink, Show Comments, the Alt Text pane, Researcher (Wikipedia search API, citing a result as a website source) and Combine.
+  - Combine accepts both copies' pending changes before comparing, so previously tracked revisions become the base text.
+  - Read Aloud walks and selects sentences at a rate; Codename One has no speech API, so audio needs a native interface.
+  - Editor: Close Header and Footer, New Window (a second synchronized view pane sharing one selection; Codename One has no multi-window API), Export page as PNG, the Custom ribbon tab with hide/show tabs, and custom keyboard shortcuts installed as desktop menu shortcuts.
+- Matrix: 486 unverified, 1 missing (`file.encrypt`, in progress), 0 partial.

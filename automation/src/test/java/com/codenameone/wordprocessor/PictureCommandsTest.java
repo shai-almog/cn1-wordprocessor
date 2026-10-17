@@ -88,4 +88,80 @@ public class PictureCommandsTest {
         new String(com.codename1.util.Base64.encodeNoNewline(png())));
     assertEquals(k, ((Picture) s.document().blocks.get(block)).look);
   }
+
+  private int insertPicture(Session s) throws Exception {
+    s.insertPicture(png(), 144, 72, "");
+    int block = -1;
+    for (int i = 0; i < s.document().blocks.size(); i++)
+      if (s.document().blocks.get(i) instanceof Picture) block = i;
+    return block;
+  }
+
+  @Test
+  public void effectsAndBackgroundRoundTrip() throws Exception {
+    Session s = new Session(Document.empty());
+    int block = insertPicture(s);
+    run(s, "picture.effects", "block", block, "effect", "pencilSketch");
+    run(s, "picture.removeBackground", "block", block, "tolerance", 30);
+    Picture.Look k = ((Picture) s.document().blocks.get(block)).look;
+    assertEquals("pencilSketch", k.effect);
+    assertEquals(30, k.backgroundTolerance);
+    assertTrue(k.adjusted());
+    Document back = DocumentXml.read(DocumentXml.write(s.document()));
+    assertEquals(k, ((Picture) back.blocks.get(block)).look);
+    try {
+      run(s, "picture.effects", "block", block, "effect", "bogus");
+      fail();
+    } catch (IllegalArgumentException expected) {
+    }
+  }
+
+  @Test
+  public void pixelMath() {
+    int w = 4, h = 4;
+    int[] px = new int[16];
+    for (int i = 0; i < 16; i++) {
+      int x = i % 4, y = i / 4;
+      px[i] = (x == 0 || y == 0 || x == 3 || y == 3) ? 0xffffffff : 0xffff0000;
+    }
+    int[] out = PictureEffects.apply(px, w, h, Picture.Look.NONE.removeBackground(10));
+    assertEquals(0, out[0] >>> 24);
+    assertEquals(0xffff0000, out[5]);
+    assertEquals(0xffffffff, px[0]);
+    int[] neg = PictureEffects.apply(px, w, h, Picture.Look.NONE.effect("negative"));
+    assertEquals(0xff000000, neg[0]);
+    assertEquals(0xff00ffff, neg[5]);
+  }
+
+  @Test
+  public void compressUsesCodecAndResetsCrop() throws Exception {
+    Session s = new Session(Document.empty());
+    int block = insertPicture(s);
+    run(s, "picture.crop", "block", block, "left", .25);
+    try {
+      run(s, "picture.compress", "block", block);
+      fail();
+    } catch (IllegalArgumentException expected) {
+      assertTrue(expected.getMessage().contains("codec"));
+    }
+    final byte[] small = png();
+    final int[] seen = new int[2];
+    PictureCommands.codec(
+        (data, mime, l, t, r, b, mw, mh) -> {
+          seen[0] = mw;
+          seen[1] = mh;
+          assertEquals(.25f, l, 1e-6);
+          return small;
+        });
+    try {
+      run(s, "picture.compress", "block", block, "ppi", 72);
+    } finally {
+      PictureCommands.codec(null);
+    }
+    Picture p = (Picture) s.document().blocks.get(block);
+    assertArrayEquals(small, p.bytes());
+    assertFalse(p.look.cropped());
+    assertEquals(144, seen[0]);
+    assertEquals(72, seen[1]);
+  }
 }

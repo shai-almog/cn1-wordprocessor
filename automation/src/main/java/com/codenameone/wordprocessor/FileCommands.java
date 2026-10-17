@@ -105,7 +105,7 @@ final class FileCommands implements Commands.Extension {
         false,
         (s, a) -> {
           try {
-            byte[] pdf = PdfExporter.write(s.document());
+            byte[] pdf = PdfExporter.write(OfficeCommands.printable(s.document()));
             return Json.object(
                 "bytes", pdf.length,
                 "base64", new String(com.codename1.util.Base64.encodeNoNewline(pdf)));

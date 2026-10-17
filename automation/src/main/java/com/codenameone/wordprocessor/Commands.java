@@ -83,6 +83,8 @@ public final class Commands {
     new LayoutDesignCommands().register(this);
     new TableStyleCommands().register(this);
     new WorkflowCommands().register(this);
+    new ProofingCommands().register(this);
+    new OfficeCommands().register(this);
   }
 
   /** Bind automation to the host's print layout, independent of viewport reflow. */
@@ -119,6 +121,15 @@ public final class Commands {
   /** The last successful editing command, for edit.repeat. */
   String lastId;
 
+  /** Top-level transactional command observers (the macro recorder); nested calls are not reported. */
+  public interface Listener {
+    void executed(Session session, String id, Map<String, Object> args);
+  }
+
+  final List<Listener> listeners = new java.util.ArrayList<Listener>();
+
+  private int depth;
+
   Map<String, Object> lastArgs;
 
   /** Caret {block, offset} after the most recent edits, newest last, for edit.goBack. */
@@ -148,7 +159,14 @@ public final class Commands {
     }
     if (!d.transactional) return d.handler.execute(session, args);
     final Object[] result = new Object[1];
-    session.transact(s -> result[0] = d.handler.execute(s, args));
+    depth++;
+    try {
+      session.transact(s -> result[0] = d.handler.execute(s, args));
+    } finally {
+      depth--;
+    }
+    if (depth == 0)
+      for (Listener l : new java.util.ArrayList<Listener>(listeners)) l.executed(session, id, args);
     if (!id.startsWith("edit.undo") && !id.startsWith("edit.redo")) {
       lastId = id;
       lastArgs = new java.util.LinkedHashMap<String, Object>(args);

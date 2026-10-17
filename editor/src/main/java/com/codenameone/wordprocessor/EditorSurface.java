@@ -143,6 +143,7 @@ public final class EditorSurface extends Container
       a = a * (100 - look.transparency) / 100;
       px[i] = a << 24 | r << 16 | g << 8 | b;
     }
+    px = PictureEffects.apply(px, image.getWidth(), image.getHeight(), look);
     return Image.createImage(px, image.getWidth(), image.getHeight());
   }
 
@@ -583,7 +584,58 @@ public final class EditorSurface extends Container
       boolean accept = !"original".equals(markup);
       for (Revisions.Change c : Revisions.list(d)) d = Revisions.resolve(d, c.revision.id, accept);
     }
+    d = OfficeCommands.shown(d);
+    if (!"arabic".equals(AppOptions.get("numeral")) && !"system".equals(AppOptions.get("numeral"))) {
+      Sequence<Block> blocks = new Sequence<Block>();
+      for (Block b : d.blocks) {
+        if (b instanceof Paragraph) {
+          final boolean rtl = ((Paragraph) b).format.rtl;
+          Paragraph p = (Paragraph) b;
+          b = p.text(p.text.mapText(t -> AppOptions.numerals(t, rtl)));
+        }
+        blocks = blocks.append(b);
+      }
+      d = d.blocks(blocks, d.nextId);
+    }
     return outline == null ? d : outline.apply(d);
+  }
+
+  private boolean exporting;
+
+  /** Renders one page at widthPx pixels wide, without caret or selection (Export as PNG). */
+  public Image renderPage(int page, int widthPx) {
+    LayoutEngine.Result result = layout();
+    if (page < 0 || page >= result.pages.size()) throw new IllegalArgumentException("No page " + (page + 1));
+    float oldZoom = zoom;
+    boolean oldDark = darkPage;
+    try {
+      exporting = true;
+      darkPage = false;
+      LayoutEngine.Page spec = result.pages.get(page);
+      zoom = Math.max(.1f, Math.min(10f, widthPx / (spec.spec.width * pointsToPixels())));
+      paintFonts.clear();
+      float scale = scale();
+      int pw = Math.round(spec.spec.width * scale), ph = Math.round(spec.spec.height * scale);
+      Image out = Image.createImage(pw, ph, 0xffffffff);
+      Graphics g = out.getGraphics();
+      g.translate(-(getX() + pageX(page) + getScrollX()), -(getY() + pageY(page)));
+      g.setClip(getX() + pageX(page) + getScrollX(), getY() + pageY(page), pw, ph);
+      paint(g);
+      return out;
+    } finally {
+      exporting = false;
+      darkPage = oldDark;
+      zoom = oldZoom;
+      paintFonts.clear();
+      tabLeaderPaint.clear();
+      repaint();
+    }
+  }
+
+  /** An application option that changes only the display (Hide Ink, numerals) changed. */
+  public void displayChanged() {
+    laidOut = null;
+    repaint();
   }
 
   /** Outline view state, or null outside Outline view. */
@@ -806,7 +858,10 @@ public final class EditorSurface extends Container
 
   /** Print/export always uses document paper geometry, independent of phone reflow and zoom. */
   public LayoutEngine.Result printLayout() {
-    return reflow ? engine.layout(session.document(), session.revision()) : layout();
+    Document printed = OfficeCommands.printable(session.document());
+    // Print what Print Markup selects, never a display-only view (outline, Hide Ink, reflow).
+    if (!reflow && printed == session.document() && shown() == printed) return layout();
+    return engine.layout(printed, session.revision());
   }
 
   /** Paginate generated reference content with the same fonts as this editor. */
@@ -1211,7 +1266,7 @@ public final class EditorSurface extends Container
           }
         }
         int selectedBlock = editingBlock(line);
-        if (session.cellSelection() == null
+        if (!exporting && session.cellSelection() == null
             && selectedBlock >= 0
             && selectedBlock >= selection.startBlock()
             && selectedBlock <= selection.endBlock()
@@ -1316,7 +1371,7 @@ public final class EditorSurface extends Container
               ly,
               Math.max(1, Math.round(.5f * scale)),
               Math.round(line.height * scale));
-        if (session.cellSelection() == null && line == caretLine && selection.collapsed()) {
+        if (!exporting && session.cellSelection() == null && line == caretLine && selection.collapsed()) {
           g.setColor(0x087f80);
           int cx = lx + Math.round(offsetX(line, selection.caret) * scale);
           g.fillRect(cx, ly, 2, Math.round(line.height * scale));
@@ -1326,7 +1381,7 @@ public final class EditorSurface extends Container
       for (LayoutEngine.PlacedPicture pic : LayoutEngine.byDepth(page.pictures, true))
         paintDrawing(g, pic, x + Math.round(pic.x * scale), y + Math.round(pic.y * scale), scale);
     }
-    if (OfficeTheme.mobile() && session.cellSelection() == null && !selection.collapsed()) {
+    if (OfficeTheme.mobile() && !exporting && session.cellSelection() == null && !selection.collapsed()) {
       g.setColor(OfficeTheme.BLUE);
       int radius = OfficeTheme.px(6);
       for (int side = 0; side < 2; side++) {
@@ -1988,10 +2043,29 @@ public final class EditorSurface extends Container
     if (session.isComposing()) {
       session.compose(text, text.length());
       session.finishComposition();
-    } else if ("\n".equals(text)) session.enterParagraph();
-    else session.typeText(text, System.currentTimeMillis());
+    } else {
+      if (text.length() == 1 && " \n.,;:!?)".indexOf(text.charAt(0)) >= 0) autoCorrect();
+      if ("\n".equals(text)) session.enterParagraph();
+      else session.typeText(text, System.currentTimeMillis());
+    }
     composingStart = composingEnd = -1;
     didEdit();
+  }
+
+  /** AutoCorrect as you type: fix the word before the caret when a word-ending key is typed. */
+  private void autoCorrect() {
+    Selection x = session.selection();
+    if (!x.collapsed() || session.inCell()) return;
+    Document d = session.editingDocument();
+    if (!(d.blocks.get(x.block) instanceof Paragraph)) return;
+    String before = d.paragraph(x.block).text.plainText().substring(0, x.caret);
+    String fixed = AppOptions.correct(before);
+    if (fixed == null) return;
+    int k = 0;
+    while (k < before.length() && k < fixed.length() && before.charAt(k) == fixed.charAt(k)) k++;
+    session.breakTypingGroup();
+    session.select(x.block, k, x.caret);
+    session.replace(fixed.substring(k));
   }
 
   @Override

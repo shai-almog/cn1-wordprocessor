@@ -13,7 +13,7 @@ final class OfficeRibbon extends Container {
   private final Container strip = new Container(new BorderLayout());
   private boolean collapsed, selecting;
   private final ComboBox<String> mobileTabs = new ComboBox<String>();
-  private final Button collapse = new Button("⌃");
+  private final Button collapse = new Button("\u2303");
   private final List<Button> buttons = new ArrayList<Button>();
   private final List<String> titles = new ArrayList<String>();
   private final List<Boolean> visibility = new ArrayList<Boolean>();
@@ -84,6 +84,10 @@ final class OfficeRibbon extends Container {
     tabs.add(b);
   }
 
+  java.util.List<String> titles() {
+    return java.util.Collections.unmodifiableList(titles);
+  }
+
   void setTabVisible(String title, boolean visible) {
     int index = titles.indexOf(title);
     if (index < 0 || visibility.get(index) == visible) return;
@@ -118,7 +122,7 @@ final class OfficeRibbon extends Container {
 
   void toggleCollapsed() {
     collapsed = !collapsed;
-    collapse.setText(collapsed ? "⌄" : "⌃");
+    collapse.setText(collapsed ? "\u2304" : "\u2303");
     collapse.setAccessibilityText(collapsed ? "Expand ribbon" : "Collapse ribbon");
     body.setHidden(collapsed);
     body.setVisible(!collapsed);
@@ -131,7 +135,7 @@ final class OfficeRibbon extends Container {
     if (OfficeTheme.mobile()) mobileTabs.setSelectedIndex(mobileIndices.indexOf(index));
     selecting = false;
     collapsed = false;
-    collapse.setText("⌃");
+    collapse.setText("\u2303");
     collapse.setAccessibilityText("Collapse ribbon");
     body.setHidden(false);
     body.setVisible(true);

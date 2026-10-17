@@ -18,3 +18,11 @@ Bundled document fonts: Adobe Source Sans 3 and Source Serif 4, and JetBrains Mo
 Additional unmodified font faces: SourceSans3-BoldIt.ttf from Adobe source-sans release 3.052R; JetBrainsMono-Bold.ttf, JetBrainsMono-Italic.ttf and JetBrainsMono-BoldItalic.ttf from JetBrainsMono v2.304. The same bundled SIL OFL notices apply.
 
 Unicode 16.0.0 grapheme-break, emoji and Indic-conjunct property data and the official grapheme test corpus are pinned under `unicode-16.0.0`, with original download URLs and SHA-256 hashes in `manifest.json`. `scripts/generate-grapheme-ranges.py` verifies those inputs and generates `GraphemeProperties.java`. The unmodified [Unicode license](unicode-16.0.0/LICENSE.txt) accompanies these data and their derived tables. Generated tables count toward application source totals.
+
+English proofing data under `document/src/main/resources/proof/`, taken unmodified from the pinned Wordcraft source asset set:
+
+| File | Content | License |
+| --- | --- | --- |
+| `en-us.dic` | Hyphenation/spelling word list derived from the Moby Hyphenator II list by Grady Ward (Project Gutenberg #3204), front-coded and raw-deflated | Public domain |
+| `en-us.pat` | US English Liang hyphenation patterns trained from the Moby list | CC0 / public domain |
+| `en-extra.txt` | Supplemental modern English spelling words written by Wordcraft contributors | MIT (see `wordcraft-LICENSE-MIT`) |

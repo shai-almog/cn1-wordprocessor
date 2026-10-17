@@ -189,3 +189,9 @@ Character shading, border, proofing language, phonetic guide (ruby) and enclosur
 
 ### Document settings, direction and section layout
 Application settings (design choices, hyphenation, and others) persist in native XML as `<setting>` children of `<properties>`, and in DOCX as `w:docVars/w:docVar` entries named `cn1.<key>`. Paragraph direction and Asian typography map to `w:bidi` and `w:kinsoku`/`w:wordWrap`/`w:overflowPunct`/`w:autoSpaceDE`/`w:autoSpaceDN`. Section vertical alignment, direction, text flow and grid map to `w:vAlign`, `w:bidi`, `w:textDirection` and `w:docGrid`. Themes are applied to the styles part, not to a `theme1.xml` part, so Word's theme gallery does not show the chosen theme.
+
+## Drop caps, picture effects and proofing data (2026-10-17)
+- Drop caps are a paragraph property (`dropCap="mode,lines,distance,font"` in native XML). DOCX writes Word's form: a framed `w:framePr w:dropCap` paragraph holding the enlarged letter, followed by the rest of the paragraph. On read, a framed letter paragraph (up to 4 characters) merges back into the paragraph after it. Frame anchoring other than text-relative is not read.
+- Picture artistic effects and background removal are stored non-destructively in the native `adjust` attribute (`brightness,contrast,transparency,mode,effect,tolerance`). DOCX does not write them (no `a14:imgEffect` / background-removal mapping), so they are lost when exported to .docx.
+- Picture compression rewrites the stored image bytes via the platform image codec (PNG stays PNG; others become JPEG at 0.85).
+- Spelling and hyphenation use bundled public-domain Moby word data and CC0 Liang patterns (see `third-party/README.md`).

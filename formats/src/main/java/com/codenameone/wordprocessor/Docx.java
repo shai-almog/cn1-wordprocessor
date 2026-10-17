@@ -66,11 +66,42 @@ public final class Docx {
     links.notes = new DocxNotes(parts, id, warnings, styles);
     Sequence<Block> blocks = new Sequence<Block>();
     Map<String, Element> sectionElements = new LinkedHashMap<String, Element>();
+    Paragraph dropLetter = null;
+    String dropSpec = null;
     for (Element c : DocxToc.body(body, warnings)) {
       String kind = Xml.local(c);
       if ("p".equals(kind)) {
         Set<String> paragraphWarnings = new LinkedHashSet<String>();
         Paragraph p = paragraph(c, id, paragraphWarnings, lists, styles, links, comments);
+        Element frame = Xml.child(c, "pPr") == null ? null : Xml.child(Xml.child(c, "pPr"), "framePr");
+        String dropMode = frame == null ? "" : Xml.attr(frame, "dropCap", "");
+        if (("drop".equals(dropMode) || "margin".equals(dropMode)) && p.text.length() > 0 && p.text.length() <= 4) {
+          // The framed letter joins the paragraph that follows it.
+          dropLetter = p;
+          float hSpace = 0;
+          try {
+            hSpace = Integer.parseInt(Xml.attr(frame, "hSpace", "0")) / 20f;
+          } catch (NumberFormatException ignored) {
+            // keep zero
+          }
+          String lines = Xml.attr(frame, "lines", "3");
+          dropSpec = dropMode + "," + lines + "," + hSpace + ",";
+          continue;
+        }
+        if (dropLetter != null) {
+          RichText letter = dropLetter.text;
+          String font = letter.styleAt(0).font;
+          if (p.text.length() > 0) {
+            letter = letter.format(0, letter.length(), "size", String.valueOf(p.text.styleAt(0).size));
+            if (!font.equals(p.text.styleAt(0).font)) dropSpec += font.replace(",", "");
+          }
+          try {
+            p = p.text(letter.concat(p.text)).with("dropCap", ParagraphFormat.dropCap(dropSpec));
+          } catch (IllegalArgumentException invalid) {
+            p = p.text(letter.concat(p.text));
+          }
+          dropLetter = null;
+        }
         paragraphWarnings.remove("Run feature: drawing");
         paragraphWarnings.remove("Paragraph feature: sectPr");
         Element paragraphProps = Xml.child(c, "pPr");
@@ -1016,6 +1047,18 @@ static final char COLUMN_BREAK = '\u000B';
       String section,
       String prefix,
       String suffix) {
+    if (!p.format.dropCap.isEmpty() && p.text.length() > 1 && !p.text.objectAt(0)
+        && !Character.isWhitespace(p.text.charAt(0))) {
+      // Word keeps a drop cap as its own framed paragraph holding the letter.
+      int skip = Graphemes.next(p.text, 0);
+      TextStyle base = p.text.styleAt(0);
+      float size = base.size * ((p.format.dropLines() - 1) * 1.2f + .9f) / .7f;
+      RichText letter = p.text.slice(0, skip).format(0, skip, "size", String.valueOf(Math.round(size)));
+      if (!p.format.dropFont().isEmpty()) letter = letter.format(0, skip, "font", p.format.dropFont());
+      writeParagraph(b, new Paragraph(p.id + "-dropcap", letter).with("dropCap", p.format.dropCap)
+          .with("before", "0").with("after", "0"), lists, tabs, links, comments, "", "", "");
+      p = p.text(p.text.slice(skip, p.text.length())).with("dropCap", "");
+    }
     b.append("<w:p><w:pPr><w:pStyle w:val=\"")
         .append(Xml.escape(p.style))
         .append("\"/><w:jc w:val=\"")
@@ -1048,6 +1091,10 @@ static final char COLUMN_BREAK = '\u000B';
           .append(p.format.outlineLevel == 0 ? 9 : p.format.outlineLevel - 1)
           .append("\"/>");
     b.append(p.format.keepLines ? "<w:keepLines/>" : "<w:keepLines w:val=\"0\"/>");
+    if (!p.format.dropCap.isEmpty())
+      b.append("<w:framePr w:dropCap=\"").append(p.format.dropMode()).append("\" w:lines=\"")
+          .append(p.format.dropLines()).append("\" w:hSpace=\"").append(Math.round(p.format.dropDistance() * 20))
+          .append("\" w:wrap=\"around\" w:vAnchor=\"text\" w:hAnchor=\"text\"/>");
     b.append(p.format.widowControl ? "<w:widowControl/>" : "<w:widowControl w:val=\"0\"/>");
     for (String option : ParagraphFormat.ASIAN)
       if (!p.format.asian(option)) b.append("<w:").append(option).append(" w:val=\"0\"/>");

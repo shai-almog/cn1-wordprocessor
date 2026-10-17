@@ -4,6 +4,18 @@ import java.util.Map;
 
 /** Picture Format catalog ids. The picture is `block`, or the block holding the caret. */
 final class PictureCommands implements Commands.Extension {
+  /** Native image codec used by picture.compress; null in headless runs. */
+  interface Codec {
+    byte[] resample(
+        byte[] data, String mime, float cropL, float cropT, float cropR, float cropB, int maxW, int maxH);
+  }
+
+  private static volatile Codec codec;
+
+  static void codec(Codec value) {
+    codec = value;
+  }
+
   public void register(final Commands c) {
     c.register(
         "picture.crop",
@@ -56,6 +68,65 @@ final class PictureCommands implements Commands.Extension {
                   a.containsKey("contrast") ? Commands.integer(a, "contrast") : k.contrast,
                   k.transparency,
                   k.colorMode));
+          return null;
+        });
+    c.register(
+        "picture.effects",
+        "Artistic effect: none, blur, pencilSketch, posterize, negative, glowEdges or sharpen",
+        "block?:integer,effect:string",
+        true,
+        (s, a) -> {
+          int block = block(s, a);
+          s.pictureLook(block, picture(s, block).look.effect(Commands.str(a, "effect")));
+          return null;
+        });
+    c.register(
+        "picture.removeBackground",
+        "Make the border-connected background transparent; tolerance 0-100, or off:true to restore",
+        "block?:integer,tolerance?:integer,off?:boolean",
+        true,
+        (s, a) -> {
+          int block = block(s, a);
+          boolean off = a.containsKey("off") && (Boolean) a.get("off");
+          int tol = off ? -1 : a.containsKey("tolerance") ? Commands.integer(a, "tolerance") : 20;
+          s.pictureLook(block, picture(s, block).look.removeBackground(tol));
+          return null;
+        });
+    c.register(
+        "picture.compress",
+        "Compress pictures to a resolution (ppi, default 150) and optionally delete cropped areas",
+        "block?:integer,ppi?:integer,deleteCropped?:boolean",
+        true,
+        (s, a) -> {
+          Codec k = codec;
+          if (k == null)
+            throw new IllegalArgumentException("Picture compression needs the native image codec");
+          int block = block(s, a);
+          Picture old = picture(s, block);
+          int ppi = a.containsKey("ppi") ? Commands.integer(a, "ppi") : 150;
+          if (ppi < 1) throw new IllegalArgumentException("ppi must be positive");
+          boolean del = !a.containsKey("deleteCropped") || (Boolean) a.get("deleteCropped");
+          Picture.Look l = old.look;
+          int maxW = Math.max(1, Math.round(old.width * ppi / 72f));
+          int maxH = Math.max(1, Math.round(old.height * ppi / 72f));
+          byte[] out =
+              k.resample(
+                  old.bytes(),
+                  old.mime,
+                  del ? l.cropLeft : 0,
+                  del ? l.cropTop : 0,
+                  del ? l.cropRight : 0,
+                  del ? l.cropBottom : 0,
+                  maxW,
+                  maxH);
+          if (out == null || out.length == 0)
+            throw new IllegalArgumentException("Picture compression failed");
+          Picture next =
+              new Picture(
+                  old.id(), out, old.width, old.height, old.alt, old.align, del ? l.crop(0, 0, 0, 0) : l);
+          Selection keep = s.selection();
+          s.replaceDocument(s.document().blocks(s.document().blocks.set(block, next), s.document().nextId));
+          s.selectRange(keep.anchorBlock, keep.anchor, keep.block, keep.caret);
           return null;
         });
     c.register(

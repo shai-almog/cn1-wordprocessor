@@ -88,7 +88,103 @@ public class WordProcessor {
 
   public void init(Object context) {
     OfficeTheme.install();
+    PictureCommands.codec(WordProcessor::resample);
     recovery = RecoveryStore.local();
+    installOfficeServices();
+  }
+
+  /** Options, templates and Researcher persist in app storage; Researcher queries Wikipedia. */
+  private static void installOfficeServices() {
+    final Storage storage = Storage.getInstance();
+    Map<String, String> options = new LinkedHashMap<String, String>();
+    try {
+      if (storage.exists("wordprocessor-options.json"))
+        for (Map.Entry<String, Object> e : Json.parse(new String(readStorage(storage, "wordprocessor-options.json"), "UTF-8")).entrySet())
+          options.put(e.getKey(), String.valueOf(e.getValue()));
+    } catch (IOException ex) {
+      Log.e(ex);
+    }
+    AppOptions.install(
+        values -> {
+          try (OutputStream out = storage.createOutputStream("wordprocessor-options.json")) {
+            out.write(Json.write(new LinkedHashMap<String, Object>(values)).getBytes("UTF-8"));
+          } catch (IOException ex) {
+            Log.e(ex);
+          }
+        },
+        options);
+    Map<String, String> templates = new LinkedHashMap<String, String>();
+    for (String key : storage.listEntries())
+      if (key.startsWith("template-") && key.endsWith(".cn1xml"))
+        try {
+          templates.put(key.substring(9, key.length() - 7), new String(readStorage(storage, key), "UTF-8"));
+        } catch (IOException ex) {
+          Log.e(ex);
+        }
+    OfficeCommands.templates(
+        new OfficeCommands.TemplateStore() {
+          public void save(String name, String xml) throws IOException {
+            try (OutputStream out = storage.createOutputStream("template-" + name + ".cn1xml")) {
+              out.write(xml.getBytes("UTF-8"));
+            }
+          }
+
+          public void delete(String name) {
+            storage.deleteStorageFile("template-" + name + ".cn1xml");
+          }
+        },
+        templates);
+    OfficeCommands.research(WordProcessor::wikipedia);
+  }
+
+  private static byte[] readStorage(Storage storage, String key) throws IOException {
+    try (java.io.InputStream in = storage.createInputStream(key)) {
+      return com.codename1.io.Util.readInputStream(in);
+    }
+  }
+
+  /** Researcher: Wikipedia's search API (title, summary, URL), run off the EDT. */
+  static java.util.List<Map<String, String>> wikipedia(String query) throws IOException {
+    ConnectionRequest r = new ConnectionRequest();
+    r.setPost(false);
+    r.setUrl("https://en.wikipedia.org/w/api.php");
+    r.addArgument("action", "query");
+    r.addArgument("list", "search");
+    r.addArgument("srsearch", query);
+    r.addArgument("srlimit", "8");
+    r.addArgument("format", "json");
+    r.addRequestHeader("User-Agent", "CN1WordProcessor/1.0");
+    r.setFailSilently(true);
+    NetworkManager.getInstance().addToQueueAndWait(r);
+    if (r.getResponseCode() != 200 || r.getResponseData() == null)
+      throw new IOException("Researcher could not reach Wikipedia (" + r.getResponseCode() + ")");
+    Map<String, Object> json = Json.parse(new String(r.getResponseData(), "UTF-8"));
+    java.util.List<Map<String, String>> out = new ArrayList<Map<String, String>>();
+    Object q = json.get("query");
+    if (!(q instanceof Map)) return out;
+    Object hits = ((Map<?, ?>) q).get("search");
+    if (!(hits instanceof java.util.List)) return out;
+    String year = String.valueOf(java.util.Calendar.getInstance().get(java.util.Calendar.YEAR));
+    for (Object h : (java.util.List<?>) hits) {
+      if (!(h instanceof Map)) continue;
+      String title = String.valueOf(((Map<?, ?>) h).get("title"));
+      String snippet = String.valueOf(((Map<?, ?>) h).get("snippet"));
+      StringBuilder plain = new StringBuilder();
+      boolean tag = false;
+      for (char c : snippet.toCharArray()) {
+        if (c == '<') tag = true;
+        else if (c == '>') tag = false;
+        else if (!tag) plain.append(c);
+      }
+      Map<String, String> m = new LinkedHashMap<String, String>();
+      m.put("title", title);
+      m.put("author", "Wikipedia contributors");
+      m.put("year", year);
+      m.put("url", "https://en.wikipedia.org/wiki/" + com.codename1.io.Util.encodeUrl(title.replace(' ', '_')));
+      m.put("summary", plain.toString().replace("&quot;", "\"").replace("&amp;", "&"));
+      out.add(m);
+    }
+    return out;
   }
 
   public void start() {
@@ -126,6 +222,9 @@ public class WordProcessor {
     ribbon.addTab("Automate", automation());
     ribbon.addTab("Table Layout", tableRibbon());
     ribbon.setTabVisible("Table Layout", false);
+    customTab = OfficeTheme.row();
+    ribbon.addTab("Custom", customTab);
+    applyRibbonOptions();
     ribbon.select(0);
     if (OfficeTheme.mobile()) ribbon.toggleCollapsed();
     ribbon.actions(
@@ -244,6 +343,7 @@ public class WordProcessor {
     updateOutline();
     updateStatus();
     installMenu();
+    installCustomKeys();
     form.addSizeChangedListener(
         e ->
             Display.getInstance()
@@ -1231,7 +1331,13 @@ public class WordProcessor {
             formatting,
             insertion,
             view);
-    boolean apply = showDialog(footerPart ? "Footer" : "Header", body, "Apply", "Cancel");
+    boolean apply;
+    editingFurniture = true;
+    try {
+      apply = showDialog(footerPart ? "Footer" : "Header", body, "Apply", "Cancel");
+    } finally {
+      editingFurniture = false;
+    }
     capture.run();
     if (apply) {
       session.furniture(
@@ -3487,10 +3593,170 @@ public class WordProcessor {
             (a.containsKey("value") ? (Boolean) a.get("value") : !"all".equals(editor.getMarkup())) ? "all" : "none"));
     view("insert.editHeader", "Edit the page header", "", a -> Display.getInstance().callSerially(() -> editFurniture(false)));
     view("insert.editFooter", "Edit the page footer", "", a -> Display.getInstance().callSerially(() -> editFurniture(true)));
+    view("insert.closeHeader", "Close Header and Footer: keep the edits and return to the document body", "", a -> {
+      if (acceptOpenDialog == null || !editingFurniture) throw new IllegalStateException("No header or footer is being edited");
+      Display.getInstance().callSerially(acceptOpenDialog);
+    });
+    view("view.newWindow", "New Window: open (or close) a second synchronized view of this document", "", a -> toggleSecondView());
+    commands.register("file.exportPng", "Export the current page (or page N, 1-based) as a PNG image; returns base64", "page?:integer,width?:integer", false, (x, a) -> {
+      int page = a.containsKey("page") ? ((Number) a.get("page")).intValue() - 1 : currentPage();
+      int width = a.containsKey("width") ? ((Number) a.get("width")).intValue() : 1240;
+      if (width < 64 || width > 6000) throw new IllegalArgumentException("Width is 64-6000 pixels");
+      Image image = editor.renderPage(page, width);
+      ByteArrayOutputStream out = new ByteArrayOutputStream();
+      try {
+        com.codename1.ui.util.ImageIO.getImageIO().save(image, out, com.codename1.ui.util.ImageIO.FORMAT_PNG, 1);
+      } catch (IOException ex) {
+        throw new IllegalStateException("PNG export failed: " + ex.getMessage(), ex);
+      }
+      return Json.object("page", page + 1, "width", image.getWidth(), "height", image.getHeight(), "bytes", out.size(),
+          "base64", new String(com.codename1.util.Base64.encodeNoNewline(out.toByteArray())));
+    });
+    view("tools.customizeRibbon", "Customize Ribbon: hide or show a tab, add or remove a command on the Custom tab, or reset", "hide?:string,show?:string,add?:string,remove?:string,reset?:boolean", a -> {
+      java.util.List<String> hidden = optionList("ribbon.hidden"), custom = optionList("ribbon.custom");
+      if (Boolean.TRUE.equals(a.get("reset"))) {
+        hidden.clear();
+        custom.clear();
+      }
+      if (a.containsKey("hide")) {
+        String t = (String) a.get("hide");
+        if (!ribbon.titles().contains(t) || "Custom".equals(t)) throw new IllegalArgumentException("No ribbon tab " + t);
+        if (!hidden.contains(t)) hidden.add(t);
+      }
+      if (a.containsKey("show")) hidden.remove(a.get("show"));
+      if (a.containsKey("add")) {
+        String id = (String) a.get("add");
+        if (!commandIds().contains(id)) throw new IllegalArgumentException("Unknown command " + id);
+        if (!custom.contains(id)) custom.add(id);
+      }
+      if (a.containsKey("remove") && !custom.remove(a.get("remove"))) throw new IllegalArgumentException("Not on the Custom tab: " + a.get("remove"));
+      AppOptions.set("ribbon.hidden", joinComma(hidden));
+      AppOptions.set("ribbon.custom", joinComma(custom));
+      applyRibbonOptions();
+    });
+    view("tools.customizeKeyboard", "Customize Keyboard: assign a shortcut (e.g. ctrl+shift+K) to a command, remove one or list them", "keys?:string,command?:string,remove?:boolean", a -> {
+      java.util.List<String> bindings = optionList("keys.custom");
+      if (a.containsKey("keys")) {
+        String keys = normalizeKeys((String) a.get("keys"));
+        for (int i = bindings.size() - 1; i >= 0; i--) if (bindings.get(i).startsWith(keys + "=")) bindings.remove(i);
+        if (!Boolean.TRUE.equals(a.get("remove"))) {
+          String id = (String) a.get("command");
+          if (id == null || !commandIds().contains(id)) throw new IllegalArgumentException("Unknown command " + id);
+          bindings.add(keys + "=" + id);
+        }
+        AppOptions.set("keys.custom", joinComma(bindings));
+        installCustomKeys();
+      }
+    });
     view("view.vertical", "Lay pages out vertically", "", a -> {
       editor.setPagesAcross(1);
       zoomTo(editor.getZoom());
     });
+  }
+
+  /** Accepts the dialog currently shown by showDialog (Close Header and Footer). */
+  private Runnable acceptOpenDialog;
+
+  private boolean editingFurniture;
+
+  private EditorSurface secondView;
+
+  private Container secondPane;
+
+  private void toggleSecondView() {
+    Container documentPane = editor.getParent();
+    if (secondView != null) {
+      secondPane.remove();
+      secondView = null;
+      secondPane = null;
+    } else {
+      secondView = new EditorSurface(session, commands, this::edited, this::editCell);
+      secondView.setZoom(editor.getZoom());
+      secondPane = new Container(new BorderLayout());
+      Label title = OfficeTheme.label(session.document().title + ":2", 11, 0x555555);
+      secondPane.add(BorderLayout.NORTH, title);
+      secondPane.add(BorderLayout.CENTER, secondView);
+      secondPane.setPreferredW(Math.max(OfficeTheme.px(240), documentPane.getWidth() / 2));
+      documentPane.add(BorderLayout.EAST, secondPane);
+    }
+    form.revalidate();
+  }
+
+  private int currentPage() {
+    LayoutEngine.Result r = editor.layout();
+    Selection x = session.selection();
+    for (int p = 0; p < r.pages.size(); p++)
+      for (LayoutEngine.Line line : r.pages.get(p).lines)
+        if (line.block == x.block && x.caret >= line.start && x.caret <= line.end) return p;
+    return 0;
+  }
+
+  private static java.util.List<String> optionList(String key) {
+    java.util.List<String> out = new ArrayList<String>();
+    for (String v : TextUtil.split(AppOptions.get(key), ',')) if (!v.isEmpty()) out.add(v);
+    return out;
+  }
+
+  private static String joinComma(java.util.List<String> values) {
+    StringBuilder b = new StringBuilder();
+    for (String v : values) b.append(b.length() == 0 ? "" : ",").append(v);
+    return b.toString();
+  }
+
+  private java.util.List<String> commandIds() {
+    java.util.List<String> out = new ArrayList<String>();
+    for (Commands.Descriptor d : commands.descriptors()) out.add(d.id);
+    return out;
+  }
+
+  private Container customTab;
+
+  private void applyRibbonOptions() {
+    java.util.List<String> hidden = optionList("ribbon.hidden");
+    for (String t : ribbon.titles())
+      if (!"Table Layout".equals(t) && !"Custom".equals(t)) ribbon.setTabVisible(t, !hidden.contains(t));
+    customTab.removeAll();
+    java.util.List<String> custom = optionList("ribbon.custom");
+    for (final String id : custom) {
+      String label = id.substring(id.indexOf('.') + 1);
+      customTab.add(button(Character.toUpperCase(label.charAt(0)) + label.substring(1), () -> run(id, new LinkedHashMap<String, Object>())));
+    }
+    ribbon.setTabVisible("Custom", !custom.isEmpty());
+    ribbon.revalidate();
+  }
+
+  static String normalizeKeys(String keys) {
+    String[] parts = TextUtil.split(keys.trim().toLowerCase(), '+');
+    boolean ctrl = false, shift = false, alt = false;
+    String key = null;
+    for (String p : parts) {
+      if ("ctrl".equals(p) || "cmd".equals(p) || "control".equals(p) || "command".equals(p)) ctrl = true;
+      else if ("shift".equals(p)) shift = true;
+      else if ("alt".equals(p) || "option".equals(p)) alt = true;
+      else if (p.length() == 1 && key == null) key = p;
+      else throw new IllegalArgumentException("Shortcut is modifiers plus one key, e.g. ctrl+shift+K");
+    }
+    if (key == null || !ctrl && !alt) throw new IllegalArgumentException("Shortcuts need ctrl/cmd or alt and one key");
+    return (ctrl ? "ctrl+" : "") + (alt ? "alt+" : "") + (shift ? "shift+" : "") + key;
+  }
+
+  private final java.util.List<String> installedKeys = new ArrayList<String>();
+
+  private void installCustomKeys() {
+    for (String binding : optionList("keys.custom")) {
+      if (installedKeys.contains(binding)) continue;
+      installedKeys.add(binding);
+      int eq = binding.indexOf('=');
+      String keys = binding.substring(0, eq);
+      final String id = binding.substring(eq + 1);
+      int mods = (keys.indexOf("ctrl+") >= 0 ? Command.DESKTOP_SHORTCUT_MODIFIER_PRIMARY : 0)
+          | (keys.indexOf("shift+") >= 0 ? Command.DESKTOP_SHORTCUT_MODIFIER_SHIFT : 0)
+          | (keys.indexOf("alt+") >= 0 ? Command.DESKTOP_SHORTCUT_MODIFIER_ALT : 0);
+      menu("Custom", keys + "  " + id, keys.charAt(keys.length() - 1), mods, () -> {
+        // A later reassignment or removal disables this binding.
+        if (optionList("keys.custom").contains(binding)) run(id, new LinkedHashMap<String, Object>());
+      });
+    }
   }
 
   /** Line- and screen-relative caret movement needs the editor's layout, so it lives here. */
@@ -4282,13 +4548,18 @@ public class WordProcessor {
             dialog.dispose();
           }
         };
+    acceptOpenDialog = () -> accept.actionPerformed(null);
     Button acceptButton = new Button(accept);
     OfficeTheme.button(acceptButton);
     actions.add(acceptButton);
     dialog.setDefaultCommand(accept);
     dialog.add(BorderLayout.SOUTH, actions);
     styleDialogBody(dialog.getContentPane());
-    showOfficeDialog(dialog);
+    try {
+      showOfficeDialog(dialog);
+    } finally {
+      acceptOpenDialog = null;
+    }
     return accepted[0];
   }
 
@@ -5466,7 +5737,18 @@ public class WordProcessor {
     showDialog(title, area, "Close", null);
   }
 
+  private long lastFileAutosave = System.currentTimeMillis();
+
   private void autosave() {
+    long now = System.currentTimeMillis();
+    if (AppOptions.flag("autosave") && filePath != null && !saving && session.document() != fileDocument
+        && !session.isComposing() && now - lastEdit >= 1000
+        && now - lastFileAutosave >= Integer.parseInt(AppOptions.get("autosaveMinutes")) * 60000L) {
+      lastFileAutosave = now;
+      OfficeCommands.snapshot(session, "AutoSave");
+      save(fileFormat, false, true);
+      return;
+    }
     if (saving
         || session.isComposing()
         || session.revision() == savedRevision
@@ -5845,4 +6127,27 @@ public class WordProcessor {
     editor.setOutline(o);
   }
 
+
+  /** Crops and downsamples a picture with the native codec; PNG stays PNG, others become JPEG 0.85. */
+  static byte[] resample(
+      byte[] data, String mime, float cl, float ct, float cr, float cb, int maxW, int maxH) {
+    try {
+      com.codename1.ui.Image img = com.codename1.ui.Image.createImage(data, 0, data.length);
+      int w = img.getWidth(), h = img.getHeight();
+      int x = Math.round(w * cl), y = Math.round(h * ct);
+      int cw = Math.max(1, w - x - Math.round(w * cr)), ch = Math.max(1, h - y - Math.round(h * cb));
+      if (x > 0 || y > 0 || cw < w || ch < h) img = img.subImage(x, y, cw, ch, true);
+      if (cw > maxW || ch > maxH) {
+        float f = Math.min(maxW / (float) cw, maxH / (float) ch);
+        img = img.scaled(Math.max(1, Math.round(cw * f)), Math.max(1, Math.round(ch * f)));
+      }
+      boolean png = mime != null && mime.indexOf("png") >= 0;
+      java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+      com.codename1.ui.util.ImageIO.getImageIO()
+          .save(img, out, png ? com.codename1.ui.util.ImageIO.FORMAT_PNG : com.codename1.ui.util.ImageIO.FORMAT_JPEG, .85f);
+      return out.toByteArray();
+    } catch (java.io.IOException | RuntimeException e) {
+      return null;
+    }
+  }
 }

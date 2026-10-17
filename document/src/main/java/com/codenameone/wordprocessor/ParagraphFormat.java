@@ -27,6 +27,12 @@ public final class ParagraphFormat {
   /** Right-to-left paragraph direction (w:bidi): mirrors alignment and indents. */
   public final boolean rtl;
 
+  /**
+   * Drop cap: empty for none, else "mode,lines,distance,font" where mode is drop or margin, lines
+   * 1-10, distance from text in points and font empty for the paragraph's font.
+   */
+  public final String dropCap;
+
   /** Asian typography options switched off, from {@link #ASIAN}, comma separated. */
   public final String asianOff;
 
@@ -110,6 +116,25 @@ public final class ParagraphFormat {
       int shading,
       boolean rtl,
       String asianOff) {
+    this(right, first, tab, keep, widow, tabs, outlineLevel, lineRule, columnBreak, borders, shading, rtl, asianOff, "");
+  }
+
+  public ParagraphFormat(
+      float right,
+      float first,
+      float tab,
+      boolean keep,
+      boolean widow,
+      java.util.List<TabStop> tabs,
+      int outlineLevel,
+      String lineRule,
+      boolean columnBreak,
+      ParagraphBorders borders,
+      int shading,
+      boolean rtl,
+      String asianOff,
+      String dropCap) {
+    this.dropCap = dropCap(dropCap);
     StringBuilder off = new StringBuilder();
     for (String a : ASIAN)
       if (("," + asianOff + ",").contains("," + a + ","))
@@ -158,7 +183,47 @@ public final class ParagraphFormat {
         "borders".equals(key) ? ParagraphBorders.decode(value) : borders,
         "shading".equals(key) ? (value.isEmpty() ? -1 : Integer.parseInt(value, 16)) : shading,
         "rtl".equals(key) ? Boolean.parseBoolean(value) : rtl,
-        "asianOff".equals(key) ? value : asianOff);
+        "asianOff".equals(key) ? value : asianOff,
+        "dropCap".equals(key) ? value : dropCap);
+  }
+
+  /** Validates and normalizes a drop cap specification. */
+  public static String dropCap(String spec) {
+    if (spec == null || spec.trim().isEmpty() || "none".equals(spec.trim())) return "";
+    String[] f = TextUtil.split(spec, ',');
+    String mode = f[0].trim();
+    if (!"drop".equals(mode) && !"margin".equals(mode))
+      throw new IllegalArgumentException("Drop cap position is none, drop or margin");
+    int lines;
+    float distance;
+    try {
+      lines = f.length > 1 && !f[1].trim().isEmpty() ? Integer.parseInt(f[1].trim()) : 3;
+      distance = f.length > 2 && !f[2].trim().isEmpty() ? Float.parseFloat(f[2].trim()) : 0;
+    } catch (NumberFormatException e) {
+      throw new IllegalArgumentException("Invalid drop cap lines or distance");
+    }
+    if (lines < 1 || lines > 10) throw new IllegalArgumentException("Lines to drop is 1-10");
+    if (!(distance >= 0 && distance <= 144)) throw new IllegalArgumentException("Distance from text is 0-144 points");
+    String font = f.length > 3 ? f[3].trim() : "";
+    return mode + "," + lines + "," + (distance == (int) distance ? String.valueOf((int) distance) : String.valueOf(distance)) + "," + font;
+  }
+
+  public String dropMode() {
+    return dropCap.isEmpty() ? "none" : TextUtil.split(dropCap, ',')[0];
+  }
+
+  public int dropLines() {
+    return dropCap.isEmpty() ? 0 : Integer.parseInt(TextUtil.split(dropCap, ',')[1]);
+  }
+
+  public float dropDistance() {
+    return dropCap.isEmpty() ? 0 : Float.parseFloat(TextUtil.split(dropCap, ',')[2]);
+  }
+
+  public String dropFont() {
+    if (dropCap.isEmpty()) return "";
+    String[] f = TextUtil.split(dropCap, ',');
+    return f.length > 3 ? f[3] : "";
   }
 
   public boolean asian(String option) {

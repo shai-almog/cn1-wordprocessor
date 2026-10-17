@@ -142,7 +142,7 @@ final class OfficeTheme {
     Container group = group(caption, content);
     Component label = ((BorderLayout) group.getLayout()).getSouth();
     group.removeComponent(label);
-    Button button = new Button("↘");
+    Button button = new Button("\u2198");
     button(button);
     button.setAccessibilityText(caption + " dialog");
     button.addActionListener(e -> launch.run());
@@ -176,7 +176,7 @@ final class OfficeTheme {
     space(row, 3, 3, 5, 5);
     row.setScrollableX(true);
     row.setScrollVisible(false);
-    Button left = new Button("‹"), right = new Button("›");
+    Button left = new Button("\u2039"), right = new Button("\u203a");
     for (Button arrow : new Button[] {left, right}) {
       button(arrow);
       arrow.setPreferredW(px(18));

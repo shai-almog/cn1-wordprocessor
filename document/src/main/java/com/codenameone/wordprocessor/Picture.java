@@ -7,6 +7,9 @@ public final class Picture implements Block {
     public static final java.util.List<String> COLOR_MODES =
         java.util.Arrays.asList("color", "grayscale", "washout", "blackWhite");
 
+    public static final java.util.List<String> EFFECTS =
+        java.util.Arrays.asList("none", "blur", "pencilSketch", "posterize", "negative", "glowEdges", "sharpen");
+
     public static final Look NONE = new Look(0, 0, 0, 0, -1, 0, 0, false, false);
 
     /** Fractions of the source cut from each edge; their sum per axis stays below 0.95. */
@@ -27,6 +30,11 @@ public final class Picture implements Block {
 
     /** color, grayscale, washout or blackWhite. */
     public final String colorMode;
+
+    /** Artistic effect (one of EFFECTS) and background-removal tolerance 0-100, or -1 for off. */
+    public final String effect;
+
+    public final int backgroundTolerance;
 
     public Look(
         float cropLeft,
@@ -55,6 +63,30 @@ public final class Picture implements Block {
         int contrast,
         int transparency,
         String colorMode) {
+      this(cropLeft, cropTop, cropRight, cropBottom, borderColor, borderWidth, rotation, flipH, flipV,
+          brightness, contrast, transparency, colorMode, "none", -1);
+    }
+
+    public Look(
+        float cropLeft,
+        float cropTop,
+        float cropRight,
+        float cropBottom,
+        int borderColor,
+        float borderWidth,
+        int rotation,
+        boolean flipH,
+        boolean flipV,
+        int brightness,
+        int contrast,
+        int transparency,
+        String colorMode,
+        String effect,
+        int backgroundTolerance) {
+      if (!EFFECTS.contains(effect) || backgroundTolerance < -1 || backgroundTolerance > 100)
+        throw new IllegalArgumentException("Invalid picture effect");
+      this.effect = effect;
+      this.backgroundTolerance = backgroundTolerance;
       if (brightness < -100 || brightness > 100 || contrast < -100 || contrast > 100
           || transparency < 0 || transparency > 100 || !COLOR_MODES.contains(colorMode))
         throw new IllegalArgumentException("Invalid picture adjustment");
@@ -84,24 +116,33 @@ public final class Picture implements Block {
     }
 
     public Look crop(float l, float t, float r, float b) {
-      return new Look(l, t, r, b, borderColor, borderWidth, rotation, flipH, flipV, brightness, contrast, transparency, colorMode);
+      return new Look(l, t, r, b, borderColor, borderWidth, rotation, flipH, flipV, brightness, contrast, transparency, colorMode, effect, backgroundTolerance);
     }
 
     public Look border(int color, float width) {
-      return new Look(cropLeft, cropTop, cropRight, cropBottom, color, width, rotation, flipH, flipV, brightness, contrast, transparency, colorMode);
+      return new Look(cropLeft, cropTop, cropRight, cropBottom, color, width, rotation, flipH, flipV, brightness, contrast, transparency, colorMode, effect, backgroundTolerance);
     }
 
     public Look rotate(int degrees, boolean h, boolean v) {
-      return new Look(cropLeft, cropTop, cropRight, cropBottom, borderColor, borderWidth, degrees, h, v, brightness, contrast, transparency, colorMode);
+      return new Look(cropLeft, cropTop, cropRight, cropBottom, borderColor, borderWidth, degrees, h, v, brightness, contrast, transparency, colorMode, effect, backgroundTolerance);
     }
 
     /** Brightness and contrast -100..100, transparency 0..100 percent. */
     public Look adjust(int brightness, int contrast, int transparency, String colorMode) {
-      return new Look(cropLeft, cropTop, cropRight, cropBottom, borderColor, borderWidth, rotation, flipH, flipV, brightness, contrast, transparency, colorMode);
+      return new Look(cropLeft, cropTop, cropRight, cropBottom, borderColor, borderWidth, rotation, flipH, flipV, brightness, contrast, transparency, colorMode, effect, backgroundTolerance);
+    }
+
+    public Look effect(String name) {
+      return new Look(cropLeft, cropTop, cropRight, cropBottom, borderColor, borderWidth, rotation, flipH, flipV, brightness, contrast, transparency, colorMode, name, backgroundTolerance);
+    }
+
+    /** Tolerance 0-100, or -1 to keep the background. */
+    public Look removeBackground(int tolerance) {
+      return new Look(cropLeft, cropTop, cropRight, cropBottom, borderColor, borderWidth, rotation, flipH, flipV, brightness, contrast, transparency, colorMode, effect, tolerance);
     }
 
     public boolean adjusted() {
-      return brightness != 0 || contrast != 0 || transparency != 0 || !"color".equals(colorMode);
+      return !"none".equals(effect) || backgroundTolerance >= 0 || brightness != 0 || contrast != 0 || transparency != 0 || !"color".equals(colorMode);
     }
 
     @Override
@@ -120,7 +161,9 @@ public final class Picture implements Block {
           && brightness == k.brightness
           && contrast == k.contrast
           && transparency == k.transparency
-          && colorMode.equals(k.colorMode);
+          && colorMode.equals(k.colorMode)
+          && effect.equals(k.effect)
+          && backgroundTolerance == k.backgroundTolerance;
     }
 
     @Override
@@ -130,7 +173,7 @@ public final class Picture implements Block {
           ^ rotation << 20
           ^ (flipH ? 1 << 29 : 0)
           ^ (flipV ? 1 << 30 : 0)
-          ^ brightness * 31 ^ contrast * 131 ^ transparency * 7 ^ colorMode.hashCode();
+          ^ brightness * 31 ^ contrast * 131 ^ transparency * 7 ^ colorMode.hashCode() ^ effect.hashCode() * 17 ^ backgroundTolerance;
     }
   }
 

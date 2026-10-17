@@ -356,21 +356,33 @@ public final class LayoutEngine {
     int start, end;
     float width, height, markerOffset;
     boolean clipped;
+
+    /** Extra left offset beside a drop cap, and the baseline from the line top. */
+    float lead, baseline;
+
+    /** The first line of a drop-capped paragraph carries the large letter and its x offset. */
+    RawLine drop;
+
+    float dropX;
   }
 
   private static final class Cached {
     final float width;
     final List<RawLine> lines;
+    final boolean drop;
 
-    Cached(float w, List<RawLine> l) {
+    Cached(float w, List<RawLine> l, boolean drop) {
       width = w;
       lines = l;
+      this.drop = drop;
     }
   }
 
   private final MeasurementCache metrics;
   private Map<Paragraph, Cached> cache = new HashMap<Paragraph, Cached>();
   private Map<Paragraph, Cached> nextCache;
+  /** Automatic hyphenation ("hyphenation" document setting) and its capitalized-word option. */
+  private boolean hyphenate, hyphenateCaps = true;
   private int measured;
 
   public LayoutEngine(Metrics m) {
@@ -488,6 +500,11 @@ public final class LayoutEngine {
   }
 
   private List<RawLine> lines(Paragraph p, float width) {
+    return lines(p, width, false);
+  }
+
+  /** Body paragraphs honour drop caps; table cells, notes and frames lay the letter out inline. */
+  private List<RawLine> lines(Paragraph p, float width, boolean allowDrop) {
     width =
         Math.max(
             1,
@@ -497,20 +514,39 @@ public final class LayoutEngine {
                 - (p.list.isEmpty() ? 0 : 18 * (p.listLevel + 1)));
     Cached c = nextCache.get(p);
     if (c == null) c = cache.get(p);
-    if (c != null && c.width == width) {
+    boolean dropped = allowDrop && !p.format.dropCap.isEmpty() && p.text.length() > 0
+        && !Character.isWhitespace(p.text.charAt(0)) && !p.text.objectAt(0);
+    if (c != null && c.width == width && c.drop == dropped) {
       nextCache.put(p, c);
       return c.lines;
     }
     measured++;
     List<RawLine> out = new ArrayList<RawLine>();
     String text = p.text.toString();
+    int skip = 0, dropLines = 0;
+    float dropWidth = 0, letterWidth = 0;
+    TextStyle dropStyle = null;
+    if (dropped) {
+      skip = Graphemes.next(p.text, 0);
+      TextStyle base = p.text.styleAt(0);
+      dropLines = p.format.dropLines();
+      float spacing = "auto".equals(p.format.lineRule) ? p.lineSpacing : 1;
+      // Cap height (about 0.7 em) spans from the first line's top to the last dropped baseline.
+      float size = base.size * ((dropLines - 1) * 1.2f * spacing + .9f) / .7f;
+      dropStyle = base.with("size", String.valueOf(Math.round(size * 2) / 2f));
+      if (!p.format.dropFont().isEmpty()) dropStyle = dropStyle.with("font", p.format.dropFont());
+      letterWidth = metrics.width(text.substring(0, skip), dropStyle);
+      dropWidth = "drop".equals(p.format.dropMode()) ? letterWidth + p.format.dropDistance() : 0;
+    }
     int start = 0;
     do {
       RawLine line = new RawLine();
-      float available = Math.max(1, width - (start == 0 ? p.format.firstIndent : 0));
+      if (out.size() < dropLines) line.lead = dropWidth;
+      float available = Math.max(1, width - (start == 0 ? p.format.firstIndent : 0) - line.lead);
       line.start = start;
       line.height = metrics.height(TextStyle.DEFAULT);
-      int end = start, lastBreak = -1;
+      int end = start == 0 ? skip : start, lastBreak = -1;
+      boolean hyphenated = false;
       float x = 0;
       while (end < text.length()) {
         int count = Graphemes.next(p.text, end) - end;
@@ -528,7 +564,11 @@ public final class LayoutEngine {
                     ? tabWidth(p, text, end, x, start == 0 ? p.format.firstIndent : 0)
                     : clusterWidth(p, text, end, end + count);
         if (x + w > available && end > start) {
-          if (lastBreak > start) end = lastBreak;
+          int soft = hyphenate ? hyphenPoint(p, text, start, Math.max(lastBreak, start), end, available) : -1;
+          if (soft > 0) {
+            end = soft;
+            hyphenated = true;
+          } else if (lastBreak > start) end = lastBreak;
           break;
         }
         x += w;
@@ -539,7 +579,7 @@ public final class LayoutEngine {
         end = Graphemes.next(p.text, end);
       line.end = end;
       float pos = 0;
-      int a = start;
+      int a = start == 0 ? skip : start;
       while (a < end) {
         TextStyle s = p.text.styleAt(a);
         int b = a + 1;
@@ -562,6 +602,10 @@ public final class LayoutEngine {
                     ? tabWidth(p, text, a, pos, start == 0 ? p.format.firstIndent : 0)
                     : metrics.width(p.text.displayAt(a, chunk), s);
         String display = p.text.displayAt(a, chunk);
+        if (hyphenated && b == end) {
+          display += "-";
+          w += metrics.width("-", s);
+        }
         if ("\t".equals(chunk)) {
           TabStop stop = nextTab(p, pos + (start == 0 ? p.format.firstIndent : 0));
           display = stop == null ? "" : leader(stop.glyph(), s, w);
@@ -601,6 +645,7 @@ public final class LayoutEngine {
           line.height = Math.max(line.height, (top + metrics.height(span.glyphStyle)));
       }
       line.markerOffset = baseline - metrics.ascent(TextStyle.DEFAULT);
+      line.baseline = baseline;
       float natural = line.height;
       if ("auto".equals(p.format.lineRule)) line.height *= p.lineSpacing;
       else {
@@ -629,9 +674,62 @@ public final class LayoutEngine {
       start = end;
       if (start < text.length() && text.charAt(start) == '\n') start++;
     } while (start < text.length());
-    c = new Cached(width, out);
+    if (dropped) {
+      int n = Math.min(dropLines, out.size());
+      float y = 0;
+      for (int i = 0; i < n - 1; i++) y += out.get(i).height;
+      RawLine letter = new RawLine();
+      letter.start = 0;
+      letter.end = skip;
+      letter.width = letterWidth;
+      float top = y + out.get(n - 1).baseline - metrics.ascent(dropStyle);
+      letter.spans.add(new Span(text.substring(0, skip), dropStyle, 0, 0, letterWidth, top));
+      RawLine first = out.get(0);
+      first.drop = letter;
+      first.dropX = "margin".equals(p.format.dropMode()) ? -(letterWidth + p.format.dropDistance()) : 0;
+      // A paragraph shorter than the drop still clears the letter.
+      float bottom = top + metrics.height(dropStyle) * .8f;
+      if (out.size() < dropLines && y + out.get(n - 1).height < bottom)
+        out.get(n - 1).height = bottom - y;
+    }
+    c = new Cached(width, out, dropped);
     nextCache.put(p, c);
     return out;
+  }
+
+  /**
+   * The last hyphenation point of the word that overflows the line (it starts at {@code from},
+   * {@code overflow} is the first cluster that did not fit) where the text plus a hyphen still
+   * fits, or -1. Only plain letter runs are hyphenated.
+   */
+  private int hyphenPoint(Paragraph p, String text, int lineStart, int from, int overflow, float available) {
+    int we = overflow;
+    while (we < text.length() && Character.isLetter(text.charAt(we))) we++;
+    int ws = from;
+    if (overflow >= text.length() || !Character.isLetter(text.charAt(overflow))) return -1;
+    for (int i = ws; i < we; i++) {
+      if (!Character.isLetter(text.charAt(i)) && text.charAt(i) != '\'') return -1;
+      if (p.text.objectAt(i) || p.text.styleAt(i).characters.hidden) return -1;
+    }
+    String word = text.substring(ws, we);
+    if (!hyphenateCaps && Character.isUpperCase(word.charAt(0))) return -1;
+    int[] points = Hyphenator.points(word);
+    for (int k = points.length - 1; k >= 0; k--) {
+      int at = ws + points[k];
+      if (at <= lineStart || at > overflow) continue;
+      float w = 0;
+      for (int a = lineStart; a < at; ) {
+        int count = Graphemes.next(p.text, a) - a;
+        w +=
+            "\t".equals(text.substring(a, a + count))
+                ? 0
+                : clusterWidth(p, text, a, a + count);
+        a += count;
+      }
+      if (text.indexOf('\t', lineStart) >= 0 && text.indexOf('\t', lineStart) < at) return -1;
+      if (w + metrics.width("-", p.text.styleAt(at - 1)) <= available) return at;
+    }
+    return -1;
   }
 
   // Keep a cluster on one line even when a formatting boundary divides its glyphs.
@@ -797,6 +895,11 @@ public final class LayoutEngine {
   private Result layoutOnce(Document doc, long revision) {
     nextCache = new HashMap<Paragraph, Cached>();
     measured = 0;
+    boolean auto = "automatic".equals(doc.properties.setting("hyphenation", ""));
+    boolean caps = !"false".equals(doc.properties.setting("hyphenation.caps", ""));
+    if (auto != hyphenate || caps != hyphenateCaps) cache = new HashMap<Paragraph, Cached>();
+    hyphenate = auto;
+    hyphenateCaps = caps;
     List<Section.Range> ranges = doc.sectionRanges();
     List<Document> contexts = new ArrayList<Document>();
     float[][] heights = new float[ranges.size()][2];
@@ -1327,7 +1430,7 @@ public final class LayoutEngine {
                     spec.width, spec.height, spec.top, spec.right + wrapRight, spec.bottom,
                     spec.left + wrapLeft);
       }
-      List<RawLine> ls = lines(p, spec.contentWidth());
+      List<RawLine> ls = lines(p, spec.contentWidth(), index >= 0);
       if (gridPitch > 0 && index >= 0) {
         // Snap each line to whole grid pitches; copies keep the measured cache unchanged.
         List<RawLine> snapped = new ArrayList<RawLine>();
@@ -1340,6 +1443,10 @@ public final class LayoutEngine {
           c.width = l.width;
           c.markerOffset = l.markerOffset;
           c.clipped = l.clipped;
+          c.lead = l.lead;
+          c.baseline = l.baseline;
+          c.drop = l.drop;
+          c.dropX = l.dropX;
           c.height = (float) Math.ceil(l.height / gridPitch - .01f) * gridPitch;
           snapped.add(c);
         }
@@ -1398,12 +1505,15 @@ public final class LayoutEngine {
           segWidth = spec.contentWidth();
         }
         float firstIndent = l.start == 0 ? p.format.firstIndent : 0;
-        float x = spec.left + indent + firstIndent;
+        float x = spec.left + indent + firstIndent + l.lead;
         if ("center".equals(p.align))
-          x += (spec.contentWidth() - indent - p.format.rightIndent - firstIndent - l.width) / 2;
+          x += (spec.contentWidth() - indent - p.format.rightIndent - firstIndent - l.lead - l.width) / 2;
         if ("right".equals(p.align))
-          x += spec.contentWidth() - indent - p.format.rightIndent - firstIndent - l.width;
+          x += spec.contentWidth() - indent - p.format.rightIndent - firstIndent - l.lead - l.width;
         current.add(new Line(index, -1, -1, p.id, pages.size(), x, y, l, marker));
+        // After the first line, so caret lookups for offset 0 find the text line first.
+        if (l.drop != null)
+          current.add(new Line(index, -1, -1, p.id, pages.size(), spec.left + indent + l.dropX, y, l.drop, ""));
         marker = "";
         y += l.height;
         segBottom = y;

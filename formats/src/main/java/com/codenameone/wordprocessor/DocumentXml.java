@@ -133,7 +133,8 @@ public final class DocumentXml {
               .append('"');
         if (look != null && look.adjusted())
           b.append(" adjust=\"").append(look.brightness).append(',').append(look.contrast).append(',')
-              .append(look.transparency).append(',').append(look.colorMode).append('"');
+              .append(look.transparency).append(',').append(look.colorMode).append(',')
+              .append(look.effect).append(',').append(look.backgroundTolerance).append('"');
         if (picture.drawing != null)
           b.append(" drawing=\"").append(Xml.attribute(picture.drawing.encode())).append('"');
         b.append(">")
@@ -298,6 +299,7 @@ public final class DocumentXml {
     if (p.format.columnBreak) b.append(" columnBreak=\"true\"");
     if (p.format.rtl) b.append(" rtl=\"true\"");
     if (!p.format.asianOff.isEmpty()) b.append(" asianOff=\"").append(p.format.asianOff).append('"');
+    if (!p.format.dropCap.isEmpty()) b.append(" dropCap=\"").append(Xml.escape(p.format.dropCap)).append('"');
     if (!p.format.borders.isEmpty())
       b.append(" borders=\"").append(p.format.borders.encode()).append('"');
     if (p.format.shading >= 0)
@@ -397,7 +399,9 @@ public final class DocumentXml {
     String value = Xml.attr(c, "adjust", "");
     if (value.isEmpty()) return look;
     String[] v = TextUtil.split(value, ',');
-    return look.adjust(Integer.parseInt(v[0]), Integer.parseInt(v[1]), Integer.parseInt(v[2]), v[3]);
+    Picture.Look k = look.adjust(Integer.parseInt(v[0]), Integer.parseInt(v[1]), Integer.parseInt(v[2]), v[3]);
+    if (v.length > 5) k = k.effect(v[4]).removeBackground(Integer.parseInt(v[5]));
+    return k;
   }
 
   public static Document read(String xml) throws IOException {
@@ -660,7 +664,8 @@ public final class DocumentXml {
                         ? -1
                         : Integer.parseInt(Xml.attr(e, "shading", ""), 16),
                     flag(e, "rtl"),
-                    Xml.attr(e, "asianOff", "")))
+                    Xml.attr(e, "asianOff", ""),
+                    Xml.attr(e, "dropCap", "")))
             .breakRevision(RevisionFormats.nativeRead(e, "break-"));
     Revision change = RevisionFormats.nativeRead(e, "format-");
     if (change != null) {
