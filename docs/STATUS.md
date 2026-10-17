@@ -294,3 +294,10 @@ The final source passes 311 reactor tests and the Mac/iPhone/Android comparison 
 Linux ARM64 builds through the standard local Maven/ParparVM target in an isolated Ubuntu 22.04 container. The review binary uses RelWithDebInfo without release LTO and opt-in loopback MCP; it is not a performance/release-size baseline. Thirty-seven Linux checks pass: seven comparison, thirteen Mailings, thirteen XTest document keyboard/Unicode/clipboard checks and four dialog input/focus/field-isolation checks. Exact original XML and Mailings recipient state were restored. Xvfb without a window manager does not certify title controls, physical input, printing or native file dialogs.
 
 All agent-owned review applications and containers, the disposable Android emulator, browser test tab and preview server were stopped after validation. The archive `artifacts/parity-20261016-comparison` contains source hashes, platform bundles, native screenshots, logs and paired results. Full Wordcraft parity, physical-device/Windows acceptance and final matched performance/size/source-token numbers remain unfinished.
+
+## Newspaper columns
+
+Sections carry 1-12 columns, with spacing, an optional separator rule and unequal widths. Paragraphs can start with a column break. These round-trip through native XML and DOCX (`w:cols`, `w:br w:type="column"`) and are covered by `ColumnsFormatTest` and `ColumnsLayoutTest`. Columns are set from Layout > Columns or with `layout.columns` / `layout.columnBreak`. Limitations:
+- Columns are not balanced before a continuous section break.
+- A column break in the middle of a DOCX paragraph moves to the paragraph start, with a warning.
+- The native visual check is still pending, so the matrix rows remain unverified.
