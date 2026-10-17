@@ -655,6 +655,13 @@ public final class EditorSurface extends Container
       g.fillRect(x + 3, y + 4, pw, ph);
       g.setColor(0xffffff);
       g.fillRect(x, y, pw, ph);
+      g.setColor(0x242424);
+      for (float[] rule : page.columnRules)
+        g.drawLine(
+            x + Math.round(rule[0] * scale),
+            y + Math.round(rule[1] * scale),
+            x + Math.round(rule[0] * scale),
+            y + Math.round(rule[2] * scale));
       for (LayoutEngine.PlacedPicture pic : page.pictures) {
         Image image = picture(pic.picture);
         if (image == null) {

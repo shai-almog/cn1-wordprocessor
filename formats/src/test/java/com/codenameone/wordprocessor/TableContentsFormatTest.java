@@ -40,7 +40,7 @@ public class TableContentsFormatTest {
   @Test public void wordcraftComplexContentsRemainEditableAndReexportAsRange() throws Exception {
     Docx.Opened opened = Docx.read(getClass().getResourceAsStream("/wordcraft-contents.docx"));
     assertEquals(new java.util.LinkedHashSet<String>(java.util.Arrays.asList(
-        "Character feature: kern", "Section feature: cols",
+        "Character feature: kern",
          "Paragraph feature: contextualSpacing", "Paragraph feature: pBdr")),
         new java.util.LinkedHashSet<String>(opened.warnings));
     Document d = opened.document;

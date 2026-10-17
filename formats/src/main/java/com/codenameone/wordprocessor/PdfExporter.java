@@ -177,6 +177,17 @@ public final class PdfExporter {
       PageSpec spec = page.spec;
       StringBuilder content = new StringBuilder(), imageResources = new StringBuilder();
       int imageIndex = 0;
+      for (float[] rule : page.columnRules)
+        content
+            .append("q 0.5 w 0 0 0 RG ")
+            .append(n(rule[0]))
+            .append(' ')
+            .append(n(spec.height - rule[1]))
+            .append(" m ")
+            .append(n(rule[0]))
+            .append(' ')
+            .append(n(spec.height - rule[2]))
+            .append(" l S Q\n");
       for (LayoutEngine.PlacedPicture pic : page.pictures) {
         String name = "Im" + (imageIndex++);
         imageResources

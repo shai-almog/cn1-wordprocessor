@@ -148,6 +148,9 @@ public final class LayoutEngine {
     public final List<Box> boxes;
     public final List<PlacedPicture> pictures;
 
+    /** Column separator lines as {x, top, bottom} in points. */
+    public final List<float[]> columnRules = new ArrayList<float[]>();
+
     Page(
         PageSpec spec,
         int section,
@@ -757,8 +760,7 @@ public final class LayoutEngine {
       Page page = b.pages.get(i);
       Document context = contexts.get(page.section);
       PageSpec body = bodies[page.section];
-      b.pages.set(
-          i,
+      Page rebuilt =
           new Page(
               page.spec,
               page.section,
@@ -785,7 +787,9 @@ public final class LayoutEngine {
                   b.pages.size(),
                   body.bottom - context.furniture.footerDistance,
                   warnings),
-              page.notes));
+              page.notes);
+      rebuilt.columnRules.addAll(page.columnRules);
+      b.pages.set(i, rebuilt);
     }
     cache = nextCache;
     return new Result(doc, b.pages, measured, revision, warnings);
@@ -892,6 +896,12 @@ public final class LayoutEngine {
 
   private final class Builder {
     PageSpec spec, paper, pagePaper;
+    // Newspaper columns: spec is the current column's geometry inside body.
+    PageSpec body;
+    Columns columns = Columns.ONE;
+    int column;
+    float columnTop, regionBottom;
+    final List<float[]> rules = new ArrayList<float[]>();
     int section, sectionFirstPage, owner, ownerFirstPage, number = 1;
     final List<Page> pages = new ArrayList<Page>();
     List<Line> current = new ArrayList<Line>();
@@ -1040,9 +1050,11 @@ public final class LayoutEngine {
         paper = pagePaper = value.page;
         if (value.pageStart > 0) number = value.pageStart;
         y = spec.top;
+        startColumns(body, value.columns, y);
         return;
       }
       finishSectionNotes();
+      closeRegion();
       boolean continuous =
           "continuous".equals(value.start)
               && paper.width == value.page.width
@@ -1072,12 +1084,63 @@ public final class LayoutEngine {
         pagePaper = paper;
         y = spec.top;
         if (restart > 0) number = restart;
-      } else y = Math.max(y, spec.top);
+      } else y = Math.max(Math.max(y, regionBottom), spec.top);
+      startColumns(body, value.columns, y);
+    }
+
+    void startColumns(PageSpec area, Columns value, float top) {
+      body = area;
+      columns = value;
+      column = 0;
+      columnTop = regionBottom = top;
+      spec = columnSpec(0);
+    }
+
+    PageSpec columnSpec(int index) {
+      if (columns.count == 1) return body;
+      float[] g = columns.layout(body.contentWidth())[index];
+      return new PageSpec(
+          body.width,
+          body.height,
+          body.top,
+          Math.max(0, body.width - body.left - g[0] - g[1]),
+          body.bottom,
+          body.left + g[0]);
+    }
+
+    /** Continue in the next column of this page, or on a new page after the last one. */
+    void nextColumn() {
+      if (column + 1 >= columns.count) {
+        newPage();
+        return;
+      }
+      regionBottom = Math.max(regionBottom, y);
+      column++;
+      spec = columnSpec(column);
+      y = columnTop;
+    }
+
+    /** Record separator rules for the column region ending here. */
+    void closeRegion() {
+      regionBottom = Math.max(regionBottom, y);
+      if (!columns.separator || columns.count < 2 || regionBottom <= columnTop) return;
+      float[][] g = columns.layout(body.contentWidth());
+      for (int i = 0; i + 1 < g.length; i++) {
+        float x = body.left + (g[i][0] + g[i][1] + g[i + 1][0]) / 2;
+        rules.add(new float[] {x, columnTop, regionBottom});
+      }
+    }
+
+    Page page(Page value) {
+      value.columnRules.addAll(rules);
+      rules.clear();
+      return value;
     }
 
     void newPage() {
+      closeRegion();
       pages.add(
-          new Page(
+          page(new Page(
               pagePaper,
               owner,
               pages.size() - ownerFirstPage,
@@ -1087,7 +1150,7 @@ public final class LayoutEngine {
               pictures,
               Collections.<Line>emptyList(),
               Collections.<Line>emptyList(),
-              placedNotes()));
+              placedNotes())));
       current = new ArrayList<Line>();
       boxes = new ArrayList<Box>();
       pictures = new ArrayList<PlacedPicture>();
@@ -1096,18 +1159,20 @@ public final class LayoutEngine {
       owner = section;
       ownerFirstPage = sectionFirstPage;
       pagePaper = paper;
+      if (body != null) startColumns(body, columns, y);
       continuationNotes();
     }
 
     void room(float height) {
       while (y + height + noteHeight > spec.height - spec.bottom
-          && (y > spec.top || !footnotes.isEmpty())) newPage();
+          && (y > spec.top || !footnotes.isEmpty() || column + 1 < columns.count)) nextColumn();
     }
 
     void paragraph(Paragraph p, int index, Paragraph following) {
       String marker = numbering.next(p);
       float indent = p.indent + (p.list.isEmpty() ? 0 : 18 * (p.listLevel + 1));
       if (p.pageBreak && y > spec.top) newPage();
+      else if (p.format.columnBreak && index >= 0) nextColumn();
       List<RawLine> ls = lines(p, spec.contentWidth());
       float pageHeight = spec.height - spec.top - spec.bottom;
       if (p.keepNext && following != null && !following.pageBreak) {
@@ -1369,7 +1434,7 @@ public final class LayoutEngine {
 
     void newTablePage(
         int index, boolean repeat, List<CellLayout> headers, float[] tops, float headerHeight) {
-      newPage();
+      nextColumn();
       if (repeat && !headers.isEmpty()) {
         emitCells(headers, index, tops, 0, headerHeight);
         y += headerHeight;
@@ -1427,8 +1492,9 @@ public final class LayoutEngine {
       finishSectionNotes();
       while (!pendingNotes.isEmpty()) newPage();
       appendEndnotes(endnotes);
+      closeRegion();
       pages.add(
-          new Page(
+          page(new Page(
               pagePaper,
               owner,
               pages.size() - ownerFirstPage,
@@ -1438,7 +1504,7 @@ public final class LayoutEngine {
               pictures,
               Collections.<Line>emptyList(),
               Collections.<Line>emptyList(),
-              placedNotes()));
+              placedNotes())));
     }
   }
 }

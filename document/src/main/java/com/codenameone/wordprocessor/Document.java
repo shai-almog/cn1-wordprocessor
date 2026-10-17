@@ -30,6 +30,7 @@ public final class Document {
         "nextPage",
         0,
         NoteOptions.EMPTY,
+        Columns.ONE,
         NoteOptions.DEFAULT,
         Collections.<String, Section>emptyMap(),
         false,
@@ -53,6 +54,7 @@ public final class Document {
         "nextPage",
         0,
         NoteOptions.EMPTY,
+        Columns.ONE,
         NoteOptions.DEFAULT,
         Collections.<String, Section>emptyMap(),
         false,
@@ -70,6 +72,7 @@ public final class Document {
       String sectionStart,
       int pageStart,
       NoteOptions sectionNotes,
+      Columns sectionColumns,
       NoteOptions notes,
       Map<String, Section> sections,
       boolean trackChanges,
@@ -81,7 +84,7 @@ public final class Document {
     this.trackChanges = trackChanges;
     this.furniture = furniture;
     this.sections = sections;
-    lastSection = new Section(page, furniture, sectionStart, pageStart, sectionNotes);
+    lastSection = new Section(page, furniture, sectionStart, pageStart, sectionNotes, sectionColumns);
     this.comments = comments;
     this.styles = styles;
     if (blocks == null || page == null || title == null || blocks.size() == 0 || nextId < 1)
@@ -104,6 +107,7 @@ public final class Document {
         lastSection.start,
         lastSection.pageStart,
         lastSection.notes,
+        lastSection.columns,
         notes,
         sections,
         enabled,
@@ -140,6 +144,7 @@ public final class Document {
         lastSection.start,
         lastSection.pageStart,
         lastSection.notes,
+        lastSection.columns,
         notes,
         kept,
         trackChanges,
@@ -158,6 +163,7 @@ public final class Document {
         lastSection.start,
         lastSection.pageStart,
         lastSection.notes,
+        lastSection.columns,
         notes,
         sections,
         trackChanges,
@@ -176,6 +182,7 @@ public final class Document {
         lastSection.start,
         lastSection.pageStart,
         lastSection.notes,
+        lastSection.columns,
         notes,
         sections,
         trackChanges,
@@ -194,6 +201,7 @@ public final class Document {
         lastSection.start,
         lastSection.pageStart,
         lastSection.notes,
+        lastSection.columns,
         notes,
         sections,
         trackChanges,
@@ -219,6 +227,7 @@ public final class Document {
         lastSection.start,
         lastSection.pageStart,
         lastSection.notes,
+        lastSection.columns,
         notes,
         sections,
         trackChanges,
@@ -242,6 +251,7 @@ public final class Document {
         lastSection.start,
         lastSection.pageStart,
         lastSection.notes,
+        lastSection.columns,
         notes,
         sections,
         trackChanges,
@@ -263,6 +273,7 @@ public final class Document {
             lastSection.start,
             lastSection.pageStart,
         lastSection.notes,
+        lastSection.columns,
         notes,
             sections,
             trackChanges,
@@ -286,6 +297,7 @@ public final class Document {
         last.start,
         last.pageStart,
         last.notes,
+        last.columns,
         notes,
         Collections.unmodifiableMap(new LinkedHashMap<String, Section>(value)),
         trackChanges,
@@ -326,12 +338,12 @@ public final class Document {
 
   public Document notes(NoteOptions value) {
     return new Document(blocks, page, title, nextId, comments, styles, furniture, lastSection.start,
-        lastSection.pageStart, lastSection.notes, value, sections, trackChanges, bookmarks, bibliography);
+        lastSection.pageStart, lastSection.notes, lastSection.columns, value, sections, trackChanges, bookmarks, bibliography);
   }
 
   public Document bibliography(Bibliography value) {
     return new Document(blocks, page, title, nextId, comments, styles, furniture, lastSection.start,
-        lastSection.pageStart, lastSection.notes, notes, sections, trackChanges, bookmarks, value);
+        lastSection.pageStart, lastSection.notes, lastSection.columns, notes, sections, trackChanges, bookmarks, value);
   }
 
   public String plainText() {

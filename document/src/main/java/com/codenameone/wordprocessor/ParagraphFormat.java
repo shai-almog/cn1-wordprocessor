@@ -14,6 +14,9 @@ public final class ParagraphFormat {
 
   public final java.util.List<TabStop> tabs;
 
+  /** Start this paragraph at the top of the next newspaper column (a DOCX column break). */
+  public final boolean columnBreak;
+
   public ParagraphFormat(float right, float first, float tab, boolean keep, boolean widow) {
     this(right, first, tab, keep, widow, java.util.Collections.<TabStop>emptyList());
   }
@@ -48,6 +51,20 @@ public final class ParagraphFormat {
       java.util.List<TabStop> tabs,
       int outlineLevel,
       String lineRule) {
+    this(right, first, tab, keep, widow, tabs, outlineLevel, lineRule, false);
+  }
+
+  public ParagraphFormat(
+      float right,
+      float first,
+      float tab,
+      boolean keep,
+      boolean widow,
+      java.util.List<TabStop> tabs,
+      int outlineLevel,
+      String lineRule,
+      boolean columnBreak) {
+    this.columnBreak = columnBreak;
     if (!java.util.Arrays.asList("auto", "exact", "atLeast").contains(lineRule))
       throw new IllegalArgumentException("Invalid line spacing rule");
     this.lineRule = lineRule;
@@ -77,6 +94,7 @@ public final class ParagraphFormat {
         "widowControl".equals(key) ? Boolean.parseBoolean(value) : widowControl,
         "tabs".equals(key) ? TabStop.decode(value) : tabs,
         "outlineLevel".equals(key) ? Integer.parseInt(value) : outlineLevel,
-        "lineRule".equals(key) ? value : lineRule);
+        "lineRule".equals(key) ? value : lineRule,
+        "columnBreak".equals(key) ? Boolean.parseBoolean(value) : columnBreak);
   }
 }

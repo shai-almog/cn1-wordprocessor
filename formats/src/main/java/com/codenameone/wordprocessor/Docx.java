@@ -218,6 +218,11 @@ public final class Docx {
     return TableFormats.readDocx(table, new Table("t" + id[0]++, rows, merges), warnings);
   }
 
+  /** Placeholder for w:br type="column" while runs are read; never stored in a document. */
+static final char COLUMN_BREAK = '\u000B';
+
+  static final String COLUMN_BREAK_TEXT = String.valueOf(COLUMN_BREAK);
+
   private static float twips(Element e, String key, int fallback) {
     return Float.parseFloat(Xml.attr(e, key, Integer.toString(fallback))) / 20f;
   }
@@ -330,6 +335,12 @@ public final class Docx {
     text =
         DocxFields.read(
             e, (run, link) -> run(run, warnings, styles, paragraphStyle, link), links, warnings);
+    for (int at = text.plainText().indexOf(COLUMN_BREAK); at >= 0;
+        at = text.plainText().indexOf(COLUMN_BREAK)) {
+      if (at > 0) warnings.add("Mid-paragraph column break moved to paragraph start");
+      text = text.replace(at, at + 1, new RichText());
+      layout = layout.with("columnBreak", "true");
+    }
     if (!listId.isEmpty() && !"0".equals(listId)) {
       DocxLists.Definition definition = lists.take(listId, listLevel);
       if (definition == null) warnings.add("Unresolved list numbering");
@@ -423,7 +434,10 @@ public final class Docx {
       String k = Xml.local(c);
       if ("t".equals(k) || "delText".equals(k)) b.append(Xml.text(c));
       else if ("tab".equals(k)) b.append('\t');
-      else if ("br".equals(k) || "cr".equals(k)) {
+      else if ("br".equals(k) && "column".equals(Xml.attr(c, "type", ""))) {
+        // Becomes ParagraphFormat.columnBreak once the paragraph is assembled.
+        b.append(COLUMN_BREAK);
+      } else if ("br".equals(k) || "cr".equals(k)) {
         b.append('\n');
         if ("page".equals(Xml.attr(c, "type", "")))
           warnings.add("Inline page break converted to line break");
@@ -752,6 +766,21 @@ public final class Docx {
         .append("\"/>");
     if (section.pageStart > 0)
       b.append("<w:pgNumType w:start=\"").append(section.pageStart).append("\"/>");
+    Columns c = section.columns;
+    if (!c.equals(Columns.ONE)) {
+      b.append("<w:cols w:num=\"").append(c.count).append("\" w:space=\"")
+          .append(Math.round(c.space * 20)).append("\" w:sep=\"").append(c.separator ? 1 : 0)
+          .append("\" w:equalWidth=\"").append(c.equalWidth() ? 1 : 0).append("\"");
+      float[] w = c.widths();
+      if (w.length == 0) b.append("/>");
+      else {
+        b.append(">");
+        for (int i = 0; i < w.length; i += 2)
+          b.append("<w:col w:w=\"").append(Math.round(w[i] * 20)).append("\" w:space=\"")
+              .append(Math.round(w[i + 1] * 20)).append("\"/>");
+        b.append("</w:cols>");
+      }
+    }
     return b.append("</w:sectPr>").toString();
   }
 
@@ -761,7 +790,27 @@ public final class Docx {
     PageSpec page = PageSpec.A4;
     String start = "nextPage";
     int pageStart = 0;
+    Columns columns = Columns.ONE;
     if (e != null) {
+      Element cols = Xml.child(e, "cols");
+      if (cols != null) {
+        try {
+          List<Element> each = Xml.children(cols, "col");
+          boolean equal = !"0".equals(Xml.attr(cols, "equalWidth", "1"))
+              && !"false".equals(Xml.attr(cols, "equalWidth", "1"));
+          int count = Integer.parseInt(Xml.attr(cols, "num", equal || each.isEmpty() ? "1" : "" + each.size()));
+          float[] widths = new float[equal || each.isEmpty() ? 0 : each.size() * 2];
+          for (int i = 0; i < widths.length / 2; i++) {
+            widths[i * 2] = twips(each.get(i), "w", 0);
+            widths[i * 2 + 1] = twips(each.get(i), "space", 0);
+          }
+          if (widths.length > 0) count = widths.length / 2;
+          String sep = Xml.attr(cols, "sep", "0");
+          columns = new Columns(count, twips(cols, "space", 720), "1".equals(sep) || "true".equals(sep), widths);
+        } catch (RuntimeException ex) {
+          warnings.add("Invalid section columns");
+        }
+      }
       Element size = Xml.child(e, "pgSz"),
           margin = Xml.child(e, "pgMar"),
           type = Xml.child(e, "type"),
@@ -803,6 +852,7 @@ public final class Docx {
                 "pgMar",
                 "type",
                 "pgNumType",
+                "cols",
                 "titlePg",
                 "headerReference",
                 "footerReference",
@@ -818,7 +868,7 @@ public final class Docx {
             warnings,
             DocxLists.read(parts.get("word/numbering.xml"), warnings),
             styles);
-    return new Section(page, furniture, start, pageStart, NoteFormats.read(e, warnings));
+    return new Section(page, furniture, start, pageStart, NoteFormats.read(e, warnings), columns);
   }
 
   static void writeParagraph(
@@ -911,6 +961,7 @@ public final class Docx {
       b.append("</w:pPrChange>");
     }
     b.append(section).append("</w:pPr>");
+    if (p.format.columnBreak) b.append("<w:r><w:br w:type=\"column\"/></w:r>");
     b.append(prefix);
     comments.content(b, p, links);
     b.append(suffix).append("</w:p>");

@@ -1589,6 +1589,38 @@ public final class Session {
     transact(s -> document = document.section(block, value));
   }
 
+  /**
+   * Newspaper columns for the current section, every section ("document"), or from the
+   * caret on ("forward", which first inserts a continuous section break), as one undo step.
+   */
+  public void columns(final Columns value, final String apply) {
+    if (inCell()) leaveCell();
+    transact(
+        s -> {
+          if ("document".equals(apply)) {
+            Map<String, Section> changed = new LinkedHashMap<String, Section>();
+            for (Map.Entry<String, Section> e : document.sections.entrySet())
+              changed.put(e.getKey(), e.getValue().columns(value));
+            document = document.sections(changed, document.lastSection.columns(value));
+          } else {
+            if ("forward".equals(apply)) sectionBreak("continuous");
+            else if (!"section".equals(apply))
+              throw new IllegalArgumentException("apply must be section, document or forward");
+            document = document.section(selection.block, activeSection().raw.columns(value));
+          }
+        });
+  }
+
+  /** Split at the caret; the text after it starts at the top of the next column. */
+  public void columnBreak() {
+    if (inCell()) throw new IllegalArgumentException("Column breaks belong in the document body");
+    transact(
+        s -> {
+          enterParagraph();
+          paragraph("columnBreak", "true");
+        });
+  }
+
   /** Insert before the selection without deleting its contents. */
   public void sectionBreak(final String kind) {
     if (inCell()) throw new IllegalArgumentException("Section breaks belong in the document body");

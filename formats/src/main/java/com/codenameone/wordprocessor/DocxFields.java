@@ -159,7 +159,12 @@ final class DocxFields {
             RichText.of(
                 ("t".equals(type) || "delText".equals(type))
                     ? Xml.text(child)
-                    : "tab".equals(type) ? "\t" : "\n",
+                    : "tab".equals(type)
+                        ? "\t"
+                        // Docx.COLUMN_BREAK: lifted into ParagraphFormat.columnBreak by Docx.
+                        : "br".equals(type) && "column".equals(Xml.attr(child, "type", ""))
+                            ? Docx.COLUMN_BREAK_TEXT
+                            : "\n",
                 style));
       }
     }

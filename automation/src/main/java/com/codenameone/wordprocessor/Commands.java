@@ -389,6 +389,33 @@ public final class Commands {
           return null;
         });
     register(
+        "layout.columns",
+        "Set newspaper columns: count 1-12 or preset one/two/three/left/right, optional"
+            + " space (pt), separator, and apply section/document/forward",
+        "count?:number,preset?:string,space?:number,separator?:boolean,apply?:string",
+        true,
+        (s, a) -> {
+          float space = a.containsKey("space") ? ((Number) a.get("space")).floatValue() : 36;
+          boolean separator = a.containsKey("separator") && Boolean.TRUE.equals(a.get("separator"));
+          Columns c =
+              a.containsKey("preset")
+                  ? Columns.preset(
+                      str(a, "preset"), s.activeSection().raw.page.contentWidth(), space)
+                  : Columns.equal(a.containsKey("count") ? integer(a, "count") : 1, space, false);
+          c = new Columns(c.count, c.space, separator, c.widths());
+          s.columns(c, a.containsKey("apply") ? str(a, "apply") : "section");
+          return null;
+        });
+    register(
+        "layout.columnBreak",
+        "Split at the caret and continue in the next newspaper column",
+        "",
+        true,
+        (s, a) -> {
+          s.columnBreak();
+          return null;
+        });
+    register(
         "layout.break",
         "Insert a section break before the selection",
         "kind:string",

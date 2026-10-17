@@ -1484,7 +1484,9 @@ public class WordProcessor {
                             session.activeSection().raw.page.height,
                             session.activeSection().raw.page.width),
                     true),
+                iconButton("Columns", FontImage.MATERIAL_VIEW_COLUMN, this::columnsDialog, true),
                 BoxLayout.encloseY(
+                    button("Column break", () -> run("layout.columnBreak", Json.object())),
                     button("A4", () -> setPage(595.28f, 841.89f)),
                     button("Letter", () -> setPage(612, 792)),
                     button("Section break…", this::sectionBreakDialog),
@@ -3847,6 +3849,48 @@ public class WordProcessor {
     d.add(BorderLayout.SOUTH, button("Cancel", d::dispose));
     styleDialogBody(d.getContentPane());
     showOfficeDialog(d);
+  }
+
+  /** Layout > Columns: Word's presets, a count, spacing, a separator and the apply scope. */
+  private void columnsDialog() {
+    Columns current = session.activeSection().raw.columns;
+    ComboBox<String> preset =
+        new ComboBox<String>("One", "Two", "Three", "Left", "Right", "Custom count");
+    preset.setSelectedIndex(
+        current.equalWidth() && current.count <= 3
+            ? current.count - 1
+            : current.equalWidth() ? 5 : current.widths()[0] < current.widths()[2] ? 3 : 4);
+    EditField count = field(String.valueOf(current.count));
+    EditField space = field(String.valueOf(current.space));
+    CheckBox separator = new CheckBox("Line between");
+    separator.setSelected(current.separator);
+    ComboBox<String> apply =
+        new ComboBox<String>("This section", "Whole document", "This point forward");
+    for (Component c : new Component[] {preset, count, space, separator, apply})
+      styleDialogBody(c);
+    if (!showDialog(
+        "Columns",
+        BoxLayout.encloseY(
+            new Label("Presets"), preset,
+            new Label("Number of columns (custom)"), count,
+            new Label("Spacing (points)"), space,
+            separator,
+            new Label("Apply to"), apply),
+        "Apply",
+        "Cancel")) return;
+    Map<String, Object> args = Json.object();
+    String[] presets = {"one", "two", "three", "left", "right"};
+    try {
+      if (preset.getSelectedIndex() < 5) args.put("preset", presets[preset.getSelectedIndex()]);
+      else args.put("count", Integer.valueOf(Integer.parseInt(count.getText().trim())));
+      args.put("space", Float.valueOf(Float.parseFloat(space.getText().trim())));
+    } catch (NumberFormatException e) {
+      Dialog.show("Columns", "Enter whole columns and spacing in points.", "OK", null);
+      return;
+    }
+    args.put("separator", Boolean.valueOf(separator.isSelected()));
+    args.put("apply", new String[] {"section", "document", "forward"}[apply.getSelectedIndex()]);
+    run("layout.columns", args);
   }
 
   private void margins() {

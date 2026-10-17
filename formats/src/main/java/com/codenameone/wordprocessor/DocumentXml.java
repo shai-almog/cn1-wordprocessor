@@ -31,6 +31,7 @@ public final class DocumentXml {
         .append(d.lastSection.pageStart)
         .append("\">");
     NoteFormats.write(b, d.lastSection.notes, "");
+    columns(b, d.lastSection.columns);
     for (Map.Entry<String, Section> entry : d.sections.entrySet()) {
       Section section = entry.getValue();
       b.append("<section end=\"")
@@ -43,6 +44,7 @@ public final class DocumentXml {
       page(b, section.page);
       furniture(b, section.furniture);
       NoteFormats.write(b, section.notes, "");
+      columns(b, section.columns);
       b.append("</section>");
     }
     b.append("</sections>");
@@ -254,6 +256,7 @@ public final class DocumentXml {
         .append("\" outlineLevel=\"")
         .append(p.format.outlineLevel)
         .append("\"");
+    if (p.format.columnBreak) b.append(" columnBreak=\"true\"");
     RevisionFormats.attributes(b, p.breakRevision, "break-");
     RevisionFormats.attributes(b, p.formatRevision, "format-");
     b.append(">");
@@ -447,7 +450,8 @@ public final class DocumentXml {
                   readFurniture(Xml.child(item, "furniture"), ids),
                   Xml.attr(item, "start", "nextPage"),
                   Integer.parseInt(Xml.attr(item, "pageStart", "0")),
-                  NoteFormats.read(item, null)));
+                  NoteFormats.read(item, null),
+                  readColumns(item)));
         }
         result =
             result.sections(
@@ -457,7 +461,8 @@ public final class DocumentXml {
                     furniture,
                     Xml.attr(sectionRoot, "start", "nextPage"),
                     Integer.parseInt(Xml.attr(sectionRoot, "pageStart", "0")),
-                    NoteFormats.read(sectionRoot, null)));
+                    NoteFormats.read(sectionRoot, null),
+                    readColumns(sectionRoot)));
         for (String id : ids)
           if (id.startsWith("p") && TextUtil.digits(id, 1))
             next = Math.max(next, Long.parseLong(id.substring(1)) + 1);
@@ -566,7 +571,8 @@ public final class DocumentXml {
                     Boolean.parseBoolean(Xml.attr(e, "widowControl", "true")),
                     TabStop.decode(Xml.attr(e, "tabs", "")),
                     Integer.parseInt(Xml.attr(e, "outlineLevel", "-1")),
-                    Xml.attr(e, "lineRule", "auto")))
+                    Xml.attr(e, "lineRule", "auto"),
+                    flag(e, "columnBreak")))
             .breakRevision(RevisionFormats.nativeRead(e, "break-"));
     Revision change = RevisionFormats.nativeRead(e, "format-");
     if (change != null) {
@@ -578,5 +584,35 @@ public final class DocumentXml {
               change, readParagraph(Xml.child(previous, "p"), new HashSet<String>()));
     }
     return result;
+  }
+
+  private static void columns(StringBuilder b, Columns c) {
+    if (c.equals(Columns.ONE)) return;
+    b.append("<columns count=\"").append(c.count).append("\" space=\"").append(c.space)
+        .append("\" separator=\"").append(c.separator).append("\">");
+    float[] w = c.widths();
+    for (int i = 0; i < w.length; i += 2)
+      b.append("<col width=\"").append(w[i]).append("\" space=\"").append(w[i + 1]).append("\"/>");
+    b.append("</columns>");
+  }
+
+  private static Columns readColumns(Element parent) throws IOException {
+    Element e = Xml.child(parent, "columns");
+    if (e == null) return Columns.ONE;
+    List<Element> cols = Xml.children(e, "col");
+    float[] widths = new float[cols.size() * 2];
+    for (int i = 0; i < cols.size(); i++) {
+      widths[i * 2] = Float.parseFloat(Xml.attr(cols.get(i), "width", "0"));
+      widths[i * 2 + 1] = Float.parseFloat(Xml.attr(cols.get(i), "space", "0"));
+    }
+    try {
+      return new Columns(
+          Integer.parseInt(Xml.attr(e, "count", "1")),
+          Float.parseFloat(Xml.attr(e, "space", "36")),
+          Boolean.parseBoolean(Xml.attr(e, "separator", "false")),
+          widths);
+    } catch (IllegalArgumentException ex) {
+      throw new IOException("Invalid section columns", ex);
+    }
   }
 }
