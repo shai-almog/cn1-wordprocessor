@@ -9,7 +9,7 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <maven.compiler.source>8</maven.compiler.source>
     <maven.compiler.target>8</maven.compiler.target>
-    <cn1.version>8.0-SNAPSHOT</cn1.version>
+    <cn1.version>7.0.278</cn1.version>
   </properties>
  <modules>
     <module>document</module>

@@ -1,6 +1,7 @@
 package com.codenameone.wordprocessor;
 
 import com.codename1.ai.Tool;
+import com.codename1.io.Properties;
 import com.codename1.mcp.MCP;
 import com.codename1.ui.Display;
 import java.io.InputStream;

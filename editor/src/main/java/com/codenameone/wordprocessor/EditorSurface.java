@@ -1124,8 +1124,8 @@ public final class EditorSurface extends Container
     String text = lineParagraph(line).text.toString();
     int offset = Math.min(offsetAt(line, x), text.length());
     int a = offset, z = offset;
-    while (a > 0 && Character.isLetterOrDigit(text.charAt(a - 1))) a--;
-    while (z < text.length() && Character.isLetterOrDigit(text.charAt(z))) z++;
+    while (a > 0 && isWordChar(text.charAt(a - 1))) a--;
+    while (z < text.length() && isWordChar(text.charAt(z))) z++;
     if (a == z && z < text.length()) z++;
     session.select(editingBlock(line), a, z);
     dragBlock = editingBlock(line);
@@ -1136,6 +1136,16 @@ public final class EditorSurface extends Container
     touchSelecting = true;
     startInput();
     refresh();
+  }
+
+  // Character.isLetter/isLetterOrDigit are not in the Codename One class library. Cased
+  // letters differ between upper and lower case; uncased scripts (CJK, Thai, Arabic,
+  // Hebrew, Indic) start above Latin Extended and are treated as word characters.
+  private static boolean isWordChar(char c) {
+    return Character.isDigit(c)
+        || Character.toUpperCase(c) != Character.toLowerCase(c)
+        || (c >= 0x0590 && !Character.isWhitespace(c) && !Character.isHighSurrogate(c)
+            && !Character.isLowSurrogate(c) && (c < 0x2000 || c > 0x2BFF) && (c < 0x3000 || c > 0x303F));
   }
 
   private int[] handlePoint(boolean anchor) {
