@@ -183,3 +183,6 @@ Limits:
 - Repeating-section items are stored as "; "-separated content.
 - Picture controls hold no image.
 - Locks are enforced only for value changes made through `developer.properties`.
+
+### Character decorations
+Character shading, border, proofing language, phonetic guide (ruby) and enclosure (circle/square/triangle/diamond) are stored in `CharacterFormat` and round-trip through native XML. DOCX writes shading as `w:shd`, the border as `w:bdr` and the language as `w:lang`; shading reads back as the run background. Limitation: DOCX does not yet write or read phonetic guides (`w:ruby`) or enclosed characters (`EQ \o` fields), and PDF does not paint shading, borders, ruby or enclosures.

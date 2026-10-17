@@ -21,11 +21,15 @@ public class CharacterCommandsTest {
       String value =
           key.equals("underlineStyle")
               ? "wave"
-              : key.equals("underlineColor")
+              : key.equals("underlineColor") || key.equals("shading") || key.equals("border")
                   ? "cc3300"
                   : key.equals("characterScale")
                       ? "120"
-                      : key.startsWith("character") ? "2" : "true";
+                      : key.startsWith("character")
+                          ? "2"
+                          : key.equals("lang")
+                              ? "en-GB"
+                              : key.equals("ruby") ? "x" : key.equals("enclose") ? "circle" : "true";
       apply(s, key, value);
       assertEquals(before.plainText(), s.document().plainText());
       assertNotEquals(

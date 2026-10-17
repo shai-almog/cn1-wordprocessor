@@ -1047,7 +1047,10 @@ static final char COLUMN_BREAK = '\u000B';
         .append("\"/><w:color w:val=\"")
         .append(TextUtil.padded(s.color, 16, 6))
         .append("\"/><w:shd w:fill=\"")
-        .append(TextUtil.padded(s.background, 16, 6))
+        .append(
+            s.characters.shading >= 0
+                ? s.characters.value("shading")
+                : TextUtil.padded(s.background, 16, 6))
         .append("\"/>");
     b.append(s.bold ? "<w:b/>" : "<w:b w:val=\"0\"/>");
     b.append(s.italic ? "<w:i/>" : "<w:i w:val=\"0\"/>");
@@ -1070,6 +1073,12 @@ static final char COLUMN_BREAK = '\u000B';
           .append(" w:val=\"")
           .append(flags[i] ? "1" : "0")
           .append("\"/>");
+    if (s.characters.border >= 0)
+      b.append("<w:bdr w:val=\"single\" w:sz=\"4\" w:space=\"0\" w:color=\"")
+          .append(s.characters.value("border"))
+          .append("\"/>");
+    if (!s.characters.lang.isEmpty())
+      b.append("<w:lang w:val=\"").append(Xml.escape(s.characters.lang)).append("\"/>");
     b.append("<w:spacing w:val=\"")
         .append(Math.round(s.characters.spacing * 20))
         .append("\"/><w:w w:val=\"")

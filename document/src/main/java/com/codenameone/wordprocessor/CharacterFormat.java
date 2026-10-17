@@ -16,8 +16,14 @@ public final class CharacterFormat {
     "outline",
     "shadow",
     "emboss",
-    "engrave"
+    "engrave",
+    "shading",
+    "border",
+    "lang",
+    "ruby",
+    "enclose"
   };
+  public static final String[] ENCLOSURES = {"none", "circle", "square", "triangle", "diamond"};
   public static final String[] UNDERLINES = {
     "none",
     "single",
@@ -49,6 +55,12 @@ public final class CharacterFormat {
 
   public final boolean outline, shadow, emboss, engrave;
 
+  /** Character shading and border colors; -1 is none. */
+  public final int shading, border;
+
+  /** Proofing language tag ("" inherits), phonetic guide text and enclosing shape. */
+  public final String lang, ruby, enclose;
+
   public CharacterFormat(
       boolean u,
       boolean s,
@@ -71,7 +83,12 @@ public final class CharacterFormat {
         false,
         false,
         false,
-        false);
+        false,
+        -1,
+        -1,
+        "",
+        "",
+        "none");
   }
 
   private CharacterFormat(
@@ -87,7 +104,21 @@ public final class CharacterFormat {
       boolean outline,
       boolean shadow,
       boolean emboss,
-      boolean engrave) {
+      boolean engrave,
+      int shading,
+      int border,
+      String lang,
+      String ruby,
+      String enclose) {
+    if (shading < -1 || shading > 0xffffff || border < -1 || border > 0xffffff
+        || !java.util.Arrays.asList(ENCLOSURES).contains(enclose)
+        || lang.length() > 35
+        || ruby.length() > 200) throw new IllegalArgumentException("Invalid character decoration");
+    this.shading = shading;
+    this.border = border;
+    this.lang = lang;
+    this.ruby = ruby;
+    this.enclose = enclose;
     if (!java.util.Arrays.asList(UNDERLINES).contains(underlineStyle)
         || underlineColor < -1
         || underlineColor > 0xffffff)
@@ -137,6 +168,11 @@ public final class CharacterFormat {
     if ("shadow".equals(key)) return "" + shadow;
     if ("emboss".equals(key)) return "" + emboss;
     if ("engrave".equals(key)) return "" + engrave;
+    if ("shading".equals(key)) return shading < 0 ? "none" : TextUtil.padded(shading, 16, 6);
+    if ("border".equals(key)) return border < 0 ? "none" : TextUtil.padded(border, 16, 6);
+    if ("lang".equals(key)) return lang;
+    if ("ruby".equals(key)) return ruby;
+    if ("enclose".equals(key)) return enclose;
     throw new IllegalArgumentException("Unknown character property: " + key);
   }
 
@@ -167,7 +203,17 @@ public final class CharacterFormat {
         "outline".equals(k) ? Boolean.parseBoolean(v) : outline,
         "shadow".equals(k) ? Boolean.parseBoolean(v) : shadow,
         "emboss".equals(k) ? Boolean.parseBoolean(v) : emboss,
-        "engrave".equals(k) ? Boolean.parseBoolean(v) : engrave);
+        "engrave".equals(k) ? Boolean.parseBoolean(v) : engrave,
+        "shading".equals(k) ? rgb(v) : shading,
+        "border".equals(k) ? rgb(v) : border,
+        "lang".equals(k) ? (v == null ? "" : v) : lang,
+        "ruby".equals(k) ? (v == null ? "" : v) : ruby,
+        "enclose".equals(k) ? (v == null || v.isEmpty() ? "none" : v) : enclose);
+  }
+
+  private static int rgb(String v) {
+    if (v == null || v.isEmpty() || "none".equals(v) || "auto".equals(v)) return -1;
+    return Integer.parseInt(v.startsWith("#") ? v.substring(1) : v, 16);
   }
 
   public CharacterFormat merge(CharacterFormat before, CharacterFormat after) {
@@ -194,7 +240,12 @@ public final class CharacterFormat {
         && outline == f.outline
         && shadow == f.shadow
         && emboss == f.emboss
-        && engrave == f.engrave;
+        && engrave == f.engrave
+        && shading == f.shading
+        && border == f.border
+        && lang.equals(f.lang)
+        && ruby.equals(f.ruby)
+        && enclose.equals(f.enclose);
   }
 
   public int hashCode() {
@@ -211,6 +262,9 @@ public final class CharacterFormat {
         + (outline ? 32 : 0)
         + (shadow ? 64 : 0)
         + (emboss ? 128 : 0)
-        + (engrave ? 256 : 0);
+        + (engrave ? 256 : 0)
+        + shading * 3
+        + border * 5
+        + (lang + ruby + enclose).hashCode() * 11;
   }
 }

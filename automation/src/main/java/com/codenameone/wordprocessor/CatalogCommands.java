@@ -88,6 +88,59 @@ final class CatalogCommands implements Commands.Extension {
         true,
         (s, a) -> format(s, "background", color(Commands.str(a, "color"), hex(TextStyle.DEFAULT.background))));
     c.register(
+        "format.shading",
+        "Set character shading (RRGGBB or none)",
+        "color:string",
+        true,
+        (s, a) -> format(s, "shading", color(Commands.str(a, "color"), "none")));
+    c.register(
+        "format.border",
+        "Set a character border (RRGGBB or none)",
+        "color:string",
+        true,
+        (s, a) -> format(s, "border", color(Commands.str(a, "color"), "none")));
+    c.register(
+        "format.phonetic",
+        "Set the phonetic guide (ruby) text; empty removes it",
+        "text:string",
+        true,
+        (s, a) -> format(s, "ruby", Commands.str(a, "text")));
+    c.register(
+        "format.enclose",
+        "Enclose characters: none, circle, square, triangle or diamond",
+        "shape:string",
+        true,
+        (s, a) -> {
+          String shape = Commands.str(a, "shape");
+          if (!java.util.Arrays.asList(CharacterFormat.ENCLOSURES).contains(shape))
+            throw new IllegalArgumentException("Unknown enclosure: " + shape);
+          return format(s, "enclose", shape);
+        });
+    c.register(
+        "review.language",
+        "Set the proofing language tag of the selection (e.g. en-US; empty inherits)",
+        "lang:string",
+        true,
+        (s, a) -> {
+          String lang = Commands.str(a, "lang");
+          for (int i = 0; i < lang.length(); i++) {
+            char ch = lang.charAt(i);
+            if (!(ch == '-' || (ch < 128 && Character.isLetterOrDigit(ch))))
+              throw new IllegalArgumentException("Invalid language tag");
+          }
+          return format(s, "lang", lang);
+        });
+    c.register(
+        "format.textEffects",
+        "Apply outline, shadow, emboss and engrave together; omitted effects are unchanged",
+        "outline?:boolean,shadow?:boolean,emboss?:boolean,engrave?:boolean",
+        true,
+        (s, a) -> {
+          for (String k : new String[] {"outline", "shadow", "emboss", "engrave"})
+            if (a.containsKey(k)) s.format(k, String.valueOf(Boolean.TRUE.equals(a.get(k))));
+          return null;
+        });
+    c.register(
         "format.spacing",
         "Character spacing in points",
         "value:number",
@@ -602,9 +655,9 @@ final class CatalogCommands implements Commands.Extension {
           s.replace("\t");
           return null;
         });
-    insertText(c, "text.nbsp", "Insert a non-breaking space", " ");
-    insertText(c, "text.nbHyphen", "Insert a non-breaking hyphen", "‑");
-    insertText(c, "text.optionalHyphen", "Insert an optional hyphen", "­");
+    insertText(c, "text.nbsp", "Insert a non-breaking space", "\u00a0");
+    insertText(c, "text.nbHyphen", "Insert a non-breaking hyphen", "\u2011");
+    insertText(c, "text.optionalHyphen", "Insert an optional hyphen", "\u00ad");
     c.register(
         "insert.pageBreak",
         "Insert a page break before the text after the caret",

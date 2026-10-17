@@ -10,9 +10,9 @@
   "not-applicable"
  ],
  "counts": {
-  "unverified": 385,
-  "missing": 89,
-  "partial": 13,
+  "unverified": 403,
+  "missing": 84,
+  "partial": 0,
   "certified": 0,
   "reference-stub": 15,
   "not-applicable": 0
@@ -553,11 +553,11 @@
    "feature": "Bold",
    "command": "format.bold",
    "appCommand": "format.bold",
-   "status": "partial",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "via format.set"
+   "notes": "Dedicated command registered (no longer only via format.set); needs native acceptance evidence."
   },
   {
    "tab": "Home",
@@ -565,11 +565,11 @@
    "feature": "Italic",
    "command": "format.italic",
    "appCommand": "format.italic",
-   "status": "partial",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "via format.set"
+   "notes": "Dedicated command registered (no longer only via format.set); needs native acceptance evidence."
   },
   {
    "tab": "Home",
@@ -577,11 +577,11 @@
    "feature": "Underline",
    "command": "format.underline",
    "appCommand": "format.underline",
-   "status": "partial",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "via format.set"
+   "notes": "Dedicated command registered (no longer only via format.set); needs native acceptance evidence."
   },
   {
    "tab": "Home",
@@ -589,11 +589,11 @@
    "feature": "Double Underline",
    "command": "format.doubleUnderline",
    "appCommand": "format.doubleUnderline",
-   "status": "partial",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "via format.set"
+   "notes": "Dedicated command registered (no longer only via format.set); needs native acceptance evidence."
   },
   {
    "tab": "Home",
@@ -601,11 +601,11 @@
    "feature": "Strikethrough",
    "command": "format.strikethrough",
    "appCommand": "format.strikethrough",
-   "status": "partial",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "via format.set"
+   "notes": "Dedicated command registered (no longer only via format.set); needs native acceptance evidence."
   },
   {
    "tab": "Home",
@@ -613,11 +613,11 @@
    "feature": "Subscript",
    "command": "format.subscript",
    "appCommand": "format.subscript",
-   "status": "partial",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "via format.set"
+   "notes": "Dedicated command registered (no longer only via format.set); needs native acceptance evidence."
   },
   {
    "tab": "Home",
@@ -625,11 +625,11 @@
    "feature": "Superscript",
    "command": "format.superscript",
    "appCommand": "format.superscript",
-   "status": "partial",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "via format.set"
+   "notes": "Dedicated command registered (no longer only via format.set); needs native acceptance evidence."
   },
   {
    "tab": "Home",
@@ -637,11 +637,11 @@
    "feature": "Text Effects Outline",
    "command": "format.outline",
    "appCommand": "format.outline",
-   "status": "partial",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "via format.set"
+   "notes": "Dedicated command registered (no longer only via format.set); needs native acceptance evidence."
   },
   {
    "tab": "Home",
@@ -649,23 +649,23 @@
    "feature": "Text Effects Shadow",
    "command": "format.shadow",
    "appCommand": "format.shadow",
-   "status": "partial",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "via format.set"
+   "notes": "Dedicated command registered (no longer only via format.set); needs native acceptance evidence."
   },
   {
    "tab": "Home",
    "group": "Font",
    "feature": "Text Effects and Typography",
    "command": "format.textEffects",
-   "appCommand": null,
-   "status": "partial",
+   "appCommand": "format.textEffects",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "via format.set"
+   "notes": "Dedicated command registered (no longer only via format.set); needs native acceptance evidence."
   },
   {
    "tab": "Home",
@@ -673,11 +673,11 @@
    "feature": "Text Highlight Color",
    "command": "format.highlight",
    "appCommand": "format.highlight",
-   "status": "partial",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "via format.set"
+   "notes": "Dedicated command registered (no longer only via format.set); needs native acceptance evidence."
   },
   {
    "tab": "Home",
@@ -685,23 +685,23 @@
    "feature": "Font Color",
    "command": "format.color",
    "appCommand": "format.color",
-   "status": "partial",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "via format.set"
+   "notes": "Dedicated command registered (no longer only via format.set); needs native acceptance evidence."
   },
   {
    "tab": "Home",
    "group": "Font",
    "feature": "Character Shading",
    "command": "format.shading",
-   "appCommand": null,
-   "status": "partial",
+   "appCommand": "format.shading",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "via format.set"
+   "notes": "Dedicated command registered (no longer only via format.set); needs native acceptance evidence."
   },
   {
    "tab": "Home",
@@ -828,36 +828,36 @@
    "group": "Font",
    "feature": "Character Border",
    "command": "format.border",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "format.border",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "format.border (Character Border)"
+   "notes": "format.border (Character Border) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Home",
    "group": "Font",
    "feature": "Phonetic Guide",
    "command": "format.phonetic",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "format.phonetic",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "format.phonetic (Phonetic Guide)"
+   "notes": "format.phonetic (Phonetic Guide) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Home",
    "group": "Font",
    "feature": "Enclose Characters",
    "command": "format.enclose",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "format.enclose",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "format.enclose (Enclose Characters)"
+   "notes": "format.enclose (Enclose Characters) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Home",
@@ -3336,12 +3336,12 @@
    "group": "Language",
    "feature": "Language",
    "command": "review.language",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "review.language",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "review.language (Language)"
+   "notes": "review.language (Language) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Review",
@@ -5988,12 +5988,12 @@
    "group": "Proofing",
    "feature": "Set Proofing Language",
    "command": "review.language",
-   "appCommand": null,
-   "status": "missing",
+   "appCommand": "review.language",
+   "status": "unverified",
    "referenceBehavior": "implemented",
    "missing": [],
    "evidence": [],
-   "notes": "review.language (Language)"
+   "notes": "review.language (Language) App command registered; needs native acceptance evidence."
   },
   {
    "tab": "Tools",

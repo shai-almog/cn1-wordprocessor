@@ -213,6 +213,20 @@ public final class TextFormats {
                 .append(s.characters.shadow ? ";text-shadow:1pt 1pt #808080" : "")
                 .append(s.characters.emboss ? ";text-shadow:-1pt -1pt white,1pt 1pt #707070" : "")
                 .append(s.characters.engrave ? ";text-shadow:-1pt -1pt #707070,1pt 1pt white" : "")
+                .append(
+                    s.characters.shading >= 0
+                        ? ";background-color:#" + s.characters.value("shading")
+                        : "")
+                .append(
+                    s.characters.border >= 0
+                        ? ";border:.5pt solid #" + s.characters.value("border")
+                        : "")
+                .append(
+                    "circle".equals(s.characters.enclose)
+                        ? ";border:.5pt solid currentColor;border-radius:50%"
+                        : "none".equals(s.characters.enclose)
+                            ? ""
+                            : ";border:.5pt solid currentColor")
                 .append(s.characters.smallCaps ? ";font-variant:small-caps" : "")
                 .append(s.characters.allCaps ? ";text-transform:uppercase" : "")
                 .append(s.characters.hidden ? ";display:none" : "")

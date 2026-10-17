@@ -14,6 +14,35 @@ final class TextEffects {
     CharacterFormat c = style.characters;
     int color = g.getColor();
     int offset = Math.max(1, Math.round(scale));
+    if (c.shading >= 0 || c.border >= 0 || !"none".equals(c.enclose) || !c.ruby.isEmpty()) {
+      int w = font.stringWidth(text), h = font.getHeight();
+      if (c.shading >= 0) {
+        g.setColor(c.shading);
+        g.fillRect(x, y, w, h);
+      }
+      g.setColor(c.border >= 0 ? c.border : color);
+      if (c.border >= 0) g.drawRect(x, y, w, h);
+      int d = Math.max(w, h);
+      if ("circle".equals(c.enclose)) g.drawArc(x + w / 2 - d / 2, y + h / 2 - d / 2, d, d, 0, 360);
+      else if ("square".equals(c.enclose)) g.drawRect(x + w / 2 - d / 2, y + h / 2 - d / 2, d, d);
+      else if ("triangle".equals(c.enclose)) {
+        g.drawLine(x + w / 2, y - d / 4, x - d / 4, y + h);
+        g.drawLine(x - d / 4, y + h, x + w + d / 4, y + h);
+        g.drawLine(x + w + d / 4, y + h, x + w / 2, y - d / 4);
+      } else if ("diamond".equals(c.enclose)) {
+        int cx = x + w / 2, cy = y + h / 2, r = d * 3 / 4;
+        g.drawLine(cx, cy - r, cx + r, cy);
+        g.drawLine(cx + r, cy, cx, cy + r);
+        g.drawLine(cx, cy + r, cx - r, cy);
+        g.drawLine(cx - r, cy, cx, cy - r);
+      }
+      if (!c.ruby.isEmpty()) {
+        // Phonetic guide: drawn above the base text in the same font, centered.
+        g.setColor(color);
+        g.drawString(c.ruby, x + (w - font.stringWidth(c.ruby)) / 2, y - h * 3 / 4);
+      }
+      g.setColor(color);
+    }
     if (c.shadow) {
       g.setColor(0x808080);
       g.drawString(text, x + offset, y + offset);

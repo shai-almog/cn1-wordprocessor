@@ -385,3 +385,6 @@ Limits:
 - Ink strokes are entered as point lists through commands; there is no freehand pointer capture on the canvas yet.
 - Equation structures are entered and shown in linear format with Unicode symbol and script substitution, not a 2-D math layout.
 - Chart data is edited as CSV text.
+
+## Character decorations
+`format.shading`, `format.border`, `format.phonetic`, `format.enclose`, `format.textEffects` and `review.language` are undoable and render on the canvas. Limitations: the phonetic guide is drawn above the base text without reserving line height, there is no spell checker to consume the language tag, and the DOCX/PDF gaps listed in FORMATS.md apply.

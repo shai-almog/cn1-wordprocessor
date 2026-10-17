@@ -150,6 +150,11 @@ final class DocxStyles {
       else if ("position".equals(k))
         s = s.with("characterPosition", String.valueOf(Float.parseFloat(value) / 2));
       else if ("vertAlign".equals(k)) s = s.with("script", value);
+      else if ("bdr".equals(k)) {
+        String color = Xml.attr(p, "color", "000000");
+        if (!"none".equals(value) && !"nil".equals(value))
+          s = s.with("border", "auto".equals(color) ? "000000" : color);
+      } else if ("lang".equals(k) && !value.isEmpty()) s = s.with("lang", value);
       else if ("sz".equals(k)) s = s.with("size", String.valueOf(Float.parseFloat(value) / 2));
       else if ("color".equals(k)) {
         if (!value.isEmpty() && !"auto".equals(value)) s = s.with("color", value);
