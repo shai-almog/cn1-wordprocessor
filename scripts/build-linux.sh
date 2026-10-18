@@ -11,8 +11,7 @@ case "$(uname -m)" in
   *) echo 'Unsupported Linux architecture.' >&2; exit 1 ;;
 esac
 # Prevent a previous debug profile from leaking its listener into a normal build.
-rm -f editor/target/classes/wordprocessor-agent.properties
-mvn -Dmaven.repo.local="$WORDPROCESSOR_MAVEN_REPO" -B -ntp -pl editor -am install "$@"
-mvn -Dmaven.repo.local="$WORDPROCESSOR_MAVEN_REPO" -B -ntp -f app/pom.xml \
+rm -f common/target/classes/wordprocessor-agent.properties
+mvn -Dmaven.repo.local="$WORDPROCESSOR_MAVEN_REPO" -B -ntp \
   -Dcodename1.platform=linux -Dcodename1.buildTarget=local-linux-device \
   -Dcodename1.arg.linux.arch="$cn1_linux_arch" clean package "$@"

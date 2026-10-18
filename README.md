@@ -132,13 +132,13 @@ The script installs/tests the shared libraries, then uses the existing Codename 
 
 ```sh
 source scripts/maven-env.sh
-mvn -Dmaven.repo.local="$WORDPROCESSOR_MAVEN_REPO" -B -f app/pom.xml \
+mvn -Dmaven.repo.local="$WORDPROCESSOR_MAVEN_REPO" -B \
   -Dcodename1.platform=ios -Dcodename1.buildTarget=mac-source package
 ```
 
-This generates `app/common/target/app-common-0.1.0-SNAPSHOT-mac-source/Main.xcodeproj`.
+This generates `common/target/app-common-0.1.0-SNAPSHOT-mac-source/Main.xcodeproj`.
 The script builds its Release configuration with Xcode into
-`app/common/target/mac-native/Build/Products/Release/Main.app` and the run script opens
+`common/target/mac-native/Build/Products/Release/Main.app` and the run script opens
 that bundle. The binary uses AppKit and Metal and needs no JVM. Signing is disabled for
 this local development build.
 
@@ -151,7 +151,7 @@ Windows x64/arm64 `.zip`. `scripts/dist.sh` packages them into `dist/`. Pushing 
 [`release.yml`](.github/workflows/release.yml), which reuses that build and attaches every
 package to a GitHub release. The Apple packages are unsigned; signing needs your certificates.
 
-The standard CN1 lifecycle is `app/common/src/main/java/com/codenameone/wordprocessor/app/Main.java`.
+The standard CN1 lifecycle is `common/src/main/java/com/codenameone/wordprocessor/app/Main.java`.
 It uses the shared `editor` application and CN1 platform file APIs.
 
 ## Libraries and tools
@@ -163,7 +163,7 @@ It uses the shared `editor` application and CN1 platform file APIs.
 | formats | Native project, DOCX, text adapters and PDF export |
 | automation | Commands, macros, extensions and previews |
 | editor | Codename One editor UI and recovery |
-| app/common | Standard Codename One lifecycle and platform integration |
+| common | Standard Codename One lifecycle and platform integration |
 | cli | Separate JVM command-line and MCP development tools; no UI host |
 | benchmarks | Model/import measurements and pinned Wordcraft inventory |
 
@@ -183,7 +183,7 @@ See [formats](docs/FORMATS.md), [automation](docs/AUTOMATION.md), and
 
 ## Other targets
 
-`app/common` is shared with Codename One's browser, Android and iOS targets.
+`common` is shared with Codename One's browser, Android and iOS targets.
 `scripts/build-web.sh` builds the JavaScript target; `scripts/build-linux.sh` uses the local
 native Linux target. See [Linux](docs/LINUX.md) and [platform evidence](docs/platforms.json).
 Linux and Windows packages are built in CI only and have not been run on a desktop yet;

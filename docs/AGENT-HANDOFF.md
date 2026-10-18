@@ -92,9 +92,9 @@ Latest local logs in `W`: `effects-final-reactor.log`, `effects-final-mac-build.
 
 ### Native artifacts and cleanup
 
-**Mac review bundle:** `/private/tmp/cn1-word-navigation-20261016-wnZ8j9YN/MacNavigation.app`, bundle ID `com.codenameone.wordprocessor.app.mac`. Reuse this review bundle instead of leaving more copies running. Built from `W/app/app/common/target/mac-native/Build/Products/Release/Main.app`. Executable SHA256: `0e7023726c2ff5ffdcff337a8d20e539ce3d174a77ae5ecf9b2147f6ceb5238a`. Last owned PID 47708 was stopped. Its document/recipient state was restored; window geometry and 214% zoom were left unchanged during the expanded batch.
+**Mac review bundle:** `/private/tmp/cn1-word-navigation-20261016-wnZ8j9YN/MacNavigation.app`, bundle ID `com.codenameone.wordprocessor.app.mac`. Reuse this review bundle instead of leaving more copies running. Built from `W/app/common/target/mac-native/Build/Products/Release/Main.app`. Executable SHA256: `0e7023726c2ff5ffdcff337a8d20e539ce3d174a77ae5ecf9b2147f6ceb5238a`. Last owned PID 47708 was stopped. Its document/recipient state was restored; window geometry and 214% zoom were left unchanged during the expanded batch.
 
-**iPhone simulator:** iPhone 17 Pro, iOS 26.3, UDID `0E472C6A-9375-4774-9EF0-B2CAA3ECC9FB`, app ID `com.codenameone.wordprocessor.app`. Debug simulator executable is `W/app/app/common/target/ios-native/Build/Products/Debug-iphonesimulator/Main.app/Main`, SHA256 `b1c4bf0b2fa6977a00d6c2e818855a0b3b4c004210b6fb00e6335e5a4525b4e9`. Last owned PID 52057 was stopped. The simulator itself may remain booted. Installed path is recorded in the acceptance JSON; it is installation-specific.
+**iPhone simulator:** iPhone 17 Pro, iOS 26.3, UDID `0E472C6A-9375-4774-9EF0-B2CAA3ECC9FB`, app ID `com.codenameone.wordprocessor.app`. Debug simulator executable is `W/app/common/target/ios-native/Build/Products/Debug-iphonesimulator/Main.app/Main`, SHA256 `b1c4bf0b2fa6977a00d6c2e818855a0b3b4c004210b6fb00e6335e5a4525b4e9`. Last owned PID 52057 was stopped. The simulator itself may remain booted. Installed path is recorded in the acceptance JSON; it is installation-specific.
 
 Both apps reused port 18765 **sequentially**. Original XML and recipients were restored and recovery saved before shutdown. Do not kill a recorded PID without checking identity now; PIDs can be reused.
 
@@ -110,7 +110,7 @@ Start with [ARCHITECTURE.md](ARCHITECTURE.md), but apply the stale-documentation
 - `formats`: native XML, DOCX, PDF and adapters. Key files: `DocumentXml`, `Docx`, `DocxStyles`, `RevisionFormats`, `TextFormats`, `PdfExporter`, `PdfMetrics`. Original DOCX parts may be preserved; retaining parts is not proof of semantic fidelity after editing.
 - `automation`: shared `Commands` routes UI, CLI and MCP. Compiled Java extensions are trusted code. Portable macros use fork/preview, revision checks and rollback.
 - `cli`: headless model/format/layout entry points. `benchmarks`: pinned reference and measurement scaffolding.
-- `app/common`: normal CN1 `Main` lifecycle; UI created in lifecycle initialization after framework display initialization. Platform projects/build scripts produce native apps.
+- `common`: normal CN1 `Main` lifecycle; UI created in lifecycle initialization after framework display initialization. Platform projects/build scripts produce native apps.
 - Recovery uses two checksummed slots and generation ordering, with delayed write protection. Large synchronous shutdown serialization is still a performance concern.
 
 ### Implemented breadth, with scoped acceptance only
@@ -212,11 +212,11 @@ bash scripts/build-native.sh -Pagent-debug -DskipTests
 For iOS, from the app repository root after dependencies are installed:
 
 ```bash
-mvn -Dmaven.repo.local="$WORDPROCESSOR_MAVEN_REPO" -B -ntp -f app/pom.xml \
+mvn -Dmaven.repo.local="$WORDPROCESSOR_MAVEN_REPO" -B -ntp \
   -Pagent-debug -DskipTests -Dcodename1.platform=ios \
   -Dcodename1.buildTarget=ios-source package
-xcodebuild -project app/common/target/app-common-0.1.0-SNAPSHOT-ios-source/Main.xcodeproj \
-  -scheme Main -configuration Debug -derivedDataPath app/common/target/ios-native \
+xcodebuild -project common/target/app-common-0.1.0-SNAPSHOT-ios-source/Main.xcodeproj \
+  -scheme Main -configuration Debug -derivedDataPath common/target/ios-native \
   -destination 'platform=iOS Simulator,id=0E472C6A-9375-4774-9EF0-B2CAA3ECC9FB' \
   CODE_SIGNING_ALLOWED=NO build
 ```

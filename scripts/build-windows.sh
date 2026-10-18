@@ -4,8 +4,7 @@
 set -euo pipefail
 cd "${BASH_SOURCE[0]%/*}/.."
 source scripts/maven-env.sh
-rm -f editor/target/classes/wordprocessor-agent.properties
-mvn -Dmaven.repo.local="$WORDPROCESSOR_MAVEN_REPO" -B -ntp -pl editor -am install "$@"
-mvn -Dmaven.repo.local="$WORDPROCESSOR_MAVEN_REPO" -B -ntp -f app/pom.xml \
+rm -f common/target/classes/wordprocessor-agent.properties
+mvn -Dmaven.repo.local="$WORDPROCESSOR_MAVEN_REPO" -B -ntp \
   -Dcodename1.platform=win -Dcodename1.buildTarget=local-windows-device \
   -Dcodename1.arg.windows.arch="${WINDOWS_ARCH:-x64}" package "$@"

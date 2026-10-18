@@ -1,6 +1,6 @@
 # Project instructions
 
-Use JDK 17 for Maven (Java 17 is the minimum language level). Build with `scripts/build.sh`; validate changed libraries with their relevant tests, then run the reactor and validate the native application when editing interaction code. `app/common` is the standard Codename One lifecycle. Use Maven mac-source and ParparVM for the application. Do not add a custom Swing host or use GraalVM as its native compiler.
+Use JDK 17 for Maven (Java 17 is the minimum language level). Build with `scripts/build.sh`; validate changed libraries with their relevant tests, then run the reactor and validate the native application when editing interaction code. `common` is the standard Codename One lifecycle. Use Maven mac-source and ParparVM for the application. Do not add a custom Swing host or use GraalVM as its native compiler.
 
 Do not mark Wordcraft catalog rows complete without reproducible equivalent behavior and artifact evidence. Do not equate a successful compilation, simulated input callback, synthetic benchmark or smaller incomplete codebase with cross-platform parity or a performance win. Keep limitations in docs/STATUS.md and docs/FORMATS.md current.
 

@@ -8,9 +8,9 @@ metrics=importlib.util.module_from_spec(spec)
 spec.loader.exec_module(metrics)
 class PruningTest(unittest.TestCase):
     def test_generated_unicode_table_is_reported_separately(self):
-        for name in ('WordCharacters', 'GraphemeProperties'):
-            self.assertEqual('generatedApplication', metrics.group_java(Path('document/src/main/java/com/codenameone/wordprocessor/'+name+'.java')))
-        self.assertEqual('application', metrics.group_java(Path('document/src/main/java/com/codenameone/wordprocessor/TextNavigation.java')))
+        for name in ('Unicode', 'GraphemeProperties'):
+            self.assertEqual('generatedApplication', metrics.group_java(Path('common/src/main/java/com/codenameone/wordprocessor/'+name+'.java')))
+        self.assertEqual('application', metrics.group_java(Path('common/src/main/java/com/codenameone/wordprocessor/TextNavigation.java')))
 
     def test_braces_in_strings_and_nested_modules(self):
         source=b'fn live() {}\n#[cfg(test)] mod tests { #[test] fn check() { let s = r#"}}{"#; } }\nfn also_live() {}'

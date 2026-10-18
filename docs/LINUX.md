@@ -8,7 +8,7 @@ The GTK port requires CMake, Ninja, a C compiler and pkg-config, plus developmen
 export JAVA_HOME=/path/to/jdk8
 export WORDPROCESSOR_MAVEN_REPO=/unique/project/repository
 scripts/build-linux.sh
-app/common/target/codenameone/antProject/dist/linux-build/result/Main
+common/target/codenameone/antProject/dist/linux-build/result/Main
 ```
 
 The app build deliberately uses Maven `clean package`. In the pinned framework, a failed prior build can leave translated C in the next native-input scan; a plain retry then indexes its own generated code and can exhaust several gigabytes of translator heap. Cleaning the application target removes that contamination. Increasing the compiler heap is not the fix.

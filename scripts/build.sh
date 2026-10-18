@@ -5,6 +5,6 @@ if [[ -z "${JAVA_HOME:-}" && -x /usr/libexec/java_home ]]; then export JAVA_HOME
 export PATH="${JAVA_HOME:+$JAVA_HOME/bin:}$PATH"
 source scripts/maven-env.sh
 # Maven does not remove resources omitted by a later profile switch.
-rm -f editor/target/classes/wordprocessor-agent.properties
+rm -f common/target/classes/wordprocessor-agent.properties
 mvn -Dmaven.repo.local="$WORDPROCESSOR_MAVEN_REPO" -B -ntp "$@" install
-mvn -Dmaven.repo.local="$WORDPROCESSOR_MAVEN_REPO" -B -ntp -f cli/pom.xml org.apache.maven.plugins:maven-dependency-plugin:3.6.1:build-classpath -DincludeScope=runtime -Dmdep.outputFile=target/runtime-classpath.txt
+mvn -Dmaven.repo.local="$WORDPROCESSOR_MAVEN_REPO" -B -ntp -pl common org.apache.maven.plugins:maven-dependency-plugin:3.6.1:build-classpath -DincludeScope=test -Dmdep.outputFile=target/test-classpath.txt

@@ -69,22 +69,28 @@ def git_revision(root):
     return r.stdout.strip() if r.returncode == 0 else None
 
 
+PLATFORMS = ('ios', 'android', 'javascript', 'javase', 'linux', 'win')
+# JVM tools kept in the test sources because they run on the JavaSE port, not on ParparVM.
+CLI = ('Cli.java', 'McpServer.java', 'DocumentFiles.java')
+BENCHMARKS = ('Benchmark.java', 'ImportBenchmark.java')
+
+
 def group_java(path):
     parts = path.parts
-    if path.as_posix() in ('document/src/main/java/com/codenameone/wordprocessor/WordCharacters.java',
-                          'document/src/main/java/com/codenameone/wordprocessor/GraphemeProperties.java'):
+    if path.as_posix() in ('common/src/main/java/com/codenameone/wordprocessor/Unicode.java',
+                          'common/src/main/java/com/codenameone/wordprocessor/GraphemeProperties.java'):
         return 'generatedApplication'
-    if parts[0] == 'benchmarks':
-        return 'benchmarks'
     if path.name.startswith('test-'):
         return 'tests'
     if 'src' not in parts or path.suffix != '.java':
         return 'buildAndAutomation'
-    if parts[0] == 'benchmarks':
+    if path.name in BENCHMARKS:
         return 'benchmarks'
+    if path.name in CLI:
+        return 'application'
     if 'test' in parts:
         return 'tests'
-    if parts[0] == 'app':
+    if parts[0] in PLATFORMS or 'app' in parts:
         return 'platformGlue'
     return 'application'
 
@@ -105,9 +111,9 @@ def group_rust(path):
 
 def source_files(root, side):
     if side == 'java':
-        files = [p for top in ['document','layout','formats','automation','editor','cli','app','benchmarks']
+        files = [p for top in ('common',) + PLATFORMS
                  for p in (root/top).rglob('*.java') if 'target' not in p.parts]
-        files += list((root/'benchmarks').glob('*.rs'))
+        files += list((root/'scripts/benchmark').glob('*.rs'))
         files += list((root/'scripts').glob('*.py'))+list((root/'scripts').glob('*.sh'))
         files += [root/'scripts/wordprocessor']
         files += [p for p in root.rglob('pom.xml') if 'target' not in p.parts]

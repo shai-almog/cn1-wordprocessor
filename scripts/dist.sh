@@ -3,7 +3,7 @@
 # Usage: dist.sh mac|ios|android|web|linux|windows [VERSION]
 set -euo pipefail
 cd "${BASH_SOURCE[0]%/*}/.."
-platform=$1 version=${2:-dev} t=app/common/target
+platform=$1 version=${2:-dev} t=common/target
 mkdir -p dist
 name="Wordprocessor-$version-$platform"
 case $platform in

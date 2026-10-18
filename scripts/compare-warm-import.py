@@ -26,7 +26,7 @@ for name in ['wordcraft_docx','wordcraft_doc']:
     if len(candidates)!=1:raise SystemExit('Expected one release rlib for '+name+'; resolve stale artifacts first')
     command+=['--extern',name+'='+str(candidates[0])]
     linked.append({'file':candidates[0].name,'sha256':hashlib.sha256(candidates[0].read_bytes()).hexdigest()})
-command += [str(root/'benchmarks/wordcraft-import-driver.rs'),'-o',str(a.out/'wordcraft-import-driver')]
+command += [str(root/'scripts/benchmark/wordcraft-import-driver.rs'),'-o',str(a.out/'wordcraft-import-driver')]
 subprocess.run(command,check=True)
 results={'cn1':[],'wordcraft':[]};expected=None
 for round in range(a.rounds):

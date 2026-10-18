@@ -6,9 +6,8 @@ if [[ -z "${JAVA_HOME:-}" && -x /usr/libexec/java_home ]]; then export JAVA_HOME
 export PATH="${JAVA_HOME:+$JAVA_HOME/bin:}$PATH"
 source scripts/maven-env.sh
 # Prevent a previous development profile from leaking its listener into a normal build.
-rm -f editor/target/classes/wordprocessor-agent.properties
-mvn -Dmaven.repo.local="$WORDPROCESSOR_MAVEN_REPO" -B -ntp -pl editor -am install "$@"
-mvn -Dmaven.repo.local="$WORDPROCESSOR_MAVEN_REPO" -B -ntp -f app/pom.xml -Dcodename1.platform=ios -Dcodename1.buildTarget=mac-source package "$@"
-xcodebuild -project app/common/target/app-common-0.1.0-SNAPSHOT-mac-source/Main.xcodeproj \
-  -scheme Main -configuration Release -derivedDataPath app/common/target/mac-native \
+rm -f common/target/classes/wordprocessor-agent.properties
+mvn -Dmaven.repo.local="$WORDPROCESSOR_MAVEN_REPO" -B -ntp -Dcodename1.platform=ios -Dcodename1.buildTarget=mac-source package "$@"
+xcodebuild -project common/target/app-common-0.1.0-SNAPSHOT-mac-source/Main.xcodeproj \
+  -scheme Main -configuration Release -derivedDataPath common/target/mac-native \
   -destination 'platform=macOS,arch=arm64' CODE_SIGNING_ALLOWED=NO build

@@ -9,5 +9,5 @@ __pycache__/
 *.pyc
 
 # Local Android build signing material
-/app/common/androidCerts/
+/common/androidCerts/
 dist/

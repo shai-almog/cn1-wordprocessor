@@ -29,23 +29,22 @@ jobs:
         run: |
           export WORDPROCESSOR_MAVEN_REPO="$PWD/.local/maven-repository"
           start=$(date +%s)
-          mvn -B -ntp -Dmaven.repo.local="$WORDPROCESSOR_MAVEN_REPO" \
-            -pl document,layout,formats,automation,editor,cli,benchmarks -am install | tee build.log
+          mvn -B -ntp -Dmaven.repo.local="$WORDPROCESSOR_MAVEN_REPO" install | tee build.log
           echo "$(( $(date +%s) - start ))" > java-build-test-seconds.txt
       - name: Test only (timed, compiled)
         run: |
           export WORDPROCESSOR_MAVEN_REPO="$PWD/.local/maven-repository"
           start=$(date +%s)
           mvn -B -ntp -o -Dmaven.repo.local="$WORDPROCESSOR_MAVEN_REPO" \
-            -pl document,layout,formats,automation,editor,cli,benchmarks surefire:test | tee test.log
+            -pl common surefire:test | tee test.log
           echo "$(( $(date +%s) - start ))" > java-test-seconds.txt
           grep -h 'Tests run:' test.log | grep -v ' in ' | awk -F'[:,]' '{s+=$2} END{print s}' > java-tests.txt
       - name: JVM engine benchmark
         run: |
           export WORDPROCESSOR_MAVEN_REPO="$PWD/.local/maven-repository"
-          mvn -B -ntp -o -Dmaven.repo.local="$WORDPROCESSOR_MAVEN_REPO" -f cli/pom.xml \
+          mvn -B -ntp -o -Dmaven.repo.local="$WORDPROCESSOR_MAVEN_REPO" -pl common \
             org.apache.maven.plugins:maven-dependency-plugin:3.6.1:build-classpath \
-            -DincludeScope=runtime -Dmdep.outputFile=target/runtime-classpath.txt
+            -DincludeScope=test -Dmdep.outputFile=target/test-classpath.txt
           scripts/benchmark.sh | tee java-benchmark.txt
       - name: Source metrics against pinned Wordcraft
         run: |
@@ -111,9 +110,9 @@ jobs:
       - name: Fixtures
         run: |
           export WORDPROCESSOR_MAVEN_REPO="$PWD/.local/maven-repository"
-          mvn -B -ntp -o -Dmaven.repo.local="$WORDPROCESSOR_MAVEN_REPO" -f cli/pom.xml \
+          mvn -B -ntp -o -Dmaven.repo.local="$WORDPROCESSOR_MAVEN_REPO" -pl common \
             org.apache.maven.plugins:maven-dependency-plugin:3.6.1:build-classpath \
-            -DincludeScope=runtime -Dmdep.outputFile=target/runtime-classpath.txt
+            -DincludeScope=test -Dmdep.outputFile=target/test-classpath.txt
           mkdir -p artifacts/startup-final
           scripts/benchmark.sh 1 1 artifacts/startup-final/1-paragraphs.docx
           scripts/benchmark.sh 1000 1 artifacts/1000-paragraphs.docx
@@ -129,7 +128,7 @@ jobs:
       - name: Startup, RAM and workload
         run: |
           base=artifacts/native-bench/ci
-          cn1="$RUNNER_TEMP/cn1-bench/app/common/target/mac-native/Build/Products/Release/Main.app/Contents/MacOS/Main"
+          cn1="$RUNNER_TEMP/cn1-bench/common/target/mac-native/Build/Products/Release/Main.app/Contents/MacOS/Main"
           wc="$RUNNER_TEMP/wordcraft-bench/target/release/wordcraft"
           c=scripts/native-bench/collect.sh
           bash $c "$cn1" "$wc" artifacts/startup-final/1-paragraphs.docx $base/startup-1 10
@@ -147,7 +146,7 @@ jobs:
               return {'executableBytes': os.path.getsize(exe), 'appBundleBytes': bundle(app),
                       'sha256': hashlib.sha256(open(exe, 'rb').read()).hexdigest()}
           t = os.environ['RUNNER_TEMP']
-          cn1 = 'app/common/target/mac-native/Build/Products/Release/Main.app'
+          cn1 = 'common/target/mac-native/Build/Products/Release/Main.app'
           wc = subprocess.check_output(['bash', '-c', f'ls -d {t}/wordcraft/target/*/WordCraft.app {t}/wordcraft/*.app 2>/dev/null | head -1']).decode().strip()
           art = {'cn1': side(cn1 + '/Contents/MacOS/Main', cn1),
                  'wordcraft': side(f'{t}/wordcraft/target/release/wordcraft', wc or f'{t}/wordcraft/target/release'),
@@ -184,10 +183,9 @@ jobs:
       - name: Build for the iPhone simulator
         run: |
           repo="$PWD/.local/maven-repository"
-          mvn -B -ntp -Dmaven.repo.local="$repo" -pl editor -am install -DskipTests
-          mvn -B -ntp -Dmaven.repo.local="$repo" -f app/pom.xml package -DskipTests \
+          mvn -B -ntp -Dmaven.repo.local="$repo" package -DskipTests \
             -Dcodename1.platform=ios -Dcodename1.buildTarget=ios-source
-          cd app/common/target/app-common-0.1.0-SNAPSHOT-ios-source
+          cd common/target/app-common-0.1.0-SNAPSHOT-ios-source
           xcodebuild -quiet -project Main.xcodeproj -scheme Main -configuration Release \
             -sdk iphonesimulator -derivedDataPath "$RUNNER_TEMP/ios" CODE_SIGNING_ALLOWED=NO build
       - name: Launch, time and screenshot
@@ -231,7 +229,7 @@ jobs:
           export ANDROID_HOME="$ANDROID_SDK_ROOT"
           export WORDPROCESSOR_MAVEN_REPO="$PWD/.local/maven-repository"
           scripts/build-android.sh -DskipTests
-          find app/common/target -name '*.apk' | head -1 > apk-path.txt
+          find common/target -name '*.apk' | head -1 > apk-path.txt
       - name: Enable KVM
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
@@ -272,10 +270,10 @@ jobs:
         run: |
           export WORDPROCESSOR_MAVEN_REPO="$PWD/.local/maven-repository"
           scripts/build-web.sh
-          du -sk app/common/target/web-preview | cut -f1 > web-kib.txt
+          du -sk common/target/web-preview | cut -f1 > web-kib.txt
       - name: Headless run and screenshot
         run: |
-          python3 -m http.server 8768 --bind 127.0.0.1 --directory app/common/target/web-preview &
+          python3 -m http.server 8768 --bind 127.0.0.1 --directory common/target/web-preview &
           sleep 1
           CHROME="$(command -v google-chrome)" node scripts/web-smoke.mjs http://127.0.0.1:8768/index.html web.png \
             '["Quarterly Product Review","Written in the browser build of the same Java source."]'

@@ -9,8 +9,7 @@ if [[ -z "${JAVA17_HOME:-}" && -x /usr/libexec/java_home ]]; then export JAVA17_
 export PATH="${JAVA_HOME:+$JAVA_HOME/bin:}$PATH"
 source scripts/maven-env.sh
 export GRADLE_USER_HOME="${GRADLE_USER_HOME:-$PWD/.local/gradle-repository}"
-rm -f editor/target/classes/wordprocessor-agent.properties
-mvn -Dmaven.repo.local="$WORDPROCESSOR_MAVEN_REPO" -B -ntp -pl editor -am install "$@"
-mvn -Dmaven.repo.local="$WORDPROCESSOR_MAVEN_REPO" -B -ntp -f app/pom.xml -Dcodename1.platform=android -Dcodename1.buildTarget=android-source package "$@"
-project="$PWD/app/common/target/app-common-0.1.0-SNAPSHOT-android-source"
+rm -f common/target/classes/wordprocessor-agent.properties
+mvn -Dmaven.repo.local="$WORDPROCESSOR_MAVEN_REPO" -B -ntp -Dcodename1.platform=android -Dcodename1.buildTarget=android-source package "$@"
+project="$PWD/common/target/app-common-0.1.0-SNAPSHOT-android-source"
 JAVA_HOME="$JAVA17_HOME" bash "$project/gradlew" -p "$project" --no-daemon assembleDebug

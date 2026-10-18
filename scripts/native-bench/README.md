@@ -17,7 +17,7 @@ restore the original source before applying it again.
 
    ```sh
    python3 scripts/native-bench/run.py \
-     --cn1 CN1_COPY/app/common/target/mac-native/Build/Products/Release/Main.app/Contents/MacOS/Main \
+     --cn1 CN1_COPY/common/target/mac-native/Build/Products/Release/Main.app/Contents/MacOS/Main \
      --wordcraft WORDCRAFT_COPY/target/release/wordcraft \
      --fixture FIXTURE.docx --out artifacts/native-bench/final/startup-1000 --runs 10
    ```

@@ -43,7 +43,7 @@ for iteration in range(a.iterations + 1):
 def stats(values):
     return {'medianMs': statistics.median(values),
             'p95Ms': sorted(values)[math.ceil(len(values)*.95)-1], 'samplesMs': values}
-baseline = json.loads((root/'benchmarks/baseline.json').read_text())
+baseline = json.loads((root/'scripts/benchmark/baseline.json').read_text())
 report = {'schema': 1, 'operation': 'fresh-process DOCX text extraction',
           'timingBoundary': 'process invocation to captured stdout completion; includes runtime startup',
           'cache': 'one discarded invocation per app; subsequent invocations use warm filesystem caches',

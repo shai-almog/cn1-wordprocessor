@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# JVM command-line tooling; the application is app/common's native CN1 build.
+# JVM command-line tooling; the application is common's native CN1 build.
 set -euo pipefail
 source "${BASH_SOURCE[0]%/*}/java-classpath.sh" cli
 if [[ -z "${JAVA_HOME:-}" && -x /usr/libexec/java_home ]]; then export JAVA_HOME="$(/usr/libexec/java_home -v 17)"; fi

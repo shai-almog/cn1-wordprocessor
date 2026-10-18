@@ -53,5 +53,5 @@ source += """
   }
 }
 """
-(root/'document/src/main/java/com/codenameone/wordprocessor/GraphemeProperties.java').write_text(source)
+(root/'common/src/main/java/com/codenameone/wordprocessor/GraphemeProperties.java').write_text(source)
 print('Generated grapheme properties:',len(source),'bytes')
