@@ -11,6 +11,11 @@ import org.junit.After;
 import org.junit.Test;
 
 public class OfficeCommandsTest {
+  // Encrypted saves use the port's Cipher, as in the app; the JavaSE port backs it with the JCE.
+  @org.junit.BeforeClass public static void port() {
+    com.codename1.io.Util.setImplementation(new com.codename1.impl.javase.JavaSEPort());
+  }
+
   private final Commands commands = new Commands();
 
   private Object run(Session s, String id, Object... kv) {

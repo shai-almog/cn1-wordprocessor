@@ -9,6 +9,11 @@ import java.util.Map;
 import org.junit.Test;
 
 public class OfficeCryptoTest {
+  // Cipher runs on the active port, as in the app; the JavaSE port backs it with the JCE.
+  @org.junit.BeforeClass public static void port() {
+    com.codename1.io.Util.setImplementation(new com.codename1.impl.javase.JavaSEPort());
+  }
+
   private static String hex(byte[] b) {
     var s = new StringBuilder();
     for (byte x : b) s.append("%02x".formatted(x & 0xff));
@@ -38,24 +43,6 @@ public class OfficeCryptoTest {
         c7d329eeb6dd26545e96e55b874be909""", hex(OfficeCrypto.sha512(ascii("""
         abcdefghbcdefghicdefghijdefghijkefghijklfghijklm\
         ghijklmnhijklmnoijklmnopjklmnopqklmnopqrlmnopqrsmnopqrstnopqrstu"""))));
-  }
-
-  @Test public void aes256KnownAnswer() {
-    byte[] key = unhex("000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f");
-    byte[] pt = unhex("00112233445566778899aabbccddeeff");
-    byte[] ct = new byte[16];
-    new Aes(key).encryptBlock(pt, 0, ct, 0);
-    assertEquals("8ea2b7ca516745bfeafc49904b496089", hex(ct));
-    byte[] back = new byte[16];
-    new Aes(key).decryptBlock(ct, 0, back, 0);
-    assertArrayEquals(pt, back);
-    byte[] k128 = unhex("000102030405060708090a0b0c0d0e0f");
-    new Aes(k128).encryptBlock(pt, 0, ct, 0);
-    assertEquals("69c4e0d86a7b0430d8cdb78070b4c55a", hex(ct));
-    byte[] data = new byte[64];
-    for (int i = 0; i < data.length; i++) data[i] = (byte) (i * 7);
-    byte[] iv = unhex("0f0e0d0c0b0a09080706050403020100");
-    assertArrayEquals(data, Aes.cbcDecrypt(key, iv, Aes.cbcEncrypt(key, iv, data)));
   }
 
   @Test public void hmacSha512Rfc4231Case2() throws Exception {

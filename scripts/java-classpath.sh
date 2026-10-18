@@ -9,11 +9,11 @@ fi
 IFS= read -r classpath < "$classpath_file" || [[ -n "$classpath" ]]
 modules='document layout formats automation editor cli benchmarks'
 if [[ "${1:-}" == cli ]]; then
-  # CLI codecs need CN1 core; GUI/JCEF/JOGL/SQLite are not CLI dependencies.
+  # CLI codecs need CN1 core, and the JavaSE port for crypto; JCEF/JOGL/SQLite are not needed.
   IFS=: read -r -a jars <<< "$classpath"
   classpath=''
   for jar in "${jars[@]}"; do
-    case "$jar" in */codenameone-core/*) classpath="$jar";; esac
+    case "$jar" in */codenameone-core/*|*/codenameone-javase/*) classpath="$jar${classpath:+:$classpath}";; esac
   done
   [[ -n "$classpath" ]] || { echo 'Missing Codename One core dependency' >&2; exit 1; }
   modules='document layout formats automation cli'

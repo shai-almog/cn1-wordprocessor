@@ -1,6 +1,8 @@
 package com.codenameone.wordprocessor;
 
+import com.codename1.security.Cipher;
 import com.codename1.security.Hash;
+import com.codename1.security.SecretKey;
 import com.codename1.security.Hmac;
 import com.codename1.util.Base64;
 import com.codename1.xml.Element;
@@ -23,6 +25,14 @@ import java.util.Random;
  */
 public final class OfficeCrypto {
   private static final int HASH_SIZE = 64;
+
+  /** AES-CBC without padding; agile encryption pads segments itself. */
+  private static byte[] aes(boolean encrypt, byte[] key, byte[] iv, byte[] data) {
+    var k = new SecretKey("AES", key);
+    return encrypt
+        ? Cipher.aesEncrypt(Cipher.AES_CBC, k, iv, null, data)
+        : Cipher.aesDecrypt(Cipher.AES_CBC, k, iv, null, data);
+  }
 
   /** SHA-512 of the concatenated parts. */
   static byte[] sha512(byte[]... parts) {
@@ -159,20 +169,20 @@ public final class OfficeCrypto {
       int from = s * SEGMENT, n = Math.min(SEGMENT, docx.length - from);
       byte[] seg = new byte[n];
       System.arraycopy(docx, from, seg, 0, n);
-      byte[] enc = Aes.cbcEncrypt(key, makeIv(keyDataSalt, le32(s)), padded(seg));
+      byte[] enc = aes(true, key, makeIv(keyDataSalt, le32(s)), padded(seg));
       System.arraycopy(enc, 0, stream, 8 + from, enc.length);
     }
 
     byte[] hn = iterate(passwordSalt, password, spin);
     byte[] iv = makeIv(passwordSalt, null);
-    byte[] encVerifierInput = Aes.cbcEncrypt(deriveKey(hn, BK_VERIFIER_INPUT, keyBytes), iv, padded(verifier));
+    byte[] encVerifierInput = aes(true, deriveKey(hn, BK_VERIFIER_INPUT, keyBytes), iv, padded(verifier));
     byte[] encVerifierHash =
-        Aes.cbcEncrypt(deriveKey(hn, BK_VERIFIER_VALUE, keyBytes), iv, padded(sha512(verifier)));
-    byte[] encKeyValue = Aes.cbcEncrypt(deriveKey(hn, BK_KEY_VALUE, keyBytes), iv, padded(key));
+        aes(true, deriveKey(hn, BK_VERIFIER_VALUE, keyBytes), iv, padded(sha512(verifier)));
+    byte[] encKeyValue = aes(true, deriveKey(hn, BK_KEY_VALUE, keyBytes), iv, padded(key));
 
-    byte[] encHmacKey = Aes.cbcEncrypt(key, makeIv(keyDataSalt, BK_HMAC_KEY), padded(hmacSalt));
+    byte[] encHmacKey = aes(true, key, makeIv(keyDataSalt, BK_HMAC_KEY), padded(hmacSalt));
     byte[] hmac = Hmac.sha512(hmacSalt, stream);
-    byte[] encHmacValue = Aes.cbcEncrypt(key, makeIv(keyDataSalt, BK_HMAC_VALUE), padded(hmac));
+    byte[] encHmacValue = aes(true, key, makeIv(keyDataSalt, BK_HMAC_VALUE), padded(hmac));
 
     var params = """
         saltSize="16" blockSize="16" keyBits="256" hashSize="64" cipherAlgorithm="AES"\
@@ -316,19 +326,19 @@ public final class OfficeCrypto {
 
     byte[] hn = iterate(pwSalt, password, spin);
     byte[] iv = makeIv(pwSalt, null);
-    byte[] input = head(Aes.cbcDecrypt(deriveKey(hn, BK_VERIFIER_INPUT, pwKeyBytes), iv,
+    byte[] input = head(aes(false, deriveKey(hn, BK_VERIFIER_INPUT, pwKeyBytes), iv,
         b64attr(ek, "encryptedVerifierHashInput")), pwSalt.length);
-    byte[] value = head(Aes.cbcDecrypt(deriveKey(hn, BK_VERIFIER_VALUE, pwKeyBytes), iv,
+    byte[] value = head(aes(false, deriveKey(hn, BK_VERIFIER_VALUE, pwKeyBytes), iv,
         b64attr(ek, "encryptedVerifierHashValue")), HASH_SIZE);
     if (!same(sha512(input), value)) throw new IOException("Wrong password");
-    byte[] key = head(Aes.cbcDecrypt(deriveKey(hn, BK_KEY_VALUE, pwKeyBytes), iv, b64attr(ek, "encryptedKeyValue")),
+    byte[] key = head(aes(false, deriveKey(hn, BK_KEY_VALUE, pwKeyBytes), iv, b64attr(ek, "encryptedKeyValue")),
         dataKeyBytes);
 
     if (integrity == null) throw new IOException("The document has no integrity check");
-    byte[] hmacKey = head(Aes.cbcDecrypt(key, makeIv(dataSalt, BK_HMAC_KEY), b64attr(integrity, "encryptedHmacKey")),
+    byte[] hmacKey = head(aes(false, key, makeIv(dataSalt, BK_HMAC_KEY), b64attr(integrity, "encryptedHmacKey")),
         HASH_SIZE);
     byte[] expected = head(
-        Aes.cbcDecrypt(key, makeIv(dataSalt, BK_HMAC_VALUE), b64attr(integrity, "encryptedHmacValue")), HASH_SIZE);
+        aes(false, key, makeIv(dataSalt, BK_HMAC_VALUE), b64attr(integrity, "encryptedHmacValue")), HASH_SIZE);
     if (!same(Hmac.sha512(hmacKey, pkg), expected))
       throw new IOException("The document is damaged (its integrity check failed)");
 
@@ -344,7 +354,7 @@ public final class OfficeCrypto {
       int n = (int) Math.min(SEGMENT, needed - from);
       byte[] seg = new byte[n];
       System.arraycopy(pkg, 8 + from, seg, 0, n);
-      byte[] dec = Aes.cbcDecrypt(key, makeIv(dataSalt, le32(s)), seg);
+      byte[] dec = aes(false, key, makeIv(dataSalt, le32(s)), seg);
       System.arraycopy(dec, 0, out, from, n);
     }
     byte[] r = new byte[(int) size];

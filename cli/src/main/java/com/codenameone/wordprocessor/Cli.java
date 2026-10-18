@@ -6,6 +6,12 @@ import java.util.*;
 
 public final class Cli {
   public static void main(String[] args) {
+    // Headless: no Display, but crypto (encrypted documents) runs on the JavaSE port.
+    // The port logs on construction; keep stdout clean for the MCP protocol.
+    var stdout = System.out;
+    System.setOut(System.err);
+    com.codename1.io.Util.setImplementation(new com.codename1.impl.javase.JavaSEPort());
+    System.setOut(stdout);
     try {
       run(args);
     } catch (Exception e) {
