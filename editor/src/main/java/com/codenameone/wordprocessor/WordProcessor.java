@@ -412,7 +412,6 @@ public class WordProcessor {
     configureMobileViewport();
     OfficeTheme.refreshAppearance();
     OfficeTheme.applyAppearance(form);
-    OfficeTheme.applyPopupAppearance();
     form.show();
     // No appearance-change callback exists, so follow the OS setting with a cheap poll.
     new UITimer(
@@ -421,7 +420,6 @@ public class WordProcessor {
               if (!changed && !OfficeTheme.mapped()) return;
               // While mapped, also catch chrome created or restyled since the last pass.
               OfficeTheme.applyAppearance(form);
-              if (changed) OfficeTheme.applyPopupAppearance();
               form.repaint();
             })
         .schedule(500, true, form);

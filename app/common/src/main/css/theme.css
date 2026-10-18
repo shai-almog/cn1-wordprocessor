@@ -68,3 +68,65 @@ SideCommand {
         border-bottom: 2px solid #334155;
     }
 }
+
+/* Office chrome over the native theme: white popups and thin overlay scrollbars (a 3pt track
+ * around a rounded thumb that darkens on hover and drag, as AppKit overlay bars do). */
+ComboBoxPopup, PopupContentPane, ComboBoxList {
+    background-color: #ffffff;
+    border: none;
+}
+ComboBoxPopup {
+    border: 1px solid #d9d9d9;
+}
+ComboBoxItem {
+    color: #242424;
+}
+Scroll, DesktopScroll {
+    background-color: transparent;
+    border: none;
+    padding: 0 0.5mm 0 0.5mm;
+    margin: 0;
+}
+HorizontalScroll, DesktopHorizontalScroll {
+    background-color: transparent;
+    border: none;
+    padding: 0.5mm 0 0.5mm 0;
+    margin: 0;
+}
+ScrollThumb, HorizontalScrollThumb, DesktopScrollThumb, DesktopHorizontalScrollThumb {
+    background-color: rgba(168, 168, 168, 0.78);
+    border-radius: 0.5mm;
+    padding: 0;
+    margin: 0;
+}
+ScrollThumb.selected, HorizontalScrollThumb.selected, DesktopScrollThumb.selected,
+DesktopHorizontalScrollThumb.selected {
+    background-color: rgba(138, 138, 138, 0.78);
+}
+ScrollThumb.pressed, HorizontalScrollThumb.pressed, DesktopScrollThumb.pressed,
+DesktopHorizontalScrollThumb.pressed {
+    background-color: rgba(112, 112, 112, 0.78);
+}
+
+@media (prefers-color-scheme: dark) {
+    ComboBoxPopup, PopupContentPane, ComboBoxList {
+        background-color: #141414;
+    }
+    ComboBoxPopup {
+        border: 1px solid #343434;
+    }
+    ComboBoxItem {
+        color: #cccccc;
+    }
+    ScrollThumb, HorizontalScrollThumb, DesktopScrollThumb, DesktopHorizontalScrollThumb {
+        background-color: rgba(93, 93, 93, 0.78);
+    }
+    ScrollThumb.selected, HorizontalScrollThumb.selected, DesktopScrollThumb.selected,
+    DesktopHorizontalScrollThumb.selected {
+        background-color: rgba(119, 119, 119, 0.78);
+    }
+    ScrollThumb.pressed, HorizontalScrollThumb.pressed, DesktopScrollThumb.pressed,
+    DesktopHorizontalScrollThumb.pressed {
+        background-color: rgba(140, 140, 140, 0.78);
+    }
+}
