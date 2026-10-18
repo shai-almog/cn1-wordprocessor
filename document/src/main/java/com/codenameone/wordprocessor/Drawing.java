@@ -23,8 +23,9 @@ public final class Drawing {
   /** 1x1 transparent PNG used as the picture payload of every drawing. */
   static final byte[] PLACEHOLDER =
       hex(
-          "89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c489"
-              + "0000000b49444154789c6360000200000500017a5eab3f0000000049454e44ae426082");
+          """
+          89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c489\
+          0000000b49444154789c6360000200000500017a5eab3f0000000049454e44ae426082""");
 
   private static byte[] hex(String s) {
     byte[] b = new byte[s.length() / 2];
@@ -46,12 +47,12 @@ public final class Drawing {
   }
 
   public String get(String key, String fallback) {
-    String v = props.get(key);
+    var v = props.get(key);
     return v == null ? fallback : v;
   }
 
   public float num(String key, float fallback) {
-    String v = props.get(key);
+    var v = props.get(key);
     if (v == null || v.isEmpty()) return fallback;
     try {
       return Float.parseFloat(v);
@@ -66,7 +67,7 @@ public final class Drawing {
 
   /** A hex RGB property, or the fallback; "none" gives -1. */
   public int color(String key, int fallback) {
-    String v = props.get(key);
+    var v = props.get(key);
     if (v == null || v.isEmpty()) return fallback;
     if ("none".equals(v)) return -1;
     if (v.startsWith("#")) v = v.substring(1);
@@ -86,7 +87,7 @@ public final class Drawing {
         throw new IllegalArgumentException("Invalid drawing property: " + key);
     if (value != null && value.length() > 200000)
       throw new IllegalArgumentException("Drawing property too long");
-    TreeMap<String, String> next = new TreeMap<String, String>(props);
+    var next = new TreeMap<String, String>(props);
     if (value == null || value.isEmpty()) next.remove(key);
     else next.put(key, value);
     return new Drawing(kind, next);
@@ -98,15 +99,15 @@ public final class Drawing {
 
   /** {@code kind;key=value;...} with backslash escapes for {@code ; = \}. */
   public String encode() {
-    StringBuilder b = new StringBuilder(kind);
+    var b = new StringBuilder(kind);
     for (Map.Entry<String, String> e : props.entrySet())
       b.append(';').append(e.getKey()).append('=').append(escape(e.getValue()));
     return b.toString();
   }
 
   public static Drawing decode(String text) {
-    List<String> parts = new ArrayList<String>();
-    StringBuilder cur = new StringBuilder();
+    var parts = new ArrayList<String>();
+    var cur = new StringBuilder();
     for (int i = 0; i < text.length(); i++) {
       char c = text.charAt(i);
       if (c == '\\' && i + 1 < text.length()) cur.append(c).append(text.charAt(++i));
@@ -118,7 +119,7 @@ public final class Drawing {
     parts.add(cur.toString());
     Drawing d = of(parts.get(0));
     for (int i = 1; i < parts.size(); i++) {
-      String p = parts.get(i);
+      var p = parts.get(i);
       int eq = p.indexOf('=');
       if (eq <= 0) throw new IllegalArgumentException("Invalid drawing property");
       d = d.with(p.substring(0, eq), unescape(p.substring(eq + 1)));
@@ -127,7 +128,7 @@ public final class Drawing {
   }
 
   private static String escape(String v) {
-    StringBuilder b = new StringBuilder();
+    var b = new StringBuilder();
     for (int i = 0; i < v.length(); i++) {
       char c = v.charAt(i);
       if (c == ';' || c == '=' || c == '\\') b.append('\\');
@@ -137,7 +138,7 @@ public final class Drawing {
   }
 
   private static String unescape(String v) {
-    StringBuilder b = new StringBuilder();
+    var b = new StringBuilder();
     for (int i = 0; i < v.length(); i++) {
       char c = v.charAt(i);
       if (c == '\\' && i + 1 < v.length()) c = v.charAt(++i);
@@ -147,7 +148,7 @@ public final class Drawing {
   }
 
   public boolean equals(Object o) {
-    return o instanceof Drawing && ((Drawing) o).kind.equals(kind) && ((Drawing) o).props.equals(props);
+    return o instanceof Drawing d && d.kind.equals(kind) && d.props.equals(props);
   }
 
   public int hashCode() {

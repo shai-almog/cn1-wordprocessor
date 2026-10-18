@@ -21,18 +21,18 @@ public class TablePropertiesLayoutTest {
 
   @Test
   public void columnsPaddingAndVerticalAlignmentSetRealGeometry() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.insertTable(1, 2);
     s.setCell(1, 0, 0, "Left");
     s.setCell(1, 0, 1, "Bottom");
-    Table t = (Table) s.document().blocks.get(1);
+    var t = (Table) s.document().blocks.get(1);
     s.formatTable(
         1,
         t.format
             .columnFraction(0, .25f)
             .minHeight(0, 100)
             .cell(0, 1, new TableFormat.Cell(0xff0000, 0, 0, 10, 7, "bottom")));
-    LayoutEngine.Page p =
+    var p =
         engine().layout(s.document().page(new PageSpec(240, 300, 20, 20, 20, 20)), 0).pages.get(0);
     assertEquals(50, p.boxes.get(0).width, .01);
     assertEquals(150, p.boxes.get(1).width, .01);
@@ -47,15 +47,15 @@ public class TablePropertiesLayoutTest {
 
   @Test
   public void repeatedHeadersDoNotDropOrDuplicateBodyRows() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.insertTable(20, 2);
     for (int r = 0; r < 20; r++) for (int c = 0; c < 2; c++) s.setCell(1, r, c, "r" + r + "c" + c);
-    Table t = (Table) s.document().blocks.get(1);
+    var t = (Table) s.document().blocks.get(1);
     s.formatTable(1, t.format.headerRows(1));
-    LayoutEngine.Result result =
+    var result =
         engine().layout(s.document().page(new PageSpec(240, 180, 20, 20, 20, 20)), 0);
     assertTrue(result.pages.size() > 2);
-    Map<String, Integer> seen = new HashMap<String, Integer>();
+    var seen = new HashMap<String, Integer>();
     int tablePages = 0;
     for (LayoutEngine.Page page : result.pages) {
       boolean hasTable = false, hasHeader = false;
@@ -63,7 +63,7 @@ public class TablePropertiesLayoutTest {
         if (line.block == 1) {
           hasTable = true;
           hasHeader |= line.row == 0;
-          String key = line.row + ":" + line.column;
+          var key = line.row + ":" + line.column;
           seen.put(key, seen.containsKey(key) ? seen.get(key) + 1 : 1);
           assertTrue(line.y + line.height <= 160.01);
         }

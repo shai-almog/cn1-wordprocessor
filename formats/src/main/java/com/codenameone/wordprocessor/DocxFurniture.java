@@ -20,7 +20,7 @@ final class DocxFurniture {
 
   DocxFurniture(Document doc, Map<String, byte[]> parts, String prefix) throws IOException {
     document = doc;
-    Set<String> existing = new HashSet<String>();
+    var existing = new HashSet<String>();
     if (parts.containsKey(REL))
       for (Element rel : Xml.children(Xml.parse(parts.get(REL)), null))
         existing.add(Xml.attr(rel, "Id", ""));
@@ -40,11 +40,11 @@ final class DocxFurniture {
             }
           }
         if (reused != null) continue;
-        String id = "cn1Furniture" + prefix + key;
+        var id = "cn1Furniture" + prefix + key;
         while (existing.contains(id)) id += "x";
         existing.add(id);
         ids.put(key, id);
-        String path = "word/cn1-" + key + ".xml";
+        var path = "word/cn1-" + key + ".xml";
         int suffix = 1;
         while (parts.containsKey(path)) path = "word/cn1-" + key + (suffix++) + ".xml";
         paths.put(key, path);
@@ -67,7 +67,7 @@ final class DocxFurniture {
       DocxStyles styles)
       throws IOException {
     if (section == null) return PageFurniture.EMPTY;
-    Map<String, String> targets = new HashMap<String, String>();
+    var targets = new HashMap<String, String>();
     if (parts.containsKey(REL))
       for (Element rel : Xml.children(Xml.parse(parts.get(REL)), null)) {
         String type = Xml.attr(rel, "Type", "");
@@ -75,7 +75,7 @@ final class DocxFurniture {
             && !"External".equals(Xml.attr(rel, "TargetMode", "")))
           targets.put(Xml.attr(rel, "Id", ""), Xml.attr(rel, "Target", ""));
       }
-    Map<String, Sequence<Paragraph>> stories = new LinkedHashMap<String, Sequence<Paragraph>>();
+    var stories = new LinkedHashMap<String, Sequence<Paragraph>>();
     for (Element ref : Xml.children(section, null)) {
       String kind = Xml.local(ref);
       if (!"headerReference".equals(kind) && !"footerReference".equals(kind)) continue;
@@ -89,25 +89,25 @@ final class DocxFurniture {
           "default".equals(type)
               ? base
               : type + Character.toUpperCase(base.charAt(0)) + base.substring(1);
-      String target = targets.get(Xml.attr(ref, "id", ""));
+      var target = targets.get(Xml.attr(ref, "id", ""));
       if (target == null || target.contains("..") || target.contains("\\")) {
         warnings.add("Missing or invalid header/footer relationship");
         continue;
       }
       String path = target.startsWith("/") ? target.substring(1) : "word/" + target;
-      byte[] data = parts.get(path);
+      var data = parts.get(path);
       if (data == null) {
         warnings.add("Missing header/footer part");
         continue;
       }
-      Sequence<Paragraph> paragraphs = new Sequence<Paragraph>();
-      String relPath =
+      var paragraphs = new Sequence<Paragraph>();
+      var relPath =
           path.substring(0, path.lastIndexOf('/') + 1)
               + "_rels/"
               + path.substring(path.lastIndexOf('/') + 1)
               + ".rels";
-      DocxLinks links = new DocxLinks(parts, relPath);
-      DocxComments comments = new DocxComments(Collections.<String, byte[]>emptyMap());
+      var links = new DocxLinks(parts, relPath);
+      var comments = new DocxComments(Collections.<String, byte[]>emptyMap());
       comments.bookmarks.supported = false;
       for (Element child : Xml.children(Xml.parse(data), null)) {
         if ("p".equals(Xml.local(child)))
@@ -159,9 +159,9 @@ final class DocxFurniture {
       String kind = key.toLowerCase().endsWith("header") ? "header" : "footer",
           tag = kind.equals("header") ? "hdr" : "ftr",
           path = paths.get(key);
-      String relPath = "word/_rels/" + path.substring(5) + ".rels";
-      DocxLinks links = new DocxLinks(parts, relPath);
-      StringBuilder b =
+      var relPath = "word/_rels/" + path.substring(5) + ".rels";
+      var links = new DocxLinks(parts, relPath);
+      var b =
           new StringBuilder("<w:")
               .append(tag)
               .append(" xmlns:w=\"")
@@ -177,7 +177,7 @@ final class DocxFurniture {
       relationship(parts, ids.get(key), kind, path.substring(5));
       contentType(parts, path, kind);
     }
-    String settingsPath = "word/settings.xml";
+    var settingsPath = "word/settings.xml";
     Element settings =
         parts.containsKey(settingsPath)
             ? Xml.parse(parts.get(settingsPath))
@@ -213,15 +213,15 @@ final class DocxFurniture {
     DocxProperties.settings(settings, document.properties, W);
     tabs.settings(settings);
     parts.put(settingsPath, Xml.write(settings).getBytes("UTF-8"));
-    String rels = new String(parts.get(REL), "UTF-8");
+    var rels = new String(parts.get(REL), "UTF-8");
     boolean found = false;
-    Set<String> existing = new HashSet<String>();
+    var existing = new HashSet<String>();
     for (Element rel : Xml.children(Xml.parse(rels), null)) {
       existing.add(Xml.attr(rel, "Id", ""));
       if ((R + "/settings").equals(Xml.attr(rel, "Type", ""))) found = true;
     }
     if (!found) {
-      String id = "cn1Settings";
+      var id = "cn1Settings";
       while (existing.contains(id)) id += "x";
       relationship(parts, id, "settings", "settings.xml");
     }

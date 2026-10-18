@@ -36,11 +36,10 @@ final class DocxTabs {
   }
 
   static List<Paragraph> paragraphs(Document document) {
-    List<Paragraph> result = new ArrayList<Paragraph>();
+    var result = new ArrayList<Paragraph>();
     for (Block block : document.blocks)
-      if (block instanceof Paragraph) result.add((Paragraph) block);
-      else if (block instanceof Table) {
-        Table table = (Table) block;
+      if (block instanceof Paragraph paragraph) result.add(paragraph);
+      else if (block instanceof Table table) {
         for (int r = 0; r < table.rows(); r++)
           for (int c = 0; c < table.columns(); c++)
             for (Paragraph p : table.cell(r, c)) result.add(p);
@@ -66,7 +65,7 @@ final class DocxTabs {
   }
 
   private List<TabStop> stops(Paragraph p) {
-    List<TabStop> result = new ArrayList<TabStop>(p.format.tabs);
+    var result = new ArrayList<TabStop>(p.format.tabs);
     if (p.format.tabInterval != interval) {
       float last = 0;
       for (TabStop stop : result)
@@ -84,8 +83,8 @@ final class DocxTabs {
   }
 
   void write(StringBuilder out, Paragraph paragraph) {
-    List<TabStop> current = stops(paragraph);
-    ParagraphStyle style = styles.get(paragraph.style);
+    var current = stops(paragraph);
+    var style = styles.get(paragraph.style);
     List<TabStop> inherited =
         style == null ? Collections.<TabStop>emptyList() : stops(style.paragraph);
     if (current.isEmpty() && inherited.isEmpty()) return;

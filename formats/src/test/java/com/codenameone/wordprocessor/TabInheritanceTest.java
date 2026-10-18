@@ -9,7 +9,7 @@ import org.junit.Test;
 
 public class TabInheritanceTest {
   private Document roundtrip(Document d) throws Exception {
-    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    var out = new ByteArrayOutputStream();
     Docx.write(d, out);
     Docx.Opened result = Docx.read(new ByteArrayInputStream(out.toByteArray()));
     assertTrue(result.warnings.toString(), result.warnings.isEmpty());
@@ -17,7 +17,7 @@ public class TabInheritanceTest {
   }
 
   private Session styled() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("A\tB");
     s.defineStyle(
         new ParagraphStyle(
@@ -31,9 +31,9 @@ public class TabInheritanceTest {
 
   @Test
   public void clearedInheritedTabsStayClearedAfterTwoRoundTrips() throws Exception {
-    Session s = styled();
+    var s = styled();
     s.paragraph("tabs", "");
-    Document d = roundtrip(roundtrip(s.document()));
+    var d = roundtrip(roundtrip(s.document()));
     assertTrue(d.paragraph(0).format.tabs.isEmpty());
     assertEquals(
         "60.0,bar,none;120.0,right,dot",
@@ -46,15 +46,15 @@ public class TabInheritanceTest {
 
   @Test
   public void partialClearsAndChangedAlignmentSurviveInCellsAndHeaders() throws Exception {
-    Session s = styled();
+    var s = styled();
     s.paragraph("tabs", "120,left,hyphen");
     s.insertTable(1, 1);
     s.enterCell(1, 0, 0);
     s.applyStyle("Tabs");
     s.paragraph("tabs", "60,bar,none");
-    Paragraph header =
+    var header =
         new Paragraph("hp", RichText.of("Header", TextStyle.DEFAULT)).with("style", "Tabs");
-    Document d =
+    var d =
         roundtrip(
             s.document()
                 .furniture(
@@ -67,7 +67,7 @@ public class TabInheritanceTest {
 
   @Test
   public void barOnlyParagraphRoundTripsAndProducesPdfRuleWithoutTabCharacter() throws Exception {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("Text without tabs");
     s.paragraph("tabs", "48,bar,none;144,bar,none");
     assertEquals(
@@ -76,7 +76,7 @@ public class TabInheritanceTest {
     assertEquals(
         DocumentXml.write(s.document()),
         DocumentXml.write(DocumentXml.read(DocumentXml.write(s.document()))));
-    String pdf =
+    var pdf =
         new String(
             PdfExporter.write(s.document().page(new PageSpec(240, 300, 20, 20, 20, 20))),
             "ISO-8859-1");
@@ -86,18 +86,18 @@ public class TabInheritanceTest {
 
   @Test
   public void nondefaultBarIntervalUsesDocumentSetting() throws Exception {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.paragraph("tabs", "48,bar,none");
     s.paragraph("tabInterval", "48");
-    Document d = roundtrip(s.document());
+    var d = roundtrip(s.document());
     assertEquals(48, d.paragraph(0).format.tabInterval, .001);
     assertEquals("48.0,bar,none", TabStop.encode(d.paragraph(0).format.tabs));
   }
 
   @Test
   public void inheritedClearsApplyAfterBasedOnStylesAndDocumentDefaults() throws Exception {
-    Map<String, String> parts = new LinkedHashMap<String, String>();
-    String ns = " xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"";
+    var parts = new LinkedHashMap<String, String>();
+    var ns = " xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"";
     parts.put(
         "word/document.xml",
         "<w:document"
@@ -117,8 +117,8 @@ public class TabInheritanceTest {
     parts.put(
         "word/settings.xml",
         "<w:settings" + ns + "><w:defaultTabStop w:val=\"960\"/></w:settings>");
-    ByteArrayOutputStream out = new ByteArrayOutputStream();
-    ZipOutputStream zip = new ZipOutputStream(out);
+    var out = new ByteArrayOutputStream();
+    var zip = new ZipOutputStream(out);
     for (Map.Entry<String, String> entry : parts.entrySet()) {
       zip.putNextEntry(new ZipEntry(entry.getKey()));
       zip.write(entry.getValue().getBytes("UTF-8"));
@@ -135,10 +135,10 @@ public class TabInheritanceTest {
 
   @Test
   public void mixedBarDefaultIntervalsRequireExplicitConversion() {
-    Paragraph first =
+    var first =
         new Paragraph("a", new RichText()).with("tabInterval", "48").with("tabs", "48,bar,none");
-    Paragraph second = new Paragraph("b", new RichText()).with("tabs", "36,bar,none");
-    Document d =
+    var second = new Paragraph("b", new RichText()).with("tabs", "36,bar,none");
+    var d =
         new Document(new Sequence<Block>().append(first).append(second), PageSpec.A4, "Mixed", 3);
     assertFalse(Docx.conversionWarnings(d, null).isEmpty());
   }

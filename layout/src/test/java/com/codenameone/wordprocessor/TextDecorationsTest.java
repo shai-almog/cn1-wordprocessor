@@ -18,7 +18,7 @@ public class TextDecorationsTest {
       };
 
   private List<float[]> lines(String value, String type) {
-    Document d =
+    var d =
         Document.empty()
             .blocks(
                 new Sequence<Block>()
@@ -27,7 +27,7 @@ public class TextDecorationsTest {
                             "p1",
                             RichText.of(value, TextStyle.DEFAULT.with("underlineStyle", type)))),
                 2);
-    List<float[]> result = new ArrayList<float[]>();
+    var result = new ArrayList<float[]>();
     for (LayoutEngine.Span span :
         new LayoutEngine(metrics).layout(d, 0).pages.get(0).lines.get(0).spans)
       TextDecorations.underline(
@@ -39,7 +39,7 @@ public class TextDecorationsTest {
 
   @Test
   public void wordOnlyUnderlineLeavesWhitespaceUnpainted() {
-    List<float[]> path = lines("ab  cd", "words");
+    var path = lines("ab  cd", "words");
     assertEquals(2, path.size());
     assertArrayEquals(new float[] {0, 1, 12, 1}, path.get(0), .001f);
     assertArrayEquals(new float[] {24, 1, 36, 1}, path.get(1), .001f);

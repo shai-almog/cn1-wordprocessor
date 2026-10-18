@@ -13,7 +13,7 @@ public class WordAliasCommandsTest {
   }
 
   private static Session doc(String text) {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace(text);
     return s;
   }
@@ -67,7 +67,7 @@ public class WordAliasCommandsTest {
     run(s, "para.distribute");
     assertEquals("distribute", s.document().paragraph(s.selection().block).align);
     run(s, "layout.orientation", "value", "landscape");
-    PageSpec p = s.activeSection().raw.page;
+    var p = s.activeSection().raw.page;
     assertTrue(p.width > p.height);
     run(s, "layout.margins", "preset", "narrow");
     assertEquals(36f, s.activeSection().raw.page.left, 0.01);
@@ -99,8 +99,8 @@ public class WordAliasCommandsTest {
     run(s, "equation.insertStructure", "kind", "fraction");
     boolean found = false;
     for (int i = 0; i < s.document().blocks.size(); i++) {
-      Block b = s.document().blocks.get(i);
-      if (b instanceof Picture && ((Picture) b).drawing != null && "equation".equals(((Picture) b).drawing.kind)) found = true;
+      var b = s.document().blocks.get(i);
+      if (b instanceof Picture picture && picture.drawing != null && "equation".equals(picture.drawing.kind)) found = true;
     }
     assertTrue(found);
   }

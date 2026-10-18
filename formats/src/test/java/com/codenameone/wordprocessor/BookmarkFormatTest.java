@@ -9,7 +9,7 @@ import org.junit.Test;
 public class BookmarkFormatTest {
   @Test
   public void rangesCommentsAndAtomicFieldsRoundTripTogether() throws Exception {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("alpha beta\nnext");
     s.select(0, 6, 10);
     s.addBookmark("Spot");
@@ -24,7 +24,7 @@ public class BookmarkFormatTest {
     s.addBookmark("Field");
     String xml = DocumentXml.write(s.document());
     assertEquals(xml, DocumentXml.write(DocumentXml.read(xml)));
-    ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+    var bytes = new ByteArrayOutputStream();
     Docx.write(s.document(), bytes);
     Docx.Opened reopened = Docx.read(new ByteArrayInputStream(bytes.toByteArray()));
     assertTrue(reopened.warnings.toString(), reopened.warnings.isEmpty());
@@ -39,15 +39,16 @@ public class BookmarkFormatTest {
 
   @Test
   public void externalMarkersUseAtomicFieldOffsetsAndPreservePointRanges() throws Exception {
-    Docx.Opened opened =
+    var opened =
         read(
-            "<w:p><w:r><w:t>X</w:t></w:r><w:bookmarkStart w:id=\"7\""
-                + " w:name=\"Target\"/><w:fldSimple"
-                + " w:instr=\"PAGE\"><w:r><w:t>123</w:t></w:r></w:fldSimple><w:bookmarkEnd"
-                + " w:id=\"7\"/><w:bookmarkStart w:id=\"8\" w:name=\"Point\"/><w:bookmarkEnd"
-                + " w:id=\"8\"/></w:p>");
+            """
+            <w:p><w:r><w:t>X</w:t></w:r><w:bookmarkStart w:id="7"\
+             w:name="Target"/><w:fldSimple\
+             w:instr="PAGE"><w:r><w:t>123</w:t></w:r></w:fldSimple><w:bookmarkEnd\
+             w:id="7"/><w:bookmarkStart w:id="8" w:name="Point"/><w:bookmarkEnd\
+             w:id="8"/></w:p>""");
     assertTrue(opened.warnings.toString(), opened.warnings.isEmpty());
-    Bookmark m = opened.document.bookmarks.get("Target");
+    var m = opened.document.bookmarks.get("Target");
     assertEquals(1, m.start);
     assertEquals(2, m.end);
     assertEquals("123", m.text(opened.document));
@@ -56,29 +57,32 @@ public class BookmarkFormatTest {
 
   @Test
   public void malformedAndFieldResultBookmarksReportConversionWarnings() throws Exception {
-    Docx.Opened broken =
+    var broken =
         read(
-            "<w:p><w:bookmarkStart w:id=\"1\""
-                + " w:name=\"MissingEnd\"/><w:r><w:t>A</w:t></w:r></w:p>");
+            """
+            <w:p><w:bookmarkStart w:id="1"\
+             w:name="MissingEnd"/><w:r><w:t>A</w:t></w:r></w:p>""");
     assertFalse(broken.warnings.isEmpty());
     assertTrue(broken.document.bookmarks.isEmpty());
-    Docx.Opened inside =
+    var inside =
         read(
-            "<w:p><w:fldSimple w:instr=\"PAGE\"><w:bookmarkStart w:id=\"1\""
-                + " w:name=\"Inside\"/><w:r><w:t>1</w:t></w:r><w:bookmarkEnd"
-                + " w:id=\"1\"/></w:fldSimple></w:p>");
+            """
+            <w:p><w:fldSimple w:instr="PAGE"><w:bookmarkStart w:id="1"\
+             w:name="Inside"/><w:r><w:t>1</w:t></w:r><w:bookmarkEnd\
+             w:id="1"/></w:fldSimple></w:p>""");
     assertFalse(inside.warnings.isEmpty());
     assertTrue(inside.document.bookmarks.isEmpty());
   }
 
   @Test
   public void nativeReaderRejectsInvalidBookmarkRange() throws Exception {
-    String xml =
+    var xml =
         DocumentXml.write(Document.empty())
             .replace(
                 "</document>",
-                "<bookmark name=\"Bad\" startId=\"p1\" endId=\"p1\" start=\"0\""
-                    + " end=\"10\"/></document>");
+                """
+                <bookmark name="Bad" startId="p1" endId="p1" start="0"\
+                 end="10"/></document>""");
     try {
       DocumentXml.read(xml);
       fail();
@@ -87,8 +91,8 @@ public class BookmarkFormatTest {
   }
 
   private Docx.Opened read(String body) throws Exception {
-    ByteArrayOutputStream out = new ByteArrayOutputStream();
-    ZipOutputStream zip = new ZipOutputStream(out);
+    var out = new ByteArrayOutputStream();
+    var zip = new ZipOutputStream(out);
     zip.putNextEntry(new ZipEntry("word/document.xml"));
     zip.write(
         ("<w:document"

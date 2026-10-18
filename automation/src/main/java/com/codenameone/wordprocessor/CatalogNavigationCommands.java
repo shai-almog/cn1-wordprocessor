@@ -47,7 +47,7 @@ final class CatalogNavigationCommands implements Commands.Extension {
         "",
         false,
         (s, a) -> {
-          String text = paragraph(s).text.plainText();
+          var text = paragraph(s).text.plainText();
           int at = Math.min(o(s), text.length()), start = at, end = at;
           while (start > 0 && !sentenceEnd(text, start - 1)) start--;
           while (start < text.length() && text.charAt(start) == ' ') start++;
@@ -134,7 +134,7 @@ final class CatalogNavigationCommands implements Commands.Extension {
           if (s.selection().startBlock() != s.selection().endBlock())
             throw new IllegalArgumentException("Select within one paragraph");
           for (int i = Math.max(to, from + 1) - 1; i >= Math.max(0, from - 1); i--) {
-            InlineField f = paragraph(s).text.fieldAt(i);
+            var f = paragraph(s).text.fieldAt(i);
             if (f == null || (from == to ? i != from && i != from - 1 : i >= to)) continue;
             s.select(block, i, i + 1);
             s.replace(f.result);
@@ -253,7 +253,7 @@ final class CatalogNavigationCommands implements Commands.Extension {
         "value?:boolean",
         true,
         (s, a) -> {
-          PageFurniture f = s.activeSection().raw.furniture;
+          var f = s.activeSection().raw.furniture;
           boolean v = a.containsKey("value") ? (Boolean) a.get("value") : !f.differentFirst;
           s.section(
               s.activeSection()
@@ -267,7 +267,7 @@ final class CatalogNavigationCommands implements Commands.Extension {
         "value?:boolean",
         true,
         (s, a) -> {
-          PageFurniture f = s.activeSection().raw.furniture;
+          var f = s.activeSection().raw.furniture;
           boolean v = a.containsKey("value") ? (Boolean) a.get("value") : !f.differentEven;
           s.section(
               s.activeSection()
@@ -288,13 +288,13 @@ final class CatalogNavigationCommands implements Commands.Extension {
             if (!Arrays.asList("left", "center", "right", "both").contains(align))
               throw new IllegalArgumentException("Unknown alignment " + align);
             String key = variant(a, kind);
-            Sequence<Paragraph> story = new Sequence<Paragraph>();
+            var story = new Sequence<Paragraph>();
             for (String line : TextUtil.split(Commands.str(a, "text"), '\n'))
               story =
                   story.append(
                       new Paragraph("hf" + story.size(), RichText.of(line, TextStyle.DEFAULT))
                           .with("align", align));
-            Section raw = s.activeSection().raw;
+            var raw = s.activeSection().raw;
             s.section(raw.furniture(raw.furniture.story(key, story)));
             return null;
           });
@@ -304,11 +304,11 @@ final class CatalogNavigationCommands implements Commands.Extension {
           "",
           true,
           (s, a) -> {
-            Section raw = s.activeSection().raw;
-            PageFurniture f = raw.furniture;
+            var raw = s.activeSection().raw;
+            var f = raw.furniture;
             for (String key : PageFurniture.KEYS)
               if (key.endsWith(kind) || key.equals(kind.toLowerCase()))
-                f = f.story(key, new Sequence<Paragraph>());
+                f = f.story(key, new Sequence<>());
             s.section(raw.furniture(f));
             return null;
           });
@@ -321,7 +321,7 @@ final class CatalogNavigationCommands implements Commands.Extension {
         (s, a) -> {
           String key = Commands.str(a, "story");
           PageFurniture.check(key);
-          Section.Range range = s.activeSection();
+          var range = s.activeSection();
           if (range.first == 0) throw new IllegalArgumentException("The first section has no previous");
           boolean linked = !range.raw.furniture.stories.containsKey(key);
           boolean link = a.containsKey("value") ? (Boolean) a.get("value") : !linked;
@@ -338,8 +338,8 @@ final class CatalogNavigationCommands implements Commands.Extension {
         "header?:number,footer?:number",
         true,
         (s, a) -> {
-          Section raw = s.activeSection().raw;
-          PageFurniture f = raw.furniture;
+          var raw = s.activeSection().raw;
+          var f = raw.furniture;
           float h = a.containsKey("header") ? ((Number) a.get("header")).floatValue() : f.headerDistance;
           float b = a.containsKey("footer") ? ((Number) a.get("footer")).floatValue() : f.footerDistance;
           if (h > raw.page.height / 2 || b > raw.page.height / 2)
@@ -353,7 +353,7 @@ final class CatalogNavigationCommands implements Commands.Extension {
         "name?:string,width?:number,height?:number",
         true,
         (s, a) -> {
-          PageSpec p = s.activeSection().raw.page;
+          var p = s.activeSection().raw.page;
           float w, h;
           if (a.containsKey("name")) {
             Object[] paper = paper(Commands.str(a, "name"));
@@ -397,7 +397,7 @@ final class CatalogNavigationCommands implements Commands.Extension {
         "color?:string",
         true,
         (s, a) -> {
-          Object v = a.get("color");
+          var v = a.get("color");
           int color =
               v == null || "none".equals(v) ? 0xffffff : Integer.parseInt(hex((String) v), 16);
           cells(s, cell -> cell(cell, color, cell.horizontalPadding, cell.verticalPadding));
@@ -450,7 +450,7 @@ final class CatalogNavigationCommands implements Commands.Extension {
   /** Word's table border gallery over the selected cells (or the caret cell). */
   private static void tableBorders(Session s, String kind, int color, float width) {
     Table t = table(s);
-    CellSelection range = s.cellSelection();
+    var range = s.cellSelection();
     int r0 = range == null ? s.cellRow() : range.firstRow,
         r1 = range == null ? s.cellRow() : range.lastRow,
         c0 = range == null ? s.cellColumn() : range.firstColumn,
@@ -458,10 +458,10 @@ final class CatalogNavigationCommands implements Commands.Extension {
     if ("all".equals(kind) || "none".equals(kind) || "outside".equals(kind) || "inside".equals(kind)
         || "insideH".equals(kind) || "insideV".equals(kind) || "top".equals(kind)
         || "bottom".equals(kind) || "left".equals(kind) || "right".equals(kind)) {
-      TableFormat f = t.format;
+      var f = t.format;
       for (int r = r0; r <= r1; r++)
         for (int c = c0; c <= c1; c++) {
-          TableFormat.Cell cell = f.cell(r, c);
+          var cell = f.cell(r, c);
           int sides = cell.borderWidth > 0 ? cell.sides : 0, edge = 0;
           int outer =
               (r == r0 ? TableFormat.Cell.TOP : 0)
@@ -518,8 +518,8 @@ final class CatalogNavigationCommands implements Commands.Extension {
         "extend?:boolean",
         false,
         (s, a) -> {
-          int[] to = target.at(s);
-          Selection sel = s.selection();
+          var to = target.at(s);
+          var sel = s.selection();
           if (Boolean.TRUE.equals(a.get("extend")))
             s.selectRange(sel.anchorBlock, sel.anchor, to[0], to[1]);
           else s.select(to[0], to[1], to[1]);
@@ -538,12 +538,12 @@ final class CatalogNavigationCommands implements Commands.Extension {
           if (needle.isEmpty()) throw new IllegalArgumentException("Text is empty");
           boolean exact = Boolean.TRUE.equals(a.get("matchCase"));
           if (!exact) needle = needle.toLowerCase();
-          Document d = s.document();
+          var d = s.document();
           int n = d.blocks.size(), start = b(s);
           for (int step = 0; step <= n; step++) {
             int i = ((forward ? start + step : start - step) % n + n) % n;
             if (!(d.blocks.get(i) instanceof Paragraph)) continue;
-            String text = ((Paragraph) d.blocks.get(i)).text.plainText();
+            var text = ((Paragraph) d.blocks.get(i)).text.plainText();
             if (!exact) text = text.toLowerCase();
             int at;
             if (forward)
@@ -570,7 +570,7 @@ final class CatalogNavigationCommands implements Commands.Extension {
         "",
         true,
         (s, a) -> {
-          final String para = paragraph(s).id;
+          final var para = paragraph(s).id;
           final int from = s.selection().start(), to = s.selection().end();
           final int[] count = {0};
           s.mapFields(
@@ -594,12 +594,12 @@ final class CatalogNavigationCommands implements Commands.Extension {
         "",
         false,
         (s, a) -> {
-          Document d = s.document();
+          var d = s.document();
           int block = b(s);
           int offset = forward ? s.selection().end() : s.selection().start() - 1;
           for (int i = block; forward ? i < d.blocks.size() : i >= 0; i += forward ? 1 : -1) {
             if (!(d.blocks.get(i) instanceof Paragraph)) continue;
-            RichText t = ((Paragraph) d.blocks.get(i)).text;
+            var t = ((Paragraph) d.blocks.get(i)).text;
             int k = i == block ? offset : forward ? 0 : t.length() - 1;
             for (; forward ? k < t.length() : k >= 0; k += forward ? 1 : -1)
               if (t.fieldAt(k) != null) {
@@ -642,7 +642,7 @@ final class CatalogNavigationCommands implements Commands.Extension {
   }
 
   private static ParagraphStyle heading(int level) {
-    ParagraphStyle six = ParagraphStyle.defaults().get("Heading6");
+    var six = ParagraphStyle.defaults().get("Heading6");
     return new ParagraphStyle(
         "Heading" + level, "Heading " + level, six.paragraph.with("outlineLevel", "" + level), six.text);
   }
@@ -666,12 +666,12 @@ final class CatalogNavigationCommands implements Commands.Extension {
 
   private static void cells(Session s, CellEdit edit) {
     Table t = table(s);
-    CellSelection range = s.cellSelection();
+    var range = s.cellSelection();
     int r0 = range == null ? s.cellRow() : range.firstRow,
         r1 = range == null ? s.cellRow() : range.lastRow,
         c0 = range == null ? s.cellColumn() : range.firstColumn,
         c1 = range == null ? s.cellColumn() : range.lastColumn;
-    TableFormat f = t.format;
+    var f = t.format;
     for (int r = r0; r <= r1; r++)
       for (int c = c0; c <= c1; c++) f = f.cell(r, c, edit.apply(f.cell(r, c)));
     s.formatTable(s.cellBlock(), f);
@@ -693,7 +693,7 @@ final class CatalogNavigationCommands implements Commands.Extension {
   }
 
   private static Paragraph paragraph(Session s) {
-    Block b = s.document().blocks.get(b(s));
+    var b = s.document().blocks.get(b(s));
     if (!(b instanceof Paragraph)) throw new IllegalArgumentException("Not in a paragraph");
     return (Paragraph) b;
   }

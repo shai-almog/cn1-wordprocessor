@@ -5,15 +5,15 @@ import java.util.*;
 /** Parsed field instruction data. No instruction is executed as code. */
 public final class FieldCode {
   public final String name;
-  public final List<String> arguments = new ArrayList<String>();
-  public final Map<String, String> switches = new LinkedHashMap<String, String>();
+  public final List<String> arguments = new ArrayList<>();
+  public final Map<String, String> switches = new LinkedHashMap<>();
 
   public FieldCode(String instruction) {
-    List<Token> tokens = lex(instruction);
+    var tokens = lex(instruction);
     name = tokens.isEmpty() ? "" : tokens.get(0).text.toUpperCase();
     for (int i = 1; i < tokens.size(); i++) {
-      Token item = tokens.get(i);
-      String token = item.text;
+      var item = tokens.get(i);
+      var token = item.text;
       if (item.isSwitch()) {
         String value =
             i + 1 < tokens.size() && !tokens.get(i + 1).isSwitch() ? tokens.get(++i).text : "";
@@ -37,14 +37,14 @@ public final class FieldCode {
   }
 
   public static List<String> tokens(String instruction) {
-    List<String> out = new ArrayList<String>();
+    var out = new ArrayList<String>();
     for (Token token : lex(instruction)) out.add(token.text);
     return out;
   }
 
   private static List<Token> lex(String instruction) {
-    List<Token> out = new ArrayList<Token>();
-    StringBuilder token = new StringBuilder();
+    var out = new ArrayList<Token>();
+    var token = new StringBuilder();
     boolean quoted = false, wasQuoted = false, started = false;
     for (int i = 0; i < instruction.length(); i++) {
       char c = instruction.charAt(i);

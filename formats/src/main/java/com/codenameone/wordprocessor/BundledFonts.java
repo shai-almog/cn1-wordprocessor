@@ -10,7 +10,7 @@ public final class BundledFonts {
   }
 
   public static String family(String name) {
-    String n = name.toLowerCase();
+    var n = name.toLowerCase();
     if (n.contains("sans")) return "Source Sans 3";
     if (n.contains("mono") || n.contains("courier")) return "JetBrains Mono";
     if (n.contains("serif")
@@ -48,9 +48,9 @@ public final class BundledFonts {
     return new PdfExporter.FontProvider() {
       public String name(TextStyle style) { return resource(style); }
       public byte[] bytes(String name) throws IOException {
-        try (InputStream in = resources.open("/" + name + ".ttf")) {
+        try (var in = resources.open("/" + name + ".ttf")) {
           if (in == null) throw new IOException("Missing bundled font " + name);
-          ByteArrayOutputStream out = new ByteArrayOutputStream();
+          var out = new ByteArrayOutputStream();
           byte[] buffer = new byte[8192];
           for (int n; (n = in.read(buffer)) != -1;) {
             if (out.size() + n > 20 * 1024 * 1024) throw new IOException("Font exceeds size limit");

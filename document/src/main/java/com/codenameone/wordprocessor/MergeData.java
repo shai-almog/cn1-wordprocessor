@@ -28,29 +28,29 @@ public final class MergeData {
         || rows.size() > 100000
         || (long) fields.size() * rows.size() > 1000000)
       throw new IllegalArgumentException("Recipient list exceeds 100,000 rows or 1,000,000 cells");
-    List<String> names = new ArrayList<String>();
-    Set<String> used = new HashSet<String>();
+    var names = new ArrayList<String>();
+    var used = new HashSet<String>();
     for (int i = 0; i < fields.size(); i++) {
-      String base = fields.get(i).trim();
+      var base = fields.get(i).trim();
       if (base.isEmpty()) base = "Column " + (i + 1);
       if (base.length() > 200
           || base.indexOf('\n') >= 0
           || base.indexOf('\r') >= 0
           || base.indexOf('\0') >= 0)
         throw new IllegalArgumentException("Invalid recipient field name");
-      String name = base;
+      var name = base;
       int n = 2;
       while (!used.add(name.toLowerCase())) name = base + " " + n++;
       names.add(name);
     }
     if (names.isEmpty() && !rows.isEmpty())
       throw new IllegalArgumentException("Recipient fields are required");
-    List<List<String>> copy = new ArrayList<List<String>>();
+    var copy = new ArrayList<List<String>>();
     long length = 0;
     for (List<String> row : rows) {
       if (row.size() > names.size())
         throw new IllegalArgumentException("A recipient row has more values than fields");
-      List<String> values = new ArrayList<String>();
+      var values = new ArrayList<String>();
       for (int i = 0; i < names.size(); i++) {
         String value = i < row.size() && row.get(i) != null ? row.get(i) : "";
         length += value.length();
@@ -64,7 +64,7 @@ public final class MergeData {
     this.fields = Collections.unmodifiableList(names);
     this.rows = Collections.unmodifiableList(copy);
     sourceRows = this.rows;
-    List<Integer> indices = new ArrayList<Integer>();
+    var indices = new ArrayList<Integer>();
     for (int i = 0; i < rows.size(); i++) indices.add(i);
     sourceIndices = Collections.unmodifiableList(indices);
     excluded = Collections.emptySet();
@@ -133,7 +133,7 @@ public final class MergeData {
       throw new IllegalArgumentException("Unknown recipient field");
     if (!Arrays.asList("contains", "=", "<>", "<", ">", "<=", ">=", "blank", "notBlank")
         .contains(operator)) throw new IllegalArgumentException("Unknown recipient filter");
-    Set<Integer> copy = new LinkedHashSet<Integer>();
+    var copy = new LinkedHashSet<Integer>();
     for (Integer i : exclusions) {
       if (i == null || i < 0 || i >= data.sourceRows.size())
         throw new IllegalArgumentException("Excluded recipient is outside the source list");
@@ -147,7 +147,7 @@ public final class MergeData {
     filterOperator = operator;
     filterValue = value;
     this.descending = descending;
-    List<Integer> indices = new ArrayList<Integer>();
+    var indices = new ArrayList<Integer>();
     int filterColumn = data.column(field);
     for (int i = 0; i < sourceRows.size(); i++)
       if (!copy.contains(i)
@@ -169,7 +169,7 @@ public final class MergeData {
             }
           });
     sourceIndices = Collections.unmodifiableList(indices);
-    List<List<String>> selected = new ArrayList<List<String>>();
+    var selected = new ArrayList<List<String>>();
     for (Integer i : indices) selected.add(sourceRows.get(i));
     rows = Collections.unmodifiableList(selected);
     int current = data.sourceIndices.isEmpty() ? -1 : data.sourceIndices.get(data.record);
@@ -237,7 +237,7 @@ public final class MergeData {
   private static final Map<String, String[]> ALIASES = aliases();
 
   private static Map<String, String[]> aliases() {
-    Map<String, String[]> out = new LinkedHashMap<String, String[]>();
+    var out = new LinkedHashMap<String, String[]>();
     out.put("title", new String[] {"Title", "CourtesyTitle"});
     out.put("firstName", new String[] {"FirstName", "First", "GivenName"});
     out.put("lastName", new String[] {"LastName", "Last", "Surname", "FamilyName"});
@@ -254,9 +254,9 @@ public final class MergeData {
 
   public Map<String, String> mappedFields() {
     if (resolvedMapping != null) return resolvedMapping;
-    Map<String, String> out = new LinkedHashMap<String, String>();
+    var out = new LinkedHashMap<String, String>();
     for (Map.Entry<String, String[]> e : ALIASES.entrySet()) {
-      String found = "";
+      var found = "";
       for (String candidate : e.getValue())
         for (String field : fields)
           if (found.isEmpty()
@@ -281,7 +281,7 @@ public final class MergeData {
   }
 
   public String address(int record) {
-    StringBuilder out = new StringBuilder();
+    var out = new StringBuilder();
     String city = mapped("city", record),
         region = join(mapped("state", record), mapped("postal", record));
     String[] lines = {
@@ -300,12 +300,12 @@ public final class MergeData {
   }
 
   public static MergeData csv(String text, boolean headers) {
-    List<List<String>> records = parseCsv(text);
+    var records = parseCsv(text);
     if (records.isEmpty()) throw new IllegalArgumentException("Recipient list is empty");
     List<String> names;
     if (headers) names = records.remove(0);
     else {
-      names = new ArrayList<String>();
+      names = new ArrayList<>();
       int width = 0;
       for (List<String> row : records) width = Math.max(width, row.size());
       for (int i = 0; i < width; i++) names.add("Column " + (i + 1));
@@ -332,9 +332,9 @@ public final class MergeData {
         delimiter = candidates[i];
         best = i;
       }
-    List<List<String>> out = new ArrayList<List<String>>();
-    List<String> row = new ArrayList<String>();
-    StringBuilder value = new StringBuilder();
+    var out = new ArrayList<List<String>>();
+    var row = new ArrayList<String>();
+    var value = new StringBuilder();
     quoted = false;
     boolean closed = false;
     for (int i = 0; i <= text.length(); i++) {
@@ -359,7 +359,7 @@ public final class MergeData {
         if (c != delimiter) {
           if (row.size() != 1 || !row.get(0).trim().isEmpty()) out.add(row);
           if (out.size() > 100001) throw new IllegalArgumentException("Too many recipients");
-          row = new ArrayList<String>();
+          row = new ArrayList<>();
           if (c == '\r' && i + 1 < text.length() && text.charAt(i + 1) == '\n') i++;
         }
       } else if (c == '"' && value.length() == 0 && !closed) quoted = true;
@@ -371,7 +371,7 @@ public final class MergeData {
   }
 
   public String csv() {
-    StringBuilder out = new StringBuilder();
+    var out = new StringBuilder();
     appendRow(out, fields);
     for (List<String> row : sourceRows) appendRow(out, row);
     return out.toString();

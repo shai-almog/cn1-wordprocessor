@@ -36,9 +36,10 @@ public final class DocumentComparison {
     for (Block b : d.blocks) {
       if (!(b instanceof Paragraph))
         throw new IllegalArgumentException(
-            "Comparison currently requires paragraphs; tables and pictures are not"
-                + " supported yet");
-      Paragraph p = (Paragraph) b;
+            """
+            Comparison currently requires paragraphs; tables and pictures are not\
+             supported yet""");
+      var p = (Paragraph) b;
       for (int i = 0; i < p.text.length(); i++)
         if (p.text.objectAt(i))
           throw new IllegalArgumentException(
@@ -57,9 +58,9 @@ public final class DocumentComparison {
 
   private static Document fragment(Document d, int from, int to) {
     int[] a = position(d, from), b = position(d, to);
-    Sequence<Block> blocks = new Sequence<Block>();
+    var blocks = new Sequence<Block>();
     for (int i = a[0]; i <= b[0]; i++) {
-      Paragraph p = d.paragraph(i);
+      var p = d.paragraph(i);
       blocks =
           blocks.append(
               p.text(p.text.slice(i == a[0] ? a[1] : 0, i == b[0] ? b[1] : p.text.length())));
@@ -97,24 +98,24 @@ public final class DocumentComparison {
     long next = original.nextId;
     int offset = 0, edit = 0;
     for (int block = 0; block < blocks.size(); block++) {
-      Paragraph old = original.paragraph(block);
+      var old = original.paragraph(block);
       int end = offset + old.text.length();
       while (edit < diff.edits.size() && diff.edits.get(edit).to < end) edit++;
       if (edit < diff.edits.size()) {
-        TextComparison.Edit e = diff.edits.get(edit);
+        var e = diff.edits.get(edit);
         if (e.same
             && e.from <= offset
             && e.to >= end
             && e.to - e.from == e.revisedTo - e.revisedFrom) {
           int[] mapped = position(revised, e.revisedFrom + offset - e.from);
-          Paragraph fresh = revised.paragraph(mapped[0]);
+          var fresh = revised.paragraph(mapped[0]);
           if (mapped[1] == 0 && fresh.text.toString().equals(old.text.toString())) {
-            final Revision rev =
+            final var rev =
                 new Revision(Long.toString(next), "format", options.author.trim(), date());
             final RichText[] text = {old.text};
             fresh.text.visit(
                 (at, value, style) -> {
-                  RichText part = old.text.slice(at, at + value.length());
+                  var part = old.text.slice(at, at + value.length());
                   text[0] =
                       text[0].replace(
                           at,
@@ -125,7 +126,7 @@ public final class DocumentComparison {
                                       ? style.clean().trackedProperties(previous, rev)
                                       : style.clean()));
                 });
-            Paragraph updated = fresh.copy(old.id, text[0]).breakRevision(old.breakRevision);
+            var updated = fresh.copy(old.id, text[0]).breakRevision(old.breakRevision);
             if (options.formatting) updated = updated.trackedProperties(old, rev);
             if (updated.formatRevision != null || hasFormatting(updated.text)) {
               next++;
@@ -150,14 +151,14 @@ public final class DocumentComparison {
   }
 
   private static List<Sequence<Block>> stories(Document d, List<Table> tables) {
-    List<Sequence<Block>> result = new ArrayList<Sequence<Block>>();
-    Sequence<Block> current = new Sequence<Block>();
+    var result = new ArrayList<Sequence<Block>>();
+    var current = new Sequence<Block>();
     for (Block b : d.blocks) {
       if (b instanceof Paragraph) current = current.append(b);
-      else if (b instanceof Table) {
+      else if (b instanceof Table table) {
         result.add(current);
-        current = new Sequence<Block>();
-        tables.add((Table) b);
+        current = new Sequence<>();
+        tables.add(table);
       } else throw new IllegalArgumentException("Comparison of pictures is not supported yet");
     }
     result.add(current);
@@ -200,7 +201,7 @@ public final class DocumentComparison {
   }
 
   private static Sequence<Block> blocks(Sequence<Paragraph> story) {
-    Sequence<Block> result = new Sequence<Block>();
+    var result = new Sequence<Block>();
     for (Paragraph p : story) result = result.append(p);
     return result;
   }
@@ -229,9 +230,10 @@ public final class DocumentComparison {
         || !Revisions.list(original).isEmpty()
         || !Revisions.list(revised).isEmpty())
       throw new IllegalArgumentException(
-          "Resolve changes and remove section, comment or bookmark ranges before"
-              + " comparing tables");
-    Sequence<Block> output = new Sequence<Block>();
+          """
+          Resolve changes and remove section, comment or bookmark ranges before\
+           comparing tables""");
+    var output = new Sequence<Block>();
     long next = original.nextId;
     int changes = 0;
     boolean coarse = false;
@@ -240,7 +242,9 @@ public final class DocumentComparison {
       if (a.size() == 0 || b.size() == 0) {
         if (a.size() != b.size())
           throw new IllegalArgumentException(
-              "Comparison of paragraph insertion at a table boundary is not supported" + " yet");
+              """
+              Comparison of paragraph insertion at a table boundary is not supported\
+               yet""");
       } else {
         Result result =
             paragraphs(story(original, a, next), story(revised, b, revised.nextId), options);
@@ -252,7 +256,7 @@ public final class DocumentComparison {
       if (i < oldTables.size()) {
         Table old = oldTables.get(i), fresh = newTables.get(i);
         tableGeometry(old, fresh);
-        Table table = old;
+        var table = old;
         for (int row = 0; row < old.rows(); row++)
           for (int col = 0; col < old.columns(); col++)
             if (!old.covered(row, col)) {
@@ -261,7 +265,7 @@ public final class DocumentComparison {
                       story(original, blocks(old.cell(row, col)), next),
                       story(revised, blocks(fresh.cell(row, col)), revised.nextId),
                       options);
-              Sequence<Paragraph> cell = new Sequence<Paragraph>();
+              var cell = new Sequence<Paragraph>();
               for (Block block : result.document.blocks) cell = cell.append((Paragraph) block);
               table = table.setCell(row, col, cell);
               next = result.document.nextId;
@@ -285,7 +289,7 @@ public final class DocumentComparison {
             before, after, options.characters, !options.ignoreCase, !options.ignoreWhiteSpace);
     final int[] formatted = {0};
     Document baseline = formatting(original, revised, diff, options, formatted);
-    Session draft = new Session(baseline);
+    var draft = new Session(baseline);
     draft.reviewAuthor(options.author);
     draft.trackChanges(true);
     final int[] changes = {formatted[0]};
@@ -294,7 +298,7 @@ public final class DocumentComparison {
           // Apply backwards: the untouched prefix retains its original offsets even when
           // deleted text remains visible.
           for (int i = diff.edits.size() - 1; i >= 0; i--) {
-            TextComparison.Edit e = diff.edits.get(i);
+            var e = diff.edits.get(i);
             if (e.same
                 && before
                     .substring(e.from, e.to)

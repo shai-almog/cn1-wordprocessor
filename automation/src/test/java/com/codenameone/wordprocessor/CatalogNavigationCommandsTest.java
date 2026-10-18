@@ -10,7 +10,7 @@ public class CatalogNavigationCommandsTest {
   private final Commands commands = new Commands();
 
   private Object run(Session s, String id, Object... kv) {
-    Map<String, Object> a = new LinkedHashMap<String, Object>();
+    var a = new LinkedHashMap<String, Object>();
     for (int i = 0; i < kv.length; i += 2) a.put((String) kv[i], kv[i + 1]);
     return commands.execute(s, id, a);
   }
@@ -21,7 +21,7 @@ public class CatalogNavigationCommandsTest {
 
   @Test
   public void caretSelectionAndFind() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("One two. Three four.");
     s.enterParagraph();
     s.replace("five two");
@@ -49,7 +49,7 @@ public class CatalogNavigationCommandsTest {
 
   @Test
   public void fieldsLockUnlinkAndStep() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("Page ");
     run(s, "insert.pageNumber");
     s.replace(" end");
@@ -67,7 +67,7 @@ public class CatalogNavigationCommandsTest {
 
   @Test
   public void outlineSectionAndTableProperties() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("Topic");
     run(s, "outline.promote");
     assertEquals("Heading9", para(s, 0).style);
@@ -90,7 +90,7 @@ public class CatalogNavigationCommandsTest {
     run(s, "table.repeatHeader");
     run(s, "table.shading", "color", "ffeeaa");
     run(s, "table.cellMargins", "horizontal", 9);
-    Table t = (Table) s.document().blocks.get(block);
+    var t = (Table) s.document().blocks.get(block);
     assertEquals(1, t.format.headerRows);
     assertEquals(0xffeeaa, t.format.cell(0, 1).background);
     assertEquals(9, t.format.cell(0, 1).horizontalPadding, .01);
@@ -99,7 +99,7 @@ public class CatalogNavigationCommandsTest {
 
   @Test
   public void tableBorderGalleryAndStyles() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     run(s, "insert.table", "rows", 3, "cols", 3);
     int block = -1;
     for (int i = 0; i < s.document().blocks.size(); i++)
@@ -108,7 +108,7 @@ public class CatalogNavigationCommandsTest {
     s.selectCells(block, 0, 0, 2, 2);
     run(s, "table.borders", "kind", "none");
     run(s, "table.borders", "kind", "outside", "color", "ff0000", "width", 1.5);
-    TableFormat f = ((Table) s.document().blocks.get(block)).format;
+    var f = ((Table) s.document().blocks.get(block)).format;
     assertTrue(f.cell(0, 0).side(TableFormat.Cell.TOP));
     assertTrue(f.cell(0, 0).side(TableFormat.Cell.LEFT));
     assertFalse(f.cell(0, 0).side(TableFormat.Cell.RIGHT));
@@ -127,11 +127,11 @@ public class CatalogNavigationCommandsTest {
 
   @Test
   public void headersFootersLinkingAndPosition() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("Body");
     run(s, "insert.header", "text", "Report\nDraft", "align", "center");
     run(s, "insert.footer", "text", "Confidential", "variant", "first");
-    PageFurniture f = s.activeSection().raw.furniture;
+    var f = s.activeSection().raw.furniture;
     assertEquals(2, f.get("header").size());
     assertEquals("center", f.get("header").get(0).align);
     assertEquals("Confidential", f.get("firstFooter").get(0).text.plainText());

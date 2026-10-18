@@ -72,7 +72,7 @@ public final class TextStyle {
   }
 
   public TextStyle with(String key, String value) {
-    CharacterFormat effects = characters.with(key, value);
+    var effects = characters.with(key, value);
     if ("underline".equals(key))
       effects = effects.with("underlineStyle", Boolean.parseBoolean(value) ? "single" : "none");
     return new TextStyle(
@@ -166,7 +166,7 @@ public final class TextStyle {
   }
 
   public TextStyle glyphStyle(String text) {
-    TextStyle result = renderedStyle();
+    var result = renderedStyle();
     return smallGlyph(text)
         ? result.with("size", Float.toString(Math.max(1, result.size * .8f)))
         : result;
@@ -177,7 +177,7 @@ public final class TextStyle {
   }
 
   public TextStyle trackedProperties(TextStyle before, Revision change) {
-    TextStyle next = this;
+    var next = this;
     if (next.clean().equals(before.clean())
         || change == null
         || revision != null && revision.inserted() && revision.author.equals(change.author))
@@ -202,7 +202,7 @@ public final class TextStyle {
 
   public TextStyle markup() {
     if (revision == null) return this;
-    TextStyle result = with("color", revision.inserted() ? "1261a0" : "b32222");
+    var result = with("color", revision.inserted() ? "1261a0" : "b32222");
     return revision.inserted()
         ? (hasUnderline() ? result : result.with("underline", "true"))
         : result.with("strike", "true");
@@ -231,7 +231,7 @@ public final class TextStyle {
   public boolean equals(Object o) {
     if (this == o) return true;
     if (!(o instanceof TextStyle)) return false;
-    TextStyle t = (TextStyle) o;
+    var t = (TextStyle) o;
     // Cheap fields first: layout looks styles up per cluster, mostly against equal styles.
     return hashCode() == t.hashCode()
         && size == t.size

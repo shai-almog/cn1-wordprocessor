@@ -14,7 +14,7 @@ public final class CharacterMetrics {
     RichText source = RichText.of(text, style);
     for (int i = 0; i < text.length(); ) {
       int next = Graphemes.next(source, i);
-      String glyph = text.substring(i, next);
+      var glyph = text.substring(i, next);
       result +=
           Math.max(
               0,

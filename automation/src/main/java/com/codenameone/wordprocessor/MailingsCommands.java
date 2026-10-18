@@ -17,7 +17,7 @@ public final class MailingsCommands implements Commands.Extension {
   }
 
   public static Map<String, Object> state(Session s) {
-    MergeData d = s.mergeData();
+    var d = s.mergeData();
     return Json.object(
         "kind",
         d.kind,
@@ -61,7 +61,7 @@ public final class MailingsCommands implements Commands.Extension {
       if (a.containsKey("csv") || a.containsKey("rows"))
         throw new IllegalArgumentException("Supply only one recipient source");
       try {
-        RecipientWorkbook workbook =
+        var workbook =
             new RecipientWorkbook(
                 com.codename1.util.Base64.decode(((String) a.get("data")).getBytes("UTF-8")));
         if (!a.containsKey("sheet") && !a.containsKey("sheetIndex") && workbook.sheets().size() > 1)
@@ -83,7 +83,7 @@ public final class MailingsCommands implements Commands.Extension {
     MergeData data;
     if (a.containsKey("csv")) data = MergeData.csv((String) a.get("csv"), bool(a, "headers", true));
     else {
-      List<String> fields = new ArrayList<String>();
+      var fields = new ArrayList<String>();
       if (a.containsKey("fields"))
         for (Object field : (List<?>) a.get("fields")) {
           if (!(field instanceof String))
@@ -101,15 +101,15 @@ public final class MailingsCommands implements Commands.Extension {
             if (!fields.contains(key)) fields.add((String) key);
           }
         }
-      List<List<String>> rows = new ArrayList<List<String>>();
+      var rows = new ArrayList<List<String>>();
       for (Object item : input) {
-        List<String> row = new ArrayList<String>();
-        if (item instanceof Map) {
-          for (Object key : ((Map<?, ?>) item).keySet())
+        var row = new ArrayList<String>();
+        if (item instanceof Map<?, ?> map) {
+          for (Object key : map.keySet())
             if (!fields.contains(key))
               throw new IllegalArgumentException("Unknown recipient column: " + key);
-          for (String field : fields) row.add(cell(((Map<?, ?>) item).get(field)));
-        } else if (item instanceof List) for (Object value : (List<?>) item) row.add(cell(value));
+          for (String field : fields) row.add(cell(map.get(field)));
+        } else if (item instanceof List<?> list) for (Object value : list) row.add(cell(value));
         else throw new IllegalArgumentException("Recipient rows must be arrays or objects");
         rows.add(row);
       }
@@ -180,8 +180,8 @@ public final class MailingsCommands implements Commands.Extension {
                   integer(a, "cols", 0),
                   row,
                   column);
-          Table table = (Table) s.document().blocks.get(0);
-          LayoutEngine.Result layout = c.layoutEngine().layout(s.document(), s.revision());
+          var table = (Table) s.document().blocks.get(0);
+          var layout = c.layoutEngine().layout(s.document(), s.revision());
           for (LayoutEngine.Page page : layout.pages)
             for (LayoutEngine.Box box : page.boxes)
               if (box.height > table.format.minHeight(box.row) + .1f)
@@ -207,7 +207,7 @@ public final class MailingsCommands implements Commands.Extension {
         "kind:string",
         true,
         (s, a) -> {
-          MergeData d = s.mergeData();
+          var d = s.mergeData();
           s.mergeData(d.options((String) a.get("kind"), d.preview, d.highlight, d.record));
           return state(s);
         });
@@ -240,7 +240,7 @@ public final class MailingsCommands implements Commands.Extension {
         "field:string",
         true,
         (s, a) -> {
-          String field = (String) a.get("field");
+          var field = (String) a.get("field");
           if (field.trim().isEmpty()) throw new IllegalArgumentException("Enter a field name");
           MailMerge.insert(s, "MERGEFIELD " + MailMerge.quote(field));
           return null;
@@ -286,10 +286,10 @@ public final class MailingsCommands implements Commands.Extension {
         "sortField?:string,descending?:boolean,filterField?:string,filterOperator?:string,filterValue?:string,excluded?:array",
         true,
         (s, a) -> {
-          MergeData d = s.mergeData();
+          var d = s.mergeData();
           Collection<Integer> excluded = d.excluded;
           if (a.containsKey("excluded")) {
-            excluded = new ArrayList<Integer>();
+            excluded = new ArrayList<>();
             for (Object item : (List<?>) a.get("excluded")) {
               if (!(item instanceof Number)
                   || ((Number) item).doubleValue() != ((Number) item).intValue())
@@ -297,7 +297,7 @@ public final class MailingsCommands implements Commands.Extension {
               excluded.add(((Number) item).intValue());
             }
           }
-          MergeData next =
+          var next =
               d.manage(
                   text(a, "sortField", d.sortField),
                   bool(a, "descending", d.descending),
@@ -316,7 +316,7 @@ public final class MailingsCommands implements Commands.Extension {
         true,
         (s, a) -> {
           if (a.containsKey("mapping")) {
-            Map<String, String> map = new LinkedHashMap<String, String>();
+            var map = new LinkedHashMap<String, String>();
             for (Map.Entry<?, ?> e : ((Map<?, ?>) a.get("mapping")).entrySet()) {
               if (!(e.getKey() instanceof String) || !(e.getValue() instanceof String))
                 throw new IllegalArgumentException("Field mappings must be text");
@@ -334,7 +334,7 @@ public final class MailingsCommands implements Commands.Extension {
         "value?:boolean",
         true,
         (s, a) -> {
-          MergeData d = s.mergeData();
+          var d = s.mergeData();
           s.mergeData(d.options(d.kind, d.preview, bool(a, "value", !d.highlight), d.record));
           return state(s);
         });
@@ -375,7 +375,7 @@ public final class MailingsCommands implements Commands.Extension {
         "text:string",
         true,
         (s, a) -> {
-          String query = ((String) a.get("text")).toLowerCase();
+          var query = ((String) a.get("text")).toLowerCase();
           for (int i = 0; i < s.mergeData().rows.size(); i++)
             for (String value : s.mergeData().rows.get(i))
               if (value.toLowerCase().indexOf(query) >= 0) {
@@ -390,7 +390,7 @@ public final class MailingsCommands implements Commands.Extension {
         "",
         false,
         (s, a) -> {
-          List<String> missing = MailMerge.errors(s.document(), s.mergeData());
+          var missing = MailMerge.errors(s.document(), s.mergeData());
           return Json.object(
               "ok",
               missing.isEmpty() && !s.mergeData().rows.isEmpty(),

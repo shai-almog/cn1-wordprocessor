@@ -24,7 +24,7 @@ public class CharacterLayoutTest {
 
   @Test
   public void capsExpansionPreservesSourceOffsetsAndMeasuresDisplayedGlyphs() {
-    LayoutEngine.Line l = line("aßZ", TextStyle.DEFAULT.with("allCaps", "true"));
+    var l = line("aßZ", TextStyle.DEFAULT.with("allCaps", "true"));
     assertEquals("ASSZ", l.spans.get(0).displayText);
     assertEquals("aßZ", l.spans.get(0).text);
     assertEquals(3, l.end);
@@ -33,7 +33,7 @@ public class CharacterLayoutTest {
 
   @Test
   public void smallCapsShareBaselineAndKeepUppercaseFullSize() {
-    LayoutEngine.Line l = line("Aa", TextStyle.DEFAULT.with("smallCaps", "true"));
+    var l = line("Aa", TextStyle.DEFAULT.with("smallCaps", "true"));
     assertEquals(2, l.spans.size());
     LayoutEngine.Span a = l.spans.get(0), b = l.spans.get(1);
     assertEquals(12, a.glyphStyle.size, 0);
@@ -44,7 +44,7 @@ public class CharacterLayoutTest {
 
   @Test
   public void spacingScalingAndLoweringCombineInPoints() {
-    LayoutEngine.Line l =
+    var l =
         line(
             "Ab",
             TextStyle.DEFAULT
@@ -58,7 +58,7 @@ public class CharacterLayoutTest {
 
   @Test
   public void hiddenTextConsumesNoHorizontalSpaceAndHugeHiddenFontsDoNotGrowLines() {
-    LayoutEngine.Line l =
+    var l =
         line("Invisible", TextStyle.DEFAULT.with("hidden", "true").with("size", "200"));
     assertEquals(0, l.width, 0);
     assertEquals("", l.spans.get(0).displayText);
@@ -73,24 +73,24 @@ public class CharacterLayoutTest {
 
   @Test
   public void combiningMarksAreNotSplitBySmallCapsCaseBoundary() {
-    LayoutEngine.Line l = line("a\u0301B", TextStyle.DEFAULT.with("smallCaps", "true"));
+    var l = line("a\u0301B", TextStyle.DEFAULT.with("smallCaps", "true"));
     assertEquals("a\u0301", l.spans.get(0).text);
     assertEquals(2, l.spans.size());
   }
 
   @Test
   public void wideCharactersReflowInsteadOfOverflowing() {
-    StringBuilder b = new StringBuilder();
+    var b = new StringBuilder();
     for (int i = 0; i < 120; i++) b.append('a');
-    LayoutEngine.Line plain = line(b.toString(), TextStyle.DEFAULT);
-    LayoutEngine.Line wide = line(b.toString(), TextStyle.DEFAULT.with("characterScale", "200"));
+    var plain = line(b.toString(), TextStyle.DEFAULT);
+    var wide = line(b.toString(), TextStyle.DEFAULT.with("characterScale", "200"));
     assertTrue(wide.end < plain.end);
     assertTrue(wide.width <= PageSpec.A4.contentWidth());
   }
 
   @Test
   public void hiddenTabsAndManualBreaksDoNotAdvanceOrSplitTheLine() {
-    LayoutEngine.Line l = line("a\tb\nc", TextStyle.DEFAULT.with("hidden", "true"));
+    var l = line("a\tb\nc", TextStyle.DEFAULT.with("hidden", "true"));
     assertEquals(0, l.width, 0);
     assertEquals(5, l.end);
     for (LayoutEngine.Span span : l.spans) assertEquals("", span.displayText);
@@ -98,8 +98,8 @@ public class CharacterLayoutTest {
 
   @Test
   public void fieldSmallCapsRetainRawResultAndAtomicSourceOffsets() {
-    TextStyle style = TextStyle.DEFAULT.with("smallCaps", "true").with("characterSpacing", "2");
-    Document d =
+    var style = TextStyle.DEFAULT.with("smallCaps", "true").with("characterSpacing", "2");
+    var d =
         Document.empty()
             .blocks(
                 new Sequence<Block>()
@@ -109,7 +109,7 @@ public class CharacterLayoutTest {
                             RichText.field(
                                 new InlineField("MERGEFIELD Name", "aB", true, false), style))),
                 2);
-    LayoutEngine.Span span =
+    var span =
         new LayoutEngine(metrics).layout(d, 0).pages.get(0).lines.get(0).spans.get(0);
     assertEquals("aB", span.rawDisplay);
     assertEquals("AB", span.displayText);

@@ -14,16 +14,16 @@ public class DeveloperCommandsTest {
   private final Commands commands = new Commands();
 
   private Object run(Session s, String id, Object... kv) {
-    Map<String, Object> a = new LinkedHashMap<String, Object>();
+    var a = new LinkedHashMap<String, Object>();
     for (int i = 0; i < kv.length; i += 2) a.put((String) kv[i], kv[i + 1]);
     return commands.execute(s, id, a);
   }
 
   private static List<String> controls(Document d) {
-    final List<String> out = new ArrayList<String>();
+    final var out = new ArrayList<String>();
     for (Block b : d.blocks)
-      if (b instanceof Paragraph)
-        ((Paragraph) b)
+      if (b instanceof Paragraph paragraph)
+        paragraph
             .text.visit(
                 new RichText.Visitor() {
                   public void run(int offset, String text, TextStyle style) {}
@@ -37,7 +37,7 @@ public class DeveloperCommandsTest {
 
   @Test
   public void controlsInsertChangeAndRoundTrip() throws Exception {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     run(s, "developer.checkBox", "title", "Agree");
     run(s, "developer.properties", "checked", true);
     assertTrue(s.document().paragraph(0).text.plainText().length() == 1);
@@ -55,7 +55,7 @@ public class DeveloperCommandsTest {
     run(s, "developer.buildingBlock");
     run(s, "developer.picture");
     run(s, "developer.repeatingSection", "items", "Row 1|Row 2");
-    List<String> before = controls(s.document());
+    var before = controls(s.document());
     assertEquals(9, before.size());
     assertTrue(before.get(0), before.get(0).contains("checked=true") && before.get(0).endsWith("=\u2612"));
     assertTrue(before.get(1).endsWith("=Blue"));
@@ -65,7 +65,7 @@ public class DeveloperCommandsTest {
     run(s, "developer.designMode", "value", false);
 
     assertEquals(before, controls(DocumentXml.read(DocumentXml.write(s.document()))));
-    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    var out = new ByteArrayOutputStream();
     Docx.write(s.document(), out);
     Docx.Opened back = Docx.read(new ByteArrayInputStream(out.toByteArray()));
     assertEquals(before, controls(back.document));

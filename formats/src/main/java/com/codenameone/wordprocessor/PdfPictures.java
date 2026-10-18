@@ -7,7 +7,7 @@ import java.util.zip.*;
 /** PDF image XObjects. PNG samples are unfiltered once; alpha is a separate soft mask. */
 final class PdfPictures {
   static int add(List<byte[]> objects, Picture picture) throws IOException {
-    byte[] data = picture.bytes();
+    var data = picture.bytes();
     if ("image/jpeg".equals(picture.mime)) {
       if (picture.channels != 1 && picture.channels != 3 && picture.channels != 4)
         throw new IOException("Unsupported JPEG color space");
@@ -18,8 +18,8 @@ final class PdfPictures {
               picture, "/ColorSpace /" + space + " /BitsPerComponent 8 /Filter /DCTDecode", data));
       return objects.size();
     }
-    Png png = new Png(data, picture);
-    String mask = "";
+    var png = new Png(data, picture);
+    var mask = "";
     if (png.alpha != null) {
       objects.add(
           stream(
@@ -37,15 +37,15 @@ final class PdfPictures {
   }
 
   private static byte[] compress(byte[] b) throws IOException {
-    ByteArrayOutputStream out = new ByteArrayOutputStream();
-    DeflaterOutputStream z = new DeflaterOutputStream(out);
+    var out = new ByteArrayOutputStream();
+    var z = new DeflaterOutputStream(out);
     z.write(b);
     z.close();
     return out.toByteArray();
   }
 
   private static byte[] stream(Picture p, String properties, byte[] b) throws IOException {
-    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    var out = new ByteArrayOutputStream();
     out.write(
         ("<< /Type /XObject /Subtype /Image /Width "
                 + p.pixelWidth
@@ -78,16 +78,16 @@ final class PdfPictures {
           || data[28] != 0)
         throw new IOException("PDF requires a non-interlaced PNG with a standard color format");
       byte[] palette = null, transparency = null;
-      ByteArrayOutputStream compressed = new ByteArrayOutputStream();
+      var compressed = new ByteArrayOutputStream();
       boolean ended = false;
       for (int at = 8; at + 12 <= data.length; ) {
         int n = integer(data, at);
         if (n < 0 || n > data.length - at - 12) throw new IOException("Invalid PNG chunk");
-        CRC32 crc = new CRC32();
+        var crc = new CRC32();
         crc.update(data, at + 4, n + 4);
         if ((int) crc.getValue() != integer(data, at + 8 + n))
           throw new IOException("PNG checksum mismatch");
-        String name = new String(data, at + 4, 4, "ISO-8859-1");
+        var name = new String(data, at + 4, 4, "ISO-8859-1");
         if ("IDAT".equals(name)) compressed.write(data, at + 8, n);
         else if ("PLTE".equals(name)) {
           palette = new byte[n];
@@ -116,7 +116,7 @@ final class PdfPictures {
               ? new byte[p.pixelWidth * p.pixelHeight]
               : null;
       byte[] previous = new byte[rowBytes], row = new byte[rowBytes];
-      InflaterInputStream in =
+      var in =
           new InflaterInputStream(new ByteArrayInputStream(compressed.toByteArray()));
       try {
         for (int y = 0; y < p.pixelHeight; y++) {
@@ -169,7 +169,7 @@ final class PdfPictures {
             rgb[pixel * 3 + 2] = (byte) b;
             if (alpha != null) alpha[pixel] = (byte) a;
           }
-          byte[] swap = previous;
+          var swap = previous;
           previous = row;
           row = swap;
         }

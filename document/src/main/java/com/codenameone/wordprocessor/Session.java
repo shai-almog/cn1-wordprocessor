@@ -58,17 +58,17 @@ public final class Session {
     cells = null;
     if (cell != null && cell.block == block && cell.row == row && cell.column == column) return;
     leaveCell();
-    Table table = (Table) document.blocks.get(block);
-    Table.Merge owner = table.span(row, column);
+    var table = (Table) document.blocks.get(block);
+    var owner = table.span(row, column);
     row = owner.row;
     column = owner.column;
-    Sequence<Block> paragraphs = new Sequence<Block>();
+    var paragraphs = new Sequence<Block>();
     for (Paragraph p : table.cell(row, column)) paragraphs = paragraphs.append(p);
-    Document view =
+    var view =
         new Document(paragraphs, document.page, document.title, document.nextId)
             .styles(document.styles)
             .trackChanges(document.trackChanges);
-    List<ReviewComment> comments = new ArrayList<ReviewComment>();
+    var comments = new ArrayList<ReviewComment>();
     for (ReviewComment c : document.comments)
       if (ReviewComment.block(view, c.startId) >= 0 && ReviewComment.block(view, c.endId) >= 0)
         comments.add(c);
@@ -85,8 +85,8 @@ public final class Session {
     if (cell == null) return;
     if (transactionDepth == 0) breakTypingGroup();
     finishComposition();
-    Document root = document();
-    Selection outer = cell.outerSelection;
+    var root = document();
+    var outer = cell.outerSelection;
     cell = null;
     document = root;
     selection = outer;
@@ -98,7 +98,7 @@ public final class Session {
   public void nextCell(boolean backwards) {
     if (cell == null) return;
     int block = cell.block, row = cell.row, column = cell.column;
-    Table table = (Table) document().blocks.get(block);
+    var table = (Table) document().blocks.get(block);
     int index = row * table.columns() + column;
     for (; ; ) {
       index += backwards ? -1 : 1;
@@ -123,10 +123,10 @@ public final class Session {
 
   /** Select whole cells without changing document content or creating undo history. */
   public void selectCells(int block, int anchorRow, int anchorColumn, int row, int column) {
-    Document root = document();
+    var root = document();
     if (block < 0 || block >= root.blocks.size() || !(root.blocks.get(block) instanceof Table))
       throw new IllegalArgumentException("Select a table");
-    CellSelection next =
+    var next =
         new CellSelection(
             block, (Table) root.blocks.get(block), anchorRow, anchorColumn, row, column);
     enterCell(block, row, column);
@@ -140,11 +140,11 @@ public final class Session {
   }
 
   private void editCells(final Edit edit, final boolean keepSelection) {
-    final CellSelection range = cells;
+    final var range = cells;
     if (range == null) throw new IllegalStateException("Select cells first");
     transact(
         s -> {
-          Table table = (Table) document().blocks.get(range.block);
+          var table = (Table) document().blocks.get(range.block);
           for (int r = range.firstRow; r <= range.lastRow; r++)
             for (int c = range.firstColumn; c <= range.lastColumn; c++) {
               if (table.covered(r, c)) continue;
@@ -309,7 +309,7 @@ public final class Session {
     }
   }
 
-  private final java.util.HashMap<Object, Object> attachments = new java.util.HashMap<Object, Object>();
+  private final java.util.HashMap<Object, Object> attachments = new java.util.HashMap<>();
 
   /** Per-session state owned by command extensions (see SessionMap); not part of the document. */
   public java.util.Map<Object, Object> attachments() {
@@ -326,21 +326,21 @@ public final class Session {
     if (cell == null) return document;
     if (document == cell.initial) return cell.root;
     if (integratedSource != document) {
-      Sequence<Paragraph> paragraphs = new Sequence<Paragraph>();
+      var paragraphs = new Sequence<Paragraph>();
       for (Block block : document.blocks) {
         if (!(block instanceof Paragraph))
           throw new IllegalStateException("Nested tables are not supported");
         paragraphs = paragraphs.append((Paragraph) block);
       }
-      Table table = (Table) cell.root.blocks.get(cell.block);
+      var table = (Table) cell.root.blocks.get(cell.block);
       integratedDocument =
           cell.root.blocks(
               cell.root.blocks.set(cell.block, table.setCell(cell.row, cell.column, paragraphs)),
               document.nextId);
       if (document.comments != cell.initial.comments) {
-        Set<String> prior = new HashSet<String>();
+        var prior = new HashSet<String>();
         for (ReviewComment c : cell.initial.comments) prior.add(c.id);
-        List<ReviewComment> comments = new ArrayList<ReviewComment>();
+        var comments = new ArrayList<ReviewComment>();
         for (ReviewComment c : cell.root.comments) if (!prior.contains(c.id)) comments.add(c);
         comments.addAll(document.comments);
         integratedDocument = integratedDocument.comments(comments);
@@ -367,7 +367,7 @@ public final class Session {
     first.text.slice(anchor, anchor);
     last.text.slice(caret, caret);
     cells = null;
-    Selection next = new Selection(anchorBlock, anchor, block, caret);
+    var next = new Selection(anchorBlock, anchor, block, caret);
     if (!sameSelection(selection, next)) {
       breakTypingGroup();
       selection = next;
@@ -383,14 +383,14 @@ public final class Session {
 
   private static TextStyle typingStyle(Paragraph paragraph, int offset) {
     int before = Math.max(0, offset - 1);
-    TextStyle style = paragraph.text.styleAt(before);
+    var style = paragraph.text.styleAt(before);
     return paragraph.text.noteAt(before) == null ? style : style.with("script", "baseline");
   }
 
   public String selectedText() {
     if (cells != null) {
-      Table table = (Table) document().blocks.get(cells.block);
-      StringBuilder text = new StringBuilder();
+      var table = (Table) document().blocks.get(cells.block);
+      var text = new StringBuilder();
       for (int r = cells.firstRow; r <= cells.lastRow; r++) {
         if (r > cells.firstRow) text.append('\n');
         for (int c = cells.firstColumn; c <= cells.lastColumn; c++) {
@@ -405,18 +405,16 @@ public final class Session {
       }
       return text.toString();
     }
-    Selection x = selection;
-    StringBuilder b = new StringBuilder();
+    var x = selection;
+    var b = new StringBuilder();
     for (int i = x.startBlock(); i <= x.endBlock(); i++) {
-      Block block = document.blocks.get(i);
+      var block = document.blocks.get(i);
       if (i > x.startBlock()) b.append('\n');
-      if (block instanceof Paragraph) {
-        Paragraph p = (Paragraph) block;
+      if (block instanceof Paragraph p) {
         int a = i == x.startBlock() ? x.start() : 0,
             end = i == x.endBlock() ? x.end() : p.text.length();
         b.append(p.text.slice(a, end).plainText());
-      } else if (block instanceof Table) {
-        Table t = (Table) block;
+      } else if (block instanceof Table t) {
         for (int r = 0; r < t.rows(); r++) {
           if (r > 0) b.append('\n');
           for (int c = 0; c < t.columns(); c++) {
@@ -442,7 +440,7 @@ public final class Session {
   }
 
   public Session fork() {
-    Session s = new Session(document);
+    var s = new Session(document);
     s.selection = selection;
     s.revision = revision;
     s.insertionStyle = insertionStyle;
@@ -458,20 +456,20 @@ public final class Session {
     if (!typingEdit) breakTypingGroup();
     if (composition != null) throw new IllegalStateException("Finish text composition first");
     if (transactionDepth > 0) {
-      Document before = document;
+      var before = document;
       edit.apply(this);
       reanchorComments(before);
       return;
     }
-    State before = state();
+    var before = state();
     long old = revision;
     transactionDepth++;
     try {
       edit.apply(this);
       int noteCell = cellBlock(), noteRow = cellRow(), noteColumn = cellColumn();
-      CellSelection noteCells = cells;
-      Selection noteSelection = selection;
-      TextStyle noteStyle = insertionStyle;
+      var noteCells = cells;
+      var noteSelection = selection;
+      var noteStyle = insertionStyle;
       if (noteCell >= 0) leaveCell();
       document = Notes.normalize(document);
       if (noteCell >= 0) enterCell(noteCell, noteRow, noteColumn);
@@ -502,7 +500,7 @@ public final class Session {
    * always allowed (there is no password support), so it is the one way out.
    */
   private void enforceProtection(Document b) {
-    String mode = b.properties.protection;
+    var mode = b.properties.protection;
     if ("none".equals(mode) || !mode.equals(document.properties.protection)) return;
     if ("trackedChanges".equals(mode)) {
       if (!document.trackChanges)
@@ -532,15 +530,15 @@ public final class Session {
     if (!before.comments.isEmpty()
         && document.comments == before.comments
         && document.blocks != before.blocks) {
-      java.util.List<ReviewComment> next = ReviewComment.reanchor(before, document);
+      var next = ReviewComment.reanchor(before, document);
       if (next != before.comments) document = document.comments(next);
     }
   }
 
   public void addBookmark(final String name) {
     if (inCell()) throw new IllegalArgumentException("Select body text for a bookmark");
-    final Selection selected = selection;
-    final Bookmark mark =
+    final var selected = selection;
+    final var mark =
         new Bookmark(
             name,
             document.paragraph(selected.startBlock()).id,
@@ -549,7 +547,7 @@ public final class Session {
             selected.end());
     transact(
         s -> {
-          Map<String, Bookmark> next = new LinkedHashMap<String, Bookmark>(document.bookmarks);
+          var next = new LinkedHashMap<String, Bookmark>(document.bookmarks);
           next.put(name, mark);
           document = document.bookmarks(next);
         });
@@ -560,14 +558,14 @@ public final class Session {
       throw new IllegalArgumentException("Unknown bookmark: " + name);
     transact(
         s -> {
-          Map<String, Bookmark> next = new LinkedHashMap<String, Bookmark>(document.bookmarks);
+          var next = new LinkedHashMap<String, Bookmark>(document.bookmarks);
           next.remove(name);
           document = document.bookmarks(next);
         });
   }
 
   public void goToBookmark(String name) {
-    Bookmark mark = document.bookmarks.get(name);
+    var mark = document.bookmarks.get(name);
     if (mark == null) throw new IllegalArgumentException("Unknown bookmark: " + name);
     leaveCell();
     selectRange(
@@ -582,9 +580,9 @@ public final class Session {
       throw new IllegalArgumentException("Enter an author and comment");
     transact(
         s -> {
-          List<ReviewComment> comments = new ArrayList<ReviewComment>(document.comments);
-          String id = "c" + document.nextId;
-          Selection x = selection;
+          var comments = new ArrayList<ReviewComment>(document.comments);
+          var id = "c" + document.nextId;
+          var x = selection;
           comments.add(
               new ReviewComment(
                   id,
@@ -603,7 +601,7 @@ public final class Session {
     leaveCell();
     transact(
         s -> {
-          List<ReviewComment> comments = new ArrayList<ReviewComment>();
+          var comments = new ArrayList<ReviewComment>();
           boolean found = false;
           for (ReviewComment c : document.comments) {
             if (c.id.equals(id)) {
@@ -620,7 +618,7 @@ public final class Session {
     leaveCell();
     transact(
         s -> {
-          List<ReviewComment> next = new ArrayList<ReviewComment>(document.comments);
+          var next = new ArrayList<ReviewComment>(document.comments);
           boolean found = false;
           for (int i = 0; i < next.size(); i++)
             if (next.get(i).id.equals(id)) {
@@ -639,11 +637,11 @@ public final class Session {
     ReviewComment target = null;
     for (ReviewComment c : document().comments) if (c.id.equals(id)) target = c;
     if (target == null) throw new IllegalArgumentException("Unknown comment");
-    final ReviewComment replacement = target.edited(replyIndex, text);
+    final var replacement = target.edited(replyIndex, text);
     leaveCell();
     transact(
         s -> {
-          List<ReviewComment> next = new ArrayList<ReviewComment>(document.comments);
+          var next = new ArrayList<ReviewComment>(document.comments);
           for (int i = 0; i < next.size(); i++)
             if (next.get(i).id.equals(id)) {
               next.set(i, replacement);
@@ -655,9 +653,9 @@ public final class Session {
 
   /** Moves the caret to the next/previous comment start in document order, wrapping. */
   public String navigateComment(boolean backwards) {
-    final Document root = document();
-    final Map<String, ReviewComment.Anchor> anchors = ReviewComment.index(root);
-    List<ReviewComment> ordered = new ArrayList<ReviewComment>();
+    final var root = document();
+    final var anchors = ReviewComment.index(root);
+    var ordered = new ArrayList<ReviewComment>();
     for (ReviewComment c : root.comments) if (anchors.containsKey(c.startId)) ordered.add(c);
     if (ordered.isEmpty()) return null;
     Collections.sort(
@@ -670,9 +668,9 @@ public final class Session {
         cell == null
             ? new int[] {selection.block, -1, -1, selection.block, selection.caret}
             : new int[] {cell.block, cell.row, cell.column, selection.block, selection.caret};
-    ReviewComment target = ordered.get(backwards ? ordered.size() - 1 : 0);
+    var target = ordered.get(backwards ? ordered.size() - 1 : 0);
     for (int i = 0; i < ordered.size(); i++) {
-      ReviewComment c = ordered.get(backwards ? ordered.size() - 1 - i : i);
+      var c = ordered.get(backwards ? ordered.size() - 1 - i : i);
       int comparison =
           compareCommentPosition(commentPosition(anchors.get(c.startId), c.start), caret);
       if (backwards ? comparison < 0 : comparison > 0) {
@@ -718,7 +716,7 @@ public final class Session {
     if (text.indexOf('\n') >= 0 || text.indexOf('\r') >= 0)
       throw new IllegalArgumentException("Composition cannot span paragraphs");
     if (composition == null) composition = state();
-    Session draft = new Session(composition.doc);
+    var draft = new Session(composition.doc);
     draft.restore(composition);
     draft.reviewAuthor = reviewAuthor;
     draft.trackFormatting = trackFormatting;
@@ -731,7 +729,7 @@ public final class Session {
         caret = Math.max(start, Math.min(start + text.length(), start + relativeCaret));
     int composingBlock =
         composition.cells == null ? composition.sel.startBlock() : draft.selection.block;
-    Paragraph p = document.paragraph(composingBlock);
+    var p = document.paragraph(composingBlock);
     if (caret > 0 && caret < p.text.length() && Character.isLowSurrogate(p.text.charAt(caret)))
       caret++;
     selection = new Selection(composingBlock, caret, caret);
@@ -739,7 +737,7 @@ public final class Session {
 
   public void finishComposition() {
     if (composition == null) return;
-    State before = composition;
+    var before = composition;
     composition = null;
     if (document != before.doc || mergeData != before.merge) {
       undo.add(before);
@@ -776,14 +774,12 @@ public final class Session {
 
   public void replaceDocument(final Document d) {
     transact(
-        new Edit() {
-          public void apply(Session s) {
-            cell = null;
-            cells = null;
-            integratedSource = null;
-            document = d;
-            selectFirst();
-          }
+        s -> {
+          cell = null;
+          cells = null;
+          integratedSource = null;
+          document = d;
+          selectFirst();
         });
   }
 
@@ -792,7 +788,7 @@ public final class Session {
     transact(
         s -> {
           int block = cellBlock(), row = cellRow(), column = cellColumn();
-          Selection selected = selection;
+          var selected = selection;
           if (block >= 0) leaveCell();
           document = document.properties(value);
           if (block >= 0) enterCell(block, row, column);
@@ -808,13 +804,13 @@ public final class Session {
     transact(
         s -> {
           int block = cellBlock(), row = cellRow(), column = cellColumn();
-          Selection selected = selection;
+          var selected = selection;
           if (block >= 0) leaveCell();
           if (value.size() != document.blocks.size())
             throw new IllegalArgumentException("updateBlocks keeps the block count");
           document = document.blocks(value, document.nextId);
           if (block >= 0 && document.blocks.get(block) instanceof Table) {
-            Table t = (Table) document.blocks.get(block);
+            var t = (Table) document.blocks.get(block);
             enterCell(block, Math.min(row, t.rows() - 1), Math.min(column, t.columns() - 1));
           } else selection = selected;
         });
@@ -824,8 +820,8 @@ public final class Session {
     transact(
         s -> {
           int block = cellBlock(), row = cellRow(), column = cellColumn();
-          Selection selected = selection;
-          TextStyle style = insertionStyle;
+          var selected = selection;
+          var style = insertionStyle;
           if (block >= 0) leaveCell();
           document = document.bibliography(value);
           if (block >= 0) enterCell(block, row, column);
@@ -857,9 +853,9 @@ public final class Session {
   public void trackChanges(final boolean enabled) {
     transact(s -> {
       int block = cellBlock(), row = cellRow(), column = cellColumn();
-      Selection selected = selection;
-      CellSelection range = cells;
-      TextStyle style = insertionStyle;
+      var selected = selection;
+      var range = cells;
+      var style = insertionStyle;
       leaveCell();
       document = document.trackChanges(enabled);
       if (block >= 0) enterCell(block, row, column);
@@ -871,7 +867,7 @@ public final class Session {
 
   private Revision newRevision(String kind) {
     Calendar utc = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
-    String date =
+    var date =
         TextUtil.padded(utc.get(Calendar.YEAR), 10, 4)
             + "-"
             + TextUtil.padded(utc.get(Calendar.MONTH) + 1, 10, 2)
@@ -884,7 +880,7 @@ public final class Session {
             + ":"
             + TextUtil.padded(utc.get(Calendar.SECOND), 10, 2)
             + "Z";
-    Revision result = new Revision(Long.toString(document.nextId), kind, reviewAuthor, date);
+    var result = new Revision(Long.toString(document.nextId), kind, reviewAuthor, date);
     document = document.blocks(document.blocks, document.nextId + 1);
     return result;
   }
@@ -899,7 +895,7 @@ public final class Session {
     leaveCell();
     transact(
         s -> {
-          Document before = document;
+          var before = document;
           document = Revisions.resolve(document, id, accept);
           document = document.comments(ReviewComment.reanchor(before, document));
           selectFirst();
@@ -907,10 +903,10 @@ public final class Session {
   }
 
   public void resolveSelectedRevisions(final boolean accept) {
-    Selection range = selection;
+    var range = selection;
     boolean properties = !range.collapsed(), mark = false;
     if (range.collapsed()) {
-      String paragraph = document.paragraph(range.block).id;
+      var paragraph = document.paragraph(range.block).id;
       Revisions.Change found = null;
       for (Revisions.Change change : Revisions.list(document))
         if (change.paragraph.equals(paragraph)
@@ -927,11 +923,11 @@ public final class Session {
       mark = "Paragraph break".equals(found.text);
       range = new Selection(range.block, found.start, found.end);
     }
-    final Selection selected = range;
+    final var selected = range;
     final boolean props = properties, paragraphMark = mark;
     transact(
         s -> {
-          Document before = document;
+          var before = document;
           document = Revisions.resolveSelection(document, selected, accept, props, paragraphMark);
           document = document.comments(ReviewComment.reanchor(before, document));
           int block = Math.min(selected.startBlock(), document.blocks.size() - 1);
@@ -957,7 +953,7 @@ public final class Session {
   }
 
   public String revisionAtSelection() {
-    String paragraph = document.paragraph(selection.block).id;
+    var paragraph = document.paragraph(selection.block).id;
     for (Revisions.Change change : Revisions.list(document()))
       if (change.paragraph.equals(paragraph)
           && change.start <= selection.end()
@@ -966,15 +962,15 @@ public final class Session {
   }
 
   public Revisions.Change nextRevision(boolean previous) {
-    List<Revisions.Change> changes = Revisions.list(document());
-    List<Revisions.Change> body = new ArrayList<Revisions.Change>();
+    var changes = Revisions.list(document());
+    var body = new ArrayList<Revisions.Change>();
     for (Revisions.Change change : changes) if (change.story.isEmpty()) body.add(change);
     if (body.isEmpty())
       throw new IllegalArgumentException("No tracked changes in the document body");
-    String paragraph = document.paragraph(selection.block).id;
+    var paragraph = document.paragraph(selection.block).id;
     int current = -1;
     for (int i = 0; i < body.size(); i++) {
-      Revisions.Change change = body.get(i);
+      var change = body.get(i);
       if (change.paragraph.equals(paragraph)
           && change.start == selection.start()
           && change.end == selection.end()) {
@@ -988,7 +984,7 @@ public final class Session {
       target = previous ? body.size() - 1 : 0;
       int block = inCell() ? cell.block : selection.block;
       for (int i = 0; i < body.size(); i++) {
-        Revisions.Change change = body.get(i);
+        var change = body.get(i);
         if (!previous
             && (change.block > block || change.block == block && change.start >= selection.caret)) {
           target = i;
@@ -999,22 +995,22 @@ public final class Session {
           target = i;
       }
     }
-    Revisions.Change result = body.get(target);
+    var result = body.get(target);
     selectRevision(result);
     return result;
   }
 
   private void trackedReplace(String value) {
-    Selection selected = selection;
+    var selected = selection;
     for (int b = selected.startBlock(); b <= selected.endBlock(); b++)
       if (!(document.blocks.get(b) instanceof Paragraph))
         throw new IllegalArgumentException(
             "Select text within paragraphs when tracking edits across blocks");
     Revision deletion = selected.collapsed() ? null : newRevision("delete");
-    Set<String> cancelBreaks = new HashSet<String>();
+    var cancelBreaks = new HashSet<String>();
     Sequence<Block> blocks = document.blocks;
     for (int b = selected.startBlock(); b <= selected.endBlock(); b++) {
-      Paragraph p = (Paragraph) blocks.get(b);
+      var p = (Paragraph) blocks.get(b);
       int from = b == selected.startBlock() ? selected.start() : 0;
       int to = b == selected.endBlock() ? selected.end() : p.text.length();
       if (to > from) p = p.text(p.text.replace(from, to, p.text.slice(from, to).deleted(deletion)));
@@ -1027,13 +1023,13 @@ public final class Session {
       }
       blocks = blocks.set(b, p);
     }
-    Map<String, Section> keptSections = new LinkedHashMap<String, Section>(document.sections);
+    var keptSections = new LinkedHashMap<String, Section>(document.sections);
     for (int b = selected.startBlock(); b + 1 < blocks.size(); b++) {
       if (!cancelBreaks.contains(blocks.get(b).id())) continue;
       Paragraph a = (Paragraph) blocks.get(b), z = (Paragraph) blocks.get(b + 1);
       cancelBreaks.remove(a.id);
       if (cancelBreaks.remove(z.id)) cancelBreaks.add(a.id);
-      Section boundary = keptSections.remove(z.id);
+      var boundary = keptSections.remove(z.id);
       keptSections.remove(a.id);
       if (boundary != null) keptSections.put(a.id, boundary);
       blocks =
@@ -1043,7 +1039,7 @@ public final class Session {
     document =
         document.blocks(blocks, document.nextId).sections(keptSections, document.lastSection);
     int first = selected.startBlock(), at = selected.start();
-    Paragraph p = document.paragraph(first);
+    var p = document.paragraph(first);
     String[] lines = TextUtil.split(value.replace("\r\n", "\n").replace('\r', '\n'), '\n');
     if (value.isEmpty()) {
       selection = new Selection(first, at, at);
@@ -1051,12 +1047,12 @@ public final class Session {
     }
     Revision insertion = null;
     if (selected.collapsed() && at > 0) {
-      Revision previous = p.text.styleAt(at - 1).revision;
+      var previous = p.text.styleAt(at - 1).revision;
       if (previous != null && previous.inserted() && previous.author.equals(reviewAuthor))
         insertion = previous;
     }
     if (insertion == null) insertion = newRevision("insert");
-    TextStyle style =
+    var style =
         (insertionStyle == null ? typingStyle(p, at) : insertionStyle).clean().revision(insertion);
     RichText prefix = p.text.slice(0, at), suffix = p.text.slice(at, p.text.length());
     blocks = document.blocks;
@@ -1078,8 +1074,8 @@ public final class Session {
                 p.copy("p" + next++, text).breakRevision(last ? p.breakRevision : insertion));
       }
     }
-    Map<String, Section> sections = new LinkedHashMap<String, Section>(document.sections);
-    Section boundary = sections.remove(p.id);
+    var sections = new LinkedHashMap<String, Section>(document.sections);
+    var boundary = sections.remove(p.id);
     if (boundary != null) sections.put(blocks.get(first + lines.length - 1).id(), boundary);
     document = document.blocks(blocks, next).sections(sections, document.lastSection);
     int caret = lines.length == 1 ? at + lines[0].length() : lines[lines.length - 1].length();
@@ -1093,67 +1089,66 @@ public final class Session {
       return;
     }
     transact(
-        new Edit() {
-          public void apply(Session s) {
-            if (document.trackChanges) {
-              trackedReplace(value);
-              return;
-            }
-            Document before = document;
-            Selection x = selection;
-            int first = x.startBlock();
-            Paragraph p = document.paragraph(first), last = document.paragraph(x.endBlock());
-            String normalized = value.replace("\r\n", "\n").replace('\r', '\n');
-            String[] lines = TextUtil.split(normalized, '\n');
-            TextStyle style = insertionStyle != null ? insertionStyle : typingStyle(p, x.start());
-            style = style.clean();
-            RichText prefix = p.text.slice(0, x.start()),
-                suffix = last.text.slice(x.end(), last.text.length());
-            Sequence<Block> b = document.blocks;
-            for (int i = x.endBlock(); i > first; i--) b = b.remove(i);
-            long next = document.nextId;
-            if (lines.length == 1) {
-              b =
-                  b.set(
-                      first,
-                      p.text(prefix.concat(RichText.of(lines[0], style)).concat(suffix))
-                          .breakRevision(last.breakRevision));
-              selection =
-                  new Selection(
-                      first, x.start() + lines[0].length(), x.start() + lines[0].length());
-            } else {
-              b =
-                  b.set(
-                      first,
-                      p.text(prefix.concat(RichText.of(lines[0], style))).breakRevision(null));
-              for (int i = 1; i < lines.length; i++) {
-                RichText t = RichText.of(lines[i], style);
-                if (i == lines.length - 1) t = t.concat(suffix);
-                b =
-                    b.insert(
-                        first + i,
-                        p.copy("p" + (next++), t)
-                            .breakRevision(i == lines.length - 1 ? last.breakRevision : null));
-              }
-              selection =
-                  new Selection(
-                      first + lines.length - 1,
-                      lines[lines.length - 1].length(),
-                      lines[lines.length - 1].length());
-            }
-            document = document.blocks(b, next);
-            if (!before.sections.isEmpty()) {
-              Map<String, Section> sections = new LinkedHashMap<String, Section>(document.sections);
-              sections.remove(p.id);
-              Section tail = before.sections.get(last.id);
-              if (tail != null) sections.put(b.get(first + lines.length - 1).id(), tail);
-              document = document.sections(sections, document.lastSection);
-            }
-            if (!before.comments.isEmpty())
-              document = document.comments(ReviewComment.reanchor(before, document, x, selection));
-            if (!before.bookmarks.isEmpty())
-              document = document.bookmarks(Bookmark.reanchor(before, document, x, selection));
+        s -> {
+          if (document.trackChanges) {
+            trackedReplace(value);
+            return;
           }
+          var before = document;
+          var x = selection;
+          int first = x.startBlock();
+          Paragraph p = document.paragraph(first), last = document.paragraph(x.endBlock());
+          var normalized = value.replace("\r\n", "\n").replace('\r', '\n');
+          String[] lines = TextUtil.split(normalized, '\n');
+          TextStyle style = insertionStyle != null ? insertionStyle : typingStyle(p, x.start());
+          style = style.clean();
+          RichText prefix = p.text.slice(0, x.start()),
+              suffix = last.text.slice(x.end(), last.text.length());
+          Sequence<Block> b = document.blocks;
+          for (int i = x.endBlock();i > first;i--) b = b.remove(i);
+          long next = document.nextId;
+          if (lines.length == 1) {
+            b =
+                b.set(
+                    first,
+                    p.text(prefix.concat(RichText.of(lines[0], style)).concat(suffix))
+                        .breakRevision(last.breakRevision));
+            selection =
+                new Selection(
+                    first, x.start() + lines[0].length(), x.start() + lines[0].length());
+          }
+          else {
+            b =
+                b.set(
+                    first,
+                    p.text(prefix.concat(RichText.of(lines[0], style))).breakRevision(null));
+            for (int i = 1;i < lines.length;i++) {
+              RichText t = RichText.of(lines[i], style);
+              if (i == lines.length - 1) t = t.concat(suffix);
+              b =
+                  b.insert(
+                      first + i,
+                      p.copy("p" + (next++), t)
+                          .breakRevision(i == lines.length - 1 ? last.breakRevision : null));
+            }
+            selection =
+                new Selection(
+                    first + lines.length - 1,
+                    lines[lines.length - 1].length(),
+                    lines[lines.length - 1].length());
+          }
+          document = document.blocks(b, next);
+          if (!before.sections.isEmpty()) {
+            var sections = new LinkedHashMap<String, Section>(document.sections);
+            sections.remove(p.id);
+            var tail = before.sections.get(last.id);
+            if (tail != null) sections.put(b.get(first + lines.length - 1).id(), tail);
+            document = document.sections(sections, document.lastSection);
+          }
+          if (!before.comments.isEmpty())
+            document = document.comments(ReviewComment.reanchor(before, document, x, selection));
+          if (!before.bookmarks.isEmpty())
+            document = document.bookmarks(Bookmark.reanchor(before, document, x, selection));
         });
   }
 
@@ -1173,9 +1168,9 @@ public final class Session {
           "Case mode must be sentence, lower, upper, title or toggle");
     transact(
         s -> {
-          Selection selected = selection;
+          var selected = selection;
           if (selected.collapsed()) {
-            String text = document.paragraph(selected.block).text.toString();
+            var text = document.paragraph(selected.block).text.toString();
             int caret = selected.caret;
             if (caret == 0
                 || caret >= text.length()
@@ -1186,12 +1181,12 @@ public final class Session {
             while (to < text.length() && CaseConversion.word(text.charAt(to))) to++;
             selected = new Selection(selected.block, from, to);
           }
-          String mode = requestedMode;
+          var mode = requestedMode;
           if (mode == null) {
-            StringBuilder text = new StringBuilder();
+            var text = new StringBuilder();
             for (int b = selected.startBlock(); b <= selected.endBlock(); b++) {
               if (!(document.blocks.get(b) instanceof Paragraph)) continue;
-              Paragraph p = document.paragraph(b);
+              var p = document.paragraph(b);
               text.append(
                   p.text
                       .slice(
@@ -1204,20 +1199,20 @@ public final class Session {
           Revision insertion = document.trackChanges ? newRevision("insert") : null;
           Revision deletion = document.trackChanges ? newRevision("delete") : null;
           Sequence<Block> blocks = document.blocks;
-          java.util.List<ReviewComment> comments = new ArrayList<ReviewComment>(document.comments);
-          Map<String, Bookmark> bookmarks = new LinkedHashMap<String, Bookmark>(document.bookmarks);
+          var comments = new ArrayList<ReviewComment>(document.comments);
+          var bookmarks = new LinkedHashMap<String, Bookmark>(document.bookmarks);
           int end = selected.end();
           for (int b = selected.startBlock(); b <= selected.endBlock(); b++) {
             if (!(blocks.get(b) instanceof Paragraph)) continue;
-            Paragraph p = (Paragraph) blocks.get(b);
+            var p = (Paragraph) blocks.get(b);
             int from = b == selected.startBlock() ? selected.start() : 0;
             int to = b == selected.endBlock() ? selected.end() : p.text.length();
-            CaseConversion conversion =
+            var conversion =
                 new CaseConversion(p.text.slice(from, to), mode, from == 0, insertion, deletion);
-            RichText converted = conversion.text();
+            var converted = conversion.text();
             blocks = blocks.set(b, p.text(p.text.replace(from, to, converted)));
             for (int c = 0; c < comments.size(); c++) {
-              ReviewComment comment = comments.get(c);
+              var comment = comments.get(c);
               int a =
                   comment.startId.equals(p.id)
                       ? caseOffset(comment.start, from, to, conversion)
@@ -1267,8 +1262,8 @@ public final class Session {
   /** Word-style formatting uses the surrounding word only when the caret is inside it. */
   private Selection characterTarget() {
     if (!selection.collapsed()) return selection;
-    RichText source = document.paragraph(selection.block).text;
-    String text = source.toString();
+    var source = document.paragraph(selection.block).text;
+    var text = source.toString();
     int at = selection.caret;
     if (at == 0
         || at == text.length()
@@ -1297,13 +1292,13 @@ public final class Session {
       return;
     }
     breakTypingGroup();
-    final Selection target = characterTarget();
+    final var target = characterTarget();
     if (target.collapsed()) {
-      final TextStyle next = activeStyle().with(key, value).formatRevision(null, null);
+      final var next = activeStyle().with(key, value).formatRevision(null, null);
       if (document.paragraph(selection.block).text.length() == 0)
         transact(
             s -> {
-              Paragraph p = document.paragraph(selection.block);
+              var p = document.paragraph(selection.block);
               document =
                   document.blocks(
                       document.blocks.set(selection.block, p.text(RichText.of("", next))),
@@ -1315,22 +1310,20 @@ public final class Session {
     transact(
         s -> {
           Revision change = document.trackChanges && trackFormatting ? newRevision("format") : null;
-          Selection x = target;
+          var x = target;
           Sequence<Block> blocks = document.blocks;
           for (int i = x.startBlock(); i <= x.endBlock(); i++) {
-            Block block = blocks.get(i);
-            if (block instanceof Paragraph) {
-              Paragraph p = (Paragraph) block;
+            var block = blocks.get(i);
+            if (block instanceof Paragraph p) {
               int a = i == x.startBlock() ? x.start() : 0,
                   b = i == x.endBlock() ? x.end() : p.text.length();
               blocks = blocks.set(i, p.text(p.text.format(a, b, key, value, change)));
-            } else if (block instanceof Table) {
-              Table t = (Table) block;
+            } else if (block instanceof Table t) {
               for (int r = 0; r < t.rows(); r++)
                 for (int c = 0; c < t.columns(); c++) {
-                  Sequence<Paragraph> cell = t.cell(r, c);
+                  var cell = t.cell(r, c);
                   for (int n = 0; n < cell.size(); n++) {
-                    Paragraph p = cell.get(n);
+                    var p = cell.get(n);
                     cell =
                         cell.set(n, p.text(p.text.format(0, p.text.length(), key, value, change)));
                   }
@@ -1349,7 +1342,7 @@ public final class Session {
       editCells(x -> x.applyStyle(id), true);
       return;
     }
-    final ParagraphStyle style = document().styles.get(id);
+    final var style = document().styles.get(id);
     if (style == null) throw new IllegalArgumentException("Unknown style: " + id);
     transact(
         s -> {
@@ -1357,7 +1350,7 @@ public final class Session {
           Sequence<Block> blocks = document.blocks;
           for (int i = selection.startBlock(); i <= selection.endBlock(); i++)
             if (blocks.get(i) instanceof Paragraph) {
-              Paragraph p = (Paragraph) blocks.get(i);
+              var p = (Paragraph) blocks.get(i);
               blocks = blocks.set(i, style.apply(p, document.styles.get(p.style), false, change));
             }
           document = document.blocks(blocks, document.nextId);
@@ -1370,13 +1363,13 @@ public final class Session {
     transact(
         s -> {
           int table = cellBlock(), row = cellRow(), column = cellColumn();
-          Selection selected = selection;
+          var selected = selection;
           leaveCell();
-          ParagraphStyle old = document.styles.get(style.id);
-          Map<String, ParagraphStyle> definitions =
+          var old = document.styles.get(style.id);
+          var definitions =
               new LinkedHashMap<String, ParagraphStyle>(document.styles);
           definitions.put(style.id, style);
-          Sequence<Block> blocks = updateStyledBlocks(document.blocks, style.id, style, old, false);
+          var blocks = updateStyledBlocks(document.blocks, style.id, style, old, false);
           document =
               document
                   .blocks(blocks, document.nextId)
@@ -1401,7 +1394,7 @@ public final class Session {
     leaveCell();
     transact(
         s -> {
-          Map<String, ParagraphStyle> definitions =
+          var definitions =
               new LinkedHashMap<String, ParagraphStyle>(document.styles);
           definitions.remove(id);
           document =
@@ -1420,7 +1413,7 @@ public final class Session {
 
   private void updateSectionStyles(
       String id, ParagraphStyle style, ParagraphStyle old, boolean deleting) {
-    Map<String, Section> sections = new LinkedHashMap<String, Section>(document.sections);
+    var sections = new LinkedHashMap<String, Section>(document.sections);
     for (Map.Entry<String, Section> entry : sections.entrySet())
       entry.setValue(
           entry
@@ -1436,12 +1429,12 @@ public final class Session {
       ParagraphStyle style,
       ParagraphStyle old,
       boolean deleting) {
-    PageFurniture result = furniture;
+    var result = furniture;
     for (String key : PageFurniture.KEYS)
       if (furniture.stories.containsKey(key)) {
         Sequence<Paragraph> previous = furniture.get(key), next = previous;
         for (int i = 0; i < previous.size(); i++) {
-          Paragraph p = previous.get(i);
+          var p = previous.get(i);
           if (p.style.equals(id))
             next = next.set(i, deleting ? p.with("style", "Normal") : style.apply(p, old, true));
         }
@@ -1457,21 +1450,19 @@ public final class Session {
       ParagraphStyle old,
       boolean deleting) {
     for (int i = 0; i < blocks.size(); i++) {
-      Block block = blocks.get(i);
-      if (block instanceof Paragraph) {
-        Paragraph p = (Paragraph) block;
+      var block = blocks.get(i);
+      if (block instanceof Paragraph p) {
         if (p.style.equals(id))
           blocks = blocks.set(i, deleting ? p.with("style", "Normal") : style.apply(p, old, true));
-      } else if (block instanceof Table) {
-        Table table = (Table) block;
+      } else if (block instanceof Table table) {
         for (int r = 0; r < table.rows(); r++)
           for (int c = 0; c < table.columns(); c++) {
             if (table.covered(r, c)) continue;
-            Sequence<Paragraph> paras = table.cell(r, c);
+            var paras = table.cell(r, c);
             boolean changed = false;
             for (int n = 0; n < paras.size(); n++)
               if (paras.get(n).style.equals(id)) {
-                Paragraph p = paras.get(n);
+                var p = paras.get(n);
                 paras =
                     paras.set(n, deleting ? p.with("style", "Normal") : style.apply(p, old, true));
                 changed = true;
@@ -1505,22 +1496,20 @@ public final class Session {
       return;
     }
     transact(
-        new Edit() {
-          public void apply(Session s) {
-            Revision change =
-                document.trackChanges && trackFormatting ? newRevision("format") : null;
-            Sequence<Block> blocks = document.blocks;
-            for (int i = selection.startBlock(); i <= selection.endBlock(); i++) {
-              if (blocks.get(i) instanceof Paragraph)
-                blocks =
-                    blocks.set(
-                        i,
-                        ((Paragraph) blocks.get(i))
-                            .with(key, value)
-                            .trackedProperties((Paragraph) blocks.get(i), change));
-            }
-            document = document.blocks(blocks, document.nextId);
+        s -> {
+          Revision change =
+              document.trackChanges && trackFormatting ? newRevision("format") : null;
+          Sequence<Block> blocks = document.blocks;
+          for (int i = selection.startBlock();i <= selection.endBlock();i++) {
+            if (blocks.get(i) instanceof Paragraph)
+              blocks =
+                  blocks.set(
+                      i,
+                      ((Paragraph) blocks.get(i))
+                          .with(key, value)
+                          .trackedProperties((Paragraph) blocks.get(i), change));
           }
+          document = document.blocks(blocks, document.nextId);
         });
   }
 
@@ -1535,9 +1524,9 @@ public final class Session {
     }
     int block = selection.block, at = selection.caret;
     while (true) {
-      Paragraph p = document.paragraph(block);
+      var p = document.paragraph(block);
       while (at < p.text.length()) {
-        Revision revision = p.text.styleAt(at).revision;
+        var revision = p.text.styleAt(at).revision;
         if (!document.trackChanges || revision == null || revision.inserted()) break;
         at++;
       }
@@ -1566,7 +1555,7 @@ public final class Session {
       replaceCells("");
       return;
     }
-    Selection x = selection;
+    var x = selection;
     if (!x.collapsed()) {
       replace("");
       return;
@@ -1574,9 +1563,9 @@ public final class Session {
     if (document.trackChanges) {
       int block = x.block, at = x.caret;
       while (true) {
-        Paragraph p = document.paragraph(block);
+        var p = document.paragraph(block);
         while (at > 0) {
-          Revision revision = p.text.styleAt(at - 1).revision;
+          var revision = p.text.styleAt(at - 1).revision;
           if (revision == null || revision.inserted()) break;
           at--;
         }
@@ -1588,7 +1577,7 @@ public final class Session {
           return;
         }
         if (block == 0 || !(document.blocks.get(block - 1) instanceof Paragraph)) return;
-        Paragraph previous = document.paragraph(block - 1);
+        var previous = document.paragraph(block - 1);
         if (previous.breakRevision != null && !previous.breakRevision.inserted()) {
           block--;
           at = previous.text.length();
@@ -1600,29 +1589,27 @@ public final class Session {
       }
     }
     if (x.caret > 0) {
-      Paragraph p = document.paragraph(x.block);
+      var p = document.paragraph(x.block);
       int start = Graphemes.previous(p.text, x.caret);
       int end = Graphemes.isBoundary(p.text, x.caret) ? x.caret : Graphemes.next(p.text, x.caret);
       select(x.block, start, end);
       replace("");
     } else if (x.block > 0 && document.blocks.get(x.block - 1) instanceof Paragraph) {
       if (document.trackChanges) {
-        Paragraph previous = document.paragraph(x.block - 1);
+        var previous = document.paragraph(x.block - 1);
         selectRange(x.block - 1, previous.text.length(), x.block, 0);
         replace("");
         return;
       }
       transact(
-          new Edit() {
-            public void apply(Session s) {
-              int i = selection.block;
-              Paragraph a = document.paragraph(i - 1), b = document.paragraph(i);
-              document =
-                  document.blocks(
-                      document.blocks.set(i - 1, a.text(a.text.concat(b.text))).remove(i),
-                      document.nextId);
-              selection = new Selection(i - 1, a.text.length(), a.text.length());
-            }
+          s -> {
+            int i = selection.block;
+            Paragraph a = document.paragraph(i - 1), b = document.paragraph(i);
+            document =
+                document.blocks(
+                    document.blocks.set(i - 1, a.text(a.text.concat(b.text))).remove(i),
+                    document.nextId);
+            selection = new Selection(i - 1, a.text.length(), a.text.length());
           });
     }
   }
@@ -1641,17 +1628,17 @@ public final class Session {
     transact(
         s -> {
           int cb = cellBlock(), cr = cellRow(), cc = cellColumn();
-          Selection saved = selection;
-          TextStyle savedStyle = insertionStyle;
+          var saved = selection;
+          var savedStyle = insertionStyle;
           leaveCell();
-          Document root = document();
+          var root = document();
           if (whole) root = root.notes(root.notes.with(kind, change.resolve(root.notes.get(kind))));
-          Map<String, Section> sections = new LinkedHashMap<String, Section>(root.sections);
-          Section tail = root.lastSection;
+          var sections = new LinkedHashMap<String, Section>(root.sections);
+          var tail = root.lastSection;
           for (Section.Range range : root.sectionRanges()) {
             if (!whole && (range.last < first || range.first > last)) continue;
-            NoteOptions.Properties old = range.raw.notes.get(kind);
-            Section updated =
+            var old = range.raw.notes.get(kind);
+            var updated =
                 range.raw.notes(
                     range.raw.notes.with(kind, whole ? old.clear(change) : change.resolve(old)));
             String id = range.last >= 0 ? root.blocks.get(range.last).id() : "";
@@ -1681,7 +1668,7 @@ public final class Session {
     transact(
         s -> {
           if ("document".equals(apply)) {
-            Map<String, Section> changed = new LinkedHashMap<String, Section>();
+            var changed = new LinkedHashMap<String, Section>();
             for (Map.Entry<String, Section> e : document.sections.entrySet())
               changed.put(e.getKey(), e.getValue().columns(value));
             document = document.sections(changed, document.lastSection.columns(value));
@@ -1709,16 +1696,16 @@ public final class Session {
     if (inCell()) throw new IllegalArgumentException("Section breaks belong in the document body");
     transact(
         s -> {
-          Selection old = selection;
+          var old = selection;
           int first = old.startBlock(),
               offset = old.start(),
               end = old.endBlock(),
               endOffset = old.end();
-          Section current = document.sectionAt(first).raw;
-          Section next = current.linked().start(kind).numbering(0);
+          var current = document.sectionAt(first).raw;
+          var next = current.linked().start(kind).numbering(0);
           select(first, offset, offset);
           replace("\n");
-          Map<String, Section> sections = new LinkedHashMap<String, Section>(document.sections);
+          var sections = new LinkedHashMap<String, Section>(document.sections);
           sections.put(document.blocks.get(first).id(), current);
           document = document.sections(sections, document.lastSection).section(first + 1, next);
           int last = end + 1, lastOffset = end == first ? endOffset - offset : endOffset;
@@ -1738,10 +1725,10 @@ public final class Session {
     transact(
         s -> {
           long next = document.nextId;
-          PageFurniture updated = value;
+          var updated = value;
           for (String key : PageFurniture.KEYS)
             if (value.stories.containsKey(key)) {
-              Sequence<Paragraph> paragraphs = new Sequence<Paragraph>();
+              var paragraphs = new Sequence<Paragraph>();
               for (Paragraph para : value.get(key))
                 paragraphs = paragraphs.append(para.copy("p" + next++, para.text));
               updated = updated.story(key, paragraphs);
@@ -1751,9 +1738,9 @@ public final class Session {
                   .blocks(document.blocks, next)
                   .section(block, document.sectionAt(block).raw.furniture(updated));
           // DOCX uses one document-wide odd/even-header switch.
-          Map<String, Section> sections = new LinkedHashMap<String, Section>(document.sections);
+          var sections = new LinkedHashMap<String, Section>(document.sections);
           for (Map.Entry<String, Section> entry : sections.entrySet()) {
-            PageFurniture f = entry.getValue().furniture;
+            var f = entry.getValue().furniture;
             entry.setValue(
                 entry
                     .getValue()
@@ -1764,7 +1751,7 @@ public final class Session {
                             f.headerDistance,
                             f.footerDistance)));
           }
-          PageFurniture f = document.furniture;
+          var f = document.furniture;
           document =
               document.sections(
                   sections,
@@ -1787,17 +1774,16 @@ public final class Session {
     transact(
         s -> {
           int block = cellBlock(), row = cellRow(), column = cellColumn();
-          Selection selected = selection;
-          CellSelection selectedCells = cells;
-          TextStyle selectedStyle = insertionStyle;
+          var selected = selection;
+          var selectedCells = cells;
+          var selectedStyle = insertionStyle;
           if (block >= 0) leaveCell();
           Sequence<Block> blocks = document.blocks;
           for (int i = 0; i < blocks.size(); i++) {
             Block original = blocks.get(i), updated = original;
-            if (original instanceof Paragraph)
-              updated = mapParagraphFields((Paragraph) original, resolver);
-            else if (original instanceof Table) {
-              Table table = (Table) original;
+            if (original instanceof Paragraph paragraph)
+              updated = mapParagraphFields(paragraph, resolver);
+            else if (original instanceof Table table) {
               for (int r = 0; r < table.rows(); r++)
                 for (int c = 0; c < table.columns(); c++) {
                   if (table.covered(r, c)) continue;
@@ -1833,14 +1819,14 @@ public final class Session {
   }
 
   private static Paragraph mapParagraphFields(Paragraph p, FieldResolver resolver) {
-    RichText text = p.text.mapFields((offset, field) -> resolver.resolve(p.id, offset, field));
+    var text = p.text.mapFields((offset, field) -> resolver.resolve(p.id, offset, field));
     return text == p.text ? p : p.text(text);
   }
 
   public void changeField(final int offset, final InlineField value) {
-    Paragraph p = document.paragraph(selection.block);
+    var p = document.paragraph(selection.block);
     if (p.text.fieldAt(offset) == null) throw new IllegalArgumentException("Select a field");
-    final String id = p.id;
+    final var id = p.id;
     mapFields((paragraph, at, field) -> id.equals(paragraph) && at == offset ? value : field);
   }
 
@@ -1852,7 +1838,7 @@ public final class Session {
       final boolean excludeLabel,
       final int chapter,
       final String separator) {
-    final String captionLabel = label.trim();
+    final var captionLabel = label.trim();
     if (captionLabel.isEmpty()
         || captionLabel.length() > 40
         || captionLabel.indexOf('"') >= 0
@@ -1870,7 +1856,7 @@ public final class Session {
     leaveCell();
     transact(
         s -> {
-          String identifier = captionLabel.replace(' ', '_').replace('\t', '_');
+          var identifier = captionLabel.replace(' ', '_').replace('\t', '_');
           TextStyle style =
               document.styles.containsKey("Caption")
                   ? document.styles.get("Caption").text
@@ -1899,7 +1885,7 @@ public final class Session {
                       style));
           if (!text.isEmpty()) content = content.concat(RichText.of(": " + text, style));
           int at = target + (above ? 0 : 1);
-          Paragraph caption =
+          var caption =
               new Paragraph("p" + document.nextId, content)
                   .with("style", "Caption")
                   .with("keepNext", "" + above);
@@ -1910,20 +1896,20 @@ public final class Session {
             if (anchor < 0 || !(document.blocks.get(anchor) instanceof Paragraph))
               throw new IllegalArgumentException(
                   "Tracked captions require an adjacent text paragraph");
-            Paragraph original = document.paragraph(anchor);
+            var original = document.paragraph(anchor);
             select(
                 anchor,
                 beforeParagraph ? 0 : original.text.length(),
                 beforeParagraph ? 0 : original.text.length());
-            Paragraph empty = original.copy("caption-empty", new RichText());
-            Sequence<Block> fragment = new Sequence<Block>();
+            var empty = original.copy("caption-empty", new RichText());
+            var fragment = new Sequence<Block>();
             fragment =
                 beforeParagraph
                     ? fragment.append(caption).append(empty)
                     : fragment.append(empty).append(caption);
             trackedPaste(new Document(fragment, document.page, "Caption", document.nextId + 1));
-            Paragraph inserted = document.paragraph(at);
-            Paragraph formatted =
+            var inserted = document.paragraph(at);
+            var formatted =
                 inserted
                     .with("style", "Caption")
                     .with("keepNext", "" + above)
@@ -1941,10 +1927,10 @@ public final class Session {
   public void insertNote(final String kind, final String text, final String mark) {
     transact(
         s -> {
-          TextStyle typing = activeStyle();
+          var typing = activeStyle();
           long next = document.nextId;
-          String id = "n" + next++;
-          Sequence<Paragraph> story = new Sequence<Paragraph>();
+          var id = "n" + next++;
+          var story = new Sequence<Paragraph>();
           for (String line : TextUtil.split(text, '\n'))
             story =
                 story.append(
@@ -1953,11 +1939,11 @@ public final class Session {
                         .with("after", "0")
                         .with("spacing", "1"));
           if (story.size() == 0) story = story.append(new Paragraph("p" + next++, new RichText()));
-          Note note = new Note(id, kind, mark, mark.isEmpty() ? "1" : mark, story);
+          var note = new Note(id, kind, mark, mark.isEmpty() ? "1" : mark, story);
           document = document.blocks(document.blocks, next);
           replace(InlineField.OBJECT);
           int block = selection.block, at = selection.caret - 1;
-          Paragraph p = document.paragraph(block);
+          var p = document.paragraph(block);
           document =
               document.blocks(
                   document.blocks.set(
@@ -1977,7 +1963,7 @@ public final class Session {
     transact(
         s -> {
           int block = cellBlock(), row = cellRow(), column = cellColumn();
-          Selection selected = selection;
+          var selected = selection;
           leaveCell();
           final boolean[] found = {false};
           document =
@@ -2006,19 +1992,18 @@ public final class Session {
   public void selectNote(String id) {
     leaveCell();
     for (int b = 0; b < document.blocks.size(); b++) {
-      Block block = document.blocks.get(b);
-      if (block instanceof Paragraph) {
-        int offset = noteOffset((Paragraph) block, id);
+      var block = document.blocks.get(b);
+      if (block instanceof Paragraph paragraph) {
+        int offset = noteOffset(paragraph, id);
         if (offset >= 0) {
           select(b, offset, offset + 1);
           return;
         }
-      } else if (block instanceof Table) {
-        Table table = (Table) block;
+      } else if (block instanceof Table table) {
         for (int r = 0; r < table.rows(); r++)
           for (int c = 0; c < table.columns(); c++) {
             if (table.covered(r, c)) continue;
-            Sequence<Paragraph> cell = table.cell(r, c);
+            var cell = table.cell(r, c);
             for (int p = 0; p < cell.size(); p++) {
               int offset = noteOffset(cell.get(p), id);
               if (offset >= 0) {
@@ -2034,13 +2019,13 @@ public final class Session {
   }
 
   public void nextNote(boolean previous) {
-    List<Notes.Reference> refs = Notes.references(document());
+    var refs = Notes.references(document());
     if (refs.isEmpty()) return;
     int b = inCell() ? cellBlock() : selection.block, r = cellRow(), c = cellColumn();
     int p = inCell() ? selection.block : 0, offset = previous ? selection.start() : selection.end();
     Notes.Reference target = previous ? refs.get(refs.size() - 1) : refs.get(0);
     for (int i = 0; i < refs.size(); i++) {
-      Notes.Reference ref = refs.get(previous ? refs.size() - i - 1 : i);
+      var ref = refs.get(previous ? refs.size() - i - 1 : i);
       int compare = ref.compare(b, r, c, p, offset);
       if (previous ? compare < 0 : compare >= 0) {
         target = ref;
@@ -2071,10 +2056,10 @@ public final class Session {
   public void insertField(final InlineField field) {
     transact(
         s -> {
-          TextStyle style = activeStyle();
+          var style = activeStyle();
           replace(InlineField.OBJECT);
           int block = selection.block, at = selection.caret - 1;
-          Paragraph paragraph = document.paragraph(block);
+          var paragraph = document.paragraph(block);
           style = paragraph.text.styleAt(at);
           document =
               document.blocks(
@@ -2090,7 +2075,7 @@ public final class Session {
       final byte[] bytes, final float width, final float height, final String alt) {
     if (inCell())
       throw new IllegalArgumentException("Pictures inside table cells are not supported yet");
-    final Picture input = new Picture("pending", bytes, width, height, alt, "left");
+    final var input = new Picture("pending", bytes, width, height, alt, "left");
     transact(
         s -> {
           replace("\n");
@@ -2111,7 +2096,7 @@ public final class Session {
     leaveCell();
     transact(
         s -> {
-          Picture p = (Picture) document.blocks.get(block);
+          var p = (Picture) document.blocks.get(block);
           document =
               document.blocks(
                   delete
@@ -2190,17 +2175,17 @@ public final class Session {
           public void apply(Session s) {
             replace("\n");
             long id = document.nextId;
-            String tid = "t" + id++;
-            List<List<Sequence<Paragraph>>> cells = new ArrayList<List<Sequence<Paragraph>>>();
+            var tid = "t" + id++;
+            var cells = new ArrayList<List<Sequence<Paragraph>>>();
             for (int r = 0; r < rows; r++) {
-              List<Sequence<Paragraph>> row = new ArrayList<Sequence<Paragraph>>();
+              var row = new ArrayList<Sequence<Paragraph>>();
               for (int c = 0; c < columns; c++)
                 row.add(
                     new Sequence<Paragraph>().append(new Paragraph("p" + id++, new RichText())));
               cells.add(row);
             }
             int i = selection.block;
-            Sequence<Block> blocks =
+            var blocks =
                 document.blocks.insert(i, new Table(tid, cells));
             document = document.blocks(blocks, id);
             selection = new Selection(i + 1, 0, 0);
@@ -2212,22 +2197,20 @@ public final class Session {
   public void setCell(final int block, final int row, final int column, final String text) {
     leaveCell();
     transact(
-        new Edit() {
-          public void apply(Session s) {
-            Table t = (Table) document.blocks.get(block);
-            Paragraph p = t.cell(row, column).get(0);
-            Sequence<Paragraph> paragraphs = new Sequence<Paragraph>();
-            long id = document.nextId;
-            String[] lines = TextUtil.split(text.replace("\r\n", "\n").replace('\r', '\n'), '\n');
-            for (int i = 0; i < lines.length; i++)
-              paragraphs =
-                  paragraphs.append(
-                      i == 0
-                          ? p.text(RichText.of(lines[i], p.text.styleAt(0)))
-                          : p.copy("p" + id++, RichText.of(lines[i], p.text.styleAt(0))));
-            Table next = t.setCell(row, column, paragraphs);
-            document = document.blocks(document.blocks.set(block, next), id);
-          }
+        s -> {
+          var t = (Table) document.blocks.get(block);
+          var p = t.cell(row, column).get(0);
+          var paragraphs = new Sequence<Paragraph>();
+          long id = document.nextId;
+          String[] lines = TextUtil.split(text.replace("\r\n", "\n").replace('\r', '\n'), '\n');
+          for (int i = 0;i < lines.length;i++)
+            paragraphs =
+                paragraphs.append(
+                    i == 0
+                        ? p.text(RichText.of(lines[i], p.text.styleAt(0)))
+                        : p.copy("p" + id++, RichText.of(lines[i], p.text.styleAt(0))));
+          var next = t.setCell(row, column, paragraphs);
+          document = document.blocks(document.blocks.set(block, next), id);
         });
   }
 
@@ -2235,10 +2218,10 @@ public final class Session {
     transact(
         s -> {
           int cellBlock = cellBlock(), row = cellRow(), column = cellColumn();
-          CellSelection selectedCells = cells;
-          Selection selected = selection;
+          var selectedCells = cells;
+          var selected = selection;
           leaveCell();
-          Table table = (Table) document.blocks.get(block);
+          var table = (Table) document.blocks.get(block);
           document =
               document.blocks(document.blocks.set(block, table.format(format)), document.nextId);
           if (cellBlock == block) {
@@ -2259,7 +2242,7 @@ public final class Session {
             int count = "insertRow".equals(action) ? table.columns() : table.rows();
             if ("insertRow".equals(action) ? table.rows() >= 1000 : table.columns() >= 100)
               throw new IllegalArgumentException("Table size limit reached");
-            List<Sequence<Paragraph>> cells = new ArrayList<Sequence<Paragraph>>();
+            var cells = new ArrayList<Sequence<Paragraph>>();
             for (int i = 0; i < count; i++)
               cells.add(
                   new Sequence<Paragraph>().append(new Paragraph("p" + id++, new RichText())));
@@ -2279,9 +2262,9 @@ public final class Session {
     transact(
         s -> {
           leaveCell();
-          Table t = (Table) document.blocks.get(block);
+          var t = (Table) document.blocks.get(block);
           long[] id = {document.nextId};
-          Table merged = t.merge(row, column, rows, columns, id);
+          var merged = t.merge(row, column, rows, columns, id);
           document = document.blocks(document.blocks.set(block, merged), id[0]);
         });
   }
@@ -2290,7 +2273,7 @@ public final class Session {
     transact(
         s -> {
           leaveCell();
-          Table t = (Table) document.blocks.get(block);
+          var t = (Table) document.blocks.get(block);
           document =
               document.blocks(document.blocks.set(block, t.split(row, column)), document.nextId);
         });
@@ -2301,8 +2284,8 @@ public final class Session {
     transact(
         s -> {
           leaveCell();
-          Table table = (Table) document.blocks.get(block);
-          Table.Merge owner = table.span(row, column);
+          var table = (Table) document.blocks.get(block);
+          var owner = table.span(row, column);
           long[] id = {document.nextId};
           Table next = TableSplitting.columns(table, row, column, columns, id);
           document = document.blocks(document.blocks.set(block, next), id[0]);
@@ -2315,12 +2298,12 @@ public final class Session {
     transact(
         s -> {
           leaveCell();
-          Table table = (Table) document.blocks.get(block);
+          var table = (Table) document.blocks.get(block);
           if (row <= 0 || row >= table.rows())
             throw new IllegalArgumentException("Split Table requires a row after the first row");
           long id = document.nextId;
           Table head = TableSplitting.rows(table, 0, row, table.id());
-          Paragraph separator = new Paragraph("p" + id++, new RichText());
+          var separator = new Paragraph("p" + id++, new RichText());
           Table tail = TableSplitting.rows(table, row, table.rows(), "t" + id++);
           document =
               document.blocks(
@@ -2343,7 +2326,7 @@ public final class Session {
     transact(
         s -> {
           leaveCell();
-          Table t = (Table) document.blocks.get(block);
+          var t = (Table) document.blocks.get(block);
           document =
               document.blocks(
                   document.blocks.set(block, t.sorted(column, descending, header, numeric)),
@@ -2355,11 +2338,11 @@ public final class Session {
     transact(
         s -> {
           leaveCell();
-          Table t = (Table) document.blocks.get(block);
-          Sequence<Block> blocks = document.blocks.remove(block);
+          var t = (Table) document.blocks.get(block);
+          var blocks = document.blocks.remove(block);
           long id = document.nextId;
           for (int r = 0; r < t.rows(); r++) {
-            RichText text = new RichText();
+            var text = new RichText();
             for (int c = 0; c < t.columns(); c++) {
               if (c > 0) text = text.concat(RichText.of(separator));
               int n = 0;
@@ -2381,7 +2364,7 @@ public final class Session {
           leaveCell();
           if (!(document.blocks.get(block) instanceof Table))
             throw new IllegalArgumentException("Select a table");
-          Sequence<Block> blocks = document.blocks.remove(block);
+          var blocks = document.blocks.remove(block);
           long id = document.nextId;
           if (blocks.size() == 0) blocks = blocks.append(new Paragraph("p" + id++, new RichText()));
           document = document.blocks(blocks, id);
@@ -2392,7 +2375,7 @@ public final class Session {
   /** A rich clipboard fragment. Blocks remain immutable; paste allocates fresh IDs. */
   public Document copySelection() {
     if (cells != null) {
-      Table table = (Table) document().blocks.get(cells.block);
+      var table = (Table) document().blocks.get(cells.block);
       return new Document(
               new Sequence<Block>().append(table.crop(cells)),
               document.page,
@@ -2401,11 +2384,10 @@ public final class Session {
           .styles(document.styles);
     }
     if (selection.collapsed()) return null;
-    Sequence<Block> blocks = new Sequence<Block>();
+    var blocks = new Sequence<Block>();
     for (int i = selection.startBlock(); i <= selection.endBlock(); i++) {
-      Block b = document.blocks.get(i);
-      if (b instanceof Paragraph) {
-        Paragraph p = (Paragraph) b;
+      var b = document.blocks.get(i);
+      if (b instanceof Paragraph p) {
         b =
             p.text(
                 p.text.slice(
@@ -2414,12 +2396,12 @@ public final class Session {
       }
       blocks = blocks.append(b);
     }
-    Map<String, Section> sections = new LinkedHashMap<String, Section>();
+    var sections = new LinkedHashMap<String, Section>();
     for (int i = selection.startBlock(); i < selection.endBlock(); i++) {
-      String id = document.blocks.get(i).id();
+      var id = document.blocks.get(i).id();
       if (document.sections.containsKey(id)) sections.put(id, document.sectionAt(i).resolved);
     }
-    Document fragment = new Document(blocks, document.page, "Clipboard", document.nextId);
+    var fragment = new Document(blocks, document.page, "Clipboard", document.nextId);
     return fragment.sections(sections, fragment.lastSection);
   }
 
@@ -2431,30 +2413,30 @@ public final class Session {
       throw new IllegalArgumentException("Tracked section paste is not supported yet");
     trackedReplace("");
     Document accepted = Revisions.resolve(fragment, null, true);
-    final Revision mark = newRevision("insert");
+    final var mark = newRevision("insert");
     int block = selection.block, at = selection.caret;
-    Paragraph original = document.paragraph(block);
+    var original = document.paragraph(block);
     RichText prefix = original.text.slice(0, at),
         suffix = original.text.slice(at, original.text.length());
     Sequence<Block> blocks = document.blocks;
     long next = document.nextId;
     int caret = at;
     for (int i = 0; i < accepted.blocks.size(); i++) {
-      Paragraph source = (Paragraph) accepted.blocks.get(i);
+      var source = (Paragraph) accepted.blocks.get(i);
       boolean last = i == accepted.blocks.size() - 1;
-      RichText text = source.text.mapStyles(style -> style.revision(mark));
+      var text = source.text.mapStyles(style -> style.revision(mark));
       if (i == 0) text = prefix.concat(text);
       caret = text.length();
       if (last) text = text.concat(suffix);
-      Paragraph inserted =
+      var inserted =
           (i == 0 ? original : source.copy("p" + next++, text))
               .text(text)
               .breakRevision(last ? original.breakRevision : mark);
       if (i == 0) blocks = blocks.set(block, inserted);
       else blocks = blocks.insert(block + i, inserted);
     }
-    Map<String, Section> sections = new LinkedHashMap<String, Section>(document.sections);
-    Section boundary = sections.remove(original.id);
+    var sections = new LinkedHashMap<String, Section>(document.sections);
+    var boundary = sections.remove(original.id);
     int last = block + accepted.blocks.size() - 1;
     if (boundary != null) sections.put(blocks.get(last).id(), boundary);
     document = document.blocks(blocks, next).sections(sections, document.lastSection);
@@ -2468,17 +2450,17 @@ public final class Session {
       replace(text);
       return;
     }
-    String normalized = text.replace("\r\n", "\n").replace('\r', '\n');
+    var normalized = text.replace("\r\n", "\n").replace('\r', '\n');
     if (normalized.endsWith("\n")) normalized = normalized.substring(0, normalized.length() - 1);
     String[] lines = TextUtil.split(normalized, '\n');
     int columns = TextUtil.split(lines[0], '\t').length;
-    List<List<Sequence<Paragraph>>> grid = new ArrayList<List<Sequence<Paragraph>>>();
+    var grid = new ArrayList<List<Sequence<Paragraph>>>();
     long id = 1;
     for (String line : lines) {
       String[] values = TextUtil.split(line, '\t');
       if (values.length != columns)
         throw new IllegalArgumentException("Pasted rows need equal column counts");
-      List<Sequence<Paragraph>> row = new ArrayList<Sequence<Paragraph>>();
+      var row = new ArrayList<Sequence<Paragraph>>();
       for (String value : values)
         row.add(new Sequence<Paragraph>().append(new Paragraph("p" + id++, RichText.of(value))));
       grid.add(row);
@@ -2490,7 +2472,7 @@ public final class Session {
     final int block = cellBlock();
     final int row = cells == null ? cellRow() : cells.firstRow;
     final int column = cells == null ? cellColumn() : cells.firstColumn;
-    Table target = (Table) document().blocks.get(block);
+    var target = (Table) document().blocks.get(block);
     if (row + source.rows() > target.rows()
         || column + source.columns() > target.columns()
         || cells != null
@@ -2515,7 +2497,7 @@ public final class Session {
               if (source.covered(r, c)) continue;
               enterCell(block, row + r, column + c);
               selectWholeCell();
-              Sequence<Block> paragraphs = new Sequence<Block>();
+              var paragraphs = new Sequence<Block>();
               for (Paragraph paragraph : source.cell(r, c))
                 paragraphs = paragraphs.append(paragraph);
               paste(new Document(paragraphs, document.page, "Clipboard", document.nextId));
@@ -2529,7 +2511,7 @@ public final class Session {
    * document). The target is given in pre-move coordinates.
    */
   public void moveSelectionTo(final int block, final int offset, final Document fragment) {
-    final Selection from = selection;
+    final var from = selection;
     transact(
         s -> {
           int sb = from.startBlock(), eb = from.endBlock(), start = from.start(), end = from.end();
@@ -2575,8 +2557,8 @@ public final class Session {
           throw new IllegalArgumentException("Nested tables are not supported yet");
     transact(
         s -> {
-          Document original = document;
-          Selection replaced = selection;
+          var original = document;
+          var replaced = selection;
           int first = selection.startBlock(), start = selection.start();
           Paragraph before = document.paragraph(first),
               after = document.paragraph(selection.endBlock());
@@ -2586,33 +2568,31 @@ public final class Session {
           Sequence<Block> blocks = document.blocks;
           for (int i = last; i >= first; i--) blocks = blocks.remove(i);
           long id = document.nextId;
-          List<Block> inserted = new ArrayList<Block>();
-          Map<String, Section> pastedSections = new LinkedHashMap<String, Section>();
+          var inserted = new ArrayList<Block>();
+          var pastedSections = new LinkedHashMap<String, Section>();
           for (Block source : fragment.blocks) {
-            if (source instanceof Paragraph) {
-              Paragraph p = (Paragraph) source;
-              Paragraph copy =
+            if (source instanceof Paragraph p) {
+              var copy =
                   p.copy("p" + id++, p.text).with("listStart", String.valueOf(p.listStart));
               inserted.add(copy);
-              Section section = fragment.sections.get(p.id);
+              var section = fragment.sections.get(p.id);
               if (section != null) {
-                PageFurniture furniture = section.furniture;
+                var furniture = section.furniture;
                 for (String key : PageFurniture.KEYS)
                   if (furniture.stories.containsKey(key)) {
-                    Sequence<Paragraph> story = new Sequence<Paragraph>();
+                    var story = new Sequence<Paragraph>();
                     for (Paragraph para : furniture.get(key))
                       story = story.append(para.copy("p" + id++, para.text));
                     furniture = furniture.story(key, story);
                   }
                 pastedSections.put(copy.id, section.furniture(furniture));
               }
-            } else if (source instanceof Table) {
-              Table table = (Table) source;
-              List<List<Sequence<Paragraph>>> cells = new ArrayList<List<Sequence<Paragraph>>>();
+            } else if (source instanceof Table table) {
+              var cells = new ArrayList<List<Sequence<Paragraph>>>();
               for (int r = 0; r < table.rows(); r++) {
-                List<Sequence<Paragraph>> row = new ArrayList<Sequence<Paragraph>>();
+                var row = new ArrayList<Sequence<Paragraph>>();
                 for (int c = 0; c < table.columns(); c++) {
-                  Sequence<Paragraph> cell = new Sequence<Paragraph>();
+                  var cell = new Sequence<Paragraph>();
                   for (Paragraph p : table.cell(r, c))
                     cell = cell.append(p.copy("p" + id++, p.text));
                   row.add(cell);
@@ -2620,17 +2600,17 @@ public final class Session {
                 cells.add(row);
               }
               inserted.add(new Table("t" + id++, cells, table.merges, table.format));
-            } else if (source instanceof Picture) inserted.add(((Picture) source).copy("i" + id++));
+            } else if (source instanceof Picture picture) inserted.add(picture.copy("i" + id++));
           }
           if (inserted.get(0) instanceof Paragraph) {
-            Paragraph p = (Paragraph) inserted.get(0);
+            var p = (Paragraph) inserted.get(0);
             inserted.set(0, (start > 0 ? before : p).text(prefix.concat(p.text)));
             if (start > 0 && pastedSections.containsKey(p.id))
               pastedSections.put(before.id, pastedSections.remove(p.id));
           } else inserted.add(0, before.text(prefix));
           int caretBlock = first + inserted.size() - 1, caret;
           if (inserted.get(inserted.size() - 1) instanceof Paragraph) {
-            Paragraph p = (Paragraph) inserted.get(inserted.size() - 1);
+            var p = (Paragraph) inserted.get(inserted.size() - 1);
             caret = p.text.length();
             inserted.set(inserted.size() - 1, p.text(p.text.concat(suffix)));
           } else {
@@ -2641,10 +2621,10 @@ public final class Session {
           for (int i = 0; i < inserted.size(); i++)
             blocks = blocks.insert(first + i, inserted.get(i));
           document = document.blocks(blocks, id);
-          Map<String, Section> sections = new LinkedHashMap<String, Section>(document.sections);
+          var sections = new LinkedHashMap<String, Section>(document.sections);
           for (int i = first; i <= last; i++) sections.remove(original.blocks.get(i).id());
           sections.putAll(pastedSections);
-          Section tail = original.sections.get(after.id);
+          var tail = original.sections.get(after.id);
           if (tail != null) sections.put(blocks.get(caretBlock).id(), tail);
           document = document.sections(sections, document.lastSection);
           selection = new Selection(caretBlock, caret, caret);
@@ -2668,7 +2648,7 @@ public final class Session {
     }
     transact(
         s -> {
-          Paragraph p = document.paragraph(selection.block);
+          var p = document.paragraph(selection.block);
           if (selection.collapsed() && p.text.length() == 0 && !p.list.isEmpty()) {
             if (p.listLevel > 0) paragraph("listLevel", String.valueOf(p.listLevel - 1));
             else {
@@ -2683,7 +2663,7 @@ public final class Session {
                   && p.style.startsWith("Heading");
           replace("\n");
           if (follow) {
-            Paragraph next =
+            var next =
                 document
                     .paragraph(selection.block)
                     .with("style", "Normal")
@@ -2713,7 +2693,7 @@ public final class Session {
     if (transactionDepth > 0) throw new IllegalStateException("Undo inside transaction");
     if (undo.isEmpty()) return;
     redo.add(state());
-    State s = undo.remove(undo.size() - 1);
+    var s = undo.remove(undo.size() - 1);
     restore(s);
     revision++;
   }
@@ -2724,7 +2704,7 @@ public final class Session {
     if (transactionDepth > 0) throw new IllegalStateException("Redo inside transaction");
     if (redo.isEmpty()) return;
     undo.add(state());
-    State s = redo.remove(redo.size() - 1);
+    var s = redo.remove(redo.size() - 1);
     restore(s);
     revision++;
   }
@@ -2733,16 +2713,14 @@ public final class Session {
     if (revision != expectedRevision)
       throw new IllegalStateException("Document changed since preview");
     transact(
-        new Edit() {
-          public void apply(Session s) {
-            document = preview.document;
-            mergeData = preview.mergeData;
-            selection = preview.selection;
-            insertionStyle = preview.insertionStyle;
-            cell = preview.cell;
-            cells = preview.cells;
-            integratedSource = null;
-          }
+        s -> {
+          document = preview.document;
+          mergeData = preview.mergeData;
+          selection = preview.selection;
+          insertionStyle = preview.insertionStyle;
+          cell = preview.cell;
+          cells = preview.cells;
+          integratedSource = null;
         });
   }
 }

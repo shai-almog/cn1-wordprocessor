@@ -11,14 +11,14 @@ public class WorkflowCommandsTest {
   private final Commands commands = new Commands();
 
   private Object run(Session s, String id, Object... kv) {
-    Map<String, Object> a = new LinkedHashMap<String, Object>();
+    var a = new LinkedHashMap<String, Object>();
     for (int i = 0; i < kv.length; i += 2) a.put((String) kv[i], kv[i + 1]);
     return commands.execute(s, id, a);
   }
 
   @Test
   public void advancedFindWildcardsCaseAndWholeWords() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("Cat cat category bat");
     assertEquals(3, ((List<?>) run(s, "edit.advancedFind", "text", "cat")).size());
     assertEquals(2, ((List<?>) run(s, "edit.advancedFind", "text", "cat", "matchCase", true)).size());
@@ -30,7 +30,7 @@ public class WorkflowCommandsTest {
 
   @Test
   public void clipboardPaneRecordsCopiesAndPastes() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     run(s, "edit.clipboardPane", "action", "clear");
     s.replace("one two");
     s.select(0, 0, 3);
@@ -47,16 +47,16 @@ public class WorkflowCommandsTest {
 
   @Test
   public void spreadsheetEvaluatesFormulas() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     run(s, "insert.spreadsheet", "data", "1\t2\n3\t4\n=SUM(ABOVE)\t=SUM(ABOVE)");
-    String text = s.document().plainText();
+    var text = s.document().plainText();
     assertTrue(text, text.contains("4"));
     assertTrue(text, text.contains("6"));
   }
 
   @Test
   public void coverPageInsertsAndRemoves() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("Body");
     int before = s.document().blocks.size();
     run(s, "insert.coverPage", "title", "Report", "author", "Ana");

@@ -8,7 +8,7 @@ final class NoteFormats {
   private NoteFormats() {}
   static void write(StringBuilder out, NoteOptions options, String prefix) {
     for (String kind : new String[] {"footnote", "endnote"}) {
-      NoteOptions.Properties p = options.get(kind);
+      var p = options.get(kind);
       if (p.isEmpty()) continue;
       out.append('<').append(prefix).append(kind).append("Pr>");
       property(out, prefix, "pos", p.pos);
@@ -23,12 +23,12 @@ final class NoteFormats {
         .append("val=\"").append(Xml.escape(value)).append("\"/>");
   }
   static NoteOptions read(Element parent, Set<String> warnings) {
-    NoteOptions result = NoteOptions.EMPTY;
+    var result = NoteOptions.EMPTY;
     if (parent == null) return result;
     for (String kind : new String[] {"footnote", "endnote"}) {
       Element properties = Xml.child(parent, kind + "Pr");
       if (properties == null) continue;
-      NoteOptions.Properties value = NoteOptions.INHERIT;
+      var value = NoteOptions.INHERIT;
       for (Element e : Xml.children(properties, null)) {
         String name = Xml.local(e), v = Xml.attr(e, "val", "");
         if (kind.equals(name)) continue; // DOCX separator references.
@@ -56,7 +56,7 @@ final class NoteFormats {
   static void settings(Element root, NoteOptions options) throws java.io.IOException {
     for (String kind : new String[] {"footnote", "endnote"}) {
       Element old = Xml.child(root, kind + "Pr");
-      StringBuilder xml = new StringBuilder("<settings>");
+      var xml = new StringBuilder("<settings>");
       write(xml, NoteOptions.EMPTY.with(kind, options.get(kind)), "w:");
       Element replacement = Xml.child(Xml.parse(xml.append("</settings>").toString()), kind + "Pr");
       if (old != null) {

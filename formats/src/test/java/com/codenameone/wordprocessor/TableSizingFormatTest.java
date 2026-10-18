@@ -8,10 +8,10 @@ import org.junit.Test;
 
 public class TableSizingFormatTest {
   private Document fixture(String unit, float width, String align, float indent, boolean fixed) {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.insertTable(2, 2);
     s.setCell(1, 0, 0, "alpha");
-    Table t = (Table) s.document().blocks.get(1);
+    var t = (Table) s.document().blocks.get(1);
     s.formatTable(
         1,
         t.format
@@ -26,7 +26,7 @@ public class TableSizingFormatTest {
     for (String unit : new String[] {"percent", "points", "auto"})
       for (boolean fixed : new boolean[] {true, false})
         for (String align : new String[] {"left", "center", "right"}) {
-          Document d =
+          var d =
               fixture(
                   unit,
                   "percent".equals(unit) ? 60 : "points".equals(unit) ? 180 : 0,
@@ -35,12 +35,12 @@ public class TableSizingFormatTest {
                   fixed);
           assertEquals(
               DocumentXml.write(d), DocumentXml.write(DocumentXml.read(DocumentXml.write(d))));
-          ByteArrayOutputStream out = new ByteArrayOutputStream();
+          var out = new ByteArrayOutputStream();
           Docx.write(d, out);
           Docx.Opened imported = Docx.read(new ByteArrayInputStream(out.toByteArray()));
           assertTrue(imported.warnings.toString(), imported.warnings.isEmpty());
-          Table t = (Table) imported.document.blocks.get(1);
-          TableFormat.Sizing size = t.format.sizing;
+          var t = (Table) imported.document.blocks.get(1);
+          var size = t.format.sizing;
           assertEquals(unit, size.unit);
           assertEquals(align, size.align);
           assertEquals(-12, size.indent, 0);
@@ -62,11 +62,11 @@ public class TableSizingFormatTest {
 
   @Test
   public void oldNativeTablesKeepFullWidthFixedGeometry() throws Exception {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.insertTable(1, 1);
     String xml = DocumentXml.write(s.document());
     assertFalse(xml.contains("widthUnit="));
-    Table t = (Table) DocumentXml.read(xml).blocks.get(1);
+    var t = (Table) DocumentXml.read(xml).blocks.get(1);
     assertEquals("percent", t.format.sizing.unit);
     assertEquals(100, t.format.sizing.width, 0);
     assertTrue(t.format.sizing.fixed);
@@ -74,11 +74,11 @@ public class TableSizingFormatTest {
 
   @Test
   public void pdfUsesCenteredPreferredWidth() throws Exception {
-    Document d =
+    var d =
         fixture("points", 120, "center", 0, true).page(new PageSpec(240, 300, 20, 20, 20, 20));
-    String pdf = new String(PdfExporter.write(d), "ISO-8859-1");
+    var pdf = new String(PdfExporter.write(d), "ISO-8859-1");
     assertTrue(pdf, pdf.contains("60.000 ")); // left edge: margin 20 + (200 - 120)/2
-    LayoutEngine.Result layout = new LayoutEngine(new PdfMetrics()).layout(d, 0);
+    var layout = new LayoutEngine(new PdfMetrics()).layout(d, 0);
     assertEquals(60, layout.pages.get(0).boxes.get(0).x, .001);
     assertEquals(40, layout.pages.get(0).boxes.get(0).width, .001);
   }

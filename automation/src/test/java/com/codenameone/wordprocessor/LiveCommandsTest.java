@@ -8,9 +8,9 @@ import org.junit.Test;
 public class LiveCommandsTest {
   @Test
   public void liveEditsShareUndoAndRejectStaleSelections() {
-    Session s = new Session(Document.empty());
-    LiveCommands live = new LiveCommands(new Commands());
-    String before = live.stateId(s);
+    var s = new Session(Document.empty());
+    var live = new LiveCommands(new Commands());
+    var before = live.stateId(s);
     live.execute(s, before, "text.insert", Json.object("text", "Hello"));
     assertEquals("Hello", s.document().plainText());
     try {
@@ -18,7 +18,7 @@ public class LiveCommandsTest {
       fail();
     } catch (IllegalStateException expected) {
     }
-    String current = live.stateId(s);
+    var current = live.stateId(s);
     s.select(0, 0, 0);
     assertFalse(current.equals(live.stateId(s)));
     s.undo();
@@ -27,9 +27,9 @@ public class LiveCommandsTest {
 
   @Test
   public void replacementSessionCannotReuseARevisionToken() {
-    LiveCommands live = new LiveCommands(new Commands());
+    var live = new LiveCommands(new Commands());
     Session first = new Session(Document.empty()), second = new Session(Document.empty());
-    String id = live.stateId(first);
+    var id = live.stateId(first);
     try {
       live.execute(second, id, "text.insert", Json.object("text", "wrong document"));
       fail();
@@ -41,9 +41,9 @@ public class LiveCommandsTest {
 
   @Test
   public void validationFailureDoesNotChangeLiveDocument() {
-    Session s = new Session(Document.empty());
-    LiveCommands live = new LiveCommands(new Commands());
-    String id = live.stateId(s);
+    var s = new Session(Document.empty());
+    var live = new LiveCommands(new Commands());
+    var id = live.stateId(s);
     try {
       live.execute(s, id, "text.insert", Json.object("text", 42));
       fail();

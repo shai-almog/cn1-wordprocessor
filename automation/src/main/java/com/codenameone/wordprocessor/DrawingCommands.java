@@ -13,7 +13,7 @@ import java.util.Map;
  */
 final class DrawingCommands implements Commands.Extension {
   /** Pen presets added with draw.addPen, in order. */
-  private final List<String> pens = new ArrayList<String>();
+  private final List<String> pens = new ArrayList<>();
 
   public void register(final Commands c) {
     pens.add("pen,000000,1");
@@ -28,7 +28,7 @@ final class DrawingCommands implements Commands.Extension {
         (s, a) -> {
           String shape = a.containsKey("shape") ? Commands.str(a, "shape") : "rect";
           if (!DrawingOps.SHAPES.contains(shape)) throw new IllegalArgumentException("Unknown shape: " + shape);
-          Drawing d = Drawing.of("shape").with("shape", shape);
+          var d = Drawing.of("shape").with("shape", shape);
           d = copy(a, d, "text", "fill", "line");
           boolean line = "line".equals(shape) || "arrowLine".equals(shape);
           return insert(s, d, f(a, "width", 144), f(a, "height", line ? 12 : 96), "Shape: " + shape);
@@ -63,7 +63,7 @@ final class DrawingCommands implements Commands.Extension {
         (s, a) -> {
           String icon = Commands.str(a, "icon");
           if (!DrawingOps.ICONS.contains(icon)) throw new IllegalArgumentException("Unknown icon: " + icon);
-          Drawing d = Drawing.of("icon").with("icon", icon);
+          var d = Drawing.of("icon").with("icon", icon);
           if (a.containsKey("color")) d = d.with("fill", Commands.str(a, "color"));
           float size = f(a, "size", 48);
           return insert(s, d, size, size, icon + " icon");
@@ -86,7 +86,7 @@ final class DrawingCommands implements Commands.Extension {
         (s, a) -> {
           String name = Commands.str(a, "name");
           if (name.isEmpty() || name.length() > 200) throw new IllegalArgumentException("Invalid object name");
-          Drawing d = Drawing.of("object").with("name", name);
+          var d = Drawing.of("object").with("name", name);
           if (a.containsKey("base64")) {
             String data = Commands.str(a, "base64");
             com.codename1.util.Base64.decode(data.getBytes());
@@ -142,7 +142,7 @@ final class DrawingCommands implements Commands.Extension {
         "block?:integer,text:string,size?:number,color?:string,bold?:boolean,align?:string",
         true,
         (s, a) -> {
-          Drawing d = drawing(s, a).with("text", Commands.str(a, "text"));
+          var d = drawing(s, a).with("text", Commands.str(a, "text"));
           if (a.containsKey("size")) d = d.with("fontSize", String.valueOf(clamp(f(a, "size", 11), 1, 400)));
           if (a.containsKey("color")) d = d.with("textColor", color(Commands.str(a, "color")));
           if (a.containsKey("bold")) d = d.with("bold", String.valueOf(a.get("bold")));
@@ -184,10 +184,10 @@ final class DrawingCommands implements Commands.Extension {
           if (from == to || source.drawing == null || target.drawing == null
               || !"textBox".equals(source.drawing.kind) || !"textBox".equals(target.drawing.kind))
             throw new IllegalArgumentException("Link two different text boxes");
-          Drawing d = source.drawing;
-          String text = d.get("text", "") + (target.drawing.get("text", "").isEmpty() ? "" : "\n" + target.drawing.get("text", ""));
+          var d = source.drawing;
+          var text = d.get("text", "") + (target.drawing.get("text", "").isEmpty() ? "" : "\n" + target.drawing.get("text", ""));
           float size = d.num("fontSize", 11), inset = d.num("inset", 7.2f);
-          List<String> lines = DrawingOps.wrap(text, source.width - 2 * inset, size, d.flag("bold"));
+          var lines = DrawingOps.wrap(text, source.width - 2 * inset, size, d.flag("bold"));
           int fits = Math.max(1, (int) ((source.height - 2 * inset) / (size * 1.2f)));
           StringBuilder first = new StringBuilder(), rest = new StringBuilder();
           for (int i = 0; i < lines.size(); i++) {
@@ -195,7 +195,7 @@ final class DrawingCommands implements Commands.Extension {
             if (into.length() > 0) into.append(i < fits || into.length() > 0 ? " " : "");
             into.append(lines.get(i));
           }
-          Selection keep = s.selection();
+          var keep = s.selection();
           Sequence<Block> blocks = s.document().blocks;
           blocks = blocks.set(from, source.drawing(d.with("text", first.toString()).with("linkNext", target.id())));
           blocks = blocks.set(to, target.drawing(target.drawing.with("text", rest.toString())));
@@ -243,7 +243,7 @@ final class DrawingCommands implements Commands.Extension {
         (s, a) -> {
           String type = a.containsKey("type") ? Commands.str(a, "type") : "column";
           if (!DrawingOps.CHARTS.contains(type)) throw new IllegalArgumentException("Unknown chart type: " + type);
-          Drawing d = Drawing.of("chart").with("chartType", type).with("data", DrawingOps.SAMPLE_CHART);
+          var d = Drawing.of("chart").with("chartType", type).with("data", DrawingOps.SAMPLE_CHART);
           if (a.containsKey("data")) d = d.with("data", chartData(Commands.str(a, "data")));
           if (a.containsKey("title")) d = d.with("title", Commands.str(a, "title")).with("titleSet", "true");
           return insert(s, d, 360, 216, "Chart");
@@ -304,7 +304,7 @@ final class DrawingCommands implements Commands.Extension {
         (s, a) -> {
           String layout = a.containsKey("layout") ? Commands.str(a, "layout") : "list";
           if (!DrawingOps.SMART_ART.contains(layout)) throw new IllegalArgumentException("Unknown layout: " + layout);
-          Drawing d = Drawing.of("smartArt").with("layout", layout).with("nodes", "Text\nText\nText");
+          var d = Drawing.of("smartArt").with("layout", layout).with("nodes", "Text\nText\nText");
           if (a.containsKey("nodes")) d = d.with("nodes", nodes(Commands.str(a, "nodes")));
           return insert(s, d, 432, 216, "SmartArt " + layout);
         });
@@ -325,7 +325,7 @@ final class DrawingCommands implements Commands.Extension {
         true,
         (s, a) -> {
           Drawing d = smart(s, a);
-          List<String> lines = lines(d);
+          var lines = lines(d);
           int after = a.containsKey("after") ? Commands.integer(a, "after") : lines.size() - 1;
           if (after < -1 || after >= lines.size()) throw new IllegalArgumentException("Node out of range");
           String indent = after < 0 ? "" : tabs(lines.get(after));
@@ -375,7 +375,7 @@ final class DrawingCommands implements Commands.Extension {
         "text?:string,display?:boolean",
         true,
         (s, a) -> {
-          Drawing d = Drawing.of("equation").with("text", a.containsKey("text") ? Commands.str(a, "text") : "");
+          var d = Drawing.of("equation").with("text", a.containsKey("text") ? Commands.str(a, "text") : "");
           boolean display = !a.containsKey("display") || (Boolean) a.get("display");
           float width = display ? s.activeSection().resolved.page.contentWidth() : 160;
           return insert(s, d.with("display", String.valueOf(display)), width, 30, "Equation");
@@ -487,10 +487,10 @@ final class DrawingCommands implements Commands.Extension {
             if ("none".equals(color)) throw new IllegalArgumentException("Choose an ink color");
             float width = clamp(f(a, "width", Float.parseFloat(defaultPen(tool)[2])), .25f, 72);
             String points = points(Commands.str(a, "points"));
-            String stroke = tool + "," + color + "," + width + ":" + points;
+            var stroke = tool + "," + color + "," + width + ":" + points;
             int block = inkTarget(s, a);
             Picture p = picture(s, block);
-            String strokes = p.drawing.get("strokes", "");
+            var strokes = p.drawing.get("strokes", "");
             s.replacePicture(block, p.drawing(p.drawing.with("strokes", strokes.isEmpty() ? stroke : strokes + "|" + stroke)));
             return Json.object("block", block, "strokes", count(p.drawing.get("strokes", "")) + 1);
           });
@@ -514,7 +514,7 @@ final class DrawingCommands implements Commands.Extension {
         (s, a) -> {
           int block = block(s, a);
           Picture p = ink(s, block);
-          String before = p.drawing.get("strokes", "");
+          var before = p.drawing.get("strokes", "");
           String after = DrawingOps.erase(before, f(a, "x", 0), f(a, "y", 0), f(a, "radius", 6));
           if (!after.equals(before)) s.replacePicture(block, p.drawing(p.drawing.with("strokes", after)));
           return count(before) - count(after);
@@ -527,8 +527,8 @@ final class DrawingCommands implements Commands.Extension {
         (s, a) -> {
           Picture p = ink(s, block(s, a));
           float x = f(a, "x", 0), y = f(a, "y", 0), w = f(a, "width", 0), h = f(a, "height", 0);
-          List<Object> hits = new ArrayList<Object>();
-          List<String> strokes = DrawingOps.split(p.drawing.get("strokes", ""), '|');
+          var hits = new ArrayList<Object>();
+          var strokes = DrawingOps.split(p.drawing.get("strokes", ""), '|');
           for (int i = 0; i < strokes.size(); i++) {
             float[] box = bounds(strokes.get(i));
             if (box != null && box[0] >= x && box[1] >= y && box[2] <= x + w && box[3] <= y + h) hits.add(i);
@@ -543,18 +543,18 @@ final class DrawingCommands implements Commands.Extension {
         (s, a) -> {
           int block = block(s, a);
           Picture p = ink(s, block);
-          List<String> strokes = DrawingOps.split(p.drawing.get("strokes", ""), '|');
+          var strokes = DrawingOps.split(p.drawing.get("strokes", ""), '|');
           if (strokes.isEmpty() || strokes.get(0).isEmpty()) throw new IllegalArgumentException("No ink to convert");
-          String last = strokes.remove(strokes.size() - 1);
+          var last = strokes.remove(strokes.size() - 1);
           float[] box = bounds(last);
           String shape = recognize(last, box);
           float w = Math.max(4, box[2] - box[0]), h = Math.max(4, box[3] - box[1]);
-          String head = last.substring(0, last.indexOf(':'));
-          List<String> parts = DrawingOps.split(head, ',');
-          Drawing d =
+          var head = last.substring(0, last.indexOf(':'));
+          var parts = DrawingOps.split(head, ',');
+          var d =
               Drawing.of("shape").with("shape", shape).with("fill", "none")
                   .with("line", parts.size() > 1 ? parts.get(1) : "000000").with("lineWidth", parts.size() > 2 ? parts.get(2) : "1");
-          Selection keep = s.selection();
+          var keep = s.selection();
           Sequence<Block> blocks = s.document().blocks;
           long id = s.document().nextId;
           blocks = blocks.set(block, p.drawing(p.drawing.with("strokes", join(strokes, '|'))));
@@ -569,7 +569,7 @@ final class DrawingCommands implements Commands.Extension {
         "block?:integer",
         false,
         (s, a) -> {
-          List<Object> out = new ArrayList<Object>();
+          var out = new ArrayList<Object>();
           for (String stroke : DrawingOps.split(ink(s, block(s, a)).drawing.get("strokes", ""), '|'))
             if (!stroke.isEmpty()) out.add(stroke);
           return out;
@@ -641,14 +641,14 @@ final class DrawingCommands implements Commands.Extension {
         "Group the drawn objects in blocks from..to into one canvas, or ungroup a group",
         "block?:integer,from?:integer,to?:integer,ungroup?:boolean",
         true,
-        (s, a) -> group(s, a));
+        DrawingCommands::group);
   }
 
   // ---------------------------------------------------------------- helpers
 
   /** Puts the caret at the start of the first paragraph at or after {@code block}. */
   private static void near(Session s, int block) {
-    Document d = s.document();
+    var d = s.document();
     for (int i = Math.max(0, Math.min(block, d.blocks.size() - 1)); i < d.blocks.size(); i++)
       if (d.blocks.get(i) instanceof Paragraph) {
         s.select(i, 0, 0);
@@ -668,7 +668,7 @@ final class DrawingCommands implements Commands.Extension {
 
   private static int block(Session s, Map<String, Object> a) {
     if (a.containsKey("block")) return Commands.integer(a, "block");
-    Document d = s.document();
+    var d = s.document();
     int b = s.selection().block;
     if (b < d.blocks.size() && d.blocks.get(b) instanceof Picture) return b;
     for (int i = b - 1; i >= 0 && i >= b - 2; i--) if (d.blocks.get(i) instanceof Picture) return i;
@@ -729,7 +729,7 @@ final class DrawingCommands implements Commands.Extension {
 
   private static String oneOf(String v, String... allowed) {
     for (String x : allowed) if (x.equals(v)) return v;
-    StringBuilder b = new StringBuilder();
+    var b = new StringBuilder();
     for (String x : allowed) b.append(b.length() == 0 ? "" : ", ").append(x);
     throw new IllegalArgumentException("Expected one of " + b + ": " + v);
   }
@@ -748,7 +748,7 @@ final class DrawingCommands implements Commands.Extension {
       {0x70ad47, 0x375623, 1}, {0xffc000, 0x7f6000, 0}
     };
     if (style < 1 || style > styles.length) throw new IllegalArgumentException("WordArt style 1-6");
-    int[] st = styles[style - 1];
+    var st = styles[style - 1];
     return d.with("textFill", hex(st[0])).with("textOutline", st[1] < 0 ? "none" : hex(st[1]))
         .with("shadow", String.valueOf(st[2] == 1)).with("wordArtStyle", String.valueOf(style));
   }
@@ -758,7 +758,7 @@ final class DrawingCommands implements Commands.Extension {
   }
 
   private static String chartData(String data) {
-    List<String[]> rows = DrawingOps.table(data);
+    var rows = DrawingOps.table(data);
     if (rows.size() < 2 || rows.get(0).length < 2) throw new IllegalArgumentException("Chart data needs a header row and one category");
     if (rows.size() > 200 || rows.get(0).length > 30) throw new IllegalArgumentException("Chart data is too large");
     return data.trim();
@@ -770,7 +770,7 @@ final class DrawingCommands implements Commands.Extension {
   }
 
   private static List<String> lines(Drawing d) {
-    List<String> out = new ArrayList<String>();
+    var out = new ArrayList<String>();
     for (String line : DrawingOps.split(d.get("nodes", ""), '\n')) if (!line.trim().isEmpty()) out.add(line);
     return out;
   }
@@ -786,7 +786,7 @@ final class DrawingCommands implements Commands.Extension {
   }
 
   private static String join(List<String> parts, char sep) {
-    StringBuilder b = new StringBuilder();
+    var b = new StringBuilder();
     for (String p : parts) {
       if (b.length() > 0) b.append(sep);
       b.append(p);
@@ -796,7 +796,7 @@ final class DrawingCommands implements Commands.Extension {
 
   private static Object level(Session s, Map<String, Object> a, int delta) {
     Drawing d = smart(s, a);
-    List<String> lines = lines(d);
+    var lines = lines(d);
     int node = Commands.integer(a, "node");
     if (node < 0 || node >= lines.size()) throw new IllegalArgumentException("Node out of range");
     String line = lines.get(node), indent = tabs(line);
@@ -810,18 +810,18 @@ final class DrawingCommands implements Commands.Extension {
 
   /** Numbers every numbered equation 1, 2, 3 in document order; returns the count. */
   private static int renumber(Session s) {
-    Document doc = s.document();
+    var doc = s.document();
     Sequence<Block> blocks = doc.blocks;
     int n = 0;
     for (int i = 0; i < blocks.size(); i++) {
       if (!(blocks.get(i) instanceof Picture)) continue;
-      Picture p = (Picture) blocks.get(i);
+      var p = (Picture) blocks.get(i);
       if (p.drawing == null || !"equation".equals(p.drawing.kind) || p.drawing.get("number", "").isEmpty()) continue;
       String next = String.valueOf(++n);
       if (!next.equals(p.drawing.get("number", ""))) blocks = blocks.set(i, p.drawing(p.drawing.with("number", next)));
     }
     if (blocks != doc.blocks) {
-      Selection keep = s.selection();
+      var keep = s.selection();
       s.replaceDocument(doc.blocks(blocks, doc.nextId));
       s.selectRange(keep.anchorBlock, keep.anchor, keep.block, keep.caret);
     }
@@ -835,7 +835,7 @@ final class DrawingCommands implements Commands.Extension {
   }
 
   private static String points(String text) {
-    StringBuilder b = new StringBuilder();
+    var b = new StringBuilder();
     int n = 0;
     for (String pt : DrawingOps.split(text.trim(), ' ')) {
       if (pt.isEmpty()) continue;
@@ -899,7 +899,7 @@ final class DrawingCommands implements Commands.Extension {
   static String recognize(String stroke, float[] box) {
     float w = box[2] - box[0], h = box[3] - box[1];
     if (Math.min(w, h) < Math.max(w, h) * .15f) return "line";
-    List<float[]> pts = new ArrayList<float[]>();
+    var pts = new ArrayList<float[]>();
     for (String pt : DrawingOps.split(stroke.substring(stroke.indexOf(':') + 1).trim(), ' ')) {
       int comma = pt.indexOf(',');
       if (comma > 0) pts.add(new float[] {Float.parseFloat(pt.substring(0, comma)), Float.parseFloat(pt.substring(comma + 1))});
@@ -945,10 +945,10 @@ final class DrawingCommands implements Commands.Extension {
   }
 
   private static List<Object> objects(Document d) {
-    List<Object> out = new ArrayList<Object>();
+    var out = new ArrayList<Object>();
     for (int i = 0; i < d.blocks.size(); i++) {
       if (!(d.blocks.get(i) instanceof Picture)) continue;
-      Picture p = (Picture) d.blocks.get(i);
+      var p = (Picture) d.blocks.get(i);
       String kind = p.drawing == null ? "picture" : p.drawing.kind;
       String name = p.drawing == null ? "" : p.drawing.get("objectName", "");
       out.add(
@@ -965,18 +965,18 @@ final class DrawingCommands implements Commands.Extension {
 
   /** Canvas children: x, y, w, h and the child's encoding, one record each. */
   private static Object group(Session s, Map<String, Object> a) {
-    Document doc = s.document();
-    Selection keep = s.selection();
+    var doc = s.document();
+    var keep = s.selection();
     if (a.containsKey("ungroup") && (Boolean) a.get("ungroup")) {
       int block = block(s, a);
       Picture p = picture(s, block);
       if (p.drawing == null || !"canvas".equals(p.drawing.kind) || p.drawing.get("items", "").isEmpty())
         throw new IllegalArgumentException("Select a group");
-      Sequence<Block> blocks = doc.blocks.remove(block);
+      var blocks = doc.blocks.remove(block);
       long id = doc.nextId;
       int at = block, n = 0;
       for (String item : DrawingOps.split(p.drawing.get("items", ""), ITEM)) {
-        List<String> f = DrawingOps.split(item, FIELD);
+        var f = DrawingOps.split(item, FIELD);
         if (f.size() != 5) continue;
         blocks = blocks.insert(at++, Picture.drawing("i" + id++, Drawing.decode(f.get(4)),
             Float.parseFloat(f.get(2)), Float.parseFloat(f.get(3)), "", p.align));
@@ -988,13 +988,13 @@ final class DrawingCommands implements Commands.Extension {
     }
     int from = Commands.integer(a, "from"), to = Commands.integer(a, "to");
     if (from < 0 || to >= doc.blocks.size() || to <= from) throw new IllegalArgumentException("Group needs a block range of two or more");
-    StringBuilder items = new StringBuilder();
+    var items = new StringBuilder();
     float y = 0, width = 0;
     for (int i = from; i <= to; i++) {
-      Block b = doc.blocks.get(i);
+      var b = doc.blocks.get(i);
       if (!(b instanceof Picture) || ((Picture) b).drawing == null)
         throw new IllegalArgumentException("Only adjacent drawn objects can be grouped");
-      Picture p = (Picture) b;
+      var p = (Picture) b;
       if (items.length() > 0) items.append(ITEM);
       items.append(0).append(FIELD).append(y).append(FIELD).append(p.width).append(FIELD).append(p.height)
           .append(FIELD).append(p.drawing.encode());
@@ -1003,8 +1003,8 @@ final class DrawingCommands implements Commands.Extension {
     }
     Sequence<Block> blocks = doc.blocks;
     for (int i = to; i > from; i--) blocks = blocks.remove(i);
-    Picture first = (Picture) doc.blocks.get(from);
-    Drawing canvas = Drawing.of("canvas").with("items", items.toString()).with("line", "none");
+    var first = (Picture) doc.blocks.get(from);
+    var canvas = Drawing.of("canvas").with("items", items.toString()).with("line", "none");
     blocks = blocks.set(from, Picture.drawing(first.id(), canvas, width, y - 6, "Group", first.align));
     s.replaceDocument(doc.blocks(blocks, doc.nextId));
     for (int i = from + 1; i < blocks.size(); i++)

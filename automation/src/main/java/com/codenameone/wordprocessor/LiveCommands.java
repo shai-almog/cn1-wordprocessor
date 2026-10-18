@@ -15,8 +15,8 @@ public final class LiveCommands {
   }
 
   public String stateId(Session session) {
-    Selection s = session.selection();
-    String position =
+    var s = session.selection();
+    var position =
         session.revision()
             + ":"
             + s.anchorBlock
@@ -38,7 +38,7 @@ public final class LiveCommands {
             + session.trackFormatting()
             + ":"
             + (session.cellSelection() == null ? "" : session.cellSelection().key());
-    Document doc = session.document();
+    var doc = session.document();
     if (session != lastSession || doc != lastDocument || !position.equals(lastPosition)) {
       version++;
       lastSession = session;
@@ -49,7 +49,7 @@ public final class LiveCommands {
   }
 
   public Map<String, Object> snapshot(Session session) {
-    Selection s = session.selection();
+    var s = session.selection();
     return Json.object(
         "stateId",
         stateId(session),
@@ -74,7 +74,7 @@ public final class LiveCommands {
   }
 
   private Object cellSelection(Session session) {
-    CellSelection x = session.cellSelection();
+    var x = session.cellSelection();
     return x == null
         ? null
         : Json.object(
@@ -103,7 +103,7 @@ public final class LiveCommands {
     if (!stateId(session).equals(expected))
       throw new IllegalStateException(
           "Document or selection changed; read word_snapshot and retry with its stateId");
-    Object result = commands.execute(session, command, args);
+    var result = commands.execute(session, command, args);
     return Json.object("result", result, "state", snapshot(session));
   }
 }

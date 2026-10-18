@@ -10,9 +10,9 @@ public final class UiSmoke {
         ef = WordProcessor.class.getDeclaredField("editor");
     sf.setAccessible(true);
     ef.setAccessible(true);
-    Session session = (Session) sf.get(app);
-    EditorSurface editor = (EditorSurface) ef.get(app);
-    Document original = session.document();
+    var session = (Session) sf.get(app);
+    var editor = (EditorSurface) ef.get(app);
+    var original = session.document();
     session.replaceDocument(Document.empty());
     editor.refresh();
     editor.commitText("first\nsecond");
@@ -29,18 +29,18 @@ public final class UiSmoke {
     editor.onKeyCommand(TextInputClient.KEY_UNDO, 0);
     require("first\nsecond".equals(session.document().plainText()), "IME undo grouping");
     editor.onKeyCommand(TextInputClient.KEY_SELECT_ALL, 0);
-    StringBuilder text = new StringBuilder();
+    var text = new StringBuilder();
     for (int i = 0; i < 200; i++) text.append("Scrolling paragraph ").append(i).append(".\n");
     editor.commitText(text.toString());
     require(editor.layout().pages.size() > 3, "Long document pagination");
     Display.getInstance().getCurrent().revalidate();
     require(editor.getScrollY() > 0, "Caret scroll position");
-    int[] caret = editor.getCaretRect();
+    var caret = editor.getCaretRect();
     require(
         caret[1] >= editor.getAbsoluteY() && caret[1] <= editor.getAbsoluteY() + editor.getHeight(),
         "Caret visible after scrolling");
     session.loadDocument(original);
-    java.lang.reflect.Method update = WordProcessor.class.getDeclaredMethod("edited");
+    var update = WordProcessor.class.getDeclaredMethod("edited");
     update.setAccessible(true);
     update.invoke(app);
     editor.resetScroll();

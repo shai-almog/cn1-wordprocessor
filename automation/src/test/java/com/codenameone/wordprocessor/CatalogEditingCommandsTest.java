@@ -10,13 +10,13 @@ public class CatalogEditingCommandsTest {
   private final Commands commands = new Commands();
 
   private Object run(Session s, String id, Object... kv) {
-    Map<String, Object> a = new LinkedHashMap<String, Object>();
+    var a = new LinkedHashMap<String, Object>();
     for (int i = 0; i < kv.length; i += 2) a.put((String) kv[i], kv[i + 1]);
     return commands.execute(s, id, a);
   }
 
   private static Session three() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("one");
     s.enterParagraph();
     s.replace("two");
@@ -26,7 +26,7 @@ public class CatalogEditingCommandsTest {
   }
 
   private static String text(Session s) {
-    StringBuilder b = new StringBuilder();
+    var b = new StringBuilder();
     for (Block block : s.document().blocks)
       b.append(((Paragraph) block).text.plainText()).append('|');
     return b.toString();
@@ -60,7 +60,7 @@ public class CatalogEditingCommandsTest {
     run(s, "edit.copyFormat");
     s.select(2, 0, 5);
     run(s, "edit.pasteFormat");
-    Paragraph p = s.document().paragraph(2);
+    var p = s.document().paragraph(2);
     assertEquals("center", p.align);
     assertTrue(p.text.styleAt(0).bold);
     assertEquals(0xc00000, p.text.styleAt(0).color);

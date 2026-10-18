@@ -14,9 +14,9 @@ public class EmbeddedPdfTest {
         }
 
         public byte[] bytes(String name) throws IOException {
-          try (InputStream in = EmbeddedPdfTest.class.getResourceAsStream("/" + name + ".ttf")) {
+          try (var in = EmbeddedPdfTest.class.getResourceAsStream("/" + name + ".ttf")) {
             assertNotNull(name, in);
-            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            var out = new ByteArrayOutputStream();
             byte[] buffer = new byte[8192];
             int n;
             while ((n = in.read(buffer)) >= 0) out.write(buffer, 0, n);
@@ -27,18 +27,18 @@ public class EmbeddedPdfTest {
 
   @Test
   public void allTwelveFacesEmbedWithUnicodeAndCorrectReferences() throws Exception {
-    Sequence<Block> blocks = new Sequence<Block>();
+    var blocks = new Sequence<Block>();
     int index = 0;
-    Set<String> faces = new HashSet<String>();
+    var faces = new HashSet<String>();
     for (String family : new String[] {"SansSerif", "Serif", "Monospaced"})
       for (int variant = 0; variant < 4; variant++) {
-        TextStyle style =
+        var style =
             TextStyle.DEFAULT
                 .with("font", family)
                 .with("size", "18")
                 .with("bold", String.valueOf((variant & 1) != 0))
                 .with("italic", String.valueOf((variant & 2) != 0));
-        String name = FONTS.name(style);
+        var name = FONTS.name(style);
         faces.add(name);
         blocks =
             blocks.append(
@@ -46,15 +46,15 @@ public class EmbeddedPdfTest {
                     "p" + ++index, RichText.of(name + " Résumé € Ελληνικά Кириллица", style)));
       }
     assertEquals(12, faces.size());
-    Document doc = new Document(blocks, PageSpec.A4, "Font acceptance", index + 1);
-    final Map<String, PdfFonts.TrueType> loaded = new HashMap<String, PdfFonts.TrueType>();
-    LayoutEngine.Result layout =
+    var doc = new Document(blocks, PageSpec.A4, "Font acceptance", index + 1);
+    final var loaded = new HashMap<String, PdfFonts.TrueType>();
+    var layout =
         new LayoutEngine(
                 new LayoutEngine.Metrics() {
                   public float width(String text, TextStyle style) {
                     try {
-                      String name = FONTS.name(style);
-                      PdfFonts.TrueType f = loaded.get(name);
+                      var name = FONTS.name(style);
+                      var f = loaded.get(name);
                       if (f == null) loaded.put(name, f = new PdfFonts.TrueType(FONTS.bytes(name)));
                       float width = 0;
                       for (int i = 0; i < text.length(); i++)
@@ -71,7 +71,7 @@ public class EmbeddedPdfTest {
                 })
             .layout(doc, 0);
     byte[] bytes = PdfExporter.write(doc.page, layout, FONTS);
-    String pdf = new String(bytes, "ISO-8859-1");
+    var pdf = new String(bytes, "ISO-8859-1");
     for (String face : faces) assertTrue(face, pdf.contains("/BaseFont /" + face));
     assertTrue(pdf.contains("/FontFile2"));
     assertTrue(pdf.contains("/ToUnicode"));
@@ -79,7 +79,7 @@ public class EmbeddedPdfTest {
     assertTrue(pdf.contains("<03bb>"));
     int start = pdf.lastIndexOf("startxref\n") + 10;
     int offset = Integer.parseInt(pdf.substring(start, pdf.indexOf('\n', start)));
-    String[] lines = pdf.substring(offset).split("\n");
+    var lines = pdf.substring(offset).split("\n");
     int count = Integer.parseInt(lines[1].split(" ")[1]);
     for (int i = 1; i < count; i++) {
       int at = Integer.parseInt(lines[i + 2].substring(0, 10));
@@ -87,17 +87,17 @@ public class EmbeddedPdfTest {
     }
     String artifact = System.getProperty("font.pdf.artifact");
     if (artifact != null)
-      try (OutputStream out = new FileOutputStream(artifact)) {
+      try (var out = new FileOutputStream(artifact)) {
         out.write(bytes);
       }
   }
 
   @Test
   public void tabLeadersFitPdfAdvancesEvenWhenScreenMeasurementsRound() throws Exception {
-    Session session = new Session(Document.empty());
+    var session = new Session(Document.empty());
     session.replace("A\tB");
     session.paragraph("tabs", "120,left,dot");
-    LayoutEngine.Result layout =
+    var layout =
         new LayoutEngine(
                 new LayoutEngine.Metrics() {
                   public float width(String text, TextStyle style) {
@@ -109,13 +109,13 @@ public class EmbeddedPdfTest {
                   }
                 })
             .layout(session.document(), 0);
-    String pdf =
+    var pdf =
         new String(PdfExporter.write(session.document().page, layout, FONTS), "ISO-8859-1");
-    java.util.regex.Matcher leader =
+    var leader =
         java.util.regex.Pattern.compile("<((?:0002)+)> Tj").matcher(pdf);
     assertTrue(leader.find());
     int count = leader.group(1).length() / 4;
-    PdfFonts.TrueType font = new PdfFonts.TrueType(FONTS.bytes(FONTS.name(TextStyle.DEFAULT)));
+    var font = new PdfFonts.TrueType(FONTS.bytes(FONTS.name(TextStyle.DEFAULT)));
     float advance = font.scaled(font.advance(font.glyph('.'))) * 12 / 1000f;
     float gap = layout.pages.get(0).lines.get(0).spans.get(1).width;
     assertTrue(count > 0);
@@ -125,7 +125,7 @@ public class EmbeddedPdfTest {
 
   @Test
   public void missingGlyphAndMalformedFontsFailExplicitly() throws Exception {
-    PdfFonts fonts = new PdfFonts(FONTS);
+    var fonts = new PdfFonts(FONTS);
     try {
       fonts.face(TextStyle.DEFAULT).encode("\uD83D\uDE80");
       fail();
@@ -149,7 +149,7 @@ public class EmbeddedPdfTest {
 
   @Test
   public void supplementaryCharactersHaveUtf16UnicodeMapping() throws Exception {
-    PdfFonts.Face face = new PdfFonts(FONTS).face(TextStyle.DEFAULT.with("font", "Serif"));
+    var face = new PdfFonts(FONTS).face(TextStyle.DEFAULT.with("font", "Serif"));
     int supplementary = 0;
     for (int cp = 0x10000; cp <= 0x1ffff; cp++)
       if (face.font.glyph(cp) != 0) {
@@ -158,11 +158,11 @@ public class EmbeddedPdfTest {
       }
     assertTrue("Fixture covers supplementary Unicode", supplementary > 0);
     int value = supplementary - 0x10000;
-    String text = "" + (char) (0xd800 + (value >> 10)) + (char) (0xdc00 + (value & 1023));
+    var text = "" + (char) (0xd800 + (value >> 10)) + (char) (0xdc00 + (value & 1023));
     assertEquals("<0001>", face.encode(text));
-    List<byte[]> objects = new ArrayList<byte[]>();
+    var objects = new ArrayList<byte[]>();
     face.install(objects);
-    String map = new String(objects.get(3), "ISO-8859-1");
+    var map = new String(objects.get(3), "ISO-8859-1");
     assertTrue(
         map.contains(Integer.toHexString(text.charAt(0)) + Integer.toHexString(text.charAt(1))));
   }

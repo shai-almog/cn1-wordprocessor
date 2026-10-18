@@ -31,7 +31,7 @@ public class LineSpacingLayoutTest {
 
   @Test
   public void exactHeightClipsAndPositionsTextAtBottomOfShortLine() {
-    LayoutEngine.Page page = layout(paragraph("exact", 10)).pages.get(0);
+    var page = layout(paragraph("exact", 10)).pages.get(0);
     assertEquals(2, page.lines.size());
     for (LayoutEngine.Line line : page.lines) {
       assertEquals(10, line.height, 0);
@@ -44,11 +44,11 @@ public class LineSpacingLayoutTest {
 
   @Test
   public void minimumHeightGrowsForLargerTextAndCentersExtraSpace() {
-    LayoutEngine.Line small = layout(paragraph("atLeast", 10)).pages.get(0).lines.get(0);
+    var small = layout(paragraph("atLeast", 10)).pages.get(0).lines.get(0);
     assertEquals(24, small.height, 0);
     assertFalse(small.clipped);
     assertEquals(0, small.spans.get(0).top, 0);
-    LayoutEngine.Line large = layout(paragraph("atLeast", 40)).pages.get(0).lines.get(0);
+    var large = layout(paragraph("atLeast", 40)).pages.get(0).lines.get(0);
     assertEquals(40, large.height, 0);
     assertEquals(8, large.spans.get(0).top, 0);
   }
@@ -56,7 +56,7 @@ public class LineSpacingLayoutTest {
   @Test
   public void multiplesKeepNaturalGlyphSizeAndScaleLineAdvance() {
     for (float value : new float[] {.5f, 1, 1.5f, 2}) {
-      LayoutEngine.Page page = layout(paragraph("auto", value)).pages.get(0);
+      var page = layout(paragraph("auto", value)).pages.get(0);
       assertEquals(24 * value, page.lines.get(0).height, .001);
       assertFalse(page.lines.get(0).clipped);
       assertEquals(24 * value, page.lines.get(1).y - page.lines.get(0).y, .001);
@@ -65,10 +65,10 @@ public class LineSpacingLayoutTest {
 
   @Test
   public void exactSpacingControlsPaginationWithoutLosingLines() {
-    StringBuilder text = new StringBuilder();
+    var text = new StringBuilder();
     for (int i = 0; i < 70; i++) text.append(i == 0 ? "" : "\n").append("line");
-    Paragraph p = paragraph("exact", 30).text(RichText.of(text.toString(), TextStyle.DEFAULT));
-    LayoutEngine.Result result = layout(p);
+    var p = paragraph("exact", 30).text(RichText.of(text.toString(), TextStyle.DEFAULT));
+    var result = layout(p);
     assertTrue(result.pages.size() > 2);
     int count = 0;
     for (LayoutEngine.Page page : result.pages)
@@ -81,7 +81,7 @@ public class LineSpacingLayoutTest {
 
   @Test
   public void listMarkersFollowTheLineTextOffset() {
-    LayoutEngine.Line line =
+    var line =
         layout(paragraph("exact", 10).with("list", "number")).pages.get(0).lines.get(0);
     assertFalse(line.marker.isEmpty());
     assertEquals(10 - TextStyle.DEFAULT.size, line.markerOffset, 0);
@@ -89,15 +89,15 @@ public class LineSpacingLayoutTest {
 
   @Test
   public void tableCellBoundaryAndExactLineClipsAreIntersected() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.insertTable(1, 1);
     s.setCell(1, 0, 0, "alpha\nbeta");
     s.enterCell(1, 0, 0);
     s.paragraph("lineRule", "exact");
     s.paragraph("spacing", "10");
-    Table t = (Table) s.document().blocks.get(1);
+    var t = (Table) s.document().blocks.get(1);
     s.formatTable(1, t.format.row(0, new TableFormat.Row(20, "exact", true)));
-    LayoutEngine.Page page = engine.layout(s.document(), 0).pages.get(0);
+    var page = engine.layout(s.document(), 0).pages.get(0);
     for (LayoutEngine.Line line : page.lines)
       if (line.block == 1) {
         assertTrue(line.clipped);

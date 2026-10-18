@@ -9,9 +9,9 @@ final class DocxPictures {
   private static final String RELS = "word/_rels/document.xml.rels";
   private static final String NS = "http://schemas.openxmlformats.org/package/2006/relationships";
   private final Map<String, byte[]> parts;
-  private final Map<String, String> targets = new HashMap<String, String>();
-  private final Map<Picture, String> output = new LinkedHashMap<Picture, String>();
-  private final Set<String> ids = new HashSet<String>();
+  private final Map<String, String> targets = new HashMap<>();
+  private final Map<Picture, String> output = new LinkedHashMap<>();
+  private final Set<String> ids = new HashSet<>();
 
   DocxPictures(Map<String, byte[]> parts) throws IOException {
     this.parts = parts;
@@ -42,7 +42,7 @@ final class DocxPictures {
   }
 
   List<Picture> read(Element paragraph, long[] id, Set<String> warnings) {
-    List<Picture> result = new ArrayList<Picture>();
+    var result = new ArrayList<Picture>();
     collect(paragraph, result, id, warnings);
     return result;
   }
@@ -74,7 +74,7 @@ final class DocxPictures {
             props = Xml.child(container, "docPr");
         if (blip == null || extent == null)
           throw new IllegalArgumentException("Drawing is not an embedded picture");
-        byte[] data = parts.get(targets.get(Xml.attr(blip, "embed", "")));
+        var data = parts.get(targets.get(Xml.attr(blip, "embed", "")));
         if (data == null) throw new IllegalArgumentException("Picture data missing or external");
         Picture.Look look = look(container, warnings);
         result.add(
@@ -141,7 +141,7 @@ final class DocxPictures {
         if ("washout".equals(mode)) bright = contrast = 0;
         int transparency =
             alpha == null ? 0 : 100 - Math.round(Float.parseFloat(Xml.attr(alpha, "amt", "100000")) / 1000f);
-        Picture.Look base =
+        var base =
             new Picture.Look(edges[0], edges[1], edges[2], edges[3], color, Math.min(72, width), rotation,
                 transform != null && "1".equals(Xml.attr(transform, "flipH", "0")),
                 transform != null && "1".equals(Xml.attr(transform, "flipV", "0")));
@@ -179,7 +179,7 @@ final class DocxPictures {
       DocxDrawings.write(b, p, 1000 + ++drawings);
       return;
     }
-    String id = output.get(p);
+    var id = output.get(p);
     if (id == null) {
       id = "cn1Picture" + (output.size() + 1);
       while (ids.contains(id)) id += "x";
@@ -190,9 +190,11 @@ final class DocxPictures {
     b.append("<w:p><w:pPr><w:jc w:val=\"")
         .append(p.align)
         .append(
-            "\"/></w:pPr><w:r><w:drawing><wp:inline"
-                + " xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\""
-                + " distT=\"0\" distB=\"0\" distL=\"0\" distR=\"0\"><wp:extent cx=\"")
+            """
+            "/></w:pPr><w:r><w:drawing><wp:inline\
+             xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"\
+             distT="0" distB="0" distL="0" distR="0"><wp:extent cx="\
+            """)
         .append(cx)
         .append("\" cy=\"")
         .append(cy)
@@ -201,15 +203,17 @@ final class DocxPictures {
         .append("\" name=\"Picture\" descr=\"")
         .append(Xml.escape(p.alt))
         .append(
-            "\"/><a:graphic"
-                + " xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\"><a:graphicData"
-                + " uri=\"http://schemas.openxmlformats.org/drawingml/2006/picture\"><pic:pic"
-                + " xmlns:pic=\"http://schemas.openxmlformats.org/drawingml/2006/picture\"><pic:nvPicPr><pic:cNvPr"
-                + " id=\"0\" name=\"Picture\"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip"
-                + " r:embed=\"")
+            """
+            "/><a:graphic\
+             xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:graphicData\
+             uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic\
+             xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:nvPicPr><pic:cNvPr\
+             id="0" name="Picture"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip\
+             r:embed="\
+            """)
         .append(id)
         .append("\">");
-    Picture.Look k = p.look;
+    var k = p.look;
     if (k.transparency > 0)
       b.append("<a:alphaModFix amt=\"").append((100 - k.transparency) * 1000).append("\"/>");
     if ("grayscale".equals(k.colorMode)) b.append("<a:grayscl/>");
@@ -255,10 +259,10 @@ final class DocxPictures {
         parts.containsKey(RELS)
             ? new String(parts.get(RELS), "UTF-8")
             : "<Relationships xmlns=\"" + NS + "\"></Relationships>";
-    String types = new String(parts.get("[Content_Types].xml"), "UTF-8");
+    var types = new String(parts.get("[Content_Types].xml"), "UTF-8");
     for (Map.Entry<Picture, String> entry : output.entrySet()) {
-      Picture p = entry.getKey();
-      String name =
+      var p = entry.getKey();
+      var name =
           "word/media/" + entry.getValue() + ("image/png".equals(p.mime) ? ".png" : ".jpg");
       while (parts.containsKey(name))
         name =

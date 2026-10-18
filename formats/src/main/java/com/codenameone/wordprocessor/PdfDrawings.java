@@ -62,7 +62,7 @@ final class PdfDrawings {
 
   /** Base-font literal; characters outside WinAnsi print as '?'. */
   private static String literal(String s) {
-    StringBuilder b = new StringBuilder();
+    var b = new StringBuilder();
     for (int i = 0; i < s.length(); i++) {
       int c;
       try {

@@ -7,7 +7,7 @@ import org.junit.Test;
 
 public class CellSelectionTest {
   private Session grid() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.insertTable(3, 3);
     for (int r = 0; r < 3; r++) for (int c = 0; c < 3; c++) s.setCell(1, r, c, "r" + r + "c" + c);
     return s;
@@ -23,8 +23,8 @@ public class CellSelectionTest {
 
   @Test
   public void rectangularSelectionDoesNotChangeContentAndKeepsIntermediateCellsOut() {
-    Session s = grid();
-    Document original = s.document();
+    var s = grid();
+    var original = s.document();
     long revision = s.revision();
     s.selectCells(1, 2, 1, 0, 1);
     assertSame(original, s.document());
@@ -49,8 +49,8 @@ public class CellSelectionTest {
 
   @Test
   public void deletingAndTypingPreserveGridAndUndoSelection() {
-    Session s = grid();
-    Document original = s.document();
+    var s = grid();
+    var original = s.document();
     s.selectCells(1, 0, 1, 2, 1);
     s.replace("new");
     assertEquals("new", text(s, 0, 1));
@@ -72,7 +72,7 @@ public class CellSelectionTest {
 
   @Test
   public void selectedEmptyFocusStillClearsAllPickedCells() {
-    Session s = grid();
+    var s = grid();
     s.setCell(1, 2, 1, "");
     s.selectCells(1, 0, 1, 2, 1);
     assertTrue(s.selection().collapsed());
@@ -84,15 +84,15 @@ public class CellSelectionTest {
 
   @Test
   public void mergedSpansExpandAndCopyRetainsGeometryAndFormatting() {
-    Session s = grid();
+    var s = grid();
     s.mergeCells(1, 0, 0, 2, 2);
     s.selectCells(1, 1, 1, 2, 2);
-    CellSelection x = s.cellSelection();
+    var x = s.cellSelection();
     assertEquals(0, x.firstRow);
     assertEquals(0, x.firstColumn);
     assertEquals(2, x.lastRow);
-    Document copy = s.copySelection();
-    Table t = (Table) copy.blocks.get(0);
+    var copy = s.copySelection();
+    var t = (Table) copy.blocks.get(0);
     assertEquals(3, t.rows());
     assertEquals(2, t.span(1, 1).rows);
     assertEquals(2, t.span(1, 1).columns);
@@ -102,12 +102,12 @@ public class CellSelectionTest {
 
   @Test
   public void richRectanglePasteAndTsvAreAtomicAndUndoable() {
-    Session s = grid();
+    var s = grid();
     s.selectCells(1, 0, 0, 1, 1);
     s.format("bold", "true");
-    Document copy = s.copySelection();
+    var copy = s.copySelection();
     s.selectCells(1, 1, 1, 2, 2);
-    Document before = s.document();
+    var before = s.document();
     s.paste(copy);
     assertEquals("r0c0", text(s, 1, 1));
     assertEquals("r1c1", text(s, 2, 2));
@@ -119,8 +119,8 @@ public class CellSelectionTest {
     assertEquals("A", text(s, 1, 1));
     assertEquals("D", text(s, 2, 2));
     assertEquals("r0c2", text(s, 0, 2));
-    Document applied = s.document();
-    CellSelection selection = s.cellSelection();
+    var applied = s.document();
+    var selection = s.cellSelection();
     long rev = s.revision();
     try {
       s.pasteText("1\t2\t3");
@@ -136,8 +136,8 @@ public class CellSelectionTest {
 
   @Test
   public void compositionCancelCommitAndUndoPreserveCellContext() {
-    Session s = grid();
-    Document original = s.document();
+    var s = grid();
+    var original = s.document();
     s.selectCells(1, 0, 1, 2, 1);
     s.compose("漢", 1);
     assertEquals("漢", text(s, 0, 1));
@@ -156,25 +156,25 @@ public class CellSelectionTest {
 
   @Test
   public void trackedClearAndFormattingCanBeAcceptedOrRejected() {
-    Session s = grid();
-    Document original = s.document();
+    var s = grid();
+    var original = s.document();
     s.trackChanges(true);
     s.selectCells(1, 0, 1, 2, 1);
     s.replace("");
     Document rejected = Revisions.resolve(s.document(), null, false);
     assertEquals(original.plainText(), rejected.plainText());
     Document accepted = Revisions.resolve(s.document(), null, true);
-    Table t = (Table) accepted.blocks.get(1);
+    var t = (Table) accepted.blocks.get(1);
     assertEquals("", t.cell(1, 1).get(0).text.plainText());
     assertEquals("r1c0", t.cell(1, 0).get(0).text.plainText());
   }
 
   @Test
   public void invalidSelectionAndFailedFormattingPreserveStateAndForksRetainRectangles() {
-    Session s = grid();
+    var s = grid();
     s.selectCells(1, 0, 0, 2, 1);
-    CellSelection x = s.cellSelection();
-    Document d = s.document();
+    var x = s.cellSelection();
+    var d = s.document();
     try {
       s.selectCells(1, 0, 0, 3, 0);
       fail();
@@ -189,7 +189,7 @@ public class CellSelectionTest {
     }
     assertSame(x, s.cellSelection());
     assertSame(d, s.document());
-    Session fork = s.fork();
+    var fork = s.fork();
     fork.format("bold", "true");
     s.applyPreview(fork, s.revision());
     assertNotNull(s.cellSelection());

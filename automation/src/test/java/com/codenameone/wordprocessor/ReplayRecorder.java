@@ -16,7 +16,7 @@ import org.junit.runner.notification.RunListener;
  */
 public class ReplayRecorder extends RunListener {
   private static final int PER_COMMAND = 4;
-  private final Map<String, Integer> counts = new HashMap<String, Integer>();
+  private final Map<String, Integer> counts = new HashMap<>();
   private Writer out;
   private String test = "";
 
@@ -28,10 +28,10 @@ public class ReplayRecorder extends RunListener {
     Commands.tracer =
         new Commands.Tracer() {
           public Object begin(Session s, String id, Map<String, Object> args) {
-            Integer n = counts.get(id);
+            var n = counts.get(id);
             if (n != null && n >= PER_COMMAND) return null;
             try {
-              Map<String, Object> rec = new LinkedHashMap<String, Object>();
+              var rec = new LinkedHashMap<String, Object>();
               rec.put("test", test);
               rec.put("command", id);
               rec.put("args", Json.parse(Json.write(args)));
@@ -46,13 +46,13 @@ public class ReplayRecorder extends RunListener {
           public void end(Object token, Session s, Object result, Throwable error) {
             if (token == null || error != null) return;
             Map<String, Object> rec = (Map<String, Object>) token;
-            String id = (String) rec.get("command");
+            var id = (String) rec.get("command");
             try {
               rec.put("after", DocumentXml.write(s.document()));
               rec.put("stateAfter", state(s));
               out.write(Json.write(rec));
               out.write('\n');
-              Integer n = counts.get(id);
+              var n = counts.get(id);
               counts.put(id, n == null ? 1 : n + 1);
             } catch (Exception ex) {
               // Unserializable results are skipped.
@@ -62,8 +62,8 @@ public class ReplayRecorder extends RunListener {
   }
 
   static Map<String, Object> state(Session s) {
-    Selection x = s.selection();
-    Map<String, Object> m = new LinkedHashMap<String, Object>();
+    var x = s.selection();
+    var m = new LinkedHashMap<String, Object>();
     m.put("anchorBlock", x.anchorBlock);
     m.put("anchor", x.anchor);
     m.put("block", x.block);
@@ -71,9 +71,9 @@ public class ReplayRecorder extends RunListener {
     m.put("cellBlock", s.cellBlock());
     m.put("cellRow", s.cellRow());
     m.put("cellColumn", s.cellColumn());
-    CellSelection c = s.cellSelection();
+    var c = s.cellSelection();
     if (c != null) {
-      Map<String, Object> cs = new LinkedHashMap<String, Object>();
+      var cs = new LinkedHashMap<String, Object>();
       cs.put("block", c.block);
       cs.put("anchorRow", c.anchorRow);
       cs.put("anchorColumn", c.anchorColumn);

@@ -4,10 +4,10 @@ import java.util.*;
 
 /** Body sequence and heading-reference fields evaluated in document order. */
 public final class SequenceFields {
-  private final Map<String, Integer> counters = new HashMap<String, Integer>();
-  private final Map<String, Integer> epochs = new HashMap<String, Integer>();
+  private final Map<String, Integer> counters = new HashMap<>();
+  private final Map<String, Integer> epochs = new HashMap<>();
   private final Map<String, Map<Integer, String>> results =
-      new HashMap<String, Map<Integer, String>>();
+      new HashMap<>();
   private final int[] headings = new int[9];
   private final String[] headingNumbers = new String[9], headingText = new String[9];
   private final ListNumbers lists = new ListNumbers();
@@ -16,9 +16,8 @@ public final class SequenceFields {
     Arrays.fill(headingNumbers, "");
     Arrays.fill(headingText, "");
     for (Block block : document.blocks) {
-      if (block instanceof Paragraph) paragraph((Paragraph) block);
-      else if (block instanceof Table) {
-        Table table = (Table) block;
+      if (block instanceof Paragraph paragraph) paragraph(paragraph);
+      else if (block instanceof Table table) {
         for (int r = 0; r < table.rows(); r++)
           for (int c = 0; c < table.columns(); c++)
             if (!table.covered(r, c)) for (Paragraph p : table.cell(r, c)) paragraph(p);
@@ -27,16 +26,16 @@ public final class SequenceFields {
   }
 
   public static Session.FieldResolver resolver(Document document) {
-    final SequenceFields fields = new SequenceFields(document);
+    final var fields = new SequenceFields(document);
     return (paragraph, offset, field) -> {
-      Map<Integer, String> values = fields.results.get(paragraph);
+      var values = fields.results.get(paragraph);
       String result = values == null ? null : values.get(offset);
       return result == null || field.locked ? field : field.result(result);
     };
   }
 
   private void paragraph(final Paragraph p) {
-    String label = lists.next(p);
+    var label = lists.next(p);
     int level = headingLevel(p.style);
     if (level > 0) {
       headings[level - 1]++;
@@ -52,13 +51,13 @@ public final class SequenceFields {
 
           public void field(int offset, InlineField field, TextStyle style) {
             if (field.locked || style.revision != null && !style.revision.inserted()) return;
-            FieldCode code = new FieldCode(field.instruction);
+            var code = new FieldCode(field.instruction);
             if (code.arguments.isEmpty()) return;
             String result = null;
             if ("SEQ".equals(code.name)) {
-              String key = code.arguments.get(0);
+              var key = code.arguments.get(0);
               int n = counters.containsKey(key) ? counters.get(key) : 0;
-              String restart = code.switches.get("s");
+              var restart = code.switches.get("s");
               if (restart != null) {
                 int level = headingLevel(restart);
                 if (level == 0) return;
@@ -68,7 +67,7 @@ public final class SequenceFields {
                   epochs.put(key, epoch);
                 }
               }
-              String reset = code.switches.get("r");
+              var reset = code.switches.get("r");
               if (reset != null) {
                 try {
                   n = Integer.parseInt(reset);
@@ -88,7 +87,7 @@ public final class SequenceFields {
                         : headingText[level - 1];
             }
             if (result != null) {
-              Map<Integer, String> values = results.get(p.id);
+              var values = results.get(p.id);
               if (values == null) results.put(p.id, values = new HashMap<Integer, String>());
               values.put(offset, result);
             }

@@ -7,11 +7,11 @@ import org.junit.Test;
 public class CommentsTest {
   @Test
   public void repliesFollowAnchorsAndUndoWithTheirThread() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("alpha beta");
     s.select(0, 6, 10);
     s.addComment("Ada", "Check beta");
-    String id = s.document().comments.get(0).id;
+    var id = s.document().comments.get(0).id;
     s.updateComment(id, true, false);
     s.replyComment(id, "Grace", "Confirmed");
     assertFalse(s.document().comments.get(0).resolved);
@@ -31,12 +31,12 @@ public class CommentsTest {
 
   @Test
   public void anchorsFollowTypingSplitsAndUndo() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("alpha beta gamma");
     s.select(0, 6, 10);
     s.addComment("Ada", "Check beta");
-    Document commented = s.document();
-    String id = commented.comments.get(0).id;
+    var commented = s.document();
+    var id = commented.comments.get(0).id;
     s.select(0, 0, 0);
     s.replace("A ");
     s.selectComment(id);
@@ -58,11 +58,11 @@ public class CommentsTest {
 
   @Test
   public void deletingCommentedTextRemovesCommentAndUndoRestoresIt() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("alpha beta gamma");
     s.select(0, 6, 10);
     s.addComment("Ada", "Delete this");
-    Document before = s.document();
+    var before = s.document();
     s.replace("");
     assertTrue(s.document().comments.isEmpty());
     s.undo();
@@ -71,17 +71,17 @@ public class CommentsTest {
 
   @Test
   public void repeatedTextUsesActualEditRangeInsteadOfAmbiguousTextDiff() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("aaaa");
     s.select(0, 1, 3);
     s.addComment("Ada", "Middle pair");
-    String id = s.document().comments.get(0).id;
+    var id = s.document().comments.get(0).id;
     s.select(0, 0, 0);
     s.replace("a");
     s.selectComment(id);
     assertEquals(2, s.selection().start());
     assertEquals(4, s.selection().end());
-    Session clipboard = new Session(Document.empty());
+    var clipboard = new Session(Document.empty());
     clipboard.replace("a");
     clipboard.select(0, 0, 1);
     s.select(0, 0, 0);
@@ -98,11 +98,11 @@ public class CommentsTest {
 
   @Test
   public void formattingDoesNotMoveCommentRange() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("first\nsecond");
     s.selectRange(0, 2, 1, 4);
     s.addComment("Ada", "Across paragraphs");
-    String id = s.document().comments.get(0).id;
+    var id = s.document().comments.get(0).id;
     s.selectRange(0, 0, 1, 6);
     s.format("bold", "true");
     s.selectComment(id);

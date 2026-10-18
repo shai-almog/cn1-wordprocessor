@@ -45,16 +45,16 @@ final class OfficeTheme {
     installed = true;
     overlay();
     if (UIManager.getInstance().getLookAndFeel() instanceof DefaultLookAndFeel) {
-      Style icon = new Style();
+      var icon = new Style();
       icon.setFgColor(INK);
       icon.setBgTransparency(0);
-      Image unchecked =
+      var unchecked =
           FontImage.createMaterial(FontImage.MATERIAL_CHECK_BOX_OUTLINE_BLANK, icon)
               .scaled(px(18), px(18));
       icon.setFgColor(BLUE);
-      Image checked =
+      var checked =
           FontImage.createMaterial(FontImage.MATERIAL_CHECK_BOX, icon).scaled(px(18), px(18));
-      DefaultLookAndFeel look = (DefaultLookAndFeel) UIManager.getInstance().getLookAndFeel();
+      var look = (DefaultLookAndFeel) UIManager.getInstance().getLookAndFeel();
       look.setCheckBoxImages(checked, unchecked);
       look.setCheckBoxFocusImages(checked, unchecked, checked, unchecked);
     }
@@ -67,7 +67,7 @@ final class OfficeTheme {
    * dark values (a 20px track with a near-black thumb) win over ours.
    */
   private static void overlay() {
-    java.util.Hashtable<String, Object> props = new java.util.Hashtable<String, Object>();
+    var props = new java.util.Hashtable<String, Object>();
     if (Display.getInstance().isDesktop()) props.put("@hideLeftSideMenuBool", "true");
     // The document UI is light. Keep native popup behavior while making its surface
     // consistent with our dark-text renderer, including on a dark OS theme.
@@ -107,10 +107,10 @@ final class OfficeTheme {
       props.put(id + ".press#derive", id);
       props.put(id + ".press#bgColor", hex(chrome(0x707070)));
     }
-    java.util.Hashtable<String, Object> both = new java.util.Hashtable<String, Object>(props);
+    var both = new java.util.Hashtable<String, Object>(props);
     for (java.util.Map.Entry<String, Object> e : props.entrySet()) {
       if (e.getKey().startsWith("@")) continue;
-      Object v = e.getValue();
+      var v = e.getValue();
       // A derive names a style; the dark copy derives from the dark copy.
       if (e.getKey().endsWith("derive") && v instanceof String) v = "$Dark" + v;
       both.put("$Dark" + e.getKey(), v);
@@ -125,7 +125,7 @@ final class OfficeTheme {
   }
 
   static void space(Component c, int top, int bottom, int left, int right) {
-    Style s = c.getAllStyles();
+    var s = c.getAllStyles();
     s.setPaddingUnit(Style.UNIT_TYPE_PIXELS);
     s.setMarginUnit(Style.UNIT_TYPE_PIXELS);
     s.setPadding(px(top), px(bottom), px(left), px(right));
@@ -138,7 +138,7 @@ final class OfficeTheme {
   }
 
   static Label label(String text, float size, int color) {
-    Label l = new Label(text);
+    var l = new Label(text);
     l.getAllStyles().setBgTransparency(0);
     space(l, 0, 0, 0, 0);
     l.getAllStyles().setFont(font(size, false));
@@ -181,8 +181,8 @@ final class OfficeTheme {
     }
     b.getPressedStyle().setBgColor(ACCENT_TEXT);
     b.getAllStyles().setBorder(OfficeBorder.of(-1, 4));
-    Object glyph = b.getClientProperty("officeTheme.icon");
-    if (glyph instanceof int[]) icon(b, (char) ((int[]) glyph)[0], ((int[]) glyph)[1], 0xffffff);
+    var glyph = b.getClientProperty("officeTheme.icon");
+    if (glyph instanceof int[] ints) icon(b, (char) ints[0], ints[1], 0xffffff);
   }
 
   /** Framed button (Comments, Editing): white with an input border, rounded 4pt. */
@@ -208,14 +208,14 @@ final class OfficeTheme {
   }
 
   private static Image glyph(int glyph, int size, int color) {
-    Style s = new Style();
+    var s = new Style();
     s.setFgColor(color);
     s.setBgTransparency(0);
     return FontImage.createMaterial((char) glyph, s).scaled(px(size), px(size));
   }
 
   static Container row(Component... children) {
-    Container c = new Container(BoxLayout.x());
+    var c = new Container(BoxLayout.x());
     c.getAllStyles().setBgTransparency(0);
     space(c, 0, 0, 0, 0);
     for (Component child : children) c.add(child);
@@ -223,7 +223,7 @@ final class OfficeTheme {
   }
 
   static Container group(String caption, Component content) {
-    Container c = new Container(new BorderLayout());
+    var c = new Container(new BorderLayout());
     space(c, 3, 2, 8, 8);
     surface(c, RIBBON);
     c.getAllStyles()
@@ -238,13 +238,13 @@ final class OfficeTheme {
 
   static Container group(String caption, Component content, Runnable launch) {
     Container group = group(caption, content);
-    Component label = ((BorderLayout) group.getLayout()).getSouth();
+    var label = ((BorderLayout) group.getLayout()).getSouth();
     group.removeComponent(label);
-    Button button = new Button("\u2198");
+    var button = new Button("\u2198");
     button(button);
     button.setAccessibilityText(caption + " dialog");
     button.addActionListener(e -> launch.run());
-    Container footer = new Container(new BorderLayout());
+    var footer = new Container(new BorderLayout());
     footer.add(BorderLayout.CENTER, label);
     footer.add(BorderLayout.EAST, button);
     group.add(BorderLayout.SOUTH, footer);
@@ -269,7 +269,7 @@ final class OfficeTheme {
   }
 
   static Container groups(Component... groups) {
-    final GroupScroller row = new GroupScroller(groups);
+    final var row = new GroupScroller(groups);
     surface(row, RIBBON);
     space(row, 3, 3, 5, 5);
     row.setScrollableX(true);
@@ -285,7 +285,7 @@ final class OfficeTheme {
     right.setAccessibilityText("More ribbon groups");
     left.addActionListener(e -> row.move(-1));
     right.addActionListener(e -> row.move(1));
-    Container frame =
+    var frame =
         new Container(new BorderLayout()) {
           protected void laidOut() {
             super.laidOut();
@@ -407,7 +407,7 @@ final class OfficeTheme {
     // [light fg, light bg, applied fg, applied bg] per style. A color that differs from what
     // this pass applied was set by the app since (a toggle, hover, new state) and becomes the
     // new light original.
-    int[] colors = (int[]) root.getClientProperty(LIGHT_COLORS);
+    var colors = (int[]) root.getClientProperty(LIGHT_COLORS);
     if (colors == null) {
       colors = new int[styles.length * 4];
       for (int i = 0; i < styles.length; i++) {
@@ -425,19 +425,19 @@ final class OfficeTheme {
       if (fg != colors[i * 4 + 2]) styles[i].setFgColor(colors[i * 4 + 2]);
       if (bg != colors[i * 4 + 3]) styles[i].setBgColor(colors[i * 4 + 3]);
     }
-    int[] icon = (int[]) root.getClientProperty(ICON);
-    if (icon != null && icon[3] != chrome(icon[2]) && root instanceof Button) {
+    var icon = (int[]) root.getClientProperty(ICON);
+    if (icon != null && icon[3] != chrome(icon[2]) && root instanceof Button button) {
       icon[3] = chrome(icon[2]);
-      ((Button) root).setIcon(glyph(icon[0], icon[1], icon[3]));
+      button.setIcon(glyph(icon[0], icon[1], icon[3]));
     }
-    if (root instanceof ComboBox && ((ComboBox) root).getRenderer() instanceof Component)
-      applyAppearance((Component) ((ComboBox) root).getRenderer());
+    if (root instanceof ComboBox box && ((ComboBox) root).getRenderer() instanceof Component)
+      applyAppearance((Component) box.getRenderer());
     recurse(root);
   }
 
   private static void recurse(Component root) {
     if (root instanceof EditorSurface || !(root instanceof Container)) return;
-    Container c = (Container) root;
+    var c = (Container) root;
     for (int i = 0; i < c.getComponentCount(); i++) applyAppearance(c.getComponentAt(i));
   }
 
@@ -447,7 +447,7 @@ final class OfficeTheme {
    * them as flat Office surfaces in every appearance instead.
    */
   private static boolean nativeChrome(Component c, Style[] styles) {
-    String id = c.getUIID();
+    var id = c.getUIID();
     if (!"TitleArea".equals(id) && !"Toolbar".equals(id) && !"StatusBar".equals(id)
         && !"Title".equals(id) && !"TitleCommand".equals(id) && !"BackCommand".equals(id))
       return false;
@@ -464,9 +464,9 @@ final class OfficeTheme {
 
   /** Native popups (combo lists, menus) follow the same appearance as the chrome. */
   static void applyPopupAppearance() {
-    java.util.Hashtable<String, Object> props = new java.util.Hashtable<String, Object>();
-    String bg = Integer.toHexString(0x1000000 | chrome(PAPER)).substring(1);
-    String fg = Integer.toHexString(0x1000000 | chrome(INK)).substring(1);
+    var props = new java.util.Hashtable<String, Object>();
+    var bg = Integer.toHexString(0x1000000 | chrome(PAPER)).substring(1);
+    var fg = Integer.toHexString(0x1000000 | chrome(INK)).substring(1);
     for (String id : new String[] {"ComboBoxPopup", "PopupContentPane", "ComboBoxList", "ComboBoxItem"}) {
       for (String v : new String[] {id, "$Dark" + id}) {
         props.put(v + ".bgColor", bg);

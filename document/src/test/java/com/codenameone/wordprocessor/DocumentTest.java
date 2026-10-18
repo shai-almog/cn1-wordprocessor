@@ -8,9 +8,9 @@ import org.junit.Test;
 public class DocumentTest {
   @Test
   public void persistentSequenceMatchesArrayList() {
-    Random r = new Random(72);
-    Sequence<Integer> seq = new Sequence<Integer>();
-    List<Integer> list = new ArrayList<Integer>();
+    var r = new Random(72);
+    var seq = new Sequence<Integer>();
+    var list = new ArrayList<Integer>();
     Sequence<Integer> snapshot = null;
     List<Integer> expected = null;
     for (int k = 0; k < 10000; k++) {
@@ -34,7 +34,7 @@ public class DocumentTest {
       assertTrue(seq.depth() < 25);
       if (k == 300) {
         snapshot = seq;
-        expected = new ArrayList<Integer>(list);
+        expected = new ArrayList<>(list);
       }
     }
     for (int i = 0; i < expected.size(); i++) assertEquals(expected.get(i), snapshot.get(i));
@@ -42,15 +42,15 @@ public class DocumentTest {
 
   @Test
   public void styledRopeMatchesReference() {
-    Random r = new Random(911);
-    StringBuilder ref = new StringBuilder();
-    RichText text = new RichText();
+    var r = new Random(911);
+    var ref = new StringBuilder();
+    var text = new RichText();
     for (int k = 0; k < 6000; k++) {
       int a = r.nextInt(ref.length() + 1), b = a + r.nextInt(ref.length() - a + 1);
-      String value = "word " + k + " ";
+      var value = "word " + k + " ";
       if (k % 7 == 0) value = "";
-      RichText old = text;
-      String oldString = ref.toString();
+      var old = text;
+      var oldString = ref.toString();
       text = text.replace(a, b, RichText.of(value));
       ref.replace(a, b, value);
       assertEquals(ref.toString(), text.toString());
@@ -62,7 +62,7 @@ public class DocumentTest {
   @Test
   public void ropeDoesNotFlattenLargeDocument() {
     RichText text = RichText.of(repeat("abcdef ", 100000));
-    RichText next = text.replace(300000, 300001, RichText.of("x"));
+    var next = text.replace(300000, 300001, RichText.of("x"));
     assertEquals(text.length(), next.length());
     assertTrue(next.depth() < 25);
     assertEquals('x', next.charAt(300000));
@@ -71,7 +71,7 @@ public class DocumentTest {
 
   @Test
   public void rangeFormattingPreservesOtherRuns() {
-    RichText t = RichText.of("abcdef").format(2, 4, "bold", "true");
+    var t = RichText.of("abcdef").format(2, 4, "bold", "true");
     assertFalse(t.styleAt(1).bold);
     assertTrue(t.styleAt(2).bold);
     assertTrue(t.styleAt(3).bold);
@@ -92,7 +92,7 @@ public class DocumentTest {
 
   @Test
   public void paragraphSplitMergeAndUndo() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("one\ntwo");
     assertEquals(2, s.document().blocks.size());
     s.select(1, 0, 0);
@@ -106,8 +106,8 @@ public class DocumentTest {
 
   @Test
   public void transactionRollsBackOnFailure() {
-    Session s = new Session(Document.empty());
-    Document original = s.document();
+    var s = new Session(Document.empty());
+    var original = s.document();
     try {
       s.transact(
           x -> {
@@ -124,7 +124,7 @@ public class DocumentTest {
 
   @Test
   public void batchIsOneUndoAndRevision() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.transact(
         x -> {
           x.replace("one");
@@ -138,8 +138,8 @@ public class DocumentTest {
 
   @Test
   public void stalePreviewCannotApplyAfterUndo() {
-    Session s = new Session(Document.empty());
-    Session p = s.fork();
+    var s = new Session(Document.empty());
+    var p = s.fork();
     long rev = s.revision();
     p.replace("preview");
     s.replace("edit");
@@ -154,8 +154,8 @@ public class DocumentTest {
 
   @Test
   public void previewAppliesAsOneUndo() {
-    Session s = new Session(Document.empty());
-    Session p = s.fork();
+    var s = new Session(Document.empty());
+    var p = s.fork();
     p.replace("preview");
     assertEquals("", s.document().plainText());
     s.applyPreview(p, 0);
@@ -166,7 +166,7 @@ public class DocumentTest {
 
   @Test
   public void unicodeBackspaceRemovesWholeCodePoint() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("A😀");
     s.deleteBackward();
     assertEquals("A", s.document().plainText());
@@ -174,7 +174,7 @@ public class DocumentTest {
 
   @Test
   public void compositionIsOneUndo() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("a");
     long before = s.revision();
     s.compose("k", 1);
@@ -190,7 +190,7 @@ public class DocumentTest {
 
   @Test
   public void cancelledCompositionRestoresSelection() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("abc");
     s.select(0, 0, 2);
     s.compose("漢", 1);
@@ -202,7 +202,7 @@ public class DocumentTest {
 
   @Test
   public void replaceAcrossParagraphsPreservesSuffixAndUndo() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("first\nsecond\nthird");
     s.selectRange(0, 2, 2, 2);
     assertEquals("rst\nsecond\nth", s.selectedText());
@@ -216,7 +216,7 @@ public class DocumentTest {
 
   @Test
   public void backwardsSelectionHasSameReplacement() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("abc\ndef");
     s.selectRange(1, 2, 0, 1);
     s.replace("X");
@@ -225,7 +225,7 @@ public class DocumentTest {
 
   @Test
   public void typingFormatAppliesWithoutSelectingText() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.format("bold", "true");
     s.replace("bold");
     assertTrue(s.document().paragraph(0).text.styleAt(0).bold);
@@ -236,7 +236,7 @@ public class DocumentTest {
 
   @Test
   public void formattingSpansParagraphs() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("abc\ndef");
     s.selectRange(0, 1, 1, 2);
     s.format("italic", "true");
@@ -248,7 +248,7 @@ public class DocumentTest {
 
   @Test
   public void rollbackRestoresTypingStyle() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     try {
       s.transact(
           x -> {
@@ -264,16 +264,16 @@ public class DocumentTest {
 
   @Test
   public void leadingAndConsecutiveEmptyParagraphsArePreserved() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("\n\nhello\n\n");
     assertEquals("\n\nhello\n\n", s.document().plainText());
   }
 
   @Test
   public void statisticsOnlyRecountChangedBlocks() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("one two\nthree four");
-    DocumentStats stats = new DocumentStats();
+    var stats = new DocumentStats();
     assertEquals(4, stats.words(s.document()));
     s.select(1, 0, 0);
     s.replace("new ");
@@ -282,14 +282,14 @@ public class DocumentTest {
   }
 
   private static String repeat(String s, int n) {
-    StringBuilder b = new StringBuilder();
+    var b = new StringBuilder();
     for (int i = 0; i < n; i++) b.append(s);
     return b.toString();
   }
 
   @Test
   public void loadClearsHistoryStyleAndInvalidatesPreviews() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("old");
     s.format("bold", "true");
     long revision = s.revision();
@@ -303,7 +303,7 @@ public class DocumentTest {
 
   @Test
   public void paragraphPropertiesApplyAcrossSelectionInOneUndo() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("first\nsecond\nthird");
     s.selectRange(0, 2, 2, 1);
     s.paragraph("align", "center");

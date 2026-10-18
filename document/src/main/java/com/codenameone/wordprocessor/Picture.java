@@ -148,7 +148,7 @@ public final class Picture implements Block {
     @Override
     public boolean equals(Object o) {
       if (!(o instanceof Look)) return false;
-      Look k = (Look) o;
+      var k = (Look) o;
       return cropLeft == k.cropLeft
           && cropTop == k.cropTop
           && cropRight == k.cropRight

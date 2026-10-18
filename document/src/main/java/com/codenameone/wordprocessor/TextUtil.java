@@ -9,7 +9,7 @@ public final class TextUtil {
 
   /** Literal delimiter, retaining empty fields including the final field. */
   public static String[] split(String text, char delimiter) {
-    List<String> parts = new ArrayList<String>();
+    var parts = new ArrayList<String>();
     int start = 0, end;
     while ((end = text.indexOf(delimiter, start)) >= 0) {
       parts.add(text.substring(start, end));
@@ -21,7 +21,7 @@ public final class TextUtil {
 
   public static String padded(long value, int radix, int width) {
     String text = Long.toString(value, radix);
-    StringBuilder out = new StringBuilder();
+    var out = new StringBuilder();
     for (int i = text.length(); i < width; i++) out.append('0');
     return out.append(text).toString();
   }
@@ -46,7 +46,7 @@ public final class TextUtil {
   }
 
   public static String fileName(String title) {
-    StringBuilder out = new StringBuilder();
+    var out = new StringBuilder();
     for (int i = 0; i < title.length(); i++) {
       char c = title.charAt(i);
       out.append(

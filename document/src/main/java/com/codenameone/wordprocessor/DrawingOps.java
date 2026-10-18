@@ -82,8 +82,8 @@ public final class DrawingOps {
   }
 
   public static final class Ops {
-    public final List<Path> paths = new ArrayList<Path>();
-    public final List<Text> texts = new ArrayList<Text>();
+    public final List<Path> paths = new ArrayList<>();
+    public final List<Text> texts = new ArrayList<>();
 
     void fill(float[] pts, int fill, int stroke, float width) {
       paths.add(new Path(pts, true, fill, stroke, width, 255));
@@ -99,9 +99,9 @@ public final class DrawingOps {
   }
 
   public static Ops build(Drawing d, float w, float h) {
-    Ops ops = new Ops();
+    var ops = new Ops();
     if (d.flag("hidden")) return ops;
-    String k = d.kind;
+    var k = d.kind;
     if ("shape".equals(k)) shape(ops, d, w, h, d.get("shape", "rect"), 0x4472c4, 0x2f528f, 0xffffff, "center");
     else if ("textBox".equals(k)) shape(ops, d, w, h, "rect", 0xffffff, 0x000000, 0x000000, "left");
     else if ("wordArt".equals(k)) wordArt(ops, d, w, h);
@@ -115,7 +115,7 @@ public final class DrawingOps {
       }
       ink(ops, d.get("strokes", ""));
       for (String item : split(d.get("items", ""), '\u001e')) {
-        List<String> f = split(item, '\u001f');
+        var f = split(item, '\u001f');
         if (f.size() != 5) continue;
         try {
           float x = Float.parseFloat(f.get(0)), y = Float.parseFloat(f.get(1));
@@ -152,7 +152,7 @@ public final class DrawingOps {
       ops.paths.add(
           new Path(pts, true, fill, line, lw, Math.round(255 * (100 - transparency) / 100f)));
     }
-    String text = d.get("text", "");
+    var text = d.get("text", "");
     if (text.isEmpty()) return;
     float inset = d.num("inset", 7.2f);
     float[] box = textBox(geometry, w, h);
@@ -176,11 +176,11 @@ public final class DrawingOps {
       Ops ops, Drawing d, String text, float x, float y, float w, float h, int color, String align) {
     float size = d.num("fontSize", 11);
     boolean bold = d.flag("bold");
-    String direction = d.get("textDirection", "horizontal");
+    var direction = d.get("textDirection", "horizontal");
     List<String> lines;
     int rotation = 0;
     if ("stacked".equals(direction)) {
-      lines = new ArrayList<String>();
+      lines = new ArrayList<>();
       for (int i = 0; i < text.length(); i++) if (text.charAt(i) != '\n') lines.add(text.substring(i, i + 1));
     } else if ("rotate90".equals(direction) || "rotate270".equals(direction)) {
       rotation = "rotate90".equals(direction) ? 90 : 270;
@@ -194,7 +194,7 @@ public final class DrawingOps {
       return;
     } else lines = wrap(text, w, size, bold);
     float lineH = size * 1.2f, total = lineH * lines.size();
-    String valign = d.get("valign", "middle");
+    var valign = d.get("valign", "middle");
     float top =
         "top".equals(valign) ? y : "bottom".equals(valign) ? y + h - total : y + (h - total) / 2;
     for (int i = 0; i < lines.size(); i++)
@@ -206,9 +206,9 @@ public final class DrawingOps {
   static List<String> wrap(String text, float width, float size, boolean bold) {
     float advance = size * (bold ? .56f : .5f);
     int max = Math.max(1, (int) (width / advance));
-    List<String> out = new ArrayList<String>();
+    var out = new ArrayList<String>();
     for (String para : split(text, '\n')) {
-      StringBuilder line = new StringBuilder();
+      var line = new StringBuilder();
       for (String word : split(para, ' ')) {
         while (word.length() > max) {
           if (line.length() > 0) {
@@ -231,7 +231,7 @@ public final class DrawingOps {
   }
 
   static List<String> split(String s, char c) {
-    List<String> out = new ArrayList<String>();
+    var out = new ArrayList<String>();
     int start = 0;
     for (int i = 0; i <= s.length(); i++)
       if (i == s.length() || s.charAt(i) == c) {
@@ -279,7 +279,7 @@ public final class DrawingOps {
     if ("ellipse".equals(g)) return ellipse(w / 2, h / 2, w / 2, h / 2);
     if ("roundRect".equals(g)) {
       float r = Math.min(w, h) / 6;
-      List<Float> p = new ArrayList<Float>();
+      var p = new ArrayList<Float>();
       float[][] corners = {{w - r, r, -90}, {w - r, h - r, 0}, {r, h - r, 90}, {r, r, 180}};
       for (float[] c : corners)
         for (int i = 0; i <= 6; i++) {
@@ -346,7 +346,7 @@ public final class DrawingOps {
     int glow = d.color("glow", -1);
     boolean shadow = d.flag("shadow");
     if (!shadow && glow < 0) return;
-    List<Path> extra = new ArrayList<Path>();
+    var extra = new ArrayList<Path>();
     for (Path p : ops.paths) {
       if (glow >= 0) extra.add(new Path(p.points, p.closed, -1, glow, p.width + 8, 90));
       if (shadow) {
@@ -362,8 +362,8 @@ public final class DrawingOps {
   // ---------------------------------------------------------------- WordArt
 
   private static void wordArt(Ops ops, Drawing d, float w, float h) {
-    String text = d.get("text", "WordArt");
-    String transform = d.get("transform", "none");
+    var text = d.get("text", "WordArt");
+    var transform = d.get("transform", "none");
     int fill = d.color("textFill", 0x4472c4), outline = d.color("textOutline", -1);
     boolean bold = !"false".equals(d.get("bold", "true"));
     float size = Math.min(h * .7f, w / Math.max(1, text.length()) / (bold ? .56f : .5f));
@@ -387,10 +387,10 @@ public final class DrawingOps {
 
   /** Rows of the chart table: first row is the header (blank, series names...), then categories. */
   public static List<String[]> table(String data) {
-    List<String[]> rows = new ArrayList<String[]>();
+    var rows = new ArrayList<String[]>();
     for (String line : split(data, '\n')) {
       if (line.trim().isEmpty()) continue;
-      List<String> cells = split(line, ',');
+      var cells = split(line, ',');
       String[] row = new String[cells.size()];
       for (int i = 0; i < row.length; i++) row[i] = cells.get(i).trim();
       rows.add(row);
@@ -408,21 +408,25 @@ public final class DrawingOps {
   }
 
   public static final String SAMPLE_CHART =
-      "Category,Series 1,Series 2,Series 3\n"
-          + "Category 1,4.3,2.4,2\nCategory 2,2.5,4.4,2\nCategory 3,3.5,1.8,3\nCategory 4,4.5,2.8,5";
+      """
+      Category,Series 1,Series 2,Series 3
+      Category 1,4.3,2.4,2
+      Category 2,2.5,4.4,2
+      Category 3,3.5,1.8,3
+      Category 4,4.5,2.8,5""";
 
   private static void chart(Ops ops, Drawing d, float w, float h) {
-    String type = d.get("chartType", "column");
-    List<String[]> rows = table(d.get("data", SAMPLE_CHART));
+    var type = d.get("chartType", "column");
+    var rows = table(d.get("data", SAMPLE_CHART));
     ops.fill(rect(0, 0, w, h), 0xffffff, 0xd9d9d9, .75f);
-    String title = d.get("title", "Chart Title");
+    var title = d.get("title", "Chart Title");
     float top = 6;
     if (!title.isEmpty()) {
       ops.text(title, 0, 6, w, 14, 0x595959, false, "center");
       top = 28;
     }
     if (rows.size() < 2 || rows.get(0).length < 2) return;
-    String[] header = rows.get(0);
+    var header = rows.get(0);
     int series = "pie".equals(type) ? 1 : header.length - 1, cats = rows.size() - 1;
     boolean legend = !"false".equals(d.get("legend", "true"));
     float bottom = h - (legend ? 26 : 8);
@@ -488,7 +492,7 @@ public final class DrawingOps {
     float band = ((bar ? plotBottom - plotTop : right - left)) / cats;
     for (int r = 1; r < rows.size(); r++) {
       float start = (bar ? plotTop : left) + band * (r - 1);
-      String name = rows.get(r)[0];
+      var name = rows.get(r)[0];
       if (bar) ops.text(name, 0, start + band / 2 - 5, left - 3, 8, 0x595959, false, "right");
       else ops.text(name, start, plotBottom + 2, band, 8, 0x595959, false, "center");
       if (!"column".equals(type) && !bar) continue;
@@ -545,10 +549,10 @@ public final class DrawingOps {
 
   /** SmartArt nodes, one per line, indented by leading tabs or "level:" prefixes. */
   public static List<Object[]> nodes(String text) {
-    List<Object[]> out = new ArrayList<Object[]>();
+    var out = new ArrayList<Object[]>();
     for (String line : split(text, '\n')) {
       int level = 1;
-      String t = line;
+      var t = line;
       while (t.startsWith("\t")) {
         level++;
         t = t.substring(1);
@@ -560,7 +564,7 @@ public final class DrawingOps {
   }
 
   private static int smartColor(Drawing d, int i) {
-    String scheme = d.get("colors", "accent1");
+    var scheme = d.get("colors", "accent1");
     if ("colorful".equals(scheme)) return PALETTE[i % PALETTE.length];
     int base = 0x4472c4;
     if (scheme.startsWith("accent") && scheme.length() == 7) {
@@ -571,10 +575,10 @@ public final class DrawingOps {
   }
 
   private static void smartArt(Ops ops, Drawing d, float w, float h) {
-    String layout = d.get("layout", "list");
-    List<Object[]> all = nodes(d.get("nodes", "Text\nText\nText"));
-    List<String> top = new ArrayList<String>();
-    List<List<String>> kids = new ArrayList<List<String>>();
+    var layout = d.get("layout", "list");
+    var all = nodes(d.get("nodes", "Text\nText\nText"));
+    var top = new ArrayList<String>();
+    var kids = new ArrayList<List<String>>();
     for (Object[] n : all) {
       if ((Integer) n[0] == 1 || top.isEmpty()) {
         top.add((String) n[1]);
@@ -583,7 +587,7 @@ public final class DrawingOps {
     }
     int n = top.size();
     if (n == 0) return;
-    Drawing label = Drawing.of("shape").with("fontSize", d.get("fontSize", "12"));
+    var label = Drawing.of("shape").with("fontSize", d.get("fontSize", "12"));
     if ("process".equals(layout)) {
       float gap = 18, bw = (w - gap * (n - 1)) / n, bh = Math.min(h, bw * .7f), by = (h - bh) / 2;
       for (int i = 0; i < n; i++) {
@@ -606,7 +610,7 @@ public final class DrawingOps {
     } else if ("hierarchy".equals(layout)) {
       float bw0 = Math.min(w * .3f, 140), bh = Math.min(h / 3.2f, 50);
       node(ops, label, top.get(0), Collections.<String>emptyList(), (w - bw0) / 2, 0, bw0, bh, smartColor(d, 0));
-      List<String> second = new ArrayList<String>(kids.get(0));
+      var second = new ArrayList<String>(kids.get(0));
       for (int i = 1; i < n; i++) second.add(top.get(i));
       int m = second.size();
       if (m > 0) {
@@ -647,7 +651,7 @@ public final class DrawingOps {
       ops.paths.get(ops.paths.size() - 1).points[i] += x;
       ops.paths.get(ops.paths.size() - 1).points[i + 1] += y;
     }
-    StringBuilder t = new StringBuilder(text);
+    var t = new StringBuilder(text);
     for (String c : children) t.append("\n\u2022 ").append(c);
     layoutText(ops, label, t.toString(), x + 4, y + 2, w - 8, h - 4, 0xffffff, "center");
   }
@@ -678,7 +682,7 @@ public final class DrawingOps {
    * digits become super/subscripts and {@code (a)/(b)} keeps its parentheses as a slash fraction.
    */
   public static String professional(String linear) {
-    StringBuilder b = new StringBuilder();
+    var b = new StringBuilder();
     for (int i = 0; i < linear.length(); i++) {
       char c = linear.charAt(i);
       if (c == '\\') {
@@ -707,12 +711,12 @@ public final class DrawingOps {
   }
 
   private static void equation(Ops ops, Drawing d, float w, float h) {
-    String linear = d.get("text", "");
+    var linear = d.get("text", "");
     boolean professional = !"linear".equals(d.get("format", "professional"));
     String shown = professional ? professional(linear) : linear;
     float size = d.num("fontSize", 12);
-    String justify = d.get("justify", "center");
-    String number = d.get("number", "");
+    var justify = d.get("justify", "center");
+    var number = d.get("number", "");
     float right = number.isEmpty() ? w : w - 40;
     ops.texts.add(
         new Text(shown, 0, (h - size * 1.2f) / 2, right, size, d.color("textColor", 0), false,
@@ -728,8 +732,8 @@ public final class DrawingOps {
     for (String stroke : split(strokes, '|')) {
       int colon = stroke.indexOf(':');
       if (colon < 0) continue;
-      List<String> head = split(stroke.substring(0, colon), ',');
-      List<String> pts = split(stroke.substring(colon + 1).trim(), ' ');
+      var head = split(stroke.substring(0, colon), ',');
+      var pts = split(stroke.substring(colon + 1).trim(), ' ');
       float[] p = new float[pts.size() * 2];
       int n = 0;
       for (String pt : pts) {
@@ -745,7 +749,7 @@ public final class DrawingOps {
       if (n < 2) continue;
       if (n == 2) p = new float[] {p[0], p[1], p[0] + .1f, p[1]};
       else p = Arrays.copyOf(p, n);
-      String tool = head.get(0);
+      var tool = head.get(0);
       int color = 0;
       float width = 1;
       try {
@@ -761,7 +765,7 @@ public final class DrawingOps {
 
   /** Removes strokes passing within {@code radius} of (x, y); returns the remaining encoding. */
   public static String erase(String strokes, float x, float y, float radius) {
-    StringBuilder out = new StringBuilder();
+    var out = new StringBuilder();
     for (String stroke : split(strokes, '|')) {
       if (stroke.trim().isEmpty()) continue;
       boolean hit = false;
@@ -795,7 +799,7 @@ public final class DrawingOps {
   }
 
   private static void icon(Ops ops, Drawing d, float w, float h) {
-    String name = d.get("icon", "star");
+    var name = d.get("icon", "star");
     int c = d.color("fill", 0x404040);
     float s = Math.min(w, h), ox = (w - s) / 2, oy = (h - s) / 2;
     float[] p;

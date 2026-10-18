@@ -13,11 +13,11 @@ public final class Hmac {
       ipad[i] = (byte) (k ^ 0x36);
       opad[i] = (byte) (k ^ 0x5c);
     }
-    Sha512 in = new Sha512();
+    var in = new Sha512();
     in.update(ipad, 0, ipad.length);
     in.update(msg, 0, msg.length);
-    byte[] inner = in.digest();
-    Sha512 out = new Sha512();
+    var inner = in.digest();
+    var out = new Sha512();
     out.update(opad, 0, opad.length);
     out.update(inner, 0, inner.length);
     return out.digest();

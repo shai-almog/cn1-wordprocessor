@@ -6,7 +6,7 @@ public final class TextNavigation {
 
   /** Move to a word boundary, stopping at adjacent paragraph boundaries and embedded blocks. */
   public static int[] word(Document document, int block, int offset, boolean forward) {
-    RichText text = document.paragraph(block).text;
+    var text = document.paragraph(block).text;
     if (forward && offset == text.length()) {
       if (block + 1 < document.blocks.size() && document.blocks.get(block + 1) instanceof Paragraph)
         return new int[] {block + 1, 0};
@@ -61,12 +61,12 @@ public final class TextNavigation {
 
   /** Delete the selected range or one word through the normal undo/revision transaction. */
   public static void deleteWord(Session session, boolean forward) {
-    Selection selection = session.selection();
+    var selection = session.selection();
     if (session.cellSelection() != null || !selection.collapsed()) {
       session.replace("");
       return;
     }
-    Document document = session.editingDocument();
+    var document = session.editingDocument();
     int block = selection.block, offset = selection.caret;
     int[] target;
     do {
@@ -75,11 +75,11 @@ public final class TextNavigation {
       boolean visible = !document.trackChanges;
       int first = Math.min(block, target[0]), last = Math.max(block, target[0]);
       for (int b = first; !visible && b <= last; b++) {
-        Paragraph paragraph = document.paragraph(b);
+        var paragraph = document.paragraph(b);
         int from = b == first ? (forward ? offset : target[1]) : 0;
         int to = b == last ? (forward ? target[1] : offset) : paragraph.text.length();
         for (int i = from; !visible && i < to; i++) {
-          Revision revision = paragraph.text.styleAt(i).revision;
+          var revision = paragraph.text.styleAt(i).revision;
           visible = revision == null || revision.inserted();
         }
         if (b < last)

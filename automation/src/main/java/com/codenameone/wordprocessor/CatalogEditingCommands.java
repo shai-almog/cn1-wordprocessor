@@ -53,7 +53,7 @@ final class CatalogEditingCommands implements Commands.Extension {
         (s, a) -> {
           if (paintedText == null) throw new IllegalStateException("Copy a format first");
           if (!s.selection().collapsed()) {
-            TextStyle t = paintedText;
+            var t = paintedText;
             s.format("font", t.font);
             s.format("size", String.valueOf(t.size));
             s.format("color", hex(t.color));
@@ -64,7 +64,7 @@ final class CatalogEditingCommands implements Commands.Extension {
             s.format("script", t.script);
             for (String key : CHARACTER_KEYS) s.format(key, t.characters.value(key));
           }
-          Paragraph p = paintedParagraph;
+          var p = paintedParagraph;
           s.paragraph("style", p.style);
           s.paragraph("align", p.align);
           s.paragraph("before", String.valueOf(p.before));
@@ -72,7 +72,7 @@ final class CatalogEditingCommands implements Commands.Extension {
           s.paragraph("indent", String.valueOf(p.indent));
           s.paragraph("spacing", String.valueOf(p.lineSpacing));
           s.paragraph("keepNext", String.valueOf(p.keepNext));
-          ParagraphFormat f = p.format;
+          var f = p.format;
           s.paragraph("rightIndent", String.valueOf(f.rightIndent));
           s.paragraph("firstIndent", String.valueOf(f.firstIndent));
           s.paragraph("keepLines", String.valueOf(f.keepLines));
@@ -98,12 +98,12 @@ final class CatalogEditingCommands implements Commands.Extension {
         "",
         false,
         (s, a) -> {
-          List<int[]> spots = new ArrayList<int[]>(c.editSpots);
-          Document d = s.document();
+          var spots = new ArrayList<int[]>(c.editSpots);
+          var d = s.document();
           for (int k = spots.size() - 1; k >= 0; k--) {
-            int[] at = spots.get(k);
+            var at = spots.get(k);
             if (at[0] >= d.blocks.size() || !(d.blocks.get(at[0]) instanceof Paragraph)) continue;
-            Selection x = s.selection();
+            var x = s.selection();
             if (at[0] == x.block && at[1] == x.caret) continue;
             int offset = Math.min(at[1], d.paragraph(at[0]).text.length());
             s.select(at[0], offset, offset);
@@ -120,8 +120,8 @@ final class CatalogEditingCommands implements Commands.Extension {
         "",
         true,
         (s, a) -> {
-          Selection x = s.selection();
-          String text = s.document().paragraph(x.block).text.plainText();
+          var x = s.selection();
+          var text = s.document().paragraph(x.block).text.plainText();
           int end = x.caret, start = end;
           // ASCII-only test: ParparVM's Character.digit accepts some non-ASCII letters (e.g. U+00E9).
           while (start > 0 && end - start < 6 && hexDigit(text.charAt(start - 1))) start--;
@@ -141,7 +141,7 @@ final class CatalogEditingCommands implements Commands.Extension {
               Character.isLowSurrogate(low) && end >= 2 && Character.isHighSurrogate(text.charAt(end - 2))
                   ? Character.toCodePoint(text.charAt(end - 2), low)
                   : low;
-          String code = Integer.toHexString(cp).toUpperCase();
+          var code = Integer.toHexString(cp).toUpperCase();
           while (code.length() < 4) code = "0" + code;
           s.select(x.block, end - Character.charCount(cp), end);
           s.replace(code);
@@ -155,7 +155,7 @@ final class CatalogEditingCommands implements Commands.Extension {
         true,
         (s, a) -> {
           final String code = Commands.str(a, "code");
-          final String para = s.document().paragraph(s.selection().block).id;
+          final var para = s.document().paragraph(s.selection().block).id;
           final int from = s.selection().start(), to = s.selection().end();
           final int[] count = {0};
           s.mapFields(
@@ -195,7 +195,7 @@ final class CatalogEditingCommands implements Commands.Extension {
         (s, a) -> {
           c.execute(s, "insert.pageBreak");
           c.execute(s, "insert.pageBreak");
-          Selection x = s.selection();
+          var x = s.selection();
           s.select(x.block - 1, 0, 0);
           return null;
         });
@@ -218,8 +218,8 @@ final class CatalogEditingCommands implements Commands.Extension {
 
   /** Swaps the caret paragraph with its neighbor; tracked documents record a move instead. */
   private static Object move(Session s, boolean up) {
-    Document d = s.document();
-    Selection x = s.selection();
+    var d = s.document();
+    var x = s.selection();
     int i = x.block, j = up ? i - 1 : i + 1;
     if (j < 0 || j >= d.blocks.size()) return false;
     if (!(d.blocks.get(j) instanceof Paragraph))

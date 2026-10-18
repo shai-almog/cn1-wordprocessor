@@ -20,20 +20,21 @@ public class LayoutTest {
 
   @Test
   public void mergedCellsHaveOneSpanningBoxAndPaginateWithoutDroppingText() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.insertTable(2, 2);
     s.setCell(
         1,
         0,
         0,
-        "alpha beta gamma delta epsilon zeta eta theta iota kappa lambda mu nu xi omicron pi rho"
-            + " sigma tau");
+        """
+        alpha beta gamma delta epsilon zeta eta theta iota kappa lambda mu nu xi omicron pi rho\
+         sigma tau""");
     s.setCell(1, 1, 0, "last cell");
     s.mergeCells(1, 0, 0, 2, 1);
-    Document d = s.document().page(new PageSpec(180, 130, 10, 10, 10, 10));
-    LayoutEngine.Result result = engine().layout(d, 0);
+    var d = s.document().page(new PageSpec(180, 130, 10, 10, 10, 10));
+    var result = engine().layout(d, 0);
     assertTrue(result.pages.size() > 1);
-    StringBuilder text = new StringBuilder();
+    var text = new StringBuilder();
     int boxes = 0;
     for (LayoutEngine.Page page : result.pages) {
       for (LayoutEngine.Box box : page.boxes)
@@ -54,11 +55,11 @@ public class LayoutTest {
 
   @Test
   public void scriptGlyphsShrinkWithoutChangingLogicalTextOrBaseLineHeight() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("x2");
     s.select(0, 1, 2);
     s.format("script", "superscript");
-    LayoutEngine.Line line = engine().layout(s.document(), 0).pages.get(0).lines.get(0);
+    var line = engine().layout(s.document(), 0).pages.get(0).lines.get(0);
     assertEquals(9.9, line.width, .001);
     assertEquals(2, line.end);
     assertEquals(14.4, line.height, .001);
@@ -73,13 +74,13 @@ public class LayoutTest {
 
   @Test
   public void mixedFontSizesShareBaselineAndScriptsShiftRelativeToIt() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("aB2");
     s.select(0, 1, 3);
     s.format("size", "24");
     s.select(0, 2, 3);
     s.format("script", "superscript");
-    LayoutEngine.Line line = engine().layout(s.document(), 0).pages.get(0).lines.get(0);
+    var line = engine().layout(s.document(), 0).pages.get(0).lines.get(0);
     assertEquals(12, line.spans.get(0).top, .001);
     assertEquals(0, line.spans.get(1).top, .001);
     assertEquals(0, line.spans.get(2).top, .001);
@@ -92,14 +93,14 @@ public class LayoutTest {
 
   @Test
   public void justifiedLinesReachRightEdgeButFinalAndHardBreakLinesDoNot() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("one two three four five six seven eight nine ten");
     s.paragraph("align", "justify");
-    Document d = s.document().page(new PageSpec(150, 500, 10, 10, 10, 10));
+    var d = s.document().page(new PageSpec(150, 500, 10, 10, 10, 10));
     java.util.List<LayoutEngine.Line> lines = engine().layout(d, 0).pages.get(0).lines;
     assertTrue(lines.size() > 1);
     for (int i = 0; i < lines.size() - 1; i++) {
-      LayoutEngine.Line line = lines.get(i);
+      var line = lines.get(i);
       assertEquals(140, line.x + line.width, .01);
       for (int j = 1; j < line.spans.size(); j++)
         assertEquals(
@@ -114,13 +115,13 @@ public class LayoutTest {
 
   @Test
   public void hangingAndRightIndentsAndCustomTabsAffectGeometry() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("a\tb long words wrap onto a second line and then another");
     s.paragraph("indent", "24");
     s.paragraph("firstIndent", "-12");
     s.paragraph("rightIndent", "18");
     s.paragraph("tabInterval", "24");
-    Document d = s.document().page(new PageSpec(170, 500, 10, 10, 10, 10));
+    var d = s.document().page(new PageSpec(170, 500, 10, 10, 10, 10));
     java.util.List<LayoutEngine.Line> lines = engine().layout(d, 0).pages.get(0).lines;
     assertEquals(22, lines.get(0).x, .01);
     // The hanging first line begins 12pt before the paragraph origin; its tab lands at that origin.
@@ -135,14 +136,14 @@ public class LayoutTest {
 
   @Test
   public void keepLinesMovesWholeParagraphWhenItFitsOnePage() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("Start\nOne two three four five six seven eight nine ten eleven twelve");
     s.select(0, 0, 0);
     s.paragraph("after", "50");
     s.select(1, 0, 0);
     s.paragraph("keepLines", "true");
-    Document d = s.document().page(new PageSpec(180, 120, 10, 10, 10, 10));
-    LayoutEngine.Result result = engine().layout(d, 0);
+    var d = s.document().page(new PageSpec(180, 120, 10, 10, 10, 10));
+    var result = engine().layout(d, 0);
     assertEquals(2, result.pages.size());
     assertEquals(1, result.pages.get(0).lines.size());
     for (LayoutEngine.Line line : result.pages.get(1).lines) assertEquals(1, line.block);
@@ -150,10 +151,10 @@ public class LayoutTest {
 
   @Test
   public void tabsAdvanceToHalfInchStopsAndKeepNextMovesHeading() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("a\tb");
-    LayoutEngine.Result result = engine().layout(s.document(), 0);
-    LayoutEngine.Line line = result.pages.get(0).lines.get(0);
+    var result = engine().layout(s.document(), 0);
+    var line = result.pages.get(0).lines.get(0);
     assertEquals(36, line.spans.get(2).x, .01);
     s = new Session(Document.empty());
     s.replace("Body\nHeading\nFollowing paragraph");
@@ -161,7 +162,7 @@ public class LayoutTest {
     s.paragraph("after", "48");
     s.select(1, 0, 0);
     s.paragraph("keepNext", "true");
-    Document d = s.document().page(new PageSpec(200, 110, 10, 10, 10, 10));
+    var d = s.document().page(new PageSpec(200, 110, 10, 10, 10, 10));
     result = engine().layout(d, 0);
     assertEquals(2, result.pages.size());
     assertEquals(0, result.pages.get(0).lines.get(0).block);
@@ -172,7 +173,7 @@ public class LayoutTest {
   @Test
   public void repeatedGlyphsUseBoundedMeasurementsAcrossParagraphsAndEdits() {
     final int[] calls = {0};
-    LayoutEngine e =
+    var e =
         new LayoutEngine(
             new LayoutEngine.Metrics() {
               public float width(String text, TextStyle s) {
@@ -184,14 +185,14 @@ public class LayoutTest {
                 return 12;
               }
             });
-    Sequence<Block> blocks = new Sequence<Block>();
+    var blocks = new Sequence<Block>();
     for (int i = 0; i < 1000; i++)
       blocks =
           blocks.append(new Paragraph("p" + i, RichText.of("A repeated sentence with words.")));
-    Document d = new Document(blocks, PageSpec.A4, "Test", 1001);
+    var d = new Document(blocks, PageSpec.A4, "Test", 1001);
     e.layout(d, 0);
     assertTrue("Native measurements: " + calls[0], calls[0] < 50);
-    Session s = new Session(d);
+    var s = new Session(d);
     s.select(500, 0, 0);
     s.replace("x");
     assertEquals(1, e.layout(s.document(), s.revision()).measuredParagraphs);
@@ -203,7 +204,7 @@ public class LayoutTest {
 
   @Test
   public void listsNumberOncePerParagraphAndRestartAfterBodyText() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("One long numbered paragraph that wraps onto many lines\nTwo\nBody\nRestart\nBullet");
     s.selectRange(0, 0, 1, 3);
     s.paragraph("list", "number");
@@ -211,10 +212,10 @@ public class LayoutTest {
     s.paragraph("list", "number");
     s.select(4, 0, 0);
     s.paragraph("list", "bullet");
-    Document d = s.document().page(new PageSpec(140, 300, 10, 10, 10, 10));
-    LayoutEngine e = engine();
-    LayoutEngine.Result result = e.layout(d, 0);
-    java.util.List<String> markers = new java.util.ArrayList<String>();
+    var d = s.document().page(new PageSpec(140, 300, 10, 10, 10, 10));
+    var e = engine();
+    var result = e.layout(d, 0);
+    var markers = new java.util.ArrayList<String>();
     int wrapped = 0;
     for (LayoutEngine.Page page : result.pages)
       for (LayoutEngine.Line line : page.lines) {
@@ -232,19 +233,19 @@ public class LayoutTest {
 
   @Test
   public void paginationAndCacheInvalidation() {
-    Session s = new Session(Document.empty());
-    StringBuilder text = new StringBuilder();
+    var s = new Session(Document.empty());
+    var text = new StringBuilder();
     for (int i = 0; i < 1000; i++)
       text.append("Paragraph ").append(i).append(" with a sentence.\n");
     s.replace(text.toString());
-    LayoutEngine e = engine();
-    LayoutEngine.Result a = e.layout(s.document(), s.revision());
+    var e = engine();
+    var a = e.layout(s.document(), s.revision());
     assertTrue(a.pages.size() > 10);
     assertEquals(1001, a.measuredParagraphs);
     assertEquals(0, e.layout(s.document(), s.revision()).measuredParagraphs);
     s.select(500, 0, 0);
     s.replace("Edited ");
-    LayoutEngine.Result b = e.layout(s.document(), s.revision());
+    var b = e.layout(s.document(), s.revision());
     assertEquals(1, b.measuredParagraphs);
     int lines = 0;
     for (LayoutEngine.Page page : b.pages)
@@ -258,11 +259,11 @@ public class LayoutTest {
 
   @Test
   public void longWordMakesProgress() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("Supercalifragilisticexpialidocious😀");
-    Document d = s.document().page(new PageSpec(100, 100, 10, 40, 10, 40));
-    LayoutEngine.Result r = engine().layout(d, 0);
-    StringBuilder b = new StringBuilder();
+    var d = s.document().page(new PageSpec(100, 100, 10, 40, 10, 40));
+    var r = engine().layout(d, 0);
+    var b = new StringBuilder();
     for (LayoutEngine.Page p : r.pages)
       for (LayoutEngine.Line l : p.lines) for (LayoutEngine.Span x : l.spans) b.append(x.text);
     assertEquals(d.plainText(), b.toString());
@@ -270,14 +271,14 @@ public class LayoutTest {
 
   @Test
   public void tallTableSplitsAcrossPages() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.insertTable(1, 2);
-    StringBuilder b = new StringBuilder();
+    var b = new StringBuilder();
     for (int i = 0; i < 500; i++) b.append("long cell ");
     s.setCell(1, 0, 0, b.toString());
-    LayoutEngine.Result r = engine().layout(s.document(), s.revision());
+    var r = engine().layout(s.document(), s.revision());
     assertTrue(r.pages.size() > 1);
-    StringBuilder actual = new StringBuilder();
+    var actual = new StringBuilder();
     for (LayoutEngine.Page p : r.pages)
       for (LayoutEngine.Line l : p.lines)
         if (l.block == 1 && l.column == 0)

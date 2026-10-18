@@ -8,7 +8,7 @@ public class TableLayoutCommandsTest {
   private final Commands commands = new Commands();
 
   private Session fixture() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.insertTable(3, 3);
     for (int r = 0; r < 3; r++) for (int c = 0; c < 3; c++) s.setCell(1, r, c, "r" + r + "c" + c);
     s.enterCell(1, 1, 1);
@@ -22,8 +22,8 @@ public class TableLayoutCommandsTest {
   @Test
   public void insertionMovesCaretAndUndoRestoresOriginalCell() {
     for (String name : new String[] {"RowAbove", "RowBelow", "ColumnLeft", "ColumnRight"}) {
-      Session s = fixture();
-      Document before = s.document();
+      var s = fixture();
+      var before = s.document();
       commands.execute(s, "table.insert" + name);
       boolean row = name.startsWith("Row"),
           after = name.endsWith("Below") || name.endsWith("Right");
@@ -44,9 +44,9 @@ public class TableLayoutCommandsTest {
 
   @Test
   public void selectedRowInsertionAddsSameCountInOneUndoStep() {
-    Session s = fixture();
+    var s = fixture();
     s.selectCells(1, 0, 0, 1, 2);
-    Document before = s.document();
+    var before = s.document();
     commands.execute(s, "table.insertRowBelow");
     assertEquals(5, table(s).rows());
     assertEquals(2, s.cellRow());
@@ -58,7 +58,7 @@ public class TableLayoutCommandsTest {
 
   @Test
   public void rightInsertionUsesMergedCellEdge() {
-    Session s = fixture();
+    var s = fixture();
     s.mergeCells(1, 1, 1, 1, 2);
     s.enterCell(1, 1, 1);
     commands.execute(s, "table.insertColumnRight");
@@ -69,14 +69,14 @@ public class TableLayoutCommandsTest {
 
   @Test
   public void rowAndColumnLimitsAreIndependentAndFailuresAreAtomic() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.insertTable(1, 30);
     for (int column = 30; column < 100; column++) s.tableStructure(1, "insertColumn", column);
     s.enterCell(1, 0, 50);
     commands.execute(s, "table.insertRowBelow");
     assertEquals(2, table(s).rows());
-    Document before = s.document();
-    Selection selection = s.selection();
+    var before = s.document();
+    var selection = s.selection();
     try {
       commands.execute(s, "table.insertColumnRight");
       fail();
@@ -89,11 +89,11 @@ public class TableLayoutCommandsTest {
 
   @Test
   public void distributePreservesCellStylesAndRangeWithUndo() {
-    Session s = fixture();
-    TableFormat.Cell shaded = new TableFormat.Cell(0xff0000, 0, 1, 8, 6, "bottom");
+    var s = fixture();
+    var shaded = new TableFormat.Cell(0xff0000, 0, 1, 8, 6, "bottom");
     s.formatTable(1, table(s).format.column(0, 5).minHeight(1, 64).cell(1, 1, shaded));
     s.selectCells(1, 0, 0, 1, 1);
-    Document before = s.document();
+    var before = s.document();
     commands.execute(s, "table.distributeColumns");
     for (int c = 0; c < 3; c++) assertEquals(1f / 3, table(s).format.columnFraction(c), .0001);
     assertSame(shaded, table(s).format.cell(1, 1));
@@ -111,12 +111,12 @@ public class TableLayoutCommandsTest {
   public void allNineAlignmentsAffectEveryCellParagraphAndPreserveCaretSelection() {
     for (String vertical : new String[] {"top", "center", "bottom"})
       for (String horizontal : new String[] {"Left", "Center", "Right"}) {
-        Session s = fixture();
+        var s = fixture();
         s.setCell(1, 1, 1, "One\nTwo");
         s.enterCell(1, 1, 1);
         s.select(1, 1, 2);
-        Document before = s.document();
-        String value = vertical + horizontal;
+        var before = s.document();
+        var value = vertical + horizontal;
         if (value.equals("centerCenter")) value = "center";
         commands.execute(s, "table.cellAlign", Json.object("value", value));
         assertEquals(vertical, table(s).format.cell(1, 1).vertical);
@@ -134,9 +134,9 @@ public class TableLayoutCommandsTest {
 
   @Test
   public void rectangularAlignmentPreservesRangeAndInvalidValuesDoNothing() {
-    Session s = fixture();
+    var s = fixture();
     s.selectCells(1, 0, 0, 1, 1);
-    Document before = s.document();
+    var before = s.document();
     commands.execute(s, "table.cellAlign", Json.object("value", "bottomRight"));
     assertEquals(1, s.cellSelection().lastRow);
     assertEquals(1, s.cellSelection().lastColumn);
@@ -145,7 +145,7 @@ public class TableLayoutCommandsTest {
         assertEquals(r < 2 && c < 2 ? "bottom" : "top", table(s).format.cell(r, c).vertical);
         assertEquals(r < 2 && c < 2 ? "right" : "left", table(s).cell(r, c).get(0).align);
       }
-    Document aligned = s.document();
+    var aligned = s.document();
     try {
       commands.execute(s, "table.cellAlign", Json.object("value", "garbage"));
       fail();
@@ -158,10 +158,10 @@ public class TableLayoutCommandsTest {
 
   @Test
   public void insertedRowsInheritCaretRowHeightAndCellAppearance() {
-    Session s = fixture();
-    TableFormat.Cell blue = new TableFormat.Cell(0x123456, 0xabcdef, 2, 12, 8, "center");
+    var s = fixture();
+    var blue = new TableFormat.Cell(0x123456, 0xabcdef, 2, 12, 8, "center");
     s.formatTable(1, table(s).format.minHeight(1, 42).cell(1, 1, blue));
-    Document before = s.document();
+    var before = s.document();
     commands.execute(s, "table.insertRowBelow");
     assertEquals(42, table(s).format.minHeight(2), .001);
     assertSame(blue, table(s).format.cell(2, 1));

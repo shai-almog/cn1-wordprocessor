@@ -20,22 +20,21 @@ public final class Citations {
       public void run(int offset, String text, TextStyle style) {}
       public void field(int offset, InlineField f, TextStyle style) {
         if (style.revision != null && !style.revision.inserted()) return;
-        FieldCode code = new FieldCode(f.instruction);
+        var code = new FieldCode(f.instruction);
         if ("CITATION".equals(code.name) && !code.arguments.isEmpty()) tags.add(code.arguments.get(0));
       }
     });
   }
   public static List<CitationSource> ordered(Document d) {
-    Set<String> tags = new LinkedHashSet<String>();
+    var tags = new LinkedHashSet<String>();
     for (Block block : d.blocks) {
-      if (block instanceof Paragraph) collect((Paragraph) block, tags);
-      else if (block instanceof Table) {
-        Table table = (Table) block;
+      if (block instanceof Paragraph paragraph) collect(paragraph, tags);
+      else if (block instanceof Table table) {
         for (int r = 0; r < table.rows(); r++) for (int c = 0; c < table.columns(); c++)
           if (!table.covered(r, c)) for (Paragraph p : table.cell(r, c)) collect(p, tags);
       }
     }
-    List<CitationSource> sources = new ArrayList<CitationSource>();
+    var sources = new ArrayList<CitationSource>();
     if (tags.isEmpty()) sources.addAll(d.bibliography.sources.values());
     else for (String tag : tags) if (d.bibliography.sources.containsKey(tag)) sources.add(d.bibliography.sources.get(tag));
     int style = CitationStyles.index(d.bibliography.style);
@@ -43,19 +42,19 @@ public final class Citations {
     return sources;
   }
   private static String key(CitationSource source, int style) {
-    List<String[]> authors = CitationSource.names(source.get("author"));
+    var authors = CitationSource.names(source.get("author"));
     return (style == 4 || authors.isEmpty() ? source.get("title") : authors.get(0)[0]).toLowerCase();
   }
   public static void refresh(Session session) {
-    Document d = session.document(); int style = CitationStyles.index(d.bibliography.style);
-    List<CitationSource> ordered = ordered(d); Map<String, Integer> numbers = new HashMap<String, Integer>();
+    var d = session.document(); int style = CitationStyles.index(d.bibliography.style);
+    var ordered = ordered(d); var numbers = new HashMap<String, Integer>();
     for (int i = 0; i < ordered.size(); i++) numbers.put(ordered.get(i).tag(), i + 1);
     session.mapFields((paragraph, offset, field) -> {
-      FieldCode code = new FieldCode(field.instruction);
+      var code = new FieldCode(field.instruction);
       if (field.locked || !"CITATION".equals(code.name) || code.arguments.isEmpty()) return field;
       // Preserve fields with unsupported composite/source-suppression switches and their cached result.
       for (String key : code.switches.keySet()) if (!Arrays.asList("p", "l", "*").contains(key)) return field;
-      CitationSource source = d.bibliography.sources.get(code.arguments.get(0));
+      var source = d.bibliography.sources.get(code.arguments.get(0));
       if (source == null) return field.result("Error! Source not found: " + code.arguments.get(0));
       String pages = code.switches.containsKey("p") ? code.switches.get("p") : "";
       return field.result(CitationStyles.citation(source, style, numbers.containsKey(source.tag()) ? numbers.get(source.tag()) : ordered.size() + 1, pages));
@@ -69,7 +68,7 @@ public final class Citations {
     session.transact(s -> { s.bibliography(s.document().bibliography.remove(tag)); update(s); });
   }
   public static void style(Session session, String style) {
-    String canonical = CitationStyles.NAMES[CitationStyles.index(style)];
+    var canonical = CitationStyles.NAMES[CitationStyles.index(style)];
     session.transact(s -> { s.bibliography(s.document().bibliography.style(canonical)); update(s); });
   }
   public static String insert(Session session, String tag, CitationSource source, String pages) {
@@ -90,11 +89,11 @@ public final class Citations {
       refresh(s);
       int[] range = range(s.document());
       if (range == null || DocumentIndex.marker(s.document().paragraph(range[0]), "BIBLIOGRAPHY").locked) return;
-      Selection selected = s.selection();
+      var selected = s.selection();
       String anchor = s.editingDocument().blocks.get(selected.anchorBlock).id(), focus = s.editingDocument().blocks.get(selected.block).id();
       String table = s.inCell() ? s.document().blocks.get(s.cellBlock()).id() : null;
       int row = s.cellRow(), column = s.cellColumn();
-      String title = s.document().paragraph(range[0]).text.plainText();
+      var title = s.document().paragraph(range[0]).text.plainText();
       s.leaveCell(); bibliography(s, title);
       if (table != null) s.enterCell(ReviewComment.block(s.document(), table), row, column);
       int a = ReviewComment.block(s.editingDocument(), anchor), f = ReviewComment.block(s.editingDocument(), focus);
@@ -119,13 +118,13 @@ public final class Citations {
         if (!s.selection().collapsed()) s.replace("");
         if (s.selection().caret > 0) s.replace("\n"); at = s.selection().block;
       }
-      Document d = s.document(); long next = d.nextId; Sequence<Block> blocks = d.blocks;
-      Paragraph header = new Paragraph("p" + next++, RichText.of(heading, TextStyle.DEFAULT.with("bold", "true").with("size", "18"))
+      var d = s.document(); long next = d.nextId; Sequence<Block> blocks = d.blocks;
+      var header = new Paragraph("p" + next++, RichText.of(heading, TextStyle.DEFAULT.with("bold", "true").with("size", "18"))
           .concat(RichText.field(new InlineField("BIBLIOGRAPHY", "", false, false), TextStyle.DEFAULT)))
           .with("style", "BibliographyHeading").with("keepNext", "true");
       blocks = blocks.insert(at, header); int n = 0;
       for (CitationSource source : ordered(d)) {
-        Paragraph p = new Paragraph("p" + next++, RichText.of(CitationStyles.entry(source, style, ++n))).with("style", "Bibliography");
+        var p = new Paragraph("p" + next++, RichText.of(CitationStyles.entry(source, style, ++n))).with("style", "Bibliography");
         if (!CitationStyles.numbered(style)) p = p.with("indent", "36").with("firstIndent", "-36");
         blocks = blocks.insert(at + n, p);
       }

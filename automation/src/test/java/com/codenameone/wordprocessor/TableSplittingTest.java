@@ -9,7 +9,7 @@ public class TableSplittingTest {
   private final Commands commands = new Commands();
 
   private Session fixture() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.insertTable(4, 3);
     for (int r = 0; r < 4; r++) for (int c = 0; c < 3; c++) s.setCell(1, r, c, "r" + r + "c" + c);
     s.enterCell(1, 1, 1);
@@ -21,11 +21,10 @@ public class TableSplittingTest {
   }
 
   private void unique(Document d) {
-    Set<String> ids = new HashSet<String>();
+    var ids = new HashSet<String>();
     for (Block b : d.blocks) {
       assertTrue(ids.add(b.id()));
-      if (b instanceof Table) {
-        Table t = (Table) b;
+      if (b instanceof Table t) {
         for (int r = 0; r < t.rows(); r++)
           for (int c = 0; c < t.columns(); c++)
             for (Paragraph p : t.cell(r, c)) assertTrue(p.id(), ids.add(p.id()));
@@ -35,11 +34,11 @@ public class TableSplittingTest {
 
   @Test
   public void ordinaryCellSplitsAndOtherCellsKeepTheirPhysicalWidths() {
-    Session s = fixture();
+    var s = fixture();
     s.formatTable(1, table(s).format.column(0, 2).column(1, 3).column(2, 5));
-    Document before = s.document();
+    var before = s.document();
     commands.execute(s, "table.split", Json.object("columns", 3));
-    Table t = table(s);
+    var t = table(s);
     assertEquals(5, t.columns());
     assertEquals(1, s.cellColumn());
     assertEquals(1, s.cellRow());
@@ -55,7 +54,7 @@ public class TableSplittingTest {
     assertEquals(.5, t.format.columnFraction(4), .00001);
     for (int c = 1; c <= 3; c++) assertEquals(.1, t.format.columnFraction(c), .00001);
     unique(s.document());
-    Document after = s.document();
+    var after = s.document();
     s.undo();
     assertSame(before, s.document());
     assertEquals(1, s.cellColumn());
@@ -65,13 +64,13 @@ public class TableSplittingTest {
 
   @Test
   public void mergedCellSplitsOnEqualWidthsAndRetainsVerticalSpans() {
-    Session s = fixture();
+    var s = fixture();
     s.mergeCells(1, 1, 0, 2, 2);
     s.enterCell(1, 1, 0);
     s.formatTable(1, table(s).format.column(0, 1).column(1, 3));
     String content = Table.cellText(table(s).cell(1, 0));
     commands.execute(s, "table.split", Json.object("columns", 2));
-    Table t = table(s);
+    var t = table(s);
     assertEquals(4, t.columns());
     assertEquals(2, t.span(1, 0).columns);
     assertEquals(2, t.span(1, 0).rows);
@@ -86,10 +85,10 @@ public class TableSplittingTest {
 
   @Test
   public void existingGridLinesAreReusedAndStylesSurvive() {
-    Session s = fixture();
+    var s = fixture();
     s.mergeCells(1, 1, 0, 1, 2);
     s.enterCell(1, 1, 0);
-    TableFormat.Cell style = new TableFormat.Cell(0x123456, 0xabcdef, 2, 7, 8, "bottom");
+    var style = new TableFormat.Cell(0x123456, 0xabcdef, 2, 7, 8, "bottom");
     s.formatTable(1, table(s).format.cell(1, 0, style).headerRows(1).minHeight(2, 57));
     commands.execute(s, "table.split", Json.object("columns", 2));
     assertEquals(3, table(s).columns());
@@ -102,10 +101,10 @@ public class TableSplittingTest {
 
   @Test
   public void invalidSplitRollsBackCellSelectionAndHistory() {
-    Session s = fixture();
+    var s = fixture();
     s.selectCells(1, 1, 1, 2, 2);
-    Document before = s.document();
-    CellSelection range = s.cellSelection();
+    var before = s.document();
+    var range = s.cellSelection();
     long rev = s.revision();
     for (int n : new int[] {0, -1, 99, 101}) {
       try {
@@ -127,7 +126,7 @@ public class TableSplittingTest {
 
   @Test
   public void defaultSplitAndLegacyUnmergeRemainAvailable() {
-    Session s = fixture();
+    var s = fixture();
     commands.execute(s, "table.split");
     assertEquals(4, table(s).columns());
     s.undo();
@@ -138,11 +137,11 @@ public class TableSplittingTest {
 
   @Test
   public void splitTablePreservesIdsStylesAndUndoRedoCellContext() {
-    Session s = fixture();
+    var s = fixture();
     s.formatTable(1, table(s).format.column(0, 4).minHeight(2, 63).headerRows(2));
     s.enterCell(1, 2, 1);
-    Document before = s.document();
-    Table old = table(s);
+    var before = s.document();
+    var old = table(s);
     commands.execute(s, "table.splitTable");
     Table head = table(s), tail = (Table) s.document().blocks.get(3);
     assertEquals(2, head.rows());
@@ -158,7 +157,7 @@ public class TableSplittingTest {
     for (int r = 0; r < 4; r++)
       for (int c = 0; c < 3; c++) assertSame(old.cell(r, c), (r < 2 ? head : tail).cell(r % 2, c));
     unique(s.document());
-    Document after = s.document();
+    var after = s.document();
     s.undo();
     assertSame(before, s.document());
     assertEquals(2, s.cellRow());
@@ -168,10 +167,10 @@ public class TableSplittingTest {
 
   @Test
   public void splitTableClipsCrossingMergeWithoutDuplicatingItsText() {
-    Session s = fixture();
+    var s = fixture();
     s.mergeCells(1, 0, 0, 4, 2);
     s.enterCell(1, 2, 2);
-    TableFormat.Cell style = new TableFormat.Cell(0x123456, 0, 1, 6, 4, "center");
+    var style = new TableFormat.Cell(0x123456, 0, 1, 6, 4, "center");
     s.formatTable(1, table(s).format.cell(0, 0, style));
     String text = Table.cellText(table(s).cell(0, 0));
     commands.execute(s, "table.splitTable");
@@ -187,9 +186,9 @@ public class TableSplittingTest {
 
   @Test
   public void firstRowSplitIsRejectedWithoutLeavingTheCell() {
-    Session s = fixture();
+    var s = fixture();
     s.enterCell(1, 0, 1);
-    Document before = s.document();
+    var before = s.document();
     try {
       commands.execute(s, "table.splitTable");
       fail();
@@ -202,11 +201,11 @@ public class TableSplittingTest {
 
   @Test
   public void commentsFollowOriginalParagraphsAcrossBothSplits() {
-    Session s = fixture();
+    var s = fixture();
     s.enterCell(1, 2, 1);
     s.select(0, 0, 4);
     s.addComment("Ada", "Keep anchor");
-    String id = s.document().comments.get(0).id;
+    var id = s.document().comments.get(0).id;
     commands.execute(s, "table.split", Json.object("columns", 3));
     s.selectComment(id);
     assertEquals("r2c1", s.selectedText());
@@ -217,14 +216,14 @@ public class TableSplittingTest {
     assertEquals("r2c1", s.selectedText());
   }
   @Test public void newBlankPartsDoNotDuplicateTheOriginalFormattingRevision() {
-    Session s=fixture();s.trackChanges(true);s.trackFormatting(true);s.paragraph("align","right");
+    var s=fixture();s.trackChanges(true);s.trackFormatting(true);s.paragraph("align","right");
     assertNotNull(table(s).cell(1,1).get(0).formatRevision);
     commands.execute(s,"table.split",Json.object("columns",2));
     assertNotNull(table(s).cell(1,1).get(0).formatRevision);
-    Paragraph blank=table(s).cell(1,2).get(0);assertEquals("right",blank.align);assertNull(blank.formatRevision);assertNull(blank.breakRevision);
+    var blank=table(s).cell(1,2).get(0);assertEquals("right",blank.align);assertNull(blank.formatRevision);assertNull(blank.breakRevision);
   }
   @Test public void togglingTrackChangesKeepsTableRangeAndUndoContext() {
-    Session s=fixture();s.selectCells(1,1,0,2,1);String range=s.cellSelection().key();Document before=s.document();
+    var s=fixture();s.selectCells(1,1,0,2,1);var range=s.cellSelection().key();var before=s.document();
     s.trackChanges(true);assertEquals(range,s.cellSelection().key());assertTrue(s.document().trackChanges);assertTrue(s.editingDocument().trackChanges);
     assertEquals(2,s.cellRow());s.undo();assertSame(before,s.document());assertEquals(range,s.cellSelection().key());assertEquals(2,s.cellRow());
   }

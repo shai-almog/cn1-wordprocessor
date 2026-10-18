@@ -29,12 +29,12 @@ public class CrossReferencesTest {
 
   @Test
   public void headingReferencesReuseAnchorsUpdateAndUndoTogether() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("Kilns\nSee ");
     s.select(0, 0, 5);
     s.applyStyle("Heading1");
     s.select(1, 4, 4);
-    Document before = s.document();
+    var before = s.document();
     CrossReferences.insert(s, "heading", "Kilns", "text", engine());
     assertEquals("Kilns\nSee Kilns", s.document().plainText());
     assertEquals(1, s.document().bookmarks.size());
@@ -52,7 +52,7 @@ public class CrossReferencesTest {
 
   @Test
   public void namedBookmarkReferencesFollowSelectionAndDeletedTargetsShowErrors() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("Kilns are hot.\nSee ");
     s.select(0, 0, 5);
     s.addBookmark("Spot");
@@ -66,14 +66,14 @@ public class CrossReferencesTest {
 
   @Test
   public void sameParagraphEndDoesNotIncludeTheInsertedReference() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("Kilns");
     s.select(0, 0, 5);
     s.applyStyle("Heading1");
     s.select(0, 5, 5);
     CrossReferences.insert(s, "heading", "Kilns", "text", engine());
     assertEquals("KilnsKilns", s.document().plainText());
-    Bookmark mark = s.document().bookmarks.values().iterator().next();
+    var mark = s.document().bookmarks.values().iterator().next();
     assertEquals("Kilns", mark.text(s.document()));
     update(s);
     assertEquals("KilnsKilns", s.document().plainText());
@@ -81,7 +81,7 @@ public class CrossReferencesTest {
 
   @Test
   public void captionsAndRelativeReferencesUseRealBookmarks() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("Object");
     s.insertCaption("Figure", "Details", false, "ROMAN", false, 0, "-");
     s.select(0, 6, 6);
@@ -93,7 +93,7 @@ public class CrossReferencesTest {
 
   @Test
   public void pageReferenceUsesSectionRestart() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("Here\nTarget");
     s.select(1, 0, 6);
     s.addBookmark("Spot");
@@ -107,7 +107,7 @@ public class CrossReferencesTest {
 
   @Test
   public void cyclicReferencesStayBoundedAcrossRepeatedUpdates() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("A\nB");
     s.select(0, 1, 1);
     s.insertField(new InlineField("REF B", "old", false, false));
@@ -124,7 +124,7 @@ public class CrossReferencesTest {
 
   @Test
   public void nestedReferencesResolveWithoutDependingOnCachedResults() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("Target\nSee \nOuter ");
     s.select(0, 0, 6);
     s.addBookmark("A");

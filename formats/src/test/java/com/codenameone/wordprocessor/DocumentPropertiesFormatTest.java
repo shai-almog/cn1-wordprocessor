@@ -21,13 +21,13 @@ public class DocumentPropertiesFormatTest {
   @Test
   public void docxCoreAppAndProtection() throws Exception {
     Document d = withProperties();
-    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    var out = new ByteArrayOutputStream();
     Docx.write(d, out);
     Docx.Opened opened = Docx.read(new ByteArrayInputStream(out.toByteArray()));
     assertTrue(opened.warnings.toString(), opened.warnings.isEmpty());
     assertEquals(d.properties, opened.document.properties);
     // Rewriting from the opened package keeps one copy of each property.
-    ByteArrayOutputStream again = new ByteArrayOutputStream();
+    var again = new ByteArrayOutputStream();
     Docx.write(opened.document.properties(opened.document.properties.with("author", "Grace")), opened, again, true);
     Docx.Opened second = Docx.read(new ByteArrayInputStream(again.toByteArray()));
     assertEquals("Grace", second.document.properties.get("author"));

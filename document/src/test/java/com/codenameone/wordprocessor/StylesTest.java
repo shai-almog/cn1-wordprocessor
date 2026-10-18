@@ -15,7 +15,7 @@ public class StylesTest {
 
   @Test
   public void applyingUpdatingAndDeletingPreserveDirectFormattingAndUndo() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("Alpha bold\nBeta");
     s.defineStyle(style("Custom", 18));
     s.selectRange(0, 0, 1, 4);
@@ -24,7 +24,7 @@ public class StylesTest {
     s.format("bold", "true");
     s.select(0, 0, 0);
     s.paragraph("after", "24");
-    Document before = s.document();
+    var before = s.document();
     s.defineStyle(style("Custom", 24));
     assertEquals(24, s.document().paragraph(0).text.styleAt(0).size, 0);
     assertTrue(s.document().paragraph(0).text.styleAt(8).bold);
@@ -43,7 +43,7 @@ public class StylesTest {
 
   @Test
   public void cellStyleUpdatesUseGlobalDefinitionsAndUndoRestoresCellSelection() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.defineStyle(style("Custom", 18));
     s.replace("Body");
     s.applyStyle("Custom");
@@ -67,7 +67,7 @@ public class StylesTest {
 
   @Test
   public void emptyParagraphStyleControlsNewTypingAndPageChangesKeepDefinitions() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.defineStyle(style("Custom", 20));
     s.applyStyle("Custom");
     s.replace("Typed");

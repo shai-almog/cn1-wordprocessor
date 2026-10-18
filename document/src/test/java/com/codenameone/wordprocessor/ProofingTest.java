@@ -15,7 +15,7 @@ public class ProofingTest {
     System.out.println("proofing first-use load ms: " + (System.currentTimeMillis() - t));
     assertTrue(Proofing.suggest("recieve", 5).contains("receive"));
     assertTrue(Proofing.suggest("Wrold", 3).contains("World"));
-    List<Proofing.Issue> issues = Proofing.checkSpelling("Hello wrold", NONE);
+    var issues = Proofing.checkSpelling("Hello wrold", NONE);
     assertEquals(1, issues.size());
     assertEquals(6, issues.get(0).start);
   }
@@ -29,7 +29,7 @@ public class ProofingTest {
 
   @Test
   public void userDictionaryAndIgnoreList() {
-    DocumentProperties p = Document.empty().properties.withSetting(Proofing.DICTIONARY, "wordcraftz").withSetting(Proofing.IGNORE, "qzx");
+    var p = Document.empty().properties.withSetting(Proofing.DICTIONARY, "wordcraftz").withSetting(Proofing.IGNORE, "qzx");
     Proofing.Options o = Proofing.Options.of(p);
     assertTrue(Proofing.isCorrect("Wordcraftz", o));
     assertTrue(Proofing.isCorrect("wordcraftzes", o));
@@ -39,10 +39,10 @@ public class ProofingTest {
 
   @Test
   public void grammar() {
-    List<Proofing.Issue> g = Proofing.checkGrammar("This is a apple. the the cat  sat , here");
-    StringBuilder all = new StringBuilder();
+    var g = Proofing.checkGrammar("This is a apple. the the cat  sat , here");
+    var all = new StringBuilder();
     for (Proofing.Issue i : g) all.append(i.message).append('|');
-    String s = all.toString();
+    var s = all.toString();
     assertTrue(s, s.indexOf("Use \"an\"") >= 0);
     assertTrue(s, s.indexOf("Repeated word") >= 0);
     assertTrue(s, s.indexOf("Capitalize") >= 0);

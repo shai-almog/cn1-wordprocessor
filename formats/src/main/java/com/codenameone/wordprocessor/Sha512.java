@@ -44,13 +44,13 @@ public final class Sha512 {
   private long total;
 
   public static byte[] hash(byte[] data) {
-    Sha512 s = new Sha512();
+    var s = new Sha512();
     s.update(data, 0, data.length);
     return s.digest();
   }
 
   public static byte[] hash(byte[] a, byte[] b) {
-    Sha512 s = new Sha512();
+    var s = new Sha512();
     s.update(a, 0, a.length);
     s.update(b, 0, b.length);
     return s.digest();

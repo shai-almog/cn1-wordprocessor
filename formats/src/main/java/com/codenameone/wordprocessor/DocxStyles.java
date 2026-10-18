@@ -6,7 +6,7 @@ import java.util.*;
 
 /** Resolves document defaults and bounded basedOn chains before applying direct formatting. */
 final class DocxStyles {
-  private final Map<String, Element> definitions = new HashMap<String, Element>();
+  private final Map<String, Element> definitions = new HashMap<>();
   private final Set<String> warnings;
   private Element runDefaults, paragraphDefaults;
   private String defaultParagraph = "Normal";
@@ -48,7 +48,7 @@ final class DocxStyles {
   }
 
   Map<String, String> paragraphNames() {
-    Map<String, String> names = new LinkedHashMap<String, String>();
+    var names = new LinkedHashMap<String, String>();
     for (Map.Entry<String, Element> entry : definitions.entrySet())
       if ("paragraph".equals(Xml.attr(entry.getValue(), "type", ""))) {
         Element name = Xml.child(entry.getValue(), "name");
@@ -63,14 +63,14 @@ final class DocxStyles {
   }
 
   private List<Element> chain(String id) {
-    List<Element> result = new ArrayList<Element>();
-    Set<String> seen = new HashSet<String>();
+    var result = new ArrayList<Element>();
+    var seen = new HashSet<String>();
     while (!id.isEmpty()) {
       if (!seen.add(id) || result.size() >= 64) {
         warnings.add("Cyclic or excessively deep style inheritance: " + id);
         break;
       }
-      Element style = definitions.get(id);
+      var style = definitions.get(id);
       if (style == null) break;
       result.add(0, style);
       Element parent = Xml.child(style, "basedOn");
@@ -80,7 +80,7 @@ final class DocxStyles {
   }
 
   List<Element> paragraphProperties(String id) {
-    List<Element> result = new ArrayList<Element>();
+    var result = new ArrayList<Element>();
     if (paragraphDefaults != null) result.addAll(Xml.children(paragraphDefaults, null));
     for (Element s : chain(id)) {
       Element p = Xml.child(s, "pPr");
@@ -91,7 +91,7 @@ final class DocxStyles {
 
   // Style-chain resolution is the same for every run sharing a paragraph and character
   // style; resolving it per run dominated opening large documents.
-  private final java.util.Map<String, TextStyle> resolved = new java.util.HashMap<String, TextStyle>();
+  private final java.util.Map<String, TextStyle> resolved = new java.util.HashMap<>();
 
   private ParagraphFormat baseFormat;
 
@@ -102,13 +102,13 @@ final class DocxStyles {
     return baseFormat;
   }
 
-  private final Map<Long, Object[]> runs = new HashMap<Long, Object[]>();
+  private final Map<Long, Object[]> runs = new HashMap<>();
 
   TextStyle text(String paragraphStyle, Element direct) {
     Element characterStyle = direct == null ? null : Xml.child(direct, "rStyle");
     String character = characterStyle == null ? null : Xml.attr(characterStyle, "val", "");
-    String key = paragraphStyle + "\u0000" + character;
-    TextStyle result = resolved.get(key);
+    var key = paragraphStyle + "\u0000" + character;
+    var result = resolved.get(key);
     if (result == null) {
       result = apply(TextStyle.DEFAULT, runDefaults, false);
       for (Element s : chain(paragraphStyle)) result = apply(result, Xml.child(s, "rPr"), true);
@@ -124,7 +124,7 @@ final class DocxStyles {
       // Runs repeat a handful of direct formats; reuse one style object per distinct rPr,
       // matched structurally so the lookup allocates nothing.
       long runKey = ((long) key.hashCode() << 32) ^ (Xml.shape(direct) & 0xffffffffL);
-      Object[] hit = runs.get(runKey);
+      var hit = runs.get(runKey);
       if (hit != null && hit[0] == result && Xml.same((Element) hit[1], direct))
         current = (TextStyle) hit[2];
       else {
@@ -134,7 +134,7 @@ final class DocxStyles {
       }
     }
     if (change != null) {
-      TextStyle before = apply(result, Xml.child(change, "rPr"), false);
+      var before = apply(result, Xml.child(change, "rPr"), false);
       current =
           current.formatRevision(
               new Revision(

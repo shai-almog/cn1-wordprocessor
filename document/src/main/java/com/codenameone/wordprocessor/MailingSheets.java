@@ -81,15 +81,15 @@ public final class MailingSheets {
     if (width < 144 || height < 144 || width > 1584 || height > 1584)
       throw new IllegalArgumentException("Envelope dimensions must be 144–1,584 points");
     float w = Math.max(width, height), h = Math.min(width, height);
-    PageSpec page = new PageSpec(w, h, 22, 22, 22, 22);
+    var page = new PageSpec(w, h, 22, 22, 22, 22);
     if (delivery == null)
       delivery =
           s.mergeData().rows.isEmpty()
               ? "Recipient Name\nStreet Address\nCity, ST 00000"
               : s.mergeData().address(s.mergeData().record);
-    Document old = s.document();
+    var old = s.document();
     long next = old.nextId;
-    Sequence<Block> blocks = new Sequence<Block>();
+    var blocks = new Sequence<Block>();
     String[] returns = returned.isEmpty() ? new String[0] : lines(returned);
     for (String line : returns) blocks = blocks.append(paragraph("p" + next++, line, 10));
     int spacer = Math.max(1, 6 - Math.min(returns.length, 6)) + 2;
@@ -97,15 +97,15 @@ public final class MailingSheets {
     for (String line : lines(delivery))
       blocks = blocks.append(paragraph("p" + next++, line, 12).with("indent", "" + (w * .42f)));
     if (blocks.size() == 0) blocks = blocks.append(paragraph("p" + next++, "", 12));
-    String boundary = blocks.get(blocks.size() - 1).id();
-    Section envelope = new Section(page, PageFurniture.EMPTY, "nextPage", 0);
+    var boundary = blocks.get(blocks.size() - 1).id();
+    var envelope = new Section(page, PageFurniture.EMPTY, "nextPage", 0);
     Document output;
     if (add) {
       for (Block b : old.blocks) blocks = blocks.append(b);
-      Map<String, Section> sections = new LinkedHashMap<String, Section>(old.sections);
+      var sections = new LinkedHashMap<String, Section>(old.sections);
       sections.put(boundary, envelope);
-      Section.Range first = old.sectionRanges().get(0);
-      Section last = old.lastSection;
+      var first = old.sectionRanges().get(0);
+      var last = old.lastSection;
       if (old.sections.containsKey(old.blocks.get(first.last).id()))
         sections.put(old.blocks.get(first.last).id(), first.raw.start("nextPage"));
       else last = last.start("nextPage");
@@ -128,7 +128,7 @@ public final class MailingSheets {
       int singleColumn) {
     int index = Arrays.asList(PRODUCTS).indexOf(product);
     if (index < 0) throw new IllegalArgumentException("Unknown label product");
-    float[] p = LABELS[index];
+    var p = LABELS[index];
     if (rows == 0) rows = (int) p[1];
     if (columns == 0) columns = (int) p[0];
     if (rows < 1 || rows > 40 || columns < 1 || columns > 10)
@@ -149,7 +149,7 @@ public final class MailingSheets {
       throw new IllegalArgumentException("Label grid does not fit the selected sheet");
     int gridColumns = gap > .5f ? columns * 2 - 1 : columns;
     long next = s.document().nextId;
-    TableFormat format = new TableFormat(rows, gridColumns);
+    var format = new TableFormat(rows, gridColumns);
     for (int c = 0; c < gridColumns; c++)
       format = format.column(c, gap > .5f && c % 2 == 1 ? gap : p[2]);
     for (int row = 0; row < rows; row++) {
@@ -168,22 +168,22 @@ public final class MailingSheets {
             : 1;
     if ((long) sheets * rows * gridColumns > 200000)
       throw new IllegalArgumentException("Too many labels; select fewer recipients");
-    PageSpec page = new PageSpec(pageW, pageH, p[4], Math.max(0, pageW - p[5] - used), 0, p[5]);
-    PageFurniture furniture =
+    var page = new PageSpec(pageW, pageH, p[4], Math.max(0, pageW - p[5] - used), 0, p[5]);
+    var furniture =
         new PageFurniture(Collections.<String, Sequence<Paragraph>>emptyMap(), false, false, 0, 0);
-    Section section = new Section(page, furniture, "nextPage", 0);
-    Map<String, Section> sections = new LinkedHashMap<String, Section>();
-    Sequence<Block> blocks = new Sequence<Block>();
+    var section = new Section(page, furniture, "nextPage", 0);
+    var sections = new LinkedHashMap<String, Section>();
+    var blocks = new Sequence<Block>();
     int record = 0, filled = 0;
     long textSize = 0;
     for (int sheet = 0; sheet < sheets; sheet++) {
-      List<List<Sequence<Paragraph>>> cells = new ArrayList<List<Sequence<Paragraph>>>();
+      var cells = new ArrayList<List<Sequence<Paragraph>>>();
       for (int row = 0; row < rows; row++) {
-        List<Sequence<Paragraph>> values = new ArrayList<Sequence<Paragraph>>();
+        var values = new ArrayList<Sequence<Paragraph>>();
         for (int c = 0; c < gridColumns; c++) {
           boolean spacer = gap > .5f && c % 2 == 1;
           int labelColumn = gap > .5f ? c / 2 : c;
-          String value = "";
+          var value = "";
           if (!spacer
               && (singleRow == 0 || singleRow == row + 1 && singleColumn == labelColumn + 1)) {
             if (!fromRecipients) value = text;
@@ -193,21 +193,21 @@ public final class MailingSheets {
           if ((textSize += value.length()) > 16000000)
             throw new IllegalArgumentException(
                 "Label output is too large; select fewer recipients");
-          Sequence<Paragraph> story = new Sequence<Paragraph>();
+          var story = new Sequence<Paragraph>();
           for (String line : lines(value)) story = story.append(paragraph("p" + next++, line, 12));
           if (story.size() == 0) story = story.append(paragraph("p" + next++, "", 12));
           values.add(story);
         }
         cells.add(values);
       }
-      Table table = new Table("t" + next++, cells, Collections.<Table.Merge>emptyList(), format);
+      var table = new Table("t" + next++, cells, Collections.<Table.Merge>emptyList(), format);
       // Word requires a paragraph after a table. Keep the sheet boundary small enough
       // to fit below the last label, without inserting a blank sheet during pagination.
       Paragraph boundary = paragraph("p" + next++, "", 1);
       blocks = blocks.append(table).append(boundary);
       if (sheet + 1 < sheets) sections.put(boundary.id, section);
     }
-    Document output = new Document(blocks, page, "Labels", next).sections(sections, section);
+    var output = new Document(blocks, page, "Labels", next).sections(sections, section);
     s.replaceDocument(output);
     return filled;
   }

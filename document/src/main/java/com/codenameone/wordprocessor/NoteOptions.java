@@ -70,7 +70,7 @@ public final class NoteOptions {
     if ("chicago".equals(format) || format.endsWith("Letter")) {
       String alphabet = "chicago".equals(format) ? "*†‡§" : "abcdefghijklmnopqrstuvwxyz";
       int repeat = Math.min(40, (number - 1) / alphabet.length() + 1);
-      StringBuilder out = new StringBuilder();
+      var out = new StringBuilder();
       for (int i = 0; i < repeat; i++) out.append(alphabet.charAt((number - 1) % alphabet.length()));
       return "upperLetter".equals(format) ? out.toString().toUpperCase() : out.toString();
     }

@@ -36,7 +36,7 @@ public final class TextComparison {
     Token(String text, int start, int end, boolean caseChanges, boolean whiteSpace) {
       this.start = start;
       this.end = end;
-      String value = text.substring(start, end);
+      var value = text.substring(start, end);
       if (!whiteSpace && whitespace(value)) value = " ";
       key = caseChanges ? value : value.toLowerCase();
     }
@@ -66,7 +66,7 @@ public final class TextComparison {
     if (s.length() > 2000000)
       throw new IllegalArgumentException(
           "Comparison is limited to two million characters per document");
-    List<Token> out = new ArrayList<Token>();
+    var out = new ArrayList<Token>();
     for (int i = 0; i < s.length(); ) {
       int end = codeEnd(s, i), type = type(s.charAt(i));
       if ((!chars && type < 2) || !space && type == 0)
@@ -96,7 +96,7 @@ public final class TextComparison {
       ae--;
       be--;
     }
-    List<int[]> matches = new ArrayList<int[]>();
+    var matches = new ArrayList<int[]>();
     for (int i = 0; i < prefix; i++) matches.add(new int[] {i, i});
     int n = ae - prefix, m = be - prefix;
     boolean coarse = (long) n * m > 4000000;
@@ -117,13 +117,13 @@ public final class TextComparison {
       }
     }
     while (ae < a.size()) matches.add(new int[] {ae++, be++});
-    List<Edit> edits = new ArrayList<Edit>();
+    var edits = new ArrayList<Edit>();
     int from = 0, to = 0;
     for (int[] match : matches) {
       Token x = a.get(match[0]), y = b.get(match[1]);
       if (from != x.start || to != y.start) edits.add(new Edit(from, x.start, to, y.start, false));
       if (!edits.isEmpty() && edits.get(edits.size() - 1).same) {
-        Edit prior = edits.remove(edits.size() - 1);
+        var prior = edits.remove(edits.size() - 1);
         edits.add(new Edit(prior.from, x.end, prior.revisedFrom, y.end, true));
       } else edits.add(new Edit(x.start, x.end, y.start, y.end, true));
       from = x.end;

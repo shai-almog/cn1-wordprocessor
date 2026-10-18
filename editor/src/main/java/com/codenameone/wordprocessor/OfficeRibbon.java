@@ -12,14 +12,14 @@ final class OfficeRibbon extends Container {
   private final Container tabs = OfficeTheme.row(), body = new Container(new BorderLayout());
   private final Container strip = new Container(new BorderLayout());
   private boolean collapsed, selecting;
-  private final ComboBox<String> mobileTabs = new ComboBox<String>();
+  private final ComboBox<String> mobileTabs = new ComboBox<>();
   private final Button collapse = new Button("\u2303");
-  private final List<Button> buttons = new ArrayList<Button>();
-  private final List<String> titles = new ArrayList<String>();
-  private final List<Boolean> visibility = new ArrayList<Boolean>();
-  private final List<Integer> mobileIndices = new ArrayList<Integer>();
+  private final List<Button> buttons = new ArrayList<>();
+  private final List<String> titles = new ArrayList<>();
+  private final List<Boolean> visibility = new ArrayList<>();
+  private final List<Integer> mobileIndices = new ArrayList<>();
   private int selectedIndex;
-  private final List<Container> pages = new ArrayList<Container>();
+  private final List<Container> pages = new ArrayList<>();
 
   /** Active tab: a 3pt rounded accent bar, 16pt narrower than the tab, 2pt above its bottom. */
   private static final Border INDICATOR =
@@ -66,7 +66,7 @@ final class OfficeRibbon extends Container {
   }
 
   void addActionTab(String title, Runnable action) {
-    Button b = new Button(title);
+    var b = new Button(title);
     OfficeTheme.button(b);
     OfficeTheme.space(b, 6, 6, 9, 9);
     b.getAllStyles().setFont(OfficeTheme.font(12.5f, false));
@@ -88,7 +88,7 @@ final class OfficeRibbon extends Container {
       selecting = false;
       return;
     }
-    Button b = new Button(title);
+    var b = new Button(title);
     OfficeTheme.button(b);
     OfficeTheme.space(b, 6, 6, 9, 9);
     b.getAllStyles().setFont(OfficeTheme.font(12.5f, false));
@@ -159,7 +159,7 @@ final class OfficeRibbon extends Container {
     // A page that was detached when the appearance last changed still has the old colors.
     OfficeTheme.applyAppearance(pages.get(index));
     for (int i = 0; i < buttons.size(); i++) {
-      Button b = buttons.get(i);
+      var b = buttons.get(i);
       boolean selected = i == index;
       b.getSemantics().setSelected(Boolean.valueOf(selected));
       b.getUnselectedStyle().setFgColor(selected ? OfficeTheme.ACCENT_TEXT : OfficeTheme.INK);

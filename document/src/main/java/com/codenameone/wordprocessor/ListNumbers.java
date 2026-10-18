@@ -27,7 +27,7 @@ public final class ListNumbers {
 
   /** Expands Word lvlText: %1..%9 are the counters of levels 1..9 in each level's format. */
   private String label(String text, int level) {
-    StringBuilder b = new StringBuilder();
+    var b = new StringBuilder();
     for (int i = 0; i < text.length(); i++) {
       char c = text.charAt(i);
       if (c == '%' && i + 1 < text.length() && text.charAt(i + 1) >= '1' && text.charAt(i + 1) <= '9') {
@@ -52,7 +52,7 @@ public final class ListNumbers {
     String base = bar < 0 ? listFormat : listFormat.substring(0, bar);
     if (!BASES.contains(base)) return false;
     if (bar < 0) return true;
-    String t = listFormat.substring(bar + 1);
+    var t = listFormat.substring(bar + 1);
     return !t.isEmpty() && t.length() <= 40 && t.indexOf('|') < 0 && t.indexOf('\n') < 0;
   }
 
@@ -80,7 +80,7 @@ public final class ListNumbers {
     String t = template(listFormat);
     if (t != null) return t;
     if ("legal".equals(base(listFormat))) {
-      StringBuilder b = new StringBuilder();
+      var b = new StringBuilder();
       for (int i = 1; i <= level + 1; i++) b.append('%').append(i).append('.');
       return b.toString();
     }
@@ -96,7 +96,7 @@ public final class ListNumbers {
   public static String format(int number, String format) {
     format = levelFormat(format, 0);
     if (format.endsWith("Letter")) {
-      String s = "";
+      var s = "";
       int n = number;
       do {
         n--;
@@ -108,7 +108,7 @@ public final class ListNumbers {
     if (format.endsWith("Roman") && number <= 3999) {
       int[] values = {1000, 900, 500, 400, 100, 90, 50, 40, 10, 9, 5, 4, 1};
       String[] symbols = {"M", "CM", "D", "CD", "C", "XC", "L", "XL", "X", "IX", "V", "IV", "I"};
-      StringBuilder b = new StringBuilder();
+      var b = new StringBuilder();
       for (int i = 0; i < values.length; i++)
         while (number >= values[i]) {
           b.append(symbols[i]);

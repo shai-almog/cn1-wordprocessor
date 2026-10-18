@@ -11,11 +11,11 @@ public class PictureTest {
   static byte[] png(
       int bits, int type, int width, int height, byte[] rows, byte[] palette, byte[] alpha)
       throws Exception {
-    ByteArrayOutputStream bytes = new ByteArrayOutputStream();
-    DataOutputStream out = new DataOutputStream(bytes);
+    var bytes = new ByteArrayOutputStream();
+    var out = new DataOutputStream(bytes);
     out.writeLong(0x89504e470d0a1a0aL);
-    ByteArrayOutputStream header = new ByteArrayOutputStream();
-    DataOutputStream h = new DataOutputStream(header);
+    var header = new ByteArrayOutputStream();
+    var h = new DataOutputStream(header);
     h.writeInt(width);
     h.writeInt(height);
     h.writeByte(bits);
@@ -24,8 +24,8 @@ public class PictureTest {
     chunk(out, "IHDR", header.toByteArray());
     if (palette != null) chunk(out, "PLTE", palette);
     if (alpha != null) chunk(out, "tRNS", alpha);
-    ByteArrayOutputStream compressed = new ByteArrayOutputStream();
-    DeflaterOutputStream z = new DeflaterOutputStream(compressed);
+    var compressed = new ByteArrayOutputStream();
+    var z = new DeflaterOutputStream(compressed);
     z.write(rows);
     z.close();
     chunk(out, "IDAT", compressed.toByteArray());
@@ -34,11 +34,11 @@ public class PictureTest {
   }
 
   static void chunk(DataOutputStream out, String name, byte[] data) throws Exception {
-    byte[] tag = name.getBytes("ISO-8859-1");
+    var tag = name.getBytes("ISO-8859-1");
     out.writeInt(data.length);
     out.write(tag);
     out.write(data);
-    CRC32 crc = new CRC32();
+    var crc = new CRC32();
     crc.update(tag);
     crc.update(data);
     out.writeInt((int) crc.getValue());
@@ -51,13 +51,13 @@ public class PictureTest {
 
   @Test
   public void insertionSplitsSelectionUndoAndFormatsRoundTrip() throws Exception {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("Before replace After");
     s.select(0, 7, 14);
-    Document before = s.document();
+    var before = s.document();
     byte[] original = rgba();
     s.insertPicture(original, 120, 60, "Red & blue");
-    Document inserted = s.document();
+    var inserted = s.document();
     assertEquals("Before ", inserted.paragraph(0).text.toString());
     assertEquals(" After", inserted.paragraph(2).text.toString());
     assertEquals(2, s.selection().block);
@@ -66,23 +66,23 @@ public class PictureTest {
     s.redo();
     assertSame(inserted, s.document());
     s.updatePicture(1, 180, 90, "Red & blue", "center", false);
-    Picture picture = (Picture) s.document().blocks.get(1);
+    var picture = (Picture) s.document().blocks.get(1);
     assertArrayEquals(original, picture.bytes());
     original[0] = 0;
     assertEquals(137, picture.bytes()[0] & 255);
     Document nativeCopy = DocumentXml.read(DocumentXml.write(s.document()));
     assertEquals(DocumentXml.write(s.document()), DocumentXml.write(nativeCopy));
-    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    var out = new ByteArrayOutputStream();
     Docx.write(s.document(), out);
     Docx.Opened opened = Docx.read(new ByteArrayInputStream(out.toByteArray()));
     assertTrue(opened.warnings.toString(), opened.warnings.isEmpty());
-    Picture copy = (Picture) opened.document.blocks.get(1);
+    var copy = (Picture) opened.document.blocks.get(1);
     assertArrayEquals(picture.bytes(), copy.bytes());
     assertEquals(180, copy.width, .001);
     assertEquals(90, copy.height, .001);
     assertEquals("center", copy.align);
     assertEquals(picture.alt, copy.alt);
-    Session edited = new Session(opened.document);
+    var edited = new Session(opened.document);
     edited.replace("Edit ");
     out.reset();
     Docx.write(edited.document(), opened, out, false);
@@ -100,17 +100,17 @@ public class PictureTest {
 
   @Test
   public void layoutMovesPictureToNextPageAndFitsWithoutDistortion() throws Exception {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("Text");
     s.insertPicture(rgba(), 800, 400, "test");
-    Document d = s.document().page(new PageSpec(220, 120, 10, 10, 10, 10));
-    LayoutEngine.Result layout = new LayoutEngine(new PdfMetrics()).layout(d, 0);
+    var d = s.document().page(new PageSpec(220, 120, 10, 10, 10, 10));
+    var layout = new LayoutEngine(new PdfMetrics()).layout(d, 0);
     assertTrue(layout.pages.size() >= 2);
-    LayoutEngine.PlacedPicture placed = layout.pages.get(1).pictures.get(0);
+    var placed = layout.pages.get(1).pictures.get(0);
     assertEquals(200, placed.width, .001);
     assertEquals(100, placed.height, .001);
     assertEquals(10, placed.y, .001);
-    String pdf = new String(PdfExporter.write(d), "ISO-8859-1");
+    var pdf = new String(PdfExporter.write(d), "ISO-8859-1");
     assertTrue(pdf.contains("/Subtype /Image"));
     assertTrue(pdf.contains("/SMask"));
     assertTrue(pdf.contains("/Im0 Do"));
@@ -123,7 +123,7 @@ public class PictureTest {
   public void pngPixelsAndAlphaDecodeExactlyForAllFilters() throws Exception {
     // Two identical RGBA pixels repeated over five rows, one row per PNG filter.
     byte[] raw = {(byte) 250, 10, 30, (byte) 255, 20, 40, 60, 80};
-    ByteArrayOutputStream rows = new ByteArrayOutputStream();
+    var rows = new ByteArrayOutputStream();
     for (int filter = 0; filter < 5; filter++) {
       rows.write(filter);
       for (int x = 0; x < raw.length; x++) {
@@ -146,7 +146,7 @@ public class PictureTest {
       }
     }
     byte[] data = png(8, 6, 2, 5, rows.toByteArray(), null, null);
-    PdfPictures.Png result = new PdfPictures.Png(data, new Picture("i1", data, 20, 50, "", "left"));
+    var result = new PdfPictures.Png(data, new Picture("i1", data, 20, 50, "", "left"));
     for (int row = 0; row < 5; row++) {
       assertArrayEquals(
           new byte[] {(byte) 250, 10, 30, 20, 40, 60},
@@ -167,7 +167,7 @@ public class PictureTest {
             new byte[] {0, 64},
             new byte[] {(byte) 255, 0, 0, 0, (byte) 255, 0},
             new byte[] {0, (byte) 255});
-    PdfPictures.Png result = new PdfPictures.Png(data, new Picture("i1", data, 2, 1, "", "left"));
+    var result = new PdfPictures.Png(data, new Picture("i1", data, 2, 1, "", "left"));
     assertArrayEquals(new byte[] {(byte) 255, 0, 0, 0, (byte) 255, 0}, result.rgb);
     assertArrayEquals(new byte[] {0, (byte) 255}, result.alpha);
     data = png(16, 0, 2, 1, new byte[] {0, 0, 0, (byte) 255, (byte) 255}, null, new byte[] {0, 0});
@@ -178,27 +178,27 @@ public class PictureTest {
 
   @Test
   public void jpegIsEmbeddedWithoutRecompression() throws Exception {
-    java.awt.image.BufferedImage bitmap =
+    var bitmap =
         new java.awt.image.BufferedImage(3, 2, java.awt.image.BufferedImage.TYPE_INT_RGB);
     bitmap.setRGB(0, 0, 0xff0000);
-    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    var out = new ByteArrayOutputStream();
     javax.imageio.ImageIO.write(bitmap, "jpeg", out);
-    byte[] data = out.toByteArray();
-    Picture p = new Picture("i1", data, 30, 20, "", "left");
+    var data = out.toByteArray();
+    var p = new Picture("i1", data, 30, 20, "", "left");
     assertEquals(3, p.pixelWidth);
     assertEquals(2, p.pixelHeight);
     assertEquals("image/jpeg", p.mime);
-    List<byte[]> objects = new ArrayList<byte[]>();
+    var objects = new ArrayList<byte[]>();
     PdfPictures.add(objects, p);
-    String object = new String(objects.get(0), "ISO-8859-1");
+    var object = new String(objects.get(0), "ISO-8859-1");
     assertTrue(object.contains("/DCTDecode"));
     assertTrue(object.contains(new String(data, "ISO-8859-1")));
   }
 
   @Test
   public void malformedPicturesFailWithoutMutatingDocument() throws Exception {
-    Session s = new Session(Document.empty());
-    Document d = s.document();
+    var s = new Session(Document.empty());
+    var d = s.document();
     try {
       s.insertPicture(new byte[40], 10, 10, "");
       fail();

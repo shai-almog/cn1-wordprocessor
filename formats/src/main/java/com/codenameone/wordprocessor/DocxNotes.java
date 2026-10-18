@@ -7,8 +7,8 @@ import java.util.*;
 /** Standard footnote/endnote package parts. Note stories own their scoped relationships. */
 final class DocxNotes {
   private static final String W = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
-  private final Map<String, Note> imported = new HashMap<String, Note>();
-  private final Map<String, Integer> ids = new LinkedHashMap<String, Integer>();
+  private final Map<String, Note> imported = new HashMap<>();
+  private final Map<String, Integer> ids = new LinkedHashMap<>();
   private final List<Note> notes;
 
   DocxNotes(Document document) {
@@ -20,14 +20,14 @@ final class DocxNotes {
       throws IOException {
     notes = Collections.emptyList();
     for (String kind : new String[] {"footnote", "endnote"}) {
-      byte[] bytes = parts.get("word/" + kind + "s.xml");
+      var bytes = parts.get("word/" + kind + "s.xml");
       if (bytes == null) continue;
-      DocxLinks links = new DocxLinks(parts, "word/_rels/" + kind + "s.xml.rels");
+      var links = new DocxLinks(parts, "word/_rels/" + kind + "s.xml.rels");
       DocxLists.Read lists = DocxLists.read(parts.get("word/numbering.xml"), warnings);
       for (Element entry : Xml.children(Xml.parse(bytes), kind)) {
         String type = Xml.attr(entry, "type", "normal"), key = Xml.attr(entry, "id", "");
         if (!"normal".equals(type)) continue;
-        Sequence<Paragraph> paragraphs = new Sequence<Paragraph>();
+        var paragraphs = new Sequence<Paragraph>();
         for (Element child : Xml.children(entry, null)) {
           if (!"p".equals(Xml.local(child))) { warnings.add("Note content: " + Xml.local(child)); continue; }
           Paragraph p = Docx.paragraph(child, next, warnings, lists, styles, links,
@@ -52,12 +52,12 @@ final class DocxNotes {
   }
 
   Note read(String kind, String id, String mark, Set<String> warnings) {
-    Note note = imported.get(kind + id);
+    var note = imported.get(kind + id);
     if (note == null) throw new IllegalArgumentException("Missing " + kind + " " + id);
     if (mark.isEmpty()) return note;
     Sequence<Paragraph> story = note.paragraphs;
-    Paragraph first = story.get(0);
-    String prefix = first.text.toString();
+    var first = story.get(0);
+    var prefix = first.text.toString();
     if (prefix.startsWith(mark)) {
       int skip = mark.length();
       if (skip < prefix.length() && (prefix.charAt(skip) == ' ' || prefix.charAt(skip) == '\t')) skip++;
@@ -67,9 +67,9 @@ final class DocxNotes {
   }
 
   void reference(StringBuilder out, Note note, TextStyle style, DocxLinks links) {
-    Integer id = ids.get(note.id);
+    var id = ids.get(note.id);
     if (id == null) throw new IllegalArgumentException("Note outside document body");
-    String content = "<w:" + note.kind + "Reference w:id=\"" + id + "\""
+    var content = "<w:" + note.kind + "Reference w:id=\"" + id + "\""
         + (note.mark.isEmpty() ? "" : " w:customMarkFollows=\"1\"") + "/>"
         + (note.mark.isEmpty() ? "" : "<w:t>" + Xml.escape(note.mark) + "</w:t>");
     RevisionFormats.start(out, style.revision);
@@ -82,21 +82,21 @@ final class DocxNotes {
   void packageParts(Map<String, byte[]> parts, DocxLists lists, DocxTabs tabs) throws IOException {
     for (String kind : new String[] {"footnote", "endnote"}) {
       String name = kind + "s", path = "word/" + name + ".xml";
-      StringBuilder out = new StringBuilder("<w:" + name + " xmlns:w=\"" + W
+      var out = new StringBuilder("<w:" + name + " xmlns:w=\"" + W
           + "\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\">");
       out.append("<w:").append(kind).append(" w:type=\"separator\" w:id=\"-1\"><w:p><w:r><w:separator/></w:r></w:p></w:").append(kind).append(">");
-      DocxLinks links = new DocxLinks(parts, "word/_rels/" + name + ".xml.rels");
+      var links = new DocxLinks(parts, "word/_rels/" + name + ".xml.rels");
       for (Note note : notes) {
         if (!kind.equals(note.kind)) continue;
         out.append("<w:").append(kind).append(" w:id=\"").append(ids.get(note.id)).append("\">");
         boolean first = true;
         for (Paragraph original : note.paragraphs) {
-          Paragraph p = original;
+          var p = original;
           if (first) {
             // Write the paragraph normally, then inject the reference mark after its properties.
-            StringBuilder paragraph = new StringBuilder();
+            var paragraph = new StringBuilder();
             Docx.writeParagraph(paragraph, p, lists, tabs, links, new DocxComments(Document.empty()));
-            String xml = paragraph.toString();
+            var xml = paragraph.toString();
             int at = xml.indexOf("</w:pPr>"); at = at < 0 ? xml.indexOf('>') + 1 : at + 8;
             String marker = note.mark.isEmpty() ? "<w:" + kind + "Ref/>" : "<w:t>" + Xml.escape(note.mark) + "</w:t>";
             out.append(xml.substring(0, at)).append("<w:r>");

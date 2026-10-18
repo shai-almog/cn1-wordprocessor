@@ -31,7 +31,7 @@ public final class TabStop {
   public static List<TabStop> normalized(List<TabStop> source) {
     if (source == null || source.size() > 64)
       throw new IllegalArgumentException("At most 64 tab stops");
-    List<TabStop> result = new ArrayList<TabStop>();
+    var result = new ArrayList<TabStop>();
     for (TabStop stop : source) {
       if (stop == null) throw new IllegalArgumentException("Missing tab stop");
       int i = 0;
@@ -43,7 +43,7 @@ public final class TabStop {
   }
 
   public static String encode(List<TabStop> stops) {
-    StringBuilder s = new StringBuilder();
+    var s = new StringBuilder();
     for (TabStop t : stops) {
       if (s.length() > 0) s.append(';');
       s.append(t.position).append(',').append(t.alignment).append(',').append(t.leader);
@@ -52,7 +52,7 @@ public final class TabStop {
   }
 
   public static List<TabStop> decode(String value) {
-    List<TabStop> stops = new ArrayList<TabStop>();
+    var stops = new ArrayList<TabStop>();
     if (!value.isEmpty())
       for (String item : TextUtil.split(value, ';')) {
         String[] p = TextUtil.split(item, ',');

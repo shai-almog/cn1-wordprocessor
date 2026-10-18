@@ -10,7 +10,7 @@ public final class Benchmark {
     int iterations = args.length > 1 ? Integer.parseInt(args[1]) : 100;
     if (paragraphs < 1 || paragraphs > 100000 || iterations < 10 || iterations > 10000)
       throw new IllegalArgumentException("Invalid benchmark size");
-    Sequence<Block> blocks = new Sequence<Block>();
+    var blocks = new Sequence<Block>();
     for (int i = 0; i < paragraphs; i++)
       blocks =
           blocks.append(
@@ -22,9 +22,9 @@ public final class Benchmark {
                           + ". A portable document engine should keep typing responsive as"
                           + " documents grow. This deterministic fixture measures editing and"
                           + " layout work, independently of window rendering.")));
-    Document doc = new Document(blocks, PageSpec.A4, "Benchmark " + paragraphs, paragraphs + 1);
-    Session session = new Session(doc);
-    LayoutEngine engine =
+    var doc = new Document(blocks, PageSpec.A4, "Benchmark " + paragraphs, paragraphs + 1);
+    var session = new Session(doc);
+    var engine =
         new LayoutEngine(
             new LayoutEngine.Metrics() {
               public float width(String text, TextStyle s) {
@@ -35,7 +35,7 @@ public final class Benchmark {
                 return s.size * 1.2f;
               }
             });
-    LayoutEngine.Result layout = engine.layout(doc, 0);
+    var layout = engine.layout(doc, 0);
     for (int i = 0; i < 40; i++) edit(session, engine, paragraphs, i);
     long[] editTimes = new long[iterations],
         layoutTimes = new long[iterations],
@@ -49,14 +49,14 @@ public final class Benchmark {
       session.replace("x");
       editTimes[i] = System.nanoTime() - start;
       start = System.nanoTime();
-      LayoutEngine.Result result = engine.layout(session.document(), session.revision());
+      var result = engine.layout(session.document(), session.revision());
       layoutTimes[i] = System.nanoTime() - start;
       measured = Math.max(measured, result.measuredParagraphs);
       session.undo();
       engine.layout(session.document(), session.revision());
     }
     for (int i = 0; i < iterations; i++) {
-      ByteArrayOutputStream out = new ByteArrayOutputStream();
+      var out = new ByteArrayOutputStream();
       long start = System.nanoTime();
       Docx.write(doc, out);
       saveTimes[i] = System.nanoTime() - start;
@@ -65,7 +65,7 @@ public final class Benchmark {
       Docx.read(new ByteArrayInputStream(bytes));
       openTimes[i] = System.nanoTime() - start;
     }
-    Map<String, Object> result =
+    var result =
         Json.object(
             "schema",
             1,
@@ -103,7 +103,7 @@ public final class Benchmark {
             false);
     System.out.println(Json.write(result));
     if (args.length > 2) {
-      try (FileOutputStream out = new FileOutputStream(args[2])) {
+      try (var out = new FileOutputStream(args[2])) {
         out.write(bytes);
       }
     }

@@ -15,14 +15,14 @@ public final class TextFormats {
   public static Document read(String text, RichTextFormat format) {
     HtmlImporter.Result r = RichTextImporter.parse(text, format);
     String[] lines = TextUtil.split(r.getText(), '\n');
-    Sequence<Block> blocks = new Sequence<Block>();
+    var blocks = new Sequence<Block>();
     int offset = 0;
     for (int i = 0; i < lines.length; i++) {
-      RichText content = new RichText();
+      var content = new RichText();
       int a = 0;
       while (a < lines[i].length()) {
         int b = a + 1;
-        com.codename1.ui.editor.TextStyle source = r.getStyles().get(offset + a);
+        var source = r.getStyles().get(offset + a);
         while (b < lines[i].length() && r.getStyles().get(offset + b).equals(source)) b++;
         TextStyle style = map(source);
         if (offset + a < r.getLinks().size() && r.getLinks().get(offset + a) != null)
@@ -30,9 +30,9 @@ public final class TextFormats {
         content = content.concat(RichText.of(lines[i].substring(a, b), style));
         a = b;
       }
-      Paragraph p = new Paragraph("p" + (i + 1), content);
+      var p = new Paragraph("p" + (i + 1), content);
       if (i < r.getBlocks().size()) {
-        RichBlocks.BlockAttr attr = r.getBlocks().get(i);
+        var attr = r.getBlocks().get(i);
         if (attr.type >= RichBlocks.H1 && attr.type <= (RichBlocks.H1 + 5))
           p = p.with("style", "Heading" + (attr.type - RichBlocks.H1 + 1));
         if (attr.listType != RichBlocks.LIST_NONE)
@@ -59,14 +59,13 @@ public final class TextFormats {
   }
 
   public static String html(Document doc) {
-    StringBuilder b =
+    var b =
         new StringBuilder("<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><title>")
             .append(Xml.escape(doc.title))
             .append("</title></head><body>");
     for (Block block : doc.blocks) {
-      if (block instanceof Paragraph) paragraph(b, (Paragraph) block);
-      else if (block instanceof Picture) {
-        Picture pic = (Picture) block;
+      if (block instanceof Paragraph paragraph) paragraph(b, paragraph);
+      else if (block instanceof Picture pic) {
         if (pic.drawing != null) {
           b.append("<p style=\"text-align:").append(pic.align).append("\">");
           svg(b, pic);
@@ -86,8 +85,7 @@ public final class TextFormats {
             .append(";base64,")
             .append(com.codename1.util.Base64.encodeNoNewline(pic.bytes()))
             .append("\"></p>");
-      } else if (block instanceof Table) {
-        Table t = (Table) block;
+      } else if (block instanceof Table t) {
         b.append("<table style=\"").append(TableFormats.css(t.format)).append("\"");
         if (!t.format.title.isEmpty())
           b.append(" aria-label=\"").append(Xml.attribute(t.format.title)).append("\"");
@@ -102,7 +100,7 @@ public final class TextFormats {
           b.append("<tr style=\"height:").append(t.format.minHeight(r)).append("pt\">");
           for (int c = 0; c < t.columns(); c++) {
             if (t.covered(r, c)) continue;
-            Table.Merge span = t.span(r, c);
+            var span = t.span(r, c);
             b.append("<td rowspan=\"")
                 .append(span.rows)
                 .append("\" colspan=\"")
@@ -207,8 +205,9 @@ public final class TextFormats {
                                 : "")
                 .append(
                     s.characters.outline
-                        ? ";-webkit-text-stroke:.5pt"
-                              + " currentColor;-webkit-text-fill-color:transparent"
+                        ? """
+                              ;-webkit-text-stroke:.5pt\
+                               currentColor;-webkit-text-fill-color:transparent"""
                         : "")
                 .append(s.characters.shadow ? ";text-shadow:1pt 1pt #808080" : "")
                 .append(s.characters.emboss ? ";text-shadow:-1pt -1pt white,1pt 1pt #707070" : "")
@@ -252,7 +251,7 @@ public final class TextFormats {
 
   public static String write(Document d, RichTextFormat format) {
     if (format == RichTextFormat.PLAIN_TEXT) {
-      StringBuilder text = new StringBuilder(d.plainText());
+      var text = new StringBuilder(d.plainText());
       for (String kind : new String[] {"footnote", "endnote"}) {
         boolean heading = false;
         for (Note note : Notes.all(d))
@@ -270,8 +269,9 @@ public final class TextFormats {
       for (Block block : d.blocks)
         if (block instanceof Picture)
           throw new IllegalArgumentException(
-              "This format cannot preserve embedded pictures. Use DOCX, HTML, PDF or"
-                  + " CN1 document.");
+              """
+              This format cannot preserve embedded pictures. Use DOCX, HTML, PDF or\
+               CN1 document.""");
     String html = html(d);
     return format == RichTextFormat.HTML ? html : RichTextImporter.fromHtml(html, format);
   }

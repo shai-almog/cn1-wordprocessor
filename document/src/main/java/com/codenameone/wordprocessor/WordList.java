@@ -46,8 +46,8 @@ final class WordList {
         System.arraycopy(raw, i + 1, cur, p, add);
         curLen = p + add;
         i = end + 1;
-        String hyphenated = new String(cur, 0, curLen, "UTF-8");
-        StringBuilder w = new StringBuilder(hyphenated.length());
+        var hyphenated = new String(cur, 0, curLen, "UTF-8");
+        var w = new StringBuilder(hyphenated.length());
         long mask = 0;
         for (int k = 0; k < hyphenated.length(); k++) {
           char c = hyphenated.charAt(k);

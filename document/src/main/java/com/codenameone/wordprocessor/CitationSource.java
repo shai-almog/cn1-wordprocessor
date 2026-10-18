@@ -8,7 +8,7 @@ public final class CitationSource {
       "city", "publisher", "journal", "edition", "volume", "issue", "pages", "url", "accessed", "doi"};
   public final Map<String, String> values;
   public CitationSource(Map<String, String> input) {
-    Map<String, String> copy = new LinkedHashMap<String, String>();
+    var copy = new LinkedHashMap<String, String>();
     for (String key : input.keySet()) if (!Arrays.asList(KEYS).contains(key))
       throw new IllegalArgumentException("Unknown source field: " + key);
     for (String key : KEYS) {
@@ -20,22 +20,22 @@ public final class CitationSource {
     }
     if (copy.get("kind").isEmpty()) copy.put("kind", "book");
     if (copy.get("tag").isEmpty()) {
-      List<String[]> authors = names(copy.get("author"));
+      var authors = names(copy.get("author"));
       String base = authors.isEmpty() ? "Source" : authors.get(0)[0];
-      StringBuilder tag = new StringBuilder();
+      var tag = new StringBuilder();
       for (char c : (base + copy.get("year")).toCharArray()) if (Character.isLetterOrDigit(c)) tag.append(c);
       copy.put("tag", tag.length() == 0 ? "Source" : tag.toString().substring(0, Math.min(64, tag.length())));
     }
-    String tag = copy.get("tag");
+    var tag = copy.get("tag");
     if (tag.length() > 64) throw new IllegalArgumentException("Source tag exceeds 64 characters");
     for (char c : tag.toCharArray()) if (!Character.isLetterOrDigit(c) && c != '_' && c != '-' && c != '.')
       throw new IllegalArgumentException("Source tags use letters, digits, dots, hyphens or underscores");
     values = Collections.unmodifiableMap(copy);
   }
-  public String get(String key) { String value = values.get(key); return value == null ? "" : value; }
+  public String get(String key) { var value = values.get(key); return value == null ? "" : value; }
   public String tag() { return get("tag"); }
   public static List<String[]> names(String authors) {
-    List<String[]> result = new ArrayList<String[]>();
+    var result = new ArrayList<String[]>();
     for (String author : TextUtil.split(authors, ';')) {
       author = author.trim(); if (author.isEmpty()) continue;
       int comma = author.indexOf(',');

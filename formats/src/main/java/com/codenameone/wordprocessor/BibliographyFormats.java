@@ -21,9 +21,9 @@ final class BibliographyFormats {
   }
   static Bibliography nativeRead(Element root) throws IOException {
     if (root == null) return Bibliography.EMPTY;
-    Map<String, CitationSource> sources = new LinkedHashMap<String, CitationSource>();
+    var sources = new LinkedHashMap<String, CitationSource>();
     for (Element e : Xml.children(root, "source")) {
-      Map<String, String> data = new LinkedHashMap<String, String>();
+      var data = new LinkedHashMap<String, String>();
       for (String key : CitationSource.KEYS) data.put(key, Xml.attr(e, key, ""));
       add(sources, new CitationSource(data));
     }
@@ -43,21 +43,21 @@ final class BibliographyFormats {
     if (parent == null) return "";
     if (Xml.child(parent, "Corporate") != null) return text(parent, "Corporate");
     Element list = Xml.child(parent, "NameList"); if (list == null) list = parent;
-    StringBuilder out = new StringBuilder();
+    var out = new StringBuilder();
     for (Element person : Xml.children(list, "Person")) {
       if (out.length() > 0) out.append("; ");
-      String first = (text(person, "First") + " " + text(person, "Middle")).trim();
+      var first = (text(person, "First") + " " + text(person, "Middle")).trim();
       out.append(text(person, "Last")); if (!first.isEmpty()) out.append(", ").append(first);
     }
     return out.toString();
   }
   static Bibliography read(Map<String, byte[]> parts, Set<String> warnings) throws IOException {
-    Map<String, CitationSource> sources = new LinkedHashMap<String, CitationSource>(); String style = "APA";
+    var sources = new LinkedHashMap<String, CitationSource>(); var style = "APA";
     for (String path : parts.keySet()) if (path.startsWith("customXml/") && path.endsWith(".xml") && !path.contains("/_rels/")) {
       Element root = Xml.parse(parts.get(path)); if (!sourceRoot(root)) continue;
       style = Xml.attr(root, "StyleName", style);
       for (Element e : Xml.children(root, "Source")) {
-        Map<String, String> data = new LinkedHashMap<String, String>();
+        var data = new LinkedHashMap<String, String>();
         for (int i = 0; i < TAGS.length; i++) if (i != 2 && i != 3) data.put(CitationSource.KEYS[i], text(e, TAGS[i]));
         Element authors = Xml.child(e, "Author");
         data.put("author", authors == null ? "" : persons(Xml.child(authors, "Author") == null ? authors : Xml.child(authors, "Author")));
@@ -100,7 +100,7 @@ final class BibliographyFormats {
   }
   static void write(Map<String, byte[]> parts, Bibliography bibliography) throws IOException {
     // Reuse the bibliography part, leaving unrelated custom XML and its relationships untouched.
-    List<String> old = new ArrayList<String>();
+    var old = new ArrayList<String>();
     for (String path : parts.keySet()) if (path.startsWith("customXml/") && path.endsWith(".xml") && !path.contains("/_rels/"))
       if (sourceRoot(Xml.parse(parts.get(path)))) old.add(path);
     if (old.isEmpty() && bibliography.sources.isEmpty() && "APA".equals(bibliography.style)) return;
@@ -110,7 +110,7 @@ final class BibliographyFormats {
       while (parts.containsKey("customXml/cn1Bibliography" + index + ".xml")) index++;
       path = "customXml/cn1Bibliography" + index + ".xml";
     }
-    StringBuilder b = new StringBuilder("<?xml version=\"1.0\" encoding=\"UTF-8\"?><b:Sources xmlns:b=\"").append(NS)
+    var b = new StringBuilder("<?xml version=\"1.0\" encoding=\"UTF-8\"?><b:Sources xmlns:b=\"").append(NS)
         .append("\" StyleName=\"").append(Xml.escape(bibliography.style)).append("\">");
     for (CitationSource source : bibliography.sources.values()) {
       b.append("<b:Source>");
@@ -127,22 +127,22 @@ final class BibliographyFormats {
           && parts.containsKey("customXml/" + Xml.attr(e, "Target", ""))) return;
     String stem = file.substring(0, file.length() - 4) + "Props", props = stem + ".xml";
     int suffix = 1; while (parts.containsKey("customXml/" + props)) props = stem + suffix++ + ".xml";
-    String propsPath = "customXml/" + props;
-    String id = "00000000" + Integer.toHexString(propsPath.hashCode()); id = id.substring(id.length() - 8);
+    var propsPath = "customXml/" + props;
+    var id = "00000000" + Integer.toHexString(propsPath.hashCode()); id = id.substring(id.length() - 8);
     parts.put(propsPath, ("<ds:datastoreItem xmlns:ds=\"http://schemas.openxmlformats.org/officeDocument/2006/customXml\" ds:itemID=\"{" + id + "-C1B1-4000-8000-000000000001}\"><ds:schemaRefs><ds:schemaRef ds:uri=\"" + NS + "\"/></ds:schemaRefs></ds:datastoreItem>").getBytes("UTF-8"));
     relationship(parts, propertiesRels, REL + "customXmlProps", props);
-    String types = new String(parts.get("[Content_Types].xml"), "UTF-8");
+    var types = new String(parts.get("[Content_Types].xml"), "UTF-8");
     parts.put("[Content_Types].xml", DocxLists.insert(types, "<Override xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\" PartName=\"/" + Xml.escape(propsPath) + "\" ContentType=\"application/vnd.openxmlformats-officedocument.customXmlProperties+xml\"/>").getBytes("UTF-8"));
   }
 
   private static void relationship(Map<String, byte[]> parts, String path, String type, String target) throws IOException {
     String xml = parts.containsKey(path) ? new String(parts.get(path), "UTF-8") : "<Relationships xmlns=\"" + PACKAGE + "\"></Relationships>";
-    Set<String> ids = new HashSet<String>();
+    var ids = new HashSet<String>();
     for (Element e : Xml.children(Xml.parse(xml), null)) {
       if (type.equals(Xml.attr(e, "Type", "")) && target.equals(Xml.attr(e, "Target", ""))) return;
       ids.add(Xml.attr(e, "Id", ""));
     }
-    String id = "cn1Bibliography"; while (ids.contains(id)) id += "x";
+    var id = "cn1Bibliography"; while (ids.contains(id)) id += "x";
     parts.put(path, DocxLists.insert(xml, "<Relationship xmlns=\"" + PACKAGE + "\" Id=\"" + id + "\" Type=\"" + type + "\" Target=\"" + Xml.escape(target) + "\"/>").getBytes("UTF-8"));
   }
 }

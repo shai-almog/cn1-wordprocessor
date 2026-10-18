@@ -9,7 +9,7 @@ import java.util.zip.*;
  * Bounded XLSX/XLSM/ODS recipient reader. Formula caches are read; formulas/macros are never run.
  */
 public final class RecipientWorkbook {
-  private final Map<String, byte[]> parts = new LinkedHashMap<String, byte[]>();
+  private final Map<String, byte[]> parts = new LinkedHashMap<>();
   private final List<String> names = new ArrayList<String>(), paths = new ArrayList<String>();
   private List<Element> ods;
   private Element workbook;
@@ -17,14 +17,14 @@ public final class RecipientWorkbook {
 
   public RecipientWorkbook(byte[] bytes) throws IOException {
     if (bytes.length > 64 * 1024 * 1024) throw new IOException("Workbook exceeds 64 MiB");
-    try (ZipInputStream zip = new ZipInputStream(new ByteArrayInputStream(bytes))) {
+    try (var zip = new ZipInputStream(new ByteArrayInputStream(bytes))) {
       ZipEntry entry;
       long total = 0;
       byte[] buffer = new byte[8192];
       while ((entry = zip.getNextEntry()) != null) {
         if (parts.size() >= 4096) throw new IOException("Too many workbook parts");
         if (entry.isDirectory()) continue;
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        var out = new ByteArrayOutputStream();
         int n;
         while ((n = zip.read(buffer)) != -1) {
           total += n;
@@ -36,7 +36,7 @@ public final class RecipientWorkbook {
           throw new IOException("Duplicate workbook part");
       }
     }
-    String main = "xl/workbook.xml";
+    var main = "xl/workbook.xml";
     if (parts.containsKey("_rels/.rels"))
       for (Element rel : Xml.children(xml("_rels/.rels"), "Relationship"))
         if (Xml.attr(rel, "Type", "").endsWith("/officeDocument")
@@ -47,8 +47,8 @@ public final class RecipientWorkbook {
       if (!"workbook".equals(Xml.local(workbook)))
         throw new IOException("Not a spreadsheet workbook");
       base = main.substring(0, main.lastIndexOf('/') + 1);
-      String relPath = base + "_rels/" + main.substring(main.lastIndexOf('/') + 1) + ".rels";
-      Map<String, String> targets = new HashMap<String, String>();
+      var relPath = base + "_rels/" + main.substring(main.lastIndexOf('/') + 1) + ".rels";
+      var targets = new HashMap<String, String>();
       for (Element rel : Xml.children(xml(relPath), "Relationship"))
         if (!"External".equals(Xml.attr(rel, "TargetMode", ""))) {
           String type = Xml.attr(rel, "Type", "");
@@ -60,7 +60,7 @@ public final class RecipientWorkbook {
       Element sheets = Xml.child(workbook, "sheets");
       if (sheets != null)
         for (Element sheet : Xml.children(sheets, "sheet")) {
-          String path = targets.get(Xml.attr(sheet, "id", ""));
+          var path = targets.get(Xml.attr(sheet, "id", ""));
           if (path == null) throw new IOException("Missing worksheet relationship");
           names.add(Xml.attr(sheet, "name", "Sheet " + (names.size() + 1)));
           paths.add(path);
@@ -83,7 +83,7 @@ public final class RecipientWorkbook {
   }
 
   private Element xml(String name) throws IOException {
-    byte[] bytes = parts.get(name);
+    var bytes = parts.get(name);
     if (bytes == null) throw new IOException("Missing workbook part: " + name);
     return Xml.parse(bytes);
   }
@@ -92,7 +92,7 @@ public final class RecipientWorkbook {
     if (target.indexOf(':') >= 0 || target.indexOf('\\') >= 0)
       throw new IOException("External or invalid workbook relationship");
     String combined = target.startsWith("/") ? target.substring(1) : base + target;
-    List<String> segments = new ArrayList<String>();
+    var segments = new ArrayList<String>();
     for (String segment : TextUtil.split(combined, '/')) {
       if (segment.isEmpty() || ".".equals(segment)) continue;
       if ("..".equals(segment)) {
@@ -100,7 +100,7 @@ public final class RecipientWorkbook {
         segments.remove(segments.size() - 1);
       } else segments.add(segment);
     }
-    StringBuilder out = new StringBuilder();
+    var out = new StringBuilder();
     for (String segment : segments) {
       if (out.length() > 0) out.append('/');
       out.append(segment);
@@ -132,7 +132,7 @@ public final class RecipientWorkbook {
     if (rows.isEmpty()) throw new IOException("Worksheet is empty");
     int width = 0;
     for (List<String> row : rows) width = Math.max(width, row.size());
-    List<String> fields = new ArrayList<String>();
+    var fields = new ArrayList<String>();
     if (headers) {
       fields.addAll(rows.remove(0));
       while (fields.size() < width) fields.add("");
@@ -142,7 +142,7 @@ public final class RecipientWorkbook {
 
   private static String rich(Element root) {
     if (root == null) return "";
-    StringBuilder out = new StringBuilder();
+    var out = new StringBuilder();
     for (Element child : Xml.children(root, null)) {
       if ("t".equals(Xml.local(child))) out.append(Xml.text(child));
       else if ("r".equals(Xml.local(child))) out.append(rich(child));
@@ -174,14 +174,14 @@ public final class RecipientWorkbook {
   }
 
   private List<List<String>> xlsx(String path) throws IOException {
-    List<String> strings = new ArrayList<String>();
+    var strings = new ArrayList<String>();
     if (parts.containsKey(stringPath))
       for (Element item : Xml.children(xml(stringPath), "si")) {
         strings.add(rich(item));
         if (strings.size() > 1000000) throw new IOException("Too many shared strings");
       }
-    List<String> formats = new ArrayList<String>();
-    Map<Integer, String> custom = new HashMap<Integer, String>();
+    var formats = new ArrayList<String>();
+    var custom = new HashMap<Integer, String>();
     if (parts.containsKey(stylePath)) {
       Element styles = xml(stylePath),
           nums = Xml.child(styles, "numFmts"),
@@ -199,11 +199,11 @@ public final class RecipientWorkbook {
     boolean date1904 =
         properties != null
             && Arrays.asList("1", "true").contains(Xml.attr(properties, "date1904", "0"));
-    List<List<String>> rows = new ArrayList<List<String>>();
+    var rows = new ArrayList<List<String>>();
     Element data = Xml.child(xml(path), "sheetData");
     if (data == null) return rows;
     for (Element row : Xml.children(data, "row")) {
-      List<String> values = new ArrayList<String>();
+      var values = new ArrayList<String>();
       for (Element c : Xml.children(row, "c")) {
         String reference = Xml.attr(c, "r", "");
         int column = 0;
@@ -249,7 +249,7 @@ public final class RecipientWorkbook {
   }
 
   private static String numberText(String raw, String format, boolean date1904) throws IOException {
-    StringBuilder pattern = new StringBuilder();
+    var pattern = new StringBuilder();
     boolean quote = false, bracket = false;
     for (int i = 0; i < format.length(); i++) {
       char c = Character.toLowerCase(format.charAt(i));
@@ -259,7 +259,7 @@ public final class RecipientWorkbook {
       else if (c == '\\') i++;
       else if (!quote && !bracket) pattern.append(c);
     }
-    String p = pattern.toString();
+    var p = pattern.toString();
     boolean date = p.indexOf('d') >= 0 || p.indexOf('y') >= 0,
         time = p.indexOf('h') >= 0 || p.indexOf('s') >= 0;
     if (!date && !time) return raw;
@@ -287,7 +287,7 @@ public final class RecipientWorkbook {
                 + pad(cal.get(Calendar.MONTH) + 1, 2)
                 + "-"
                 + pad(cal.get(Calendar.DAY_OF_MONTH), 2);
-    String t =
+    var t =
         pad((int) (seconds / 3600), 2)
             + ":"
             + pad((int) (seconds / 60 % 60), 2)
@@ -296,30 +296,30 @@ public final class RecipientWorkbook {
   }
 
   private static String pad(int n, int width) {
-    String value = "" + n;
+    var value = "" + n;
     while (value.length() < width) value = "0" + value;
     return value;
   }
 
   private List<List<String>> ods(Element sheet) throws IOException {
-    List<List<String>> rows = new ArrayList<List<String>>();
-    List<Element> pending = new ArrayList<Element>();
+    var rows = new ArrayList<List<String>>();
+    var pending = new ArrayList<Element>();
     pending.add(sheet);
     while (!pending.isEmpty()) {
-      Element e = pending.remove(pending.size() - 1);
+      var e = pending.remove(pending.size() - 1);
       String tag = Xml.local(e);
       if (Arrays.asList("table", "table-row-group", "table-header-rows", "table-rows")
           .contains(tag)) {
-        List<Element> children = Xml.children(e, null);
+        var children = Xml.children(e, null);
         for (int i = children.size() - 1; i >= 0; i--) pending.add(children.get(i));
         continue;
       }
       if (!"table-row".equals(tag)) continue;
-      List<String> row = new ArrayList<String>();
+      var row = new ArrayList<String>();
       for (Element c : Xml.children(e, null)) {
         if (!Arrays.asList("table-cell", "covered-table-cell").contains(Xml.local(c))) continue;
         String type = Xml.attr(c, "value-type", "");
-        String value = "";
+        var value = "";
         if (!"covered-table-cell".equals(Xml.local(c))) {
           if ("float".equals(type)) value = Xml.attr(c, "value", "");
           else if ("boolean".equals(type))
@@ -327,7 +327,7 @@ public final class RecipientWorkbook {
           else if ("date".equals(type)) value = Xml.attr(c, "date-value", "").replace('T', ' ');
           else if ("time".equals(type)) value = duration(Xml.attr(c, "time-value", ""));
           else {
-            StringBuilder out = new StringBuilder();
+            var out = new StringBuilder();
             for (Element p : Xml.children(c, "p")) {
               if (out.length() > 0) out.append('\n');
               out.append(Xml.text(p));

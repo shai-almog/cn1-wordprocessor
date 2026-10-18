@@ -32,7 +32,7 @@ public final class PdfExporter {
           .append(literal(d.watermark)).append(") Tj ET Q\n");
     }
     if (!d.borders.isEmpty()) {
-      ParagraphBorders b = d.borders;
+      var b = d.borders;
       frame(
           c,
           new LayoutEngine.Frame(
@@ -55,7 +55,7 @@ public final class PdfExporter {
           .append(' ')
           .append(n(top - bottom))
           .append(" re f\n");
-    ParagraphBorders b = f.borders;
+    var b = f.borders;
     if (f.first) edge(c, b.top, f.x, top - b.top.width / 2, f.x + f.width, top - b.top.width / 2);
     if (f.last)
       edge(c, b.bottom, f.x, bottom + b.bottom.width / 2, f.x + f.width, bottom + b.bottom.width / 2);
@@ -102,7 +102,7 @@ public final class PdfExporter {
    */
   private static void picture(
       StringBuilder content, LayoutEngine.PlacedPicture pic, float pageHeight, String name) {
-    Picture.Look k = pic.picture.look;
+    var k = pic.picture.look;
     float w = pic.width, h = pic.height;
     double a = Math.toRadians(k.rotation);
     float cos = (float) Math.cos(a), sin = (float) Math.sin(a);
@@ -179,7 +179,7 @@ public final class PdfExporter {
   /** Paginate and embed with the same font instances, loading each face at most once per export. */
   public static byte[] write(Document document, FontProvider provider) throws IOException {
     if (provider == null) return write(document);
-    final PdfFonts fonts = new PdfFonts(provider);
+    final var fonts = new PdfFonts(provider);
     LayoutEngine.Result layout;
     try {
       layout = new LayoutEngine(new FontMetrics(fonts)).layout(document, 0);
@@ -206,7 +206,7 @@ public final class PdfExporter {
 
   private static void drawText(
       StringBuilder b, int face, TextStyle s, float x, float y, String encoded) {
-    CharacterFormat c = s.characters;
+    var c = s.characters;
     if (c.shadow) textPass(b, face, s, x + 1, y - 1, encoded, 0x808080, false);
     if (c.emboss || c.engrave) {
       textPass(b, face, s, x - 1, y + 1, encoded, c.engrave ? 0x707070 : 0xffffff, false);
@@ -267,7 +267,7 @@ public final class PdfExporter {
 
     public float width(String text, TextStyle style) {
       try {
-        PdfFonts.TrueType font = fonts.face(style).font;
+        var font = fonts.face(style).font;
         float width = 0;
         for (int i = 0; i < text.length(); ) {
           int cp = Character.codePointAt(text, i);
@@ -306,10 +306,10 @@ public final class PdfExporter {
         for (LayoutEngine.Line line : page.allLines())
           for (LayoutEngine.Span span : line.spans)
             if (!span.displayText.isEmpty()) fonts.face(span.style).encode(span.displayText);
-    List<byte[]> objects = new ArrayList<byte[]>();
+    var objects = new ArrayList<byte[]>();
     for (int i = 0; i < 6; i++) objects.add(null);
     objects.set(0, ascii("<< /Type /Catalog /Pages 2 0 R >>"));
-    StringBuilder kids = new StringBuilder();
+    var kids = new StringBuilder();
     for (int i = 0; i < layout.pages.size(); i++) kids.append(7 + i * 2).append(" 0 R ");
     objects.set(
         1, ascii("<< /Type /Pages /Count " + layout.pages.size() + " /Kids [" + kids + "] >>"));
@@ -323,14 +323,14 @@ public final class PdfExporter {
                   + " /Encoding /WinAnsiEncoding >>"));
     for (int i = 0; i < layout.pages.size() * 2; i++) objects.add(null);
     String embeddedResources = fonts == null ? "" : fonts.install(objects);
-    Map<Picture, Integer> imageIds = new HashMap<Picture, Integer>();
+    var imageIds = new HashMap<Picture, Integer>();
     for (LayoutEngine.Page page : layout.pages)
       for (LayoutEngine.PlacedPicture pic : page.pictures)
         if (pic.picture.drawing == null && !imageIds.containsKey(pic.picture))
           imageIds.put(pic.picture, PdfPictures.add(objects, pic.picture));
     int pageIndex = 0;
     for (LayoutEngine.Page page : layout.pages) {
-      PageSpec spec = page.spec;
+      var spec = page.spec;
       StringBuilder content = new StringBuilder(), imageResources = new StringBuilder();
       int imageIndex = 0;
       for (float[] rule : page.columnRules)
@@ -357,7 +357,7 @@ public final class PdfExporter {
           PdfDrawings.paint(content, pic, spec.height);
           continue;
         }
-        String name = "Im" + (imageIndex++);
+        var name = "Im" + (imageIndex++);
         imageResources
             .append('/')
             .append(name)
@@ -463,16 +463,16 @@ public final class PdfExporter {
               .append(") Tj ET\n");
         for (LayoutEngine.Span span : line.spans) {
           if (span.displayText.isEmpty()) continue;
-          TextStyle s = span.glyphStyle;
+          var s = span.glyphStyle;
           float x = line.x + span.x, y = spec.height - line.y - span.top - s.renderedSize();
           int face = fonts == null ? (s.bold ? 1 : 0) + (s.italic ? 2 : 0) : fonts.face(s).number;
-          String display = span.displayText;
+          var display = span.displayText;
           if ("\t".equals(span.text)) {
-            String glyph = display.substring(0, 1);
+            var glyph = display.substring(0, 1);
             float advance;
             if (fonts == null) advance = new PdfMetrics().width(glyph, s.renderedStyle());
             else {
-              PdfFonts.TrueType font = fonts.face(s).font;
+              var font = fonts.face(s).font;
               advance =
                   font.scaled(font.advance(font.glyph(glyph.charAt(0)))) * s.renderedSize() / 1000f;
             }
@@ -581,15 +581,15 @@ public final class PdfExporter {
                   + (pageId + 1)
                   + " 0 R >>"));
       byte[] stream = ascii(content.toString());
-      ByteArrayOutputStream obj = new ByteArrayOutputStream();
+      var obj = new ByteArrayOutputStream();
       obj.write(ascii("<< /Length " + stream.length + " >>\nstream\n"));
       obj.write(stream);
       obj.write(ascii("endstream"));
       objects.set(pageId, obj.toByteArray());
     }
-    ByteArrayOutputStream pdf = new ByteArrayOutputStream();
+    var pdf = new ByteArrayOutputStream();
     pdf.write(ascii("%PDF-1.4\n% CN1 Word Processor\n"));
-    List<Integer> offsets = new ArrayList<Integer>();
+    var offsets = new ArrayList<Integer>();
     for (int i = 0; i < objects.size(); i++) {
       offsets.add(pdf.size());
       pdf.write(ascii((i + 1) + " 0 obj\n"));
@@ -644,7 +644,7 @@ public final class PdfExporter {
   }
 
   static int winAnsi(char character) throws IOException {
-    String special = "€\u0000‚ƒ„…†‡ˆ‰Š‹Œ\u0000Ž\u0000\u0000‘’“”•–—˜™š›œ\u0000žŸ";
+    var special = "€\u0000‚ƒ„…†‡ˆ‰Š‹Œ\u0000Ž\u0000\u0000‘’“”•–—˜™š›œ\u0000žŸ";
     int c = character;
     if (c == '\t') c = ' ';
     if (c > 255) {
@@ -662,7 +662,7 @@ public final class PdfExporter {
   }
 
   private static String literal(String s) throws IOException {
-    StringBuilder b = new StringBuilder();
+    var b = new StringBuilder();
     for (int i = 0; i < s.length(); i++) {
       int c = winAnsi(s.charAt(i));
       if (c == '(' || c == ')' || c == '\\') b.append('\\').append((char) c);

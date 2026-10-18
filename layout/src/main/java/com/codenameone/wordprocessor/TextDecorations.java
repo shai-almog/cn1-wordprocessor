@@ -9,18 +9,18 @@ public final class TextDecorations {
   }
 
   public static float weight(TextStyle style) {
-    String type = style.characters.underlineStyle;
+    var type = style.characters.underlineStyle;
     return "thick".equals(type) || type.endsWith("Heavy") ? 1.5f : .5f;
   }
 
   public static void underline(LayoutEngine.Span span, LayoutEngine.Metrics metrics, Lines lines) {
-    String type = span.style.characters.underlineStyle;
+    var type = span.style.characters.underlineStyle;
     if ("none".equals(type) || span.displayText.isEmpty() || span.width <= 0) return;
     if (!"words".equals(type)) {
       pattern(type, 0, span.width, lines);
       return;
     }
-    String raw = span.rawDisplay;
+    var raw = span.rawDisplay;
     RichText text = RichText.of(raw, span.style);
     int spaces = 0;
     for (int at = 0; at < raw.length(); at = Graphemes.next(text, at))

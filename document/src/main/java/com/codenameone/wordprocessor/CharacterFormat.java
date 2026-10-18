@@ -217,7 +217,7 @@ public final class CharacterFormat {
   }
 
   public CharacterFormat merge(CharacterFormat before, CharacterFormat after) {
-    CharacterFormat out = this;
+    var out = this;
     for (String k : KEYS)
       if (!"doubleUnderline".equals(k) && value(k).equals(before.value(k)))
         out = out.with(k, after.value(k));
@@ -226,7 +226,7 @@ public final class CharacterFormat {
 
   public boolean equals(Object o) {
     if (!(o instanceof CharacterFormat)) return false;
-    CharacterFormat f = (CharacterFormat) o;
+    var f = (CharacterFormat) o;
     return doubleUnderline == f.doubleUnderline
         && doubleStrike == f.doubleStrike
         && smallCaps == f.smallCaps

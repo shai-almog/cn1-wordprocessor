@@ -23,8 +23,8 @@ final class WordMcp {
 
   static void start(Commands commands, Context context) throws Exception {
     if (started) return;
-    Properties config = new Properties();
-    try (InputStream in =
+    var config = new Properties();
+    try (var in =
         Display.getInstance()
             .getResourceAsStream(WordMcp.class, "/wordprocessor-agent.properties")) {
       if (in == null) return; // Normal builds have no listener or published domain tools.
@@ -32,18 +32,19 @@ final class WordMcp {
     }
     int port = Integer.parseInt(config.getProperty("port"));
     if (port < 1024 || port > 65535) throw new IllegalArgumentException("Invalid agent-debug port");
-    final LiveCommands live = new LiveCommands(commands);
+    final var live = new LiveCommands(commands);
     MCP.getServer().setServerInfo("CN1 Word Processor development", "1");
     MCP.addTool(
         new Tool(
             "word_snapshot",
-            "Inspect the live document, selection and stateId. Optional xml includes native model"
-                + " XML.",
+            """
+            Inspect the live document, selection and stateId. Optional xml includes native model\
+             XML.""",
             "{\"type\":\"object\",\"properties\":{\"xml\":{\"type\":\"boolean\"}}}",
             json ->
                 onEdt(
                     () -> {
-                      Map<String, Object> state = live.snapshot(context.session());
+                      var state = live.snapshot(context.session());
                       if (Boolean.TRUE.equals(Json.parse(json).get("xml")))
                         state.put("xml", DocumentXml.write(context.session().document()));
                       return state;
@@ -51,22 +52,24 @@ final class WordMcp {
     MCP.addTool(
         new Tool(
             "word_layout",
-            "Inspect visible native editor cell and line geometry and selection; bounds are display"
-                + " pixels; line heights and clipping heights are also reported in points.",
+            """
+            Inspect visible native editor cell and line geometry and selection; bounds are display\
+             pixels; line heights and clipping heights are also reported in points.""",
             "{\"type\":\"object\",\"properties\":{}}",
-            json -> onEdt(() -> context.layout())));
+            json -> onEdt(context::layout)));
     MCP.addTool(
         new Tool(
             "word_load",
-            "Replace the live document with native model XML and restore a recorded selection,"
-                + " cell, review author and tracking state (clears history). Used to replay recorded cases.",
+            """
+            Replace the live document with native model XML and restore a recorded selection,\
+             cell, review author and tracking state (clears history). Used to replay recorded cases.""",
             "{\"type\":\"object\",\"properties\":{\"xml\":{\"type\":\"string\"},\"state\":{\"type\":\"object\"}},\"required\":[\"xml\"]}",
             json ->
                 onEdt(
                     () -> {
-                      Map<String, Object> args = Json.parse(json);
+                      var args = Json.parse(json);
                       context.beforeCommand();
-                      Session session = context.session();
+                      var session = context.session();
                       session.leaveCell();
                       session.loadDocument(DocumentXml.read((String) args.get("xml")));
                       Map<String, Object> st = (Map<String, Object>) args.get("state");
@@ -97,7 +100,7 @@ final class WordMcp {
             "List the command schemas used by the live editor.",
             "{\"type\":\"object\",\"properties\":{}}",
             json -> {
-              List<Object> list = new ArrayList<Object>();
+              var list = new ArrayList<Object>();
               for (Commands.Descriptor d : commands.descriptors())
                 list.add(
                     Json.object("id", d.id, "description", d.description, "arguments", d.schema()));
@@ -106,20 +109,21 @@ final class WordMcp {
     MCP.addTool(
         new Tool(
             "word_command",
-            "Execute one editor command against the observed stateId. Uses the live document and"
-                + " its normal undo history; refuses stale state and active dialogs.",
+            """
+            Execute one editor command against the observed stateId. Uses the live document and\
+             its normal undo history; refuses stale state and active dialogs.""",
             "{\"type\":\"object\",\"properties\":{\"stateId\":{\"type\":\"string\"},\"command\":{\"type\":\"string\"},\"args\":{\"type\":\"object\"}},\"required\":[\"stateId\",\"command\"]}",
             json ->
                 onEdt(
                     () -> {
-                      Map<String, Object> args = Json.parse(json);
+                      var args = Json.parse(json);
                       context.beforeCommand();
-                      Session session = context.session();
-                      String before = live.stateId(session);
-                      Object values = args.get("args");
+                      var session = context.session();
+                      var before = live.stateId(session);
+                      var values = args.get("args");
                       if (values != null && !(values instanceof Map))
                         throw new IllegalArgumentException("args must be an object");
-                      Map<String, Object> response =
+                      var response =
                           live.execute(
                               session,
                               (String) args.get("stateId"),
@@ -143,8 +147,8 @@ final class WordMcp {
   }
 
   private static int num(Map<String, Object> m, String k) {
-    Object v = m.get(k);
-    return v instanceof Number ? ((Number) v).intValue() : -1;
+    var v = m.get(k);
+    return v instanceof Number n ? n.intValue() : -1;
   }
 
   private interface Action {

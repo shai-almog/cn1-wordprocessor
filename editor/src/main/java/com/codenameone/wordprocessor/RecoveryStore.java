@@ -32,9 +32,9 @@ public final class RecoveryStore {
         new Backend() {
           public byte[] read(String key) throws IOException {
             if (!Storage.getInstance().exists(key)) return null;
-            InputStream in = Storage.getInstance().createInputStream(key);
+            var in = Storage.getInstance().createInputStream(key);
             try {
-              ByteArrayOutputStream out = new ByteArrayOutputStream();
+              var out = new ByteArrayOutputStream();
               byte[] b = new byte[8192];
               int n;
               while ((n = in.read(b)) != -1) {
@@ -49,7 +49,7 @@ public final class RecoveryStore {
           }
 
           public void write(String key, byte[] bytes) throws IOException {
-            OutputStream out = Storage.getInstance().createOutputStream(key);
+            var out = Storage.getInstance().createOutputStream(key);
             try {
               out.write(bytes);
               out.flush();
@@ -74,16 +74,16 @@ public final class RecoveryStore {
 
   private Record slot(int n) {
     try {
-      byte[] data = backend.read("wordprocessor-recovery-" + n);
+      var data = backend.read("wordprocessor-recovery-" + n);
       if (data == null) return null;
-      DataInputStream in = new DataInputStream(new ByteArrayInputStream(data));
+      var in = new DataInputStream(new ByteArrayInputStream(data));
       if (in.readInt() != 0x57503132) return null;
       long seq = in.readLong(), checksum = in.readLong();
       int length = in.readInt();
       if (length < 0 || length > 128 * 1024 * 1024 || length != data.length - 24) return null;
       byte[] xml = new byte[length];
       in.readFully(xml);
-      CRC32 crc = new CRC32();
+      var crc = new CRC32();
       crc.update(xml);
       if (crc.getValue() != checksum) return null;
       return new Record(seq, ProjectFile.read(xml));
@@ -114,11 +114,11 @@ public final class RecoveryStore {
     if (revision < latestRevision) return;
     byte[] xml = ProjectFile.write(doc, source);
     if (xml.length > 128 * 1024 * 1024) throw new IOException("Recovery document exceeds 128 MiB");
-    CRC32 crc = new CRC32();
+    var crc = new CRC32();
     crc.update(xml);
     long next = generation + 1;
-    ByteArrayOutputStream bytes = new ByteArrayOutputStream();
-    DataOutputStream out = new DataOutputStream(bytes);
+    var bytes = new ByteArrayOutputStream();
+    var out = new DataOutputStream(bytes);
     out.writeInt(0x57503132);
     out.writeLong(next);
     out.writeLong(crc.getValue());
@@ -127,7 +127,7 @@ public final class RecoveryStore {
     out.flush();
     int index = (int) (next % 2);
     backend.write("wordprocessor-recovery-" + index, bytes.toByteArray());
-    Record check = slot(index);
+    var check = slot(index);
     if (check == null || check.sequence != next)
       throw new IOException("Recovery verification failed");
     generation = next;

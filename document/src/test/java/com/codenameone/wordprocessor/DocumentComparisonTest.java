@@ -7,14 +7,14 @@ import org.junit.Test;
 
 public class DocumentComparisonTest {
   private Document doc(String text) {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace(text);
     return s.document();
   }
 
   private void roundTrip(String a, String b) {
     Document original = doc(a), revised = doc(b);
-    DocumentComparison.Options opts = new DocumentComparison.Options();
+    var opts = new DocumentComparison.Options();
     opts.author = "Reviewer";
     DocumentComparison.Result result = DocumentComparison.compare(original, revised, opts);
     assertEquals(b, Revisions.resolve(result.document, null, true).plainText());
@@ -43,7 +43,7 @@ public class DocumentComparisonTest {
 
   @Test
   public void randomEditsPreserveEveryCharacter() {
-    Random rand = new Random(76);
+    var rand = new Random(76);
     for (int i = 0; i < 200; i++) {
       StringBuilder a = new StringBuilder(), b = new StringBuilder();
       for (int j = 0; j < rand.nextInt(40); j++) a.append("ab \n".charAt(rand.nextInt(4)));
@@ -54,7 +54,7 @@ public class DocumentComparisonTest {
 
   @Test
   public void ignoredCaseAndWhitespaceUseRevisedSpelling() {
-    DocumentComparison.Options o = new DocumentComparison.Options();
+    var o = new DocumentComparison.Options();
     o.ignoreCase = true;
     o.ignoreWhiteSpace = true;
     DocumentComparison.Result r =
@@ -90,12 +90,12 @@ public class DocumentComparisonTest {
 
   @Test
   public void unchangedParagraphFormattingIsTrackedAndReversible() {
-    Document a = doc("Keep this.\nSecond");
-    Session edit = new Session(a);
+    var a = doc("Keep this.\nSecond");
+    var edit = new Session(a);
     edit.select(0, 0, 4);
     edit.format("bold", "true");
     edit.paragraph("align", "center");
-    Document b = edit.document();
+    var b = edit.document();
     DocumentComparison.Result result =
         DocumentComparison.compare(a, b, new DocumentComparison.Options());
     assertEquals(1, result.changes);
@@ -105,7 +105,7 @@ public class DocumentComparisonTest {
     assertEquals("center", accepted.paragraph(0).align);
     assertFalse(rejected.paragraph(0).text.styleAt(0).bold);
     assertEquals("left", rejected.paragraph(0).align);
-    DocumentComparison.Options o = new DocumentComparison.Options();
+    var o = new DocumentComparison.Options();
     o.formatting = false;
     result = DocumentComparison.compare(a, b, o);
     assertEquals(0, result.changes);
@@ -115,8 +115,8 @@ public class DocumentComparisonTest {
 
   @Test
   public void emptyParagraphFormattingStillCounts() {
-    Document a = doc("");
-    Document b = a.blocks(a.blocks.set(0, a.paragraph(0).with("align", "right")), a.nextId);
+    var a = doc("");
+    var b = a.blocks(a.blocks.set(0, a.paragraph(0).with("align", "right")), a.nextId);
     DocumentComparison.Result result =
         DocumentComparison.compare(a, b, new DocumentComparison.Options());
     assertEquals(1, result.changes);
@@ -126,7 +126,7 @@ public class DocumentComparisonTest {
 
   @Test
   public void existingRevisionsAreNotSilentlyAccepted() {
-    Session s = new Session(doc("Old"));
+    var s = new Session(doc("Old"));
     s.trackChanges(true);
     s.replace("New");
     try {

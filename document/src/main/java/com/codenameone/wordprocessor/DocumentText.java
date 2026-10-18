@@ -9,12 +9,12 @@ public final class DocumentText {
   public DocumentText(Document document) {
     this.document = document;
     starts = new int[document.blocks.size()];
-    StringBuilder b = new StringBuilder();
+    var b = new StringBuilder();
     for (int i = 0; i < starts.length; i++) {
       if (i > 0) b.append('\n');
       starts[i] = b.length();
-      Block block = document.blocks.get(i);
-      b.append(block instanceof Paragraph ? ((Paragraph) block).text.toString() : "\ufffc");
+      var block = document.blocks.get(i);
+      b.append(block instanceof Paragraph p ? p.text.toString() : "\ufffc");
     }
     text = b.toString();
   }
@@ -39,9 +39,9 @@ public final class DocumentText {
         while (block > 0 && !(document.blocks.get(block) instanceof Paragraph)) block--;
       }
     }
-    Paragraph p = document.paragraph(block);
+    var p = document.paragraph(block);
     int local = Math.max(0, Math.min(p.text.length(), offset - starts[block]));
-    String t = p.text.toString();
+    var t = p.text.toString();
     if (local > 0 && local < t.length() && Character.isLowSurrogate(t.charAt(local))) local--;
     return new int[] {block, local};
   }

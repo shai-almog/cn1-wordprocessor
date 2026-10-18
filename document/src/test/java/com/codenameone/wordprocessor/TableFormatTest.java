@@ -6,7 +6,7 @@ import org.junit.Test;
 
 public class TableFormatTest {
   private Session sample() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.insertTable(3, 3);
     for (int r = 0; r < 3; r++) for (int c = 0; c < 3; c++) s.setCell(1, r, c, "" + (3 - r));
     return s;
@@ -20,10 +20,10 @@ public class TableFormatTest {
 
   @Test
   public void formatTransactionPreservesCellSelectionAndUndo() {
-    Session s = sample();
+    var s = sample();
     s.enterCell(1, 1, 1);
     s.select(0, 0, 1);
-    Document before = s.document();
+    var before = s.document();
     s.formatTable(
         1, table(s).format.cell(1, 1, blue).columnFraction(1, .6f).minHeight(1, 70).headerRows(1));
     assertSame(blue, table(s).format.cell(1, 1));
@@ -42,7 +42,7 @@ public class TableFormatTest {
 
   @Test
   public void structuralChangesAndSortingCarryCellAppearance() {
-    Session s = sample();
+    var s = sample();
     s.formatTable(1, table(s).format.cell(0, 0, blue).columnFraction(0, .5f).minHeight(0, 60));
     s.sortTable(1, 0, false, false, true);
     assertSame(blue, table(s).format.cell(2, 0));
@@ -59,7 +59,7 @@ public class TableFormatTest {
 
   @Test
   public void deletingMergedOwnerPreservesItsAppearance() {
-    Session s = sample();
+    var s = sample();
     s.formatTable(1, table(s).format.cell(0, 0, blue));
     s.mergeCells(1, 0, 0, 2, 2);
     s.tableStructure(1, "deleteRow", 0);
@@ -69,10 +69,10 @@ public class TableFormatTest {
 
   @Test
   public void invalidHeaderBoundaryRollsBackWithoutLosingCellContext() {
-    Session s = sample();
+    var s = sample();
     s.mergeCells(1, 0, 0, 2, 1);
     s.enterCell(1, 0, 0);
-    Document before = s.document();
+    var before = s.document();
     try {
       s.formatTable(1, table(s).format.headerRows(1));
       fail();

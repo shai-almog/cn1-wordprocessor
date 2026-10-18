@@ -6,7 +6,7 @@ import java.util.*;
 final class MeasurementCache implements LayoutEngine.Metrics {
   private final LayoutEngine.Metrics delegate;
   private final Map<TextStyle, Values> styles =
-      new LinkedHashMap<TextStyle, Values>(32, .75f, true) {
+      new LinkedHashMap<>(32, .75f, true) {
         protected boolean removeEldestEntry(Map.Entry<TextStyle, Values> e) {
           return size() > 32;
         }
@@ -16,14 +16,14 @@ final class MeasurementCache implements LayoutEngine.Metrics {
     Float height, ascent;
     float[] ascii;
     final Map<String, Float> widths =
-        new LinkedHashMap<String, Float>(256, .75f, true) {
+        new LinkedHashMap<>(256, .75f, true) {
           protected boolean removeEldestEntry(Map.Entry<String, Float> e) {
             return size() > 2048;
           }
         };
     /** Line-length chunks, kept apart so they cannot evict the cluster widths. */
     final Map<String, Float> runs =
-        new LinkedHashMap<String, Float>(64, .75f, true) {
+        new LinkedHashMap<>(64, .75f, true) {
           protected boolean removeEldestEntry(Map.Entry<String, Float> e) {
             return size() > 128;
           }
@@ -40,7 +40,7 @@ final class MeasurementCache implements LayoutEngine.Metrics {
   private Values values(TextStyle style) {
     // Consecutive clusters of a run share one style object; skip the map for them.
     if (style == lastStyle) return lastValues;
-    Values v = styles.get(style);
+    var v = styles.get(style);
     if (v == null) {
       v = new Values();
       styles.put(style, v);
@@ -53,7 +53,7 @@ final class MeasurementCache implements LayoutEngine.Metrics {
   public float width(String text, TextStyle style) {
     // Do not pin large pastes or whole paragraphs in a measurement cache.
     if (text.length() > 256) return CharacterMetrics.width(delegate, text, style);
-    Values v = values(style);
+    var v = values(style);
     if (text.length() > 12 && text.indexOf(' ') > 0) return words(text, style);
     // Line chunks are mostly unique; sharing one LRU with clusters evicted the widths that
     // line breaking looks up for every grapheme.
@@ -62,7 +62,7 @@ final class MeasurementCache implements LayoutEngine.Metrics {
 
   private float cached(String text, TextStyle style, Values v) {
     Map<String, Float> cache = text.length() > 12 ? v.runs : v.widths;
-    Float width = cache.get(text);
+    var width = cache.get(text);
     if (width == null) {
       width = CharacterMetrics.width(delegate, text, style);
       cache.put(text, width);
@@ -78,7 +78,7 @@ final class MeasurementCache implements LayoutEngine.Metrics {
    * a whitespace-only string narrower than it draws, which shifted every following run.
    */
   private float words(String text, TextStyle style) {
-    Values v = values(style);
+    var v = values(style);
     float total = 0;
     int start = 0, n = text.length();
     while (start < n) {
@@ -94,7 +94,7 @@ final class MeasurementCache implements LayoutEngine.Metrics {
 
   /** Width of one ASCII character c (whose string is text), cached per style. */
   float ascii(char c, String text, TextStyle style) {
-    Values v = values(style);
+    var v = values(style);
     if (v.ascii == null) {
       v.ascii = new float[128];
       java.util.Arrays.fill(v.ascii, -1);
@@ -105,7 +105,7 @@ final class MeasurementCache implements LayoutEngine.Metrics {
   }
 
   public float height(TextStyle style) {
-    Values v = values(style);
+    var v = values(style);
     if (v.height == null)
       v.height =
           delegate.height(
@@ -114,7 +114,7 @@ final class MeasurementCache implements LayoutEngine.Metrics {
   }
 
   public float ascent(TextStyle style) {
-    Values v = values(style);
+    var v = values(style);
     if (v.ascent == null) v.ascent = delegate.ascent(style.renderedStyle());
     return v.ascent;
   }

@@ -35,7 +35,7 @@ public final class Commands {
     }
 
     public Map<String, Object> schema() {
-      Map<String, Object> props = new LinkedHashMap<String, Object>();
+      var props = new LinkedHashMap<String, Object>();
       for (Map.Entry<String, String> e : parameters.entrySet())
         // "any" accepts null or any JSON value, as Wordcraft's nullable arguments do.
         props.put(
@@ -56,7 +56,7 @@ public final class Commands {
   }
 
   private final LinkedHashMap<String, Descriptor> commands =
-      new LinkedHashMap<String, Descriptor>();
+      new LinkedHashMap<>();
 
   private LayoutEngine layoutEngine;
 
@@ -102,12 +102,12 @@ public final class Commands {
       String id, String description, String spec, boolean transactional, Handler handler) {
     if (commands.containsKey(id) || !TextUtil.commandId(id))
       throw new IllegalArgumentException("Duplicate/invalid command " + id);
-    Map<String, String> params = new LinkedHashMap<String, String>();
-    Set<String> required = new HashSet<String>();
+    var params = new LinkedHashMap<String, String>();
+    var required = new HashSet<String>();
     if (!spec.isEmpty())
       for (String p : TextUtil.split(spec, ',')) {
         String[] kv = TextUtil.split(p, ':');
-        String key = kv[0];
+        var key = kv[0];
         if (!key.endsWith("?")) required.add(key);
         else key = key.substring(0, key.length() - 1);
         params.put(key, kv[1]);
@@ -127,14 +127,14 @@ public final class Commands {
     void executed(Session session, String id, Map<String, Object> args);
   }
 
-  final List<Listener> listeners = new java.util.ArrayList<Listener>();
+  final List<Listener> listeners = new java.util.ArrayList<>();
 
   private int depth;
 
   Map<String, Object> lastArgs;
 
   /** Caret {block, offset} after the most recent edits, newest last, for edit.goBack. */
-  final List<int[]> editSpots = new java.util.ArrayList<int[]>();
+  final List<int[]> editSpots = new java.util.ArrayList<>();
 
   /** Observes every outermost execute call; used by tests to record native replay cases. */
   public interface Tracer {
@@ -148,9 +148,9 @@ public final class Commands {
   private int traceDepth;
 
   public Object execute(final Session session, String id, final Map<String, Object> args) {
-    Tracer t = tracer;
+    var t = tracer;
     if (t == null || traceDepth > 0) return run(session, id, args);
-    Object token = t.begin(session, id, args);
+    var token = t.begin(session, id, args);
     traceDepth++;
     Object result;
     try {
@@ -166,15 +166,15 @@ public final class Commands {
   }
 
   private Object run(final Session session, String id, final Map<String, Object> args) {
-    final Descriptor d = commands.get(id);
+    final var d = commands.get(id);
     if (d == null) throw new IllegalArgumentException("Unknown command: " + id);
     for (String required : d.required)
       if (!args.containsKey(required))
         throw new IllegalArgumentException("Missing argument: " + required);
     for (Map.Entry<String, Object> e : args.entrySet()) {
-      String type = d.parameters.get(e.getKey());
+      var type = d.parameters.get(e.getKey());
       if (type == null) throw new IllegalArgumentException("Unknown argument: " + e.getKey());
-      Object v = e.getValue();
+      var v = e.getValue();
       if ("string".equals(type) && !(v instanceof String)
           || "integer".equals(type)
               && (!(v instanceof Number) || ((Number) v).doubleValue() != ((Number) v).intValue())
@@ -199,9 +199,9 @@ public final class Commands {
       for (Listener l : new java.util.ArrayList<Listener>(listeners)) l.executed(session, id, args);
     if (!id.startsWith("edit.undo") && !id.startsWith("edit.redo")) {
       lastId = id;
-      lastArgs = new java.util.LinkedHashMap<String, Object>(args);
+      lastArgs = new java.util.LinkedHashMap<>(args);
     }
-    Selection x = session.selection();
+    var x = session.selection();
     if (editSpots.isEmpty()
         || editSpots.get(editSpots.size() - 1)[0] != x.block
         || editSpots.get(editSpots.size() - 1)[1] != x.caret) {
@@ -224,11 +224,11 @@ public final class Commands {
   }
 
   private static Map<String, Integer> contentsStyleLevels(Map<?, ?> source) {
-    Map<String, Integer> result = new LinkedHashMap<String, Integer>();
+    var result = new LinkedHashMap<String, Integer>();
     for (Map.Entry<?, ?> entry : source.entrySet()) {
       if (!(entry.getKey() instanceof String) || !(entry.getValue() instanceof Number))
         throw new IllegalArgumentException("Style mappings require names and integer levels");
-      Number value = (Number) entry.getValue();
+      var value = (Number) entry.getValue();
       if (value.doubleValue() != value.intValue())
         throw new IllegalArgumentException("Invalid style level");
       result.put((String) entry.getKey(), value.intValue());
@@ -257,7 +257,7 @@ public final class Commands {
         true,
         (s, a) -> {
           s.leaveCell();
-          Selection x = s.selection();
+          var x = s.selection();
           s.replaceDocument(s.document().title(str(a, "title")));
           s.selectRange(x.anchorBlock, x.anchor, x.block, x.caret);
           return null;
@@ -362,7 +362,7 @@ public final class Commands {
         "",
         false,
         (s, a) -> {
-          List<Object> result = new ArrayList<Object>();
+          var result = new ArrayList<Object>();
           for (ParagraphStyle style : s.document().styles.values())
             result.add(
                 Json.object(
@@ -408,7 +408,7 @@ public final class Commands {
         "id:string",
         true,
         (s, a) -> {
-          ParagraphStyle old = s.document().styles.get(str(a, "id"));
+          var old = s.document().styles.get(str(a, "id"));
           if (old == null) throw new IllegalArgumentException("Unknown style");
           s.defineStyle(
               new ParagraphStyle(
@@ -424,7 +424,7 @@ public final class Commands {
         "id:string,property:string,value:string",
         true,
         (s, a) -> {
-          ParagraphStyle old = s.document().styles.get(str(a, "id"));
+          var old = s.document().styles.get(str(a, "id"));
           if (old == null) throw new IllegalArgumentException("Unknown style");
           String key = str(a, "property"), value = str(a, "value");
           if ("name".equals(key))
@@ -478,8 +478,9 @@ public final class Commands {
         });
     register(
         "layout.columns",
-        "Set newspaper columns: count 1-12 or preset one/two/three/left/right, optional"
-            + " space (pt), separator, and apply section/document/forward",
+        """
+        Set newspaper columns: count 1-12 or preset one/two/three/left/right, optional\
+         space (pt), separator, and apply section/document/forward""",
         "count?:number,preset?:string,space?:number,separator?:boolean,apply?:string",
         true,
         (s, a) -> {
@@ -520,7 +521,7 @@ public final class Commands {
         (s, a) -> {
           String key = str(a, "story");
           PageFurniture.check(key);
-          Sequence<Paragraph> paragraphs = new Sequence<Paragraph>();
+          var paragraphs = new Sequence<Paragraph>();
           String text = str(a, "text");
           String[] lines = TextUtil.split(text, '\n');
           if (!text.isEmpty())
@@ -545,7 +546,7 @@ public final class Commands {
           (s, a) -> {
             String caption = figures ? (a.containsKey("label") ? str(a, "label") : "Figure") : null;
             TableContents.Options old = TableContents.options(s.document(), caption);
-            TableContents.Options options =
+            var options =
                 new TableContents.Options(
                     a.containsKey("levels") ? integer(a, "levels") : old.levels,
                     a.containsKey("title") ? str(a, "title") : old.title,
@@ -573,7 +574,7 @@ public final class Commands {
                         ? contentsStyleLevels((Map<?, ?>) a.get("styleLevels"))
                         : old.styleLevels,
                     a.containsKey("tcIdentifier") ? str(a, "tcIdentifier") : old.tcIdentifier);
-            LayoutEngine engine = layoutEngine;
+            var engine = layoutEngine;
             TableContents.insert(s, options, d -> engine.layout(d, s.revision()));
             return null;
           });
@@ -594,7 +595,7 @@ public final class Commands {
         (s, a) -> {
           if (a.containsKey("add")) Citations.source(s, citationSource((Map<?, ?>) a.get("add")));
           if (a.containsKey("remove")) Citations.removeSource(s, str(a, "remove"));
-          List<Object> result = new ArrayList<Object>();
+          var result = new ArrayList<Object>();
           for (CitationSource source : s.document().bibliography.sources.values())
             result.add(source.values);
           return result;
@@ -697,7 +698,7 @@ public final class Commands {
         true,
         (s, a) -> {
           String entry = a.containsKey("entry") ? str(a, "entry") : s.selectedText();
-          String selected = s.selectedText().trim();
+          var selected = s.selectedText().trim();
           int marked =
               DocumentIndex.mark(
                   s,
@@ -772,7 +773,7 @@ public final class Commands {
         "",
         true,
         (s, a) -> {
-          LayoutEngine engine = layoutEngine;
+          var engine = layoutEngine;
           TableContents.update(s, d -> engine.layout(d, s.revision()));
           return null;
         });
@@ -791,7 +792,7 @@ public final class Commands {
         "",
         true,
         (s, a) -> {
-          LayoutEngine engine = layoutEngine;
+          var engine = layoutEngine;
           TableContents.updateFigures(s, d -> engine.layout(d, s.revision()));
           return null;
         });
@@ -829,7 +830,7 @@ public final class Commands {
             if (a.containsKey(k + "Format"))
               s.noteOptions(
                   k, new NoteOptions.Properties(str(a, k + "Format"), 0, null, null), true);
-          NoteOptions options = s.activeSection().resolved.notes;
+          var options = s.activeSection().resolved.notes;
           return Json.object(
               "footnote",
               noteProperties(options.footnote),
@@ -897,7 +898,7 @@ public final class Commands {
         "",
         false,
         (s, a) -> {
-          List<Object> result = new ArrayList<Object>();
+          var result = new ArrayList<Object>();
           for (Note note : Notes.all(layoutEngine.layout(s.document(), s.revision()).document))
             result.add(
                 Json.object(
@@ -942,9 +943,9 @@ public final class Commands {
           if (found == null) throw new IllegalArgumentException("Unknown note");
           Sequence<Paragraph> story = found.paragraphs;
           if (a.containsKey("text")) {
-            Sequence<Block> blocks = new Sequence<Block>();
+            var blocks = new Sequence<Block>();
             for (Paragraph p : story) blocks = blocks.append(p);
-            Session draft =
+            var draft =
                 new Session(
                     new Document(blocks, s.document().page, "Note", s.document().nextId)
                         .styles(s.document().styles)
@@ -953,7 +954,7 @@ public final class Commands {
             int last = blocks.size() - 1;
             draft.selectRange(0, 0, last, ((Paragraph) blocks.get(last)).text.length());
             draft.replace(str(a, "text"));
-            story = new Sequence<Paragraph>();
+            story = new Sequence<>();
             for (Block block : draft.document().blocks) story = story.append((Paragraph) block);
           }
           s.updateNote(
@@ -991,14 +992,14 @@ public final class Commands {
         "",
         true,
         (s, a) -> {
-          LayoutEngine engine = layoutEngine;
+          var engine = layoutEngine;
           Citations.update(s);
           TableContents.update(s, d -> engine.layout(d, s.revision()));
           TableContents.updateFigures(s, d -> engine.layout(d, s.revision()));
           DocumentIndex.update(s, d -> engine.layout(d, s.revision()));
           TableAuthorities.update(s, d -> engine.layout(d, s.revision()));
           for (int pass = 0; pass < 4; pass++) {
-            Document before = s.document();
+            var before = s.document();
             s.mapFields(
                 DocumentFields.resolver(
                     before,
@@ -1041,7 +1042,7 @@ public final class Commands {
         "",
         false,
         (s, a) -> {
-          List<Object> marks = new ArrayList<Object>();
+          var marks = new ArrayList<Object>();
           for (Bookmark mark : s.document().bookmarks.values())
             marks.add(
                 Json.object(
@@ -1129,7 +1130,7 @@ public final class Commands {
         true,
         (s, a) -> {
           int block = integer(a, "block");
-          Picture pic = (Picture) s.document().blocks.get(block);
+          var pic = (Picture) s.document().blocks.get(block);
           s.updatePicture(block, pic.width, pic.height, pic.alt, pic.align, true);
           return null;
         });
@@ -1207,7 +1208,7 @@ public final class Commands {
           (s, a) -> {
             if (!s.inCell()) throw new IllegalArgumentException("Click inside a table first");
             int block = s.cellBlock(), row = s.cellRow(), col = s.cellColumn();
-            Table t = (Table) s.document().blocks.get(block);
+            var t = (Table) s.document().blocks.get(block);
             s.selectCells(
                 block,
                 "Column".equals(scope) || "Table".equals(scope) ? 0 : row,
@@ -1225,8 +1226,8 @@ public final class Commands {
           (s, a) -> {
             if (!s.inCell()) throw new IllegalArgumentException("Click inside a table first");
             int block = s.cellBlock(), row = s.cellRow(), col = s.cellColumn();
-            Table table = (Table) s.document().blocks.get(block);
-            CellSelection selected = s.cellSelection();
+            var table = (Table) s.document().blocks.get(block);
+            var selected = s.cellSelection();
             int first =
                 selected == null
                     ? (rows ? row : col)
@@ -1260,7 +1261,7 @@ public final class Commands {
         "",
         true,
         (s, a) -> {
-          CellSelection x = s.cellSelection();
+          var x = s.cellSelection();
           if (x == null) throw new IllegalArgumentException("Select cells first");
           s.mergeCells(
               x.block,
@@ -1306,9 +1307,9 @@ public final class Commands {
         true,
         (s, a) -> {
           int block = integer(a, "block"), row = integer(a, "row"), column = integer(a, "column");
-          Table table = (Table) s.document().blocks.get(block);
-          TableFormat f = table.format;
-          TableFormat.Cell old = f.cell(row, column);
+          var table = (Table) s.document().blocks.get(block);
+          var f = table.format;
+          var old = f.cell(row, column);
           f =
               f.cell(
                   row,
@@ -1493,7 +1494,7 @@ public final class Commands {
         "",
         false,
         (s, a) -> {
-          List<Object> out = new ArrayList<Object>();
+          var out = new ArrayList<Object>();
           for (Revisions.Change c : Revisions.list(s.document()))
             out.add(
                 Json.object(
@@ -1582,7 +1583,7 @@ public final class Commands {
         "",
         false,
         (s, a) -> {
-          List<Object> out = new ArrayList<Object>();
+          var out = new ArrayList<Object>();
           for (ReviewComment c : s.document().comments)
             out.add(
                 Json.object(
@@ -1646,10 +1647,10 @@ public final class Commands {
         true,
         (s, a) -> {
           String needle = str(a, "text");
-          List<Map<String, Object>> matches = find(s.document(), needle);
+          var matches = find(s.document(), needle);
           if (matches.size() > 10000) throw new IllegalArgumentException("Too many matches");
           for (int i = matches.size() - 1; i >= 0; i--) {
-            Map<String, Object> m = matches.get(i);
+            var m = matches.get(i);
             selectMatch(s, m);
             s.replace(str(a, "replacement"));
           }
@@ -1658,7 +1659,7 @@ public final class Commands {
   }
 
   private static List<Object> replies(ReviewComment c) {
-    List<Object> out = new ArrayList<Object>();
+    var out = new ArrayList<Object>();
     for (ReviewComment.Reply reply : c.replies)
       out.add(Json.object("author", reply.author, "text", reply.text));
     return out;
@@ -1666,12 +1667,11 @@ public final class Commands {
 
   public static List<Map<String, Object>> find(Document d, String needle) {
     if (needle.isEmpty()) throw new IllegalArgumentException("Search text is empty");
-    List<Map<String, Object>> out = new ArrayList<Map<String, Object>>();
+    var out = new ArrayList<Map<String, Object>>();
     for (int i = 0; i < d.blocks.size(); i++) {
-      Block b = d.blocks.get(i);
-      if (b instanceof Paragraph) findParagraph(out, (Paragraph) b, needle, i, -1, -1, 0);
-      else if (b instanceof Table) {
-        Table t = (Table) b;
+      var b = d.blocks.get(i);
+      if (b instanceof Paragraph paragraph1) findParagraph(out, paragraph1, needle, i, -1, -1, 0);
+      else if (b instanceof Table t) {
         for (int r = 0; r < t.rows(); r++)
           for (int c = 0; c < t.columns(); c++) {
             if (t.covered(r, c)) continue;
@@ -1692,10 +1692,10 @@ public final class Commands {
       int row,
       int column,
       int paragraph) {
-    String text = p.text.toString();
+    var text = p.text.toString();
     int start = 0;
     while ((start = text.indexOf(needle, start)) >= 0) {
-      Map<String, Object> match =
+      var match =
           Json.object("block", block, "start", start, "end", start + needle.length());
       if (row >= 0) {
         match.put("row", row);
@@ -1725,7 +1725,7 @@ public final class Commands {
   }
 
   public static boolean followsSelection(Session s, Map<String, Object> match) {
-    Selection x = s.selection();
+    var x = s.selection();
     int[] current = {
       s.inCell() ? s.cellBlock() : x.block,
       s.cellRow(),
@@ -1748,7 +1748,7 @@ public final class Commands {
   }
 
   private static CitationSource citationSource(Map<?, ?> values) {
-    Map<String, String> data = new LinkedHashMap<String, String>();
+    var data = new LinkedHashMap<String, String>();
     for (Map.Entry<?, ?> entry : values.entrySet()) {
       if (!(entry.getKey() instanceof String) || !(entry.getValue() instanceof String))
         throw new IllegalArgumentException("Source fields must be strings");
@@ -1758,10 +1758,9 @@ public final class Commands {
   }
 
   public static Map<String, Object> inspect(Session s) {
-    List<Object> blocks = new ArrayList<Object>();
+    var blocks = new ArrayList<Object>();
     for (Block b : s.document().blocks) {
-      if (b instanceof Paragraph) {
-        Paragraph p = (Paragraph) b;
+      if (b instanceof Paragraph p) {
         blocks.add(
             Json.object(
                 "id",
@@ -1774,8 +1773,7 @@ public final class Commands {
                 p.style,
                 "alignment",
                 p.align));
-      } else if (b instanceof Table) {
-        Table t = (Table) b;
+      } else if (b instanceof Table t) {
         blocks.add(
             Json.object(
                 "id",
@@ -1792,7 +1790,7 @@ public final class Commands {
                 t.format.description));
       }
     }
-    Selection x = s.selection();
+    var x = s.selection();
     return Json.object(
         "apiVersion",
         1,

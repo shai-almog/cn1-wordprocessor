@@ -7,7 +7,7 @@ import org.junit.Test;
 public class SectionsTest {
   @Test
   public void breakPreservesSelectedTextAndUndoAndSplittingRetainsBoundary() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("First second third");
     s.select(0, 6, 12);
     s.sectionBreak("oddPage");
@@ -30,8 +30,8 @@ public class SectionsTest {
 
   @Test
   public void linkedStoriesFollowPreviousSectionUntilExplicitlyUnlinked() {
-    Session s = new Session(Document.empty());
-    PageFurniture header =
+    var s = new Session(Document.empty());
+    var header =
         PageFurniture.EMPTY.story(
             "header", new Sequence<Paragraph>().append(new Paragraph("h", RichText.of("Shared"))));
     s.furniture(header);
@@ -48,9 +48,9 @@ public class SectionsTest {
 
   @Test
   public void pageChangesAffectOnlyActiveSectionAndSurviveTitleChanges() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.sectionBreak("evenPage");
-    PageSpec landscape = new PageSpec(842, 595, 54, 54, 54, 54);
+    var landscape = new PageSpec(842, 595, 54, 54, 54, 54);
     s.section(s.activeSection().raw.page(landscape).numbering(7));
     assertSame(PageSpec.A4, s.document().sectionAt(0).raw.page);
     assertSame(landscape, s.document().title("Changed").sectionAt(1).raw.page);
@@ -62,7 +62,7 @@ public class SectionsTest {
 
   @Test
   public void richPasteRetainsDestinationBoundaryAndCopiesInternalSections() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("First");
     s.sectionBreak("nextPage");
     s.replace("Second");
@@ -76,8 +76,8 @@ public class SectionsTest {
     assertEquals(2, s.document().sectionRanges().size());
     assertEquals("FiXrst", s.document().paragraph(0).text.toString());
     s.selectRange(0, 0, 1, 6);
-    Document fragment = s.copySelection();
-    Session target = new Session(Document.empty());
+    var fragment = s.copySelection();
+    var target = new Session(Document.empty());
     target.paste(fragment);
     assertEquals(2, target.document().sectionRanges().size());
     assertEquals(s.document().plainText(), target.document().plainText());

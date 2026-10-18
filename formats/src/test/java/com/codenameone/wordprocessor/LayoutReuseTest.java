@@ -8,10 +8,10 @@ import org.junit.Test;
 
 public class LayoutReuseTest {
   @Test public void typingInLargeImportedDocumentRemeasuresOneParagraph() throws Exception {
-    File f = new File("../artifacts/1000-paragraphs.docx");
+    var f = new File("../artifacts/1000-paragraphs.docx");
     org.junit.Assume.assumeTrue(f.exists());
-    Session s = new Session(Docx.read(new FileInputStream(f)).document);
-    LayoutEngine engine = new LayoutEngine(new PdfMetrics());
+    var s = new Session(Docx.read(new FileInputStream(f)).document);
+    var engine = new LayoutEngine(new PdfMetrics());
     engine.layout(s.document(), 0);
     LayoutEngine.Result r = null;
     for (int i = 0; i < 30; i++) {

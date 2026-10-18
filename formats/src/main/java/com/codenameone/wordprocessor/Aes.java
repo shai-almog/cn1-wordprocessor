@@ -109,9 +109,9 @@ public final class Aes {
   /** CBC encrypt; data length must be a multiple of 16 (no padding is added). */
   public static byte[] cbcEncrypt(byte[] key, byte[] iv, byte[] data) {
     if (data.length % 16 != 0 || iv.length != 16) throw new IllegalArgumentException("CBC needs whole blocks");
-    Aes aes = new Aes(key);
+    var aes = new Aes(key);
     byte[] out = new byte[data.length];
-    byte[] prev = iv.clone();
+    var prev = iv.clone();
     byte[] x = new byte[16];
     for (int o = 0; o < data.length; o += 16) {
       for (int i = 0; i < 16; i++) x[i] = (byte) (data[o + i] ^ prev[i]);
@@ -123,9 +123,9 @@ public final class Aes {
 
   public static byte[] cbcDecrypt(byte[] key, byte[] iv, byte[] data) {
     if (data.length % 16 != 0 || iv.length != 16) throw new IllegalArgumentException("CBC needs whole blocks");
-    Aes aes = new Aes(key);
+    var aes = new Aes(key);
     byte[] out = new byte[data.length];
-    byte[] prev = iv.clone();
+    var prev = iv.clone();
     for (int o = 0; o < data.length; o += 16) {
       aes.decryptBlock(data, o, out, o);
       for (int i = 0; i < 16; i++) out[o + i] ^= prev[i];

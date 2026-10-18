@@ -10,7 +10,7 @@ public class TableContentsTest {
   });
   private TableContents.Paginator pages() { return d -> engine.layout(d, 0); }
   private Session document() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("\nOverview\nBody\nDetails\nMore text");
     s.select(1, 0, 8); s.applyStyle("Heading1");
     s.select(3, 0, 7); s.applyStyle("Heading2");
@@ -18,8 +18,8 @@ public class TableContentsTest {
     return s;
   }
   @Test public void contentsUpdatesWithoutDuplicatesAndUndoIsAtomic() {
-    Session s = document();
-    Document before = s.document();
+    var s = document();
+    var before = s.document();
     TableContents.insert(s, TableContents.options(before), pages());
     assertEquals("Contents", s.document().paragraph(0).text.plainText());
     assertEquals("Overview\t1", s.document().paragraph(1).text.plainText());
@@ -33,13 +33,13 @@ public class TableContentsTest {
     assertEquals("Introduction\t1", s.document().paragraph(1).text.plainText());
     assertEquals(2, s.document().bookmarks.size());
     assertEquals(8, s.document().blocks.size());
-    Document withContents = s.document();
+    var withContents = s.document();
     TableContents.remove(s); assertNull(TableContents.range(s.document()));
     assertTrue(s.document().plainText().contains("Introduction"));
     s.undo(); assertSame(withContents, s.document());
   }
   @Test public void settingsReplaceInPlaceAndKeepOnlyRequestedHeadingLevels() {
-    Session s = document();
+    var s = document();
     TableContents.insert(s, TableContents.options(s.document()), pages());
     s.select(s.document().blocks.size()-1, 0, 0);
     TableContents.insert(s, new TableContents.Options(1,"Index",false,false,"none",false), pages());
@@ -50,16 +50,16 @@ public class TableContentsTest {
     assertFalse(TableContents.options(s.document()).pageNumbers);
   }
   @Test public void pageNumbersIncludeContentsPaginationAndSectionRestarts() {
-    Session s = document();
-    Document d = s.document().page(new PageSpec(300,100,10,10,10,10));
+    var s = document();
+    var d = s.document().page(new PageSpec(300,100,10,10,10,10));
     d = d.section(3, new Section(d.page,PageFurniture.EMPTY,"nextPage",7));
     s.replaceDocument(d);
     TableContents.insert(s, TableContents.options(d), pages());
-    LayoutEngine.Result layout = pages().layout(s.document());
+    var layout = pages().layout(s.document());
     for (int i=1; i<=2; i++) {
-      Paragraph entry=s.document().paragraph(i);
-      InlineField page=entry.text.fieldAt(entry.text.length()-1);
-      Bookmark anchor=s.document().bookmarks.get(new FieldCode(page.instruction).arguments.get(0));
+      var entry=s.document().paragraph(i);
+      var page=entry.text.fieldAt(entry.text.length()-1);
+      var anchor=s.document().bookmarks.get(new FieldCode(page.instruction).arguments.get(0));
       int expected=-1;
       for (LayoutEngine.Page p:layout.pages) for(LayoutEngine.Line l:p.lines)
         if(l.paragraphId.equals(anchor.startId)) expected=p.number;
@@ -67,8 +67,8 @@ public class TableContentsTest {
     }
   }
   @Test public void insertionSplitsTextAndEmptyContentsRemainRemovable() {
-    Session s=new Session(Document.empty()); s.replace("BeforeAfter"); s.select(0,6,6);
-    Document before=s.document();
+    var s=new Session(Document.empty()); s.replace("BeforeAfter"); s.select(0,6,6);
+    var before=s.document();
     TableContents.insert(s,TableContents.options(before),pages());
     assertEquals("Before\nContents\nAfter",s.document().plainText());
     TableContents.remove(s);
@@ -76,7 +76,7 @@ public class TableContentsTest {
     s.undo(); s.undo(); assertSame(before,s.document());
   }
   @Test public void headerMarkerIsNotAnEntryAndInvalidOptionsPreserveDocument() {
-    Session s=document(); Document before=s.document();
+    var s=document(); var before=s.document();
     try { TableContents.insert(s,new TableContents.Options(0,"Bad",true,true,"dot",true),pages()); fail(); }
     catch(IllegalArgumentException expected) { assertSame(before,s.document()); }
     TableContents.insert(s,TableContents.options(before),pages());
@@ -86,12 +86,12 @@ public class TableContentsTest {
   }
 
   @Test public void updateFromTableCellPreservesSelectionAndUndo() {
-    Session s=document();
+    var s=document();
     s.select(4,0,0); s.insertTable(1,1);
     s.enterCell(5,0,0); s.replace("Cell text"); s.leaveCell(); s.select(0,0,0);
     TableContents.insert(s,TableContents.options(s.document()),pages());
     s.enterCell(8,0,0); s.select(0,2,6);
-    Document before=s.document();
+    var before=s.document();
     TableContents.update(s,pages());
     assertTrue(s.inCell()); assertEquals(8,s.cellBlock());
     assertEquals(2,s.selection().anchor); assertEquals(6,s.selection().caret);
@@ -100,7 +100,7 @@ public class TableContentsTest {
     assertEquals(2,s.selection().anchor); assertEquals(6,s.selection().caret);
   }
   @Test public void headingFieldResultsAreRefreshedBeforeContentsPaginationSettles() {
-    Session s = new Session(Document.empty().page(new PageSpec(300, 160, 10, 10, 10, 10)));
+    var s = new Session(Document.empty().page(new PageSpec(300, 160, 10, 10, 10, 10)));
     s.replace("\nCurrent heading text\nHeading ");
     s.select(1, 0, 20); s.addBookmark("Source");
     s.select(2, 8, 8); s.applyStyle("Heading1");
@@ -109,9 +109,9 @@ public class TableContentsTest {
     s.select(0, 0, 0);
     TableContents.insert(s, TableContents.options(s.document()), pages());
     int[] range = TableContents.range(s.document());
-    String heading = s.document().paragraph(s.document().blocks.size() - 1).text.plainText();
+    var heading = s.document().paragraph(s.document().blocks.size() - 1).text.plainText();
     assertTrue(heading.startsWith("Heading Current heading text"));
-    String entry = s.document().paragraph(range[0] + 1).text.plainText();
+    var entry = s.document().paragraph(range[0] + 1).text.plainText();
     assertTrue(entry, entry.startsWith(heading + "\t"));
     TableContents.update(s, pages());
     assertEquals(entry, s.document().paragraph(range[0] + 1).text.plainText());
@@ -123,18 +123,18 @@ public class TableContentsTest {
         headings, outlines, marked, styles, identifier);
   }
   private java.util.List<String> entries(Document d) {
-    java.util.List<String> out = new java.util.ArrayList<String>();
+    var out = new java.util.ArrayList<String>();
     int[] range = TableContents.range(d);
     for (int i = range[0] + 1; i < range[1]; i++) out.add(d.paragraph(i).style + ":" + d.paragraph(i).text.plainText());
     return out;
   }
   @Test public void styleMappingsOutrankOutlineExclusionAndCanUseHigherLevels() {
-    Session s = document();
+    var s = document();
     s.select(2,0,0); s.defineStyle(new ParagraphStyle("Topic", "Special Topic", s.document().paragraph(2), TextStyle.DEFAULT));
     s.applyStyle("Topic"); s.paragraph("outlineLevel", "0");
     s.select(1,0,0); s.paragraph("outlineLevel", "0");
     s.select(4,0,0); s.paragraph("outlineLevel", "3"); s.select(0,0,0);
-    java.util.Map<String,Integer> styles = new java.util.LinkedHashMap<String,Integer>();
+    var styles = new java.util.LinkedHashMap<String,Integer>();
     styles.put("special topic", 6);
     TableContents.insert(s, sources(true,true,false,styles,""), pages());
     assertEquals(java.util.Arrays.asList("TOC6:Body\t1", "TOC2:Details\t1", "TOC3:More text\t1"), entries(s.document()));
@@ -146,7 +146,7 @@ public class TableContentsTest {
     assertEquals(java.util.Arrays.asList("TOC5:Body\t1"),entries(s.document()));
   }
   @Test public void outlineOnlyIncludesLevelNineAndExclusionDoesNotHideHeadingOnlySource() {
-    Session s = document(); s.select(1,0,0); s.paragraph("outlineLevel","0");
+    var s = document(); s.select(1,0,0); s.paragraph("outlineLevel","0");
     s.select(4,0,0); s.paragraph("outlineLevel","9"); s.select(0,0,0);
     TableContents.insert(s,sources(false,true,false,java.util.Collections.<String,Integer>emptyMap(),""),pages());
     assertEquals(java.util.Arrays.asList("TOC9:More text\t1"),entries(s.document()));
@@ -154,7 +154,7 @@ public class TableContentsTest {
     assertEquals(java.util.Arrays.asList("TOC1:Overview\t1","TOC2:Details\t1"),entries(s.document()));
   }
   @Test public void markedEntriesPreserveSourceAndUseDistinctAnchorsAndFilters() {
-    Session s = document(); s.select(2,0,4); Document before = s.document();
+    var s = document(); s.select(2,0,4); var before = s.document();
     TableContents.markEntry(s,"Quoted \"topic\" \\ path",2,"C");
     assertEquals("Body",s.document().paragraph(2).text.plainText());
     assertEquals("Quoted \"topic\" \\ path",new FieldCode(s.document().paragraph(2).text.fieldAt(4).instruction).arguments.get(0));
@@ -166,10 +166,10 @@ public class TableContentsTest {
     TableContents.insert(s,sources(false,false,true,java.util.Collections.<String,Integer>emptyMap(),"c"),pages());
     assertEquals(java.util.Arrays.asList("TOC2:Quoted \"topic\" \\ path\t1","TOC1:Invalid level falls back\t1"),entries(s.document()));
     assertEquals(2,s.document().bookmarks.size());
-    java.util.Set<Integer> starts = new java.util.HashSet<Integer>();
+    var starts = new java.util.HashSet<Integer>();
     for (Bookmark b:s.document().bookmarks.values()) { starts.add(b.start); assertEquals(b.start+1,b.end); }
     assertEquals(2,starts.size());
-    java.util.List<String> expected=entries(s.document());
+    var expected=entries(s.document());
     TableContents.update(s,pages()); assertEquals(expected,entries(s.document())); assertEquals(2,s.document().bookmarks.size());
     TableContents.remove(s); assertNull(TableContents.range(s.document()));
     assertTrue(s.document().plainText().contains("Body"));

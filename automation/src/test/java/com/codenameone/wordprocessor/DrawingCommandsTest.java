@@ -14,7 +14,7 @@ public class DrawingCommandsTest {
   private final Commands commands = new Commands();
 
   private Object run(Session s, String id, Object... kv) {
-    Map<String, Object> a = new LinkedHashMap<String, Object>();
+    var a = new LinkedHashMap<String, Object>();
     for (int i = 0; i < kv.length; i += 2) a.put((String) kv[i], kv[i + 1]);
     return commands.execute(s, id, a);
   }
@@ -28,14 +28,14 @@ public class DrawingCommandsTest {
   }
 
   private static List<Drawing> drawings(Document d) {
-    List<Drawing> out = new ArrayList<Drawing>();
-    for (Block b : d.blocks) if (b instanceof Picture && ((Picture) b).drawing != null) out.add(((Picture) b).drawing);
+    var out = new ArrayList<Drawing>();
+    for (Block b : d.blocks) if (b instanceof Picture picture && picture.drawing != null) out.add(picture.drawing);
     return out;
   }
 
   @Test
   public void shapesTextBoxesAndWordArtFormatAndUndo() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     int shape = block(run(s, "insert.shape", "shape", "star", "text", "Hi"));
     run(s, "shape.fill", "block", shape, "color", "#ff0000", "transparency", 25);
     run(s, "shape.outline", "block", shape, "color", "none");
@@ -72,7 +72,7 @@ public class DrawingCommandsTest {
 
   @Test
   public void chartsSmartArtEquationsInkAndArrange() throws Exception {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     int chart = block(run(s, "insert.chart", "type", "bar", "data", "x,Sales\nQ1,3\nQ2,5"));
     run(s, "chart.title", "block", chart, "title", "Revenue");
     run(s, "chart.legend", "block", chart, "value", false);
@@ -123,16 +123,16 @@ public class DrawingCommandsTest {
     assertTrue(objects.size() >= 5);
 
     // Native XML and DOCX keep every drawing exactly; PDF and HTML render them.
-    List<Drawing> expected = drawings(s.document());
+    var expected = drawings(s.document());
     assertEquals(expected, drawings(DocumentXml.read(DocumentXml.write(s.document()))));
-    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    var out = new ByteArrayOutputStream();
     Docx.write(s.document(), out);
     Docx.Opened back = Docx.read(new ByteArrayInputStream(out.toByteArray()));
-    List<Drawing> fromDocx = drawings(back.document);
+    var fromDocx = drawings(back.document);
     assertEquals(expected.size(), fromDocx.size());
     for (int i = 0; i < expected.size(); i++)
       if (!"equation".equals(expected.get(i).kind)) assertEquals(expected.get(i), fromDocx.get(i));
-    String docx = new String(part(out.toByteArray(), "word/document.xml"), "UTF-8");
+    var docx = new String(part(out.toByteArray(), "word/document.xml"), "UTF-8");
     assertTrue(docx.contains("<m:oMathPara"));
     assertTrue(docx.contains("wpg:wgp"));
     assertTrue(new String(PdfExporter.write(s.document()), "ISO-8859-1").contains("(Revenue) Tj") == false);
@@ -141,10 +141,10 @@ public class DrawingCommandsTest {
   }
 
   private static byte[] part(byte[] zip, String name) throws Exception {
-    java.util.zip.ZipInputStream in = new java.util.zip.ZipInputStream(new ByteArrayInputStream(zip));
+    var in = new java.util.zip.ZipInputStream(new ByteArrayInputStream(zip));
     for (java.util.zip.ZipEntry e; (e = in.getNextEntry()) != null; )
       if (e.getName().equals(name)) {
-        ByteArrayOutputStream b = new ByteArrayOutputStream();
+        var b = new ByteArrayOutputStream();
         byte[] buf = new byte[8192];
         for (int n; (n = in.read(buf)) > 0; ) b.write(buf, 0, n);
         return b.toByteArray();
@@ -154,7 +154,7 @@ public class DrawingCommandsTest {
 
   @Test
   public void groupAndUngroup() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     int a = block(run(s, "insert.shape", "shape", "ellipse"));
     int b = block(run(s, "insert.icon", "icon", "check"));
     assertEquals(a + 1, b);
@@ -175,14 +175,14 @@ public class DrawingCommandsTest {
 
   @Test
   public void squareWrapNarrowsTextBesideTheObjectAndFrontTakesNoSpace() throws Exception {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     int shape = block(run(s, "insert.shape", "shape", "rect", "width", 100, "height", 100));
     s.replace("Wrapped text beside the shape.");
     LayoutEngine engine = PdfExporter.layoutEngine(null);
     float inlineY = engine.layout(s.document(), 1).pages.get(0).lines.get(0).y;
     run(s, "arrange.wrap", "block", shape, "wrap", "square");
-    LayoutEngine.Page page = engine.layout(s.document(), 2).pages.get(0);
-    LayoutEngine.PlacedPicture pic = page.pictures.get(0);
+    var page = engine.layout(s.document(), 2).pages.get(0);
+    var pic = page.pictures.get(0);
     assertTrue(page.lines.get(0).x >= pic.x + pic.width);
     assertTrue(page.lines.get(0).y < inlineY);
     run(s, "arrange.wrap", "block", shape, "wrap", "front");

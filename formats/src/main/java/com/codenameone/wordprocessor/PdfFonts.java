@@ -7,16 +7,16 @@ import java.util.zip.DeflaterOutputStream;
 /** Embedded TrueType faces with explicit glyph mapping and searchable Unicode text. */
 final class PdfFonts {
   private final PdfExporter.FontProvider provider;
-  private final Map<String, Face> faces = new LinkedHashMap<String, Face>();
+  private final Map<String, Face> faces = new LinkedHashMap<>();
 
   PdfFonts(PdfExporter.FontProvider provider) {
     this.provider = provider;
   }
 
   Face face(TextStyle style) throws IOException {
-    String name = provider.name(style);
+    var name = provider.name(style);
     if (!validName(name)) throw new IOException("Invalid PDF font name");
-    Face face = faces.get(name);
+    var face = faces.get(name);
     if (face == null) {
       face = new Face(name, provider.bytes(name), faces.size() + 4);
       faces.put(name, face);
@@ -35,7 +35,7 @@ final class PdfFonts {
   }
 
   String install(List<byte[]> objects) throws IOException {
-    StringBuilder resources = new StringBuilder();
+    var resources = new StringBuilder();
     for (Face face : faces.values()) {
       int id = face.install(objects);
       resources.append(" /F").append(face.number).append(' ').append(id).append(" 0 R");
@@ -47,7 +47,7 @@ final class PdfFonts {
     final String name;
     final int number;
     final TrueType font;
-    final Map<Integer, Integer> codes = new LinkedHashMap<Integer, Integer>();
+    final Map<Integer, Integer> codes = new LinkedHashMap<>();
 
     Face(String name, byte[] bytes, int number) throws IOException {
       this.name = name;
@@ -56,7 +56,7 @@ final class PdfFonts {
     }
 
     String encode(String text) throws IOException {
-      StringBuilder out = new StringBuilder("<");
+      var out = new StringBuilder("<");
       for (int i = 0; i < text.length(); i++) {
         int cp = text.charAt(i);
         if (cp >= 0xd800 && cp <= 0xdbff && i + 1 < text.length()) {
@@ -69,7 +69,7 @@ final class PdfFonts {
         if (cp < 32 || cp >= 0xd800 && cp <= 0xdfff || font.glyph(cp) == 0)
           throw new IOException(
               "PDF font " + name + " does not cover U+" + Integer.toHexString(cp));
-        Integer cid = codes.get(cp);
+        var cid = codes.get(cp);
         if (cid == null) {
           if (codes.size() == 65535) throw new IOException("Too many PDF font characters");
           codes.put(cp, cid = codes.size() + 1);
@@ -104,15 +104,17 @@ final class PdfFonts {
       StringBuilder widths = new StringBuilder("[1 ["),
           unicode =
               new StringBuilder(
-                  "/CIDInit /ProcSet findresource begin\n"
-                      + "12 dict begin\n"
-                      + "begincmap\n"
-                      + "/CIDSystemInfo << /Registry (Adobe) /Ordering (UCS) /Supplement 0 >> def\n"
-                      + "/CMapName /CN1Unicode def\n"
-                      + "/CMapType 2 def\n"
-                      + "1 begincodespacerange\n"
-                      + "<0000> <FFFF>\n"
-                      + "endcodespacerange\n");
+                  """
+                  /CIDInit /ProcSet findresource begin
+                  12 dict begin
+                  begincmap
+                  /CIDSystemInfo << /Registry (Adobe) /Ordering (UCS) /Supplement 0 >> def
+                  /CMapName /CN1Unicode def
+                  /CMapType 2 def
+                  1 begincodespacerange
+                  <0000> <FFFF>
+                  endcodespacerange
+                  """);
       int count = 0;
       for (Map.Entry<Integer, Integer> e : codes.entrySet()) {
         if (count % 100 == 0)
@@ -165,7 +167,7 @@ final class PdfFonts {
   /** Bounds-checked SFNT reader; supports Unicode cmap 4 and 12 and TrueType outlines. */
   static final class TrueType {
     final byte[] data;
-    final Map<String, int[]> tables = new HashMap<String, int[]>();
+    final Map<String, int[]> tables = new HashMap<>();
     final int units, ascent, descent, metrics, glyphs, hmtx, cmap, cmapLength, format, head;
     final float italic;
 
@@ -192,9 +194,9 @@ final class PdfFonts {
       glyphs = u16(table("maxp", 6) + 4);
       if (metrics == 0 || metrics > glyphs) throw new IOException("Invalid font metrics");
       hmtx = table("hmtx", 4 * metrics + 2 * (glyphs - metrics));
-      int[] post = tables.get("post");
+      var post = tables.get("post");
       italic = post != null && post[1] >= 8 ? ((int) raw32(post[0] + 4)) / 65536f : 0;
-      int[] os = tables.get("OS/2");
+      var os = tables.get("OS/2");
       if (os != null && os[1] >= 10 && (u16(os[0] + 8) & 0x202) != 0)
         throw new IOException("Font license prohibits outline embedding");
       int base = table("cmap", 4),
@@ -292,7 +294,7 @@ final class PdfFonts {
     }
 
     int table(String name, int min) throws IOException {
-      int[] t = tables.get(name);
+      var t = tables.get(name);
       if (t == null || t[1] < min) throw new IOException("Missing or truncated font table " + name);
       return t[0];
     }
@@ -338,14 +340,14 @@ final class PdfFonts {
   private static byte[] stream(String attributes, byte[] bytes, boolean compress)
       throws IOException {
     if (compress) {
-      ByteArrayOutputStream out = new ByteArrayOutputStream();
-      DeflaterOutputStream z = new DeflaterOutputStream(out);
+      var out = new ByteArrayOutputStream();
+      var z = new DeflaterOutputStream(out);
       z.write(bytes);
       z.close();
       bytes = out.toByteArray();
       attributes += " /Filter /FlateDecode";
     }
-    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    var out = new ByteArrayOutputStream();
     out.write(ascii("<< " + attributes + " /Length " + bytes.length + " >>\nstream\n"));
     out.write(bytes);
     out.write(ascii("\nendstream"));

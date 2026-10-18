@@ -58,14 +58,14 @@ public final class Proofing {
   }
 
   public static Set<String> list(String commaList) {
-    Set<String> out = new LinkedHashSet<String>();
+    var out = new LinkedHashSet<String>();
     for (String w : TextUtil.split(commaList == null ? "" : commaList, ','))
       if (w.trim().length() > 0) out.add(w.trim().toLowerCase());
     return out;
   }
 
   public static String join(Set<String> words) {
-    StringBuilder b = new StringBuilder();
+    var b = new StringBuilder();
     for (String w : words) b.append(b.length() == 0 ? "" : ",").append(w);
     return b.toString();
   }
@@ -85,12 +85,10 @@ public final class Proofing {
     if (preloading) return;
     preloading = true;
     new Thread(
-            new Runnable() {
-              public void run() {
-                WordList.get();
-                extra();
-                done.run();
-              }
+            (Runnable) () -> {
+              WordList.get();
+              extra();
+              done.run();
             },
             "proofing-load")
         .start();
@@ -98,9 +96,9 @@ public final class Proofing {
 
   private static synchronized Set<String> extra() {
     if (extra == null) {
-      extra = new HashSet<String>();
+      extra = new HashSet<>();
       for (String line : TextUtil.split(ProofData.text("/proof/en-extra.txt"), '\n')) {
-        String w = line.trim();
+        var w = line.trim();
         if (w.length() > 0 && !w.startsWith("#")) extra.add(w.toLowerCase());
       }
       for (String w : TextUtil.split(COMMON, ' ')) extra.add(w);
@@ -119,25 +117,25 @@ public final class Proofing {
       {"ing", "", "e"}, {"ly", "", "le"}, {"ily", "y"}, {"er", "", "e"}, {"est", "", "e"}, {"ness", ""}
     };
     for (String[] row : stems) {
-      String suf = row[0];
+      var suf = row[0];
       if (!w.endsWith(suf) || w.length() - suf.length() < 2) continue;
-      String stem = w.substring(0, w.length() - suf.length());
+      var stem = w.substring(0, w.length() - suf.length());
       for (int i = 1; i < row.length; i++) {
-        String s = stem + row[i];
+        var s = stem + row[i];
         if (base(s) || o.dictionary.contains(s)) return true;
       }
       int n = stem.length();
       if (("ing".equals(suf) || "ed".equals(suf) || "er".equals(suf) || "est".equals(suf))
           && n >= 3
           && stem.charAt(n - 1) == stem.charAt(n - 2)) {
-        String s = stem.substring(0, n - 1);
+        var s = stem.substring(0, n - 1);
         if (base(s) || o.dictionary.contains(s)) return true;
       }
     }
     String[] prefixes = {"un", "re", "non", "pre", "over", "under", "co", "mis"};
     for (String pre : prefixes)
       if (w.startsWith(pre) && w.length() - pre.length() >= 3) {
-        String rest = w.substring(pre.length());
+        var rest = w.substring(pre.length());
         if (base(rest) || o.dictionary.contains(rest)) return true;
       }
     return false;
@@ -147,7 +145,7 @@ public final class Proofing {
     int a = 0, b = word.length();
     while (a < b && !Character.isLetterOrDigit(word.charAt(a))) a++;
     while (b > a && !Character.isLetterOrDigit(word.charAt(b - 1)) && word.charAt(b - 1) != '\'') b--;
-    String w = word.substring(a, b);
+    var w = word.substring(a, b);
     while (w.startsWith("'")) w = w.substring(1);
     while (w.endsWith("'")) w = w.substring(0, w.length() - 1);
     return w;
@@ -165,7 +163,7 @@ public final class Proofing {
       if (c >= '0' && c <= '9') digit = true;
     }
     if (!letters || digit || !lower) return true;
-    String l = w.toLowerCase().replace('\u2019', '\'');
+    var l = w.toLowerCase().replace('\u2019', '\'');
     if (known(l, o)) return true;
     if (l.indexOf('-') >= 0) {
       for (String part : TextUtil.split(l, '-')) if (part.length() > 0 && !known(part, o)) return false;
@@ -180,7 +178,7 @@ public final class Proofing {
 
   /** Word spans (start, end) of the text, surrounding apostrophes and hyphens trimmed. */
   public static List<int[]> words(String text) {
-    List<int[]> out = new ArrayList<int[]>();
+    var out = new ArrayList<int[]>();
     int i = 0;
     while (i < text.length()) {
       if (!wordChar(text.charAt(i))) {
@@ -200,13 +198,13 @@ public final class Proofing {
 
   /** Spelling issues (without suggestions; ask {@link #suggest}) of a paragraph. */
   public static List<Issue> checkSpelling(String text, Options o) {
-    List<Issue> out = new ArrayList<Issue>();
+    var out = new ArrayList<Issue>();
     for (int[] w : words(text)) {
-      String word = text.substring(w[0], w[1]);
+      var word = text.substring(w[0], w[1]);
       int ts = w[0], te = w[1];
       while (ts > 0 && !Character.isWhitespace(text.charAt(ts - 1))) ts--;
       while (te < text.length() && !Character.isWhitespace(text.charAt(te))) te++;
-      String token = text.substring(ts, te);
+      var token = text.substring(ts, te);
       if (token.indexOf("://") >= 0 || token.indexOf('@') >= 0 || token.startsWith("www.")) continue;
       if (!isCorrect(word, o))
         out.add(new Issue(w[0], w[1], "spelling", "Possible spelling mistake", new ArrayList<String>()));
@@ -216,7 +214,7 @@ public final class Proofing {
 
   /** Spelling plus grammar issues sorted by position. */
   public static List<Issue> check(String text, Options o) {
-    List<Issue> out = marks(text, o);
+    var out = marks(text, o);
     for (Issue i : out)
       if ("spelling".equals(i.kind)) i.suggestions.addAll(suggest(text.substring(i.start, i.end), 5));
     return out;
@@ -227,7 +225,7 @@ public final class Proofing {
    * whole word list per misspelling; on the paint path that cost every keystroke in a word.
    */
   public static List<Issue> marks(String text, Options o) {
-    List<Issue> out = checkSpelling(text, o);
+    var out = checkSpelling(text, o);
     out.addAll(checkGrammar(text));
     Collections.sort(
         out,
@@ -241,11 +239,11 @@ public final class Proofing {
 
   /** Words within two edits of the misspelling, nearest first. */
   public static List<String> suggest(String word, int max) {
-    String lower = trimmed(word).toLowerCase().replace('\u2019', '\'');
+    var lower = trimmed(word).toLowerCase().replace('\u2019', '\'');
     int n = lower.length();
-    List<String> out = new ArrayList<String>();
+    var out = new ArrayList<String>();
     if (n == 0 || n > 40) return out;
-    final List<Object[]> scored = new ArrayList<Object[]>();
+    final var scored = new ArrayList<Object[]>();
     WordList d = WordList.get();
     int total = d.words.length;
     Set<String> ex = extra();
@@ -276,7 +274,7 @@ public final class Proofing {
     boolean upper = n > 1;
     for (int i = 0; i < word.length(); i++) if (Character.isLowerCase(word.charAt(i))) upper = false;
     for (int i = 0; i < scored.size() && out.size() < max; i++) {
-      String w = (String) scored.get(i)[2];
+      var w = (String) scored.get(i)[2];
       if (upper) w = w.toUpperCase();
       else if (cap) w = Character.toUpperCase(w.charAt(0)) + w.substring(1);
       if (!out.contains(w)) out.add(w);
@@ -301,7 +299,7 @@ public final class Proofing {
         rowMin = Math.min(rowMin, v);
       }
       if (rowMin > 2) return 3;
-      int[] t = prev2;
+      var t = prev2;
       prev2 = prev;
       prev = cur;
       cur = t;
@@ -310,28 +308,28 @@ public final class Proofing {
   }
 
   private static boolean consonantSound(String w) {
-    String l = w.toLowerCase();
+    var l = w.toLowerCase();
     String[] p = {"uni", "use", "usu", "eu", "one", "once", "ubiq", "uti", "ure", "uro"};
     for (String s : p) if (l.startsWith(s)) return true;
     return false;
   }
 
   private static Issue grammar(int a, int b, String message, String fix) {
-    List<String> s = new ArrayList<String>();
+    var s = new ArrayList<String>();
     s.add(fix);
     return new Issue(a, b, "grammar", message, s);
   }
 
   /** Cheap grammar checks of a paragraph. */
   public static List<Issue> checkGrammar(String text) {
-    List<Issue> v = new ArrayList<Issue>();
-    List<int[]> ws = words(text);
+    var v = new ArrayList<Issue>();
+    var ws = words(text);
     for (int k = 0; k + 1 < ws.size(); k++) {
       int[] x = ws.get(k), y = ws.get(k + 1);
       String w0 = text.substring(x[0], x[1]), w1 = text.substring(y[0], y[1]), gap = text.substring(x[1], y[0]);
       boolean letters0 = true;
       for (int i = 0; i < w0.length(); i++) if (!Character.isLetter(w0.charAt(i))) letters0 = false;
-      String l0 = w0.toLowerCase();
+      var l0 = w0.toLowerCase();
       if (gap.trim().length() == 0 && w0.equalsIgnoreCase(w1) && letters0
           && !"had".equals(l0) && !"that".equals(l0) && !"bye".equals(l0) && !"so".equals(l0))
         v.add(grammar(x[0], y[1], "Repeated word: \"" + w1 + "\"", w0));
@@ -356,7 +354,7 @@ public final class Proofing {
     }
     boolean afterEnd = true;
     for (int[] w : ws) {
-      String word = text.substring(w[0], w[1]);
+      var word = text.substring(w[0], w[1]);
       boolean alpha = true;
       for (int i = 0; i < word.length(); i++) if (!Character.isLetter(word.charAt(i))) alpha = false;
       if (afterEnd && alpha && Character.isLowerCase(word.charAt(0)))

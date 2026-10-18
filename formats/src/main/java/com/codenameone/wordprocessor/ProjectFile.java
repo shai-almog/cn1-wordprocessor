@@ -18,11 +18,11 @@ public final class ProjectFile {
   private ProjectFile() {}
 
   public static byte[] write(Document d, Docx.Opened source) throws IOException {
-    ByteArrayOutputStream bytes = new ByteArrayOutputStream();
-    ZipOutputStream zip = new ZipOutputStream(bytes);
+    var bytes = new ByteArrayOutputStream();
+    var zip = new ZipOutputStream(bytes);
     entry(zip, "document.xml", DocumentXml.write(d).getBytes("UTF-8"));
     if (source != null) {
-      ByteArrayOutputStream original = new ByteArrayOutputStream();
+      var original = new ByteArrayOutputStream();
       Docx.write(source.document, source, original, false);
       entry(zip, "original.docx", original.toByteArray());
     }
@@ -31,7 +31,7 @@ public final class ProjectFile {
   }
 
   private static void entry(ZipOutputStream zip, String name, byte[] data) throws IOException {
-    ZipEntry entry = new ZipEntry(name);
+    var entry = new ZipEntry(name);
     entry.setTime(0);
     zip.putNextEntry(entry);
     zip.write(data);
@@ -39,18 +39,18 @@ public final class ProjectFile {
   }
 
   public static Opened read(byte[] bytes) throws IOException {
-    ZipInputStream zip = new ZipInputStream(new ByteArrayInputStream(bytes));
+    var zip = new ZipInputStream(new ByteArrayInputStream(bytes));
     byte[] xml = null, original = null;
     int total = 0, count = 0;
     ZipEntry entry;
     while ((entry = zip.getNextEntry()) != null) {
       if (++count > 2) throw new IOException("Unexpected native project entry");
-      String name = entry.getName();
+      var name = entry.getName();
       if (!"document.xml".equals(name) && !"original.docx".equals(name)
           || "document.xml".equals(name) && xml != null
           || "original.docx".equals(name) && original != null)
         throw new IOException("Unknown or duplicate project part");
-      ByteArrayOutputStream out = new ByteArrayOutputStream();
+      var out = new ByteArrayOutputStream();
       byte[] buffer = new byte[8192];
       int n;
       while ((n = zip.read(buffer)) != -1) {

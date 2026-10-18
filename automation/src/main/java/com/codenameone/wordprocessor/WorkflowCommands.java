@@ -16,16 +16,16 @@ import java.util.Map;
  */
 final class WorkflowCommands implements Commands.Extension {
   /** Office clipboard: the last 24 copied fragments per session, newest first. */
-  private static final SessionMap<List<Document>> CLIPBOARD = new SessionMap<List<Document>>();
+  private static final SessionMap<List<Document>> CLIPBOARD = new SessionMap<>();
 
   static final int CLIPBOARD_SIZE = 24;
 
   /** Records the current selection on the Office clipboard (called by edit.copy and edit.cut). */
   static void record(Session s) {
-    Document fragment = s.copySelection();
+    var fragment = s.copySelection();
     if (fragment == null) return;
     synchronized (CLIPBOARD) {
-      List<Document> items = CLIPBOARD.get(s);
+      var items = CLIPBOARD.get(s);
       if (items == null) CLIPBOARD.put(s, items = new ArrayList<Document>());
       items.add(0, fragment);
       while (items.size() > CLIPBOARD_SIZE) items.remove(items.size() - 1);
@@ -34,7 +34,7 @@ final class WorkflowCommands implements Commands.Extension {
 
   private static List<Document> clipboard(Session s) {
     synchronized (CLIPBOARD) {
-      List<Document> items = CLIPBOARD.get(s);
+      var items = CLIPBOARD.get(s);
       return items == null ? new ArrayList<Document>() : items;
     }
   }
@@ -60,7 +60,7 @@ final class WorkflowCommands implements Commands.Extension {
         "block?:integer,offset?:integer",
         false,
         (s, a) -> {
-          Selection sel = s.selection();
+          var sel = s.selection();
           if (a.containsKey("block")) {
             int block = ((Number) a.get("block")).intValue();
             int offset = a.containsKey("offset") ? ((Number) a.get("offset")).intValue() : 0;
@@ -69,8 +69,8 @@ final class WorkflowCommands implements Commands.Extension {
             return s.selectedText();
           }
           for (String step : new String[] {"select.word", "select.sentence", "select.paragraph", "select.all"}) {
-            Selection before = s.selection();
-            c.execute(s, step, new LinkedHashMap<String, Object>());
+            var before = s.selection();
+            c.execute(s, step, new LinkedHashMap<>());
             if (!same(before, s.selection()) && covers(s.selection(), sel)) return s.selectedText();
             if (!covers(s.selection(), sel)) s.selectRange(before.anchorBlock, before.anchor, before.block, before.caret);
           }
@@ -82,12 +82,12 @@ final class WorkflowCommands implements Commands.Extension {
         "property?:string,value?:string",
         true,
         (s, a) -> {
-          TextStyle like = s.document().paragraph(s.selection().block).text.styleAt(Math.max(0, s.selection().start() - (s.selection().collapsed() ? 1 : 0)));
-          List<int[]> ranges = new ArrayList<int[]>();
-          Document d = s.document();
+          var like = s.document().paragraph(s.selection().block).text.styleAt(Math.max(0, s.selection().start() - (s.selection().collapsed() ? 1 : 0)));
+          var ranges = new ArrayList<int[]>();
+          var d = s.document();
           for (int b = 0; b < d.blocks.size(); b++) {
             if (!(d.blocks.get(b) instanceof Paragraph)) continue;
-            RichText t = ((Paragraph) d.blocks.get(b)).text;
+            var t = ((Paragraph) d.blocks.get(b)).text;
             int start = -1;
             for (int i = 0; i <= t.length(); i++) {
               boolean match = i < t.length() && similar(t.styleAt(i), like);
@@ -104,7 +104,7 @@ final class WorkflowCommands implements Commands.Extension {
               s.format(Commands.str(a, "property"), Commands.str(a, "value"));
             }
           if (!ranges.isEmpty()) s.select(ranges.get(0)[0], ranges.get(0)[1], ranges.get(0)[2]);
-          List<Object> out = new ArrayList<Object>();
+          var out = new ArrayList<Object>();
           for (int[] r : ranges) out.add(Arrays.asList(r[0], r[1], r[2]));
           return out;
         });
@@ -119,10 +119,10 @@ final class WorkflowCommands implements Commands.Extension {
           if (b0 > b1 || c0 > c1 || b0 < 0 || b1 >= s.document().blocks.size() || c0 < 0)
             throw new IllegalArgumentException("Invalid column rectangle");
           String action = a.containsKey("action") ? Commands.str(a, "action") : "copy";
-          StringBuilder text = new StringBuilder();
+          var text = new StringBuilder();
           for (int b = b0; b <= b1; b++) {
             if (!(s.document().blocks.get(b) instanceof Paragraph)) continue;
-            String line = s.document().paragraph(b).text.plainText();
+            var line = s.document().paragraph(b).text.plainText();
             if (text.length() > 0) text.append('\n');
             if (c0 < line.length()) text.append(line.substring(c0, Math.min(c1, line.length())));
           }
@@ -148,11 +148,11 @@ final class WorkflowCommands implements Commands.Extension {
           if (pattern.isEmpty()) throw new IllegalArgumentException("Find what?");
           boolean matchCase = Boolean.TRUE.equals(a.get("matchCase")), whole = Boolean.TRUE.equals(a.get("wholeWord"));
           boolean wild = Boolean.TRUE.equals(a.get("wildcards"));
-          List<int[]> found = new ArrayList<int[]>();
-          Document d = s.document();
+          var found = new ArrayList<int[]>();
+          var d = s.document();
           for (int b = 0; b < d.blocks.size(); b++) {
             if (!(d.blocks.get(b) instanceof Paragraph)) continue;
-            String text = d.paragraph(b).text.plainText();
+            var text = d.paragraph(b).text.plainText();
             for (int i = 0; i < text.length(); ) {
               int end = wild ? wildcard(text, i, pattern, 0) : literal(text, i, pattern, matchCase || wild);
               if (end > i && (!whole || boundary(text, i - 1) && boundary(text, end))) {
@@ -163,10 +163,10 @@ final class WorkflowCommands implements Commands.Extension {
           }
           int index = a.containsKey("index") ? Commands.integer(a, "index") : 0;
           if (!found.isEmpty()) {
-            int[] f = found.get(((index % found.size()) + found.size()) % found.size());
+            var f = found.get(((index % found.size()) + found.size()) % found.size());
             s.select(f[0], f[1], f[2]);
           }
-          List<Object> out = new ArrayList<Object>();
+          var out = new ArrayList<Object>();
           for (int[] f : found) out.add(Arrays.asList(f[0], f[1], f[2]));
           return out;
         });
@@ -177,7 +177,7 @@ final class WorkflowCommands implements Commands.Extension {
         true,
         (s, a) -> {
           String action = a.containsKey("action") ? Commands.str(a, "action") : "list";
-          List<Document> items = clipboard(s);
+          var items = clipboard(s);
           int index = a.containsKey("index") ? Commands.integer(a, "index") : 0;
           if ("paste".equals(action)) s.paste(item(items, index));
           else if ("delete".equals(action)) {
@@ -190,9 +190,9 @@ final class WorkflowCommands implements Commands.Extension {
               items.clear();
             }
           } else if (!"list".equals(action)) throw new IllegalArgumentException("Action is list, paste, delete or clear");
-          List<Object> out = new ArrayList<Object>();
+          var out = new ArrayList<Object>();
           for (Document item : items) {
-            String text = item.plainText();
+            var text = item.plainText();
             out.add(text.length() > 80 ? text.substring(0, 80) : text);
           }
           return out;
@@ -218,22 +218,23 @@ final class WorkflowCommands implements Commands.Extension {
     c.register(
         "format.fontDialog",
         "Font dialog: set several character properties at once and return the effective font settings",
-        "font?:string,size?:number,color?:string,bold?:boolean,italic?:boolean,underlineStyle?:string,"
-            + "underlineColor?:string,strike?:boolean,doubleStrike?:boolean,script?:string,smallCaps?:boolean,"
-            + "allCaps?:boolean,hidden?:boolean,characterSpacing?:number,characterScale?:number,characterPosition?:number",
+        """
+        font?:string,size?:number,color?:string,bold?:boolean,italic?:boolean,underlineStyle?:string,\
+        underlineColor?:string,strike?:boolean,doubleStrike?:boolean,script?:string,smallCaps?:boolean,\
+        allCaps?:boolean,hidden?:boolean,characterSpacing?:number,characterScale?:number,characterPosition?:number""",
         true,
         (s, a) -> {
           for (Map.Entry<String, Object> e : a.entrySet()) {
-            Object v = e.getValue();
-            String value = v instanceof Number ? String.valueOf(((Number) v).floatValue()) : String.valueOf(v);
+            var v = e.getValue();
+            String value = v instanceof Number n ? String.valueOf(n.floatValue()) : String.valueOf(v);
             if ("color".equals(e.getKey()) || "underlineColor".equals(e.getKey()))
               value = value.startsWith("#") ? value.substring(1) : value;
             if ("script".equals(e.getKey()) && !Arrays.asList("baseline", "superscript", "subscript").contains(value))
               throw new IllegalArgumentException("Script is baseline, superscript or subscript");
             s.format(e.getKey(), value);
           }
-          TextStyle t = s.activeStyle();
-          Map<String, Object> out = new LinkedHashMap<String, Object>();
+          var t = s.activeStyle();
+          var out = new LinkedHashMap<String, Object>();
           out.put("font", t.font);
           out.put("size", t.size);
           out.put("color", TextUtil.padded(t.color, 16, 6));
@@ -253,7 +254,7 @@ final class WorkflowCommands implements Commands.Extension {
         true,
         (s, a) -> {
           ParagraphStyle st = style(s.document(), Commands.str(a, "name"));
-          TextStyle t = st.text;
+          var t = st.text;
           s.format("font", t.font);
           s.format("size", String.valueOf(t.size));
           s.format("color", TextUtil.padded(t.color, 16, 6));
@@ -270,20 +271,20 @@ final class WorkflowCommands implements Commands.Extension {
         "all?:boolean",
         false,
         (s, a) -> {
-          Document d = s.document();
-          String hidden = "," + d.properties.setting("styles.hidden", "") + ",";
-          Map<String, Integer> uses = new LinkedHashMap<String, Integer>();
+          var d = s.document();
+          var hidden = "," + d.properties.setting("styles.hidden", "") + ",";
+          var uses = new LinkedHashMap<String, Integer>();
           for (Block b : d.blocks)
-            if (b instanceof Paragraph) {
-              Integer n = uses.get(((Paragraph) b).style);
-              uses.put(((Paragraph) b).style, n == null ? 1 : n + 1);
+            if (b instanceof Paragraph paragraph) {
+              var n = uses.get(paragraph.style);
+              uses.put(paragraph.style, n == null ? 1 : n + 1);
             }
           String current = s.document().blocks.get(s.selection().block) instanceof Paragraph ? d.paragraph(s.selection().block).style : "";
-          List<Object> out = new ArrayList<Object>();
+          var out = new ArrayList<Object>();
           for (String id : ordered(d)) {
             if (hidden.contains("," + id + ",") && !Boolean.TRUE.equals(a.get("all"))) continue;
-            ParagraphStyle st = d.styles.get(id);
-            Map<String, Object> row = new LinkedHashMap<String, Object>();
+            var st = d.styles.get(id);
+            var row = new LinkedHashMap<String, Object>();
             row.put("id", id);
             row.put("name", st.name);
             row.put("inUse", uses.containsKey(id) ? uses.get(id) : 0);
@@ -301,11 +302,11 @@ final class WorkflowCommands implements Commands.Extension {
         "clear?:string",
         true,
         (s, a) -> {
-          Document d = s.document();
+          var d = s.document();
           int block = s.selection().block;
           if (!(d.blocks.get(block) instanceof Paragraph)) throw new IllegalArgumentException("Select a paragraph");
-          Paragraph p = d.paragraph(block);
-          ParagraphStyle st = d.styles.get(p.style);
+          var p = d.paragraph(block);
+          var st = d.styles.get(p.style);
           if (st == null) st = ParagraphStyle.defaults().get("Normal");
           String clear = a.containsKey("clear") ? Commands.str(a, "clear") : "";
           if ("paragraph".equals(clear)) {
@@ -316,14 +317,14 @@ final class WorkflowCommands implements Commands.Extension {
               s.format(k, textValue(st.text, k));
           } else if (!clear.isEmpty()) throw new IllegalArgumentException("Clear paragraph or character");
           p = s.document().paragraph(block);
-          TextStyle t = s.activeStyle();
-          Map<String, Object> out = new LinkedHashMap<String, Object>();
+          var t = s.activeStyle();
+          var out = new LinkedHashMap<String, Object>();
           out.put("paragraphStyle", st.id);
-          Map<String, Object> pd = new LinkedHashMap<String, Object>();
+          var pd = new LinkedHashMap<String, Object>();
           for (String k : new String[] {"align", "before", "after", "indent", "spacing", "rightIndent", "firstIndent"})
             if (!paragraphValue(p, k).equals(paragraphValue(st.paragraph, k))) pd.put(k, paragraphValue(p, k));
           out.put("paragraphDirect", pd);
-          Map<String, Object> td = new LinkedHashMap<String, Object>();
+          var td = new LinkedHashMap<String, Object>();
           for (String k : new String[] {"font", "size", "color", "bold", "italic", "underline", "strike"})
             if (!textValue(t, k).equals(textValue(st.text, k))) td.put(k, textValue(t, k));
           out.put("characterDirect", td);
@@ -335,18 +336,18 @@ final class WorkflowCommands implements Commands.Extension {
         "action?:string,id?:string,order?:string",
         true,
         (s, a) -> {
-          Document d = s.document();
+          var d = s.document();
           String action = a.containsKey("action") ? Commands.str(a, "action") : "list";
-          DocumentProperties p = d.properties;
+          var p = d.properties;
           if ("hide".equals(action) || "show".equals(action)) {
             String id = Commands.str(a, "id");
             style(d, id);
-            List<String> hidden = new ArrayList<String>();
+            var hidden = new ArrayList<String>();
             for (String h : TextUtil.split(p.setting("styles.hidden", ""), ',')) if (!h.isEmpty() && !h.equals(id)) hidden.add(h);
             if ("hide".equals(action)) hidden.add(id);
             p = p.withSetting("styles.hidden", join(hidden));
           } else if ("order".equals(action)) {
-            List<String> order = new ArrayList<String>();
+            var order = new ArrayList<String>();
             for (String id : TextUtil.split(Commands.str(a, "order"), ',')) {
               style(d, id.trim());
               order.add(id.trim());
@@ -354,7 +355,7 @@ final class WorkflowCommands implements Commands.Extension {
             p = p.withSetting("styles.order", join(order));
           } else if (!"list".equals(action)) throw new IllegalArgumentException("Action is list, hide, show or order");
           if (p != d.properties) s.documentProperties(p);
-          Map<String, Object> out = new LinkedHashMap<String, Object>();
+          var out = new LinkedHashMap<String, Object>();
           out.put("order", ordered(s.document()));
           out.put("hidden", s.document().properties.setting("styles.hidden", ""));
           return out;
@@ -364,7 +365,7 @@ final class WorkflowCommands implements Commands.Extension {
         "Insert a designed cover page (title, subtitle, author, date, page break) or remove it",
         "design?:string,title?:string,subtitle?:string,author?:string,date?:string,remove?:boolean",
         true,
-        (s, a) -> coverPage(s, a));
+        WorkflowCommands::coverPage);
     gallery(c, "insert.quickParts", "quickPart.", "Quick Parts gallery: save the selection, insert, list or delete an entry");
     gallery(c, "insert.autoText", "autoText.", "AutoText gallery: save the selection, insert, list or delete an entry");
     c.register(
@@ -414,8 +415,8 @@ final class WorkflowCommands implements Commands.Extension {
           for (int r = 0; r < lines.length; r++) {
             String[] cells = TextUtil.split(lines[r], '\t');
             for (int col = 0; col < cells.length; col++) {
-              String v = cells[col];
-              Map<String, Object> args = new LinkedHashMap<String, Object>();
+              var v = cells[col];
+              var args = new LinkedHashMap<String, Object>();
               args.put("block", block);
               args.put("row", r);
               args.put("column", col);
@@ -431,7 +432,7 @@ final class WorkflowCommands implements Commands.Extension {
             }
           }
           s.enterCell(block, 0, 0);
-          Table t = (Table) s.document().blocks.get(block);
+          var t = (Table) s.document().blocks.get(block);
           s.formatTable(block, TableStyleCommands.apply(TableStyleCommands.spec(s.document(), "TableGrid"), t.format.withProp("style", "TableGrid").withProp("look", "none")));
           return block;
         });
@@ -462,15 +463,15 @@ final class WorkflowCommands implements Commands.Extension {
       return;
     }
     if ("merge".equals(format)) {
-      final TextStyle target = s.activeStyle();
-      Sequence<Block> blocks = new Sequence<Block>();
+      final var target = s.activeStyle();
+      var blocks = new Sequence<Block>();
       for (Block b : fragment.blocks)
         blocks =
             blocks.append(
-                b instanceof Paragraph
-                    ? ((Paragraph) b)
+                b instanceof Paragraph p
+                    ? p
                         .text(
-                            ((Paragraph) b)
+                            p
                                 .text.mapStyles(
                                     t ->
                                         target
@@ -487,21 +488,21 @@ final class WorkflowCommands implements Commands.Extension {
 
   private static Object section(Session s, int delta) {
     List<Section.Range> ranges = s.document().sectionRanges();
-    Section.Range active = s.activeSection();
+    var active = s.activeSection();
     int at = 0;
     for (int i = 0; i < ranges.size(); i++) if (ranges.get(i).first == active.first) at = i;
     int to = at + delta;
     if (to < 0 || to >= ranges.size())
       throw new IllegalArgumentException(delta < 0 ? "This is the first section" : "This is the last section");
-    Section.Range r = ranges.get(to);
+    var r = ranges.get(to);
     if (s.cellBlock() >= 0) s.leaveCell();
     if (s.document().blocks.get(r.first) instanceof Table) s.enterCell(r.first, 0, 0);
     else s.select(r.first, 0, 0);
-    Map<String, Object> out = new LinkedHashMap<String, Object>();
+    var out = new LinkedHashMap<String, Object>();
     out.put("section", to);
-    StringBuilder header = new StringBuilder();
+    var header = new StringBuilder();
     for (Paragraph p : r.resolved.furniture.get("header")) header.append(header.length() == 0 ? "" : "\n").append(p.text.plainText());
-    StringBuilder footer = new StringBuilder();
+    var footer = new StringBuilder();
     for (Paragraph p : r.resolved.furniture.get("footer")) footer.append(footer.length() == 0 ? "" : "\n").append(p.text.plainText());
     out.put("header", header.toString());
     out.put("footer", footer.toString());
@@ -556,7 +557,7 @@ final class WorkflowCommands implements Commands.Extension {
     if (c == '[') {
       int close = p.indexOf(']', pi + 1);
       if (close < 0) throw new IllegalArgumentException("Unclosed [ in wildcard pattern");
-      String set = p.substring(pi + 1, close);
+      var set = p.substring(pi + 1, close);
       boolean negate = set.startsWith("!");
       if (negate) set = set.substring(1);
       boolean in = false;
@@ -574,7 +575,7 @@ final class WorkflowCommands implements Commands.Extension {
   }
 
   private static ParagraphStyle style(Document d, String id) {
-    ParagraphStyle st = d.styles.get(id);
+    var st = d.styles.get(id);
     if (st == null) {
       for (ParagraphStyle candidate : d.styles.values()) if (candidate.name.equals(id)) return candidate;
       throw new IllegalArgumentException("Unknown style: " + id);
@@ -583,7 +584,7 @@ final class WorkflowCommands implements Commands.Extension {
   }
 
   private static List<String> ordered(Document d) {
-    List<String> out = new ArrayList<String>();
+    var out = new ArrayList<String>();
     for (String id : TextUtil.split(d.properties.setting("styles.order", ""), ','))
       if (d.styles.containsKey(id) && !out.contains(id)) out.add(id);
     for (String id : d.styles.keySet()) if (!out.contains(id)) out.add(id);
@@ -591,7 +592,7 @@ final class WorkflowCommands implements Commands.Extension {
   }
 
   private static String join(List<String> items) {
-    StringBuilder b = new StringBuilder();
+    var b = new StringBuilder();
     for (String i : items) b.append(b.length() == 0 ? "" : ",").append(i);
     return b.toString();
   }
@@ -617,10 +618,10 @@ final class WorkflowCommands implements Commands.Extension {
   }
 
   private static Object coverPage(Session s, Map<String, Object> a) {
-    Document d = s.document();
-    String ids = d.properties.setting("coverPage.ids", "");
-    Sequence<Block> rest = new Sequence<Block>();
-    List<String> old = Arrays.asList(TextUtil.split(ids, ','));
+    var d = s.document();
+    var ids = d.properties.setting("coverPage.ids", "");
+    var rest = new Sequence<Block>();
+    var old = Arrays.asList(TextUtil.split(ids, ','));
     for (Block b : d.blocks) if (!old.contains(b.id())) rest = rest.append(b);
     if (Boolean.TRUE.equals(a.get("remove"))) {
       if (ids.isEmpty()) throw new IllegalArgumentException("The document has no cover page");
@@ -639,9 +640,9 @@ final class WorkflowCommands implements Commands.Extension {
     String author = a.containsKey("author") ? Commands.str(a, "author") : d.properties.get("author").isEmpty() ? "[Author name]" : d.properties.get("author");
     String date = a.containsKey("date") ? Commands.str(a, "date") : "[Date]";
     int fg = Integer.parseInt(spec[1], 16);
-    TextStyle titleStyle = TextStyle.DEFAULT.with("size", spec[3]).with("color", spec[1]).with("bold", "true");
-    TextStyle sub = TextStyle.DEFAULT.with("size", "18").with("color", fg == 0xffffff ? "ffffff" : "595959");
-    TextStyle meta = TextStyle.DEFAULT.with("size", "12").with("color", "595959");
+    var titleStyle = TextStyle.DEFAULT.with("size", spec[3]).with("color", spec[1]).with("bold", "true");
+    var sub = TextStyle.DEFAULT.with("size", "18").with("color", fg == 0xffffff ? "ffffff" : "595959");
+    var meta = TextStyle.DEFAULT.with("size", "12").with("color", "595959");
     Paragraph[] cover = {
       new Paragraph("p" + id++, RichText.of(title, titleStyle)).with("before", "144").with("after", "12"),
       new Paragraph("p" + id++, RichText.of(subtitle, sub)).with("after", "216"),
@@ -654,15 +655,15 @@ final class WorkflowCommands implements Commands.Extension {
     }
     if ("Grid".equals(spec[0]) || "Sideline".equals(spec[0]))
       cover[0] = cover[0].with("borders", "bottom=1.5," + spec[1] + ",4,single");
-    Sequence<Block> blocks = new Sequence<Block>();
-    StringBuilder newIds = new StringBuilder();
+    var blocks = new Sequence<Block>();
+    var newIds = new StringBuilder();
     for (Paragraph p : cover) {
       blocks = blocks.append(p);
       newIds.append(newIds.length() == 0 ? "" : ",").append(p.id);
     }
     for (int i = 0; i < rest.size(); i++) {
-      Block b = rest.get(i);
-      if (i == 0 && b instanceof Paragraph) b = ((Paragraph) b).with("pageBreak", "true");
+      var b = rest.get(i);
+      if (i == 0 && b instanceof Paragraph paragraph) b = paragraph.with("pageBreak", "true");
       blocks = blocks.append(b);
     }
     s.replaceDocument(d.blocks(blocks, id).properties(d.properties.withSetting("coverPage.ids", newIds.toString())));
@@ -670,7 +671,7 @@ final class WorkflowCommands implements Commands.Extension {
   }
 
   /** App-wide galleries (this run), mirrored into document settings so they travel with it. */
-  private static final Map<String, String> GALLERY = new LinkedHashMap<String, String>();
+  private static final Map<String, String> GALLERY = new LinkedHashMap<>();
 
   private static void gallery(Commands c, String id, final String prefix, String description) {
     c.register(
@@ -681,17 +682,17 @@ final class WorkflowCommands implements Commands.Extension {
         (s, a) -> {
           String action = a.containsKey("action") ? Commands.str(a, "action") : "list";
           if ("list".equals(action)) return entries(s, prefix);
-          String name = Commands.str(a, "name").trim();
+          var name = Commands.str(a, "name").trim();
           if (name.isEmpty() || name.length() > 40) throw new IllegalArgumentException("Entry name must be 1-40 characters");
-          StringBuilder key = new StringBuilder(prefix);
+          var key = new StringBuilder(prefix);
           for (int i = 0; i < name.length(); i++) {
             char ch = name.charAt(i);
             if (ch > 127 || !(Character.isLetterOrDigit(ch) || ch == ' ')) throw new IllegalArgumentException("Names use letters, digits and spaces");
             key.append(ch == ' ' ? '_' : ch);
           }
-          String k = key.toString();
+          var k = key.toString();
           if ("save".equals(action)) {
-            Document fragment = s.copySelection();
+            var fragment = s.copySelection();
             if (fragment == null) throw new IllegalArgumentException("Select the content to save");
             String xml = DocumentXml.write(fragment);
             synchronized (GALLERY) {
@@ -699,7 +700,7 @@ final class WorkflowCommands implements Commands.Extension {
             }
             s.documentProperties(s.document().properties.withSetting(k, xml));
           } else if ("insert".equals(action)) {
-            String xml = s.document().properties.setting(k, "");
+            var xml = s.document().properties.setting(k, "");
             if (xml.isEmpty())
               synchronized (GALLERY) {
                 xml = GALLERY.containsKey(k) ? GALLERY.get(k) : "";
@@ -721,7 +722,7 @@ final class WorkflowCommands implements Commands.Extension {
   }
 
   private static List<String> entries(Session s, String prefix) {
-    List<String> out = new ArrayList<String>();
+    var out = new ArrayList<String>();
     for (String k : s.document().properties.settings().keySet())
       if (k.startsWith(prefix)) out.add(k.substring(prefix.length()).replace('_', ' '));
     synchronized (GALLERY) {

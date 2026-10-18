@@ -21,11 +21,11 @@ public class ColumnsLayoutTest {
   }
 
   private static Document text(int paragraphs, Columns columns) {
-    Session s = new Session(Document.empty());
-    StringBuilder b = new StringBuilder();
+    var s = new Session(Document.empty());
+    var b = new StringBuilder();
     for (int i = 0; i < paragraphs; i++) b.append(i == 0 ? "" : "\n").append("Line ").append(i);
     s.replace(b.toString());
-    Document d = s.document();
+    var d = s.document();
     return d.section(0, d.lastSection.columns(columns));
   }
 
@@ -33,7 +33,7 @@ public class ColumnsLayoutTest {
   public void textFlowsIntoTheSecondColumnBeforeANewPage() {
     Document d = text(120, Columns.equal(2, 36, true));
     LayoutEngine.Result r = layout(d);
-    LayoutEngine.Page first = r.pages.get(0);
+    var first = r.pages.get(0);
     float left = d.page.left, mid = d.page.left + d.page.contentWidth() / 2;
     boolean leftColumn = false, rightColumn = false;
     for (LayoutEngine.Line l : first.lines) {
@@ -43,7 +43,7 @@ public class ColumnsLayoutTest {
     }
     assertTrue(leftColumn && rightColumn);
     assertEquals(1, first.columnRules.size());
-    float[] rule = first.columnRules.get(0);
+    var rule = first.columnRules.get(0);
     assertEquals(d.page.left + d.page.contentWidth() / 2, rule[0], .5f);
     // Two columns hold about twice the lines of one.
     int single = layout(text(120, Columns.ONE)).pages.size();
@@ -53,7 +53,7 @@ public class ColumnsLayoutTest {
   @Test
   public void columnBreakStartsTheParagraphAtTheTopOfTheNextColumn() {
     Document d = text(3, Columns.equal(2, 36, false));
-    Paragraph p = d.paragraph(1);
+    var p = d.paragraph(1);
     d = d.blocks(d.blocks.set(1, p.with("columnBreak", "true")), d.nextId);
     LayoutEngine.Result r = layout(d);
     LayoutEngine.Line first = null, second = null;
@@ -70,7 +70,7 @@ public class ColumnsLayoutTest {
   public void unequalColumnsUseTheirWidths() {
     float tw = PageSpec.A4.contentWidth();
     Columns c = Columns.preset("left", tw, 36);
-    float[][] g = c.layout(tw);
+    var g = c.layout(tw);
     assertEquals((tw - 36) / 3, g[0][1], .01f);
     assertEquals(g[0][1] + 36, g[1][0], .01f);
     assertEquals(tw, g[1][0] + g[1][1], .01f);

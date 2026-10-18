@@ -115,7 +115,7 @@ public final class OfficeCrypto {
       tag = ++counter;
     }
     long seed = System.nanoTime() ^ System.currentTimeMillis() ^ System.identityHashCode(new Object()) ^ ((long) tag << 32);
-    Random r = new Random(seed);
+    var r = new Random(seed);
     byte[] pool = new byte[64];
     r.nextBytes(pool);
     byte[] out = new byte[n];
@@ -163,9 +163,11 @@ public final class OfficeCrypto {
     byte[] hmac = Hmac.sha512(hmacSalt, stream);
     byte[] encHmacValue = Aes.cbcEncrypt(key, makeIv(keyDataSalt, BK_HMAC_VALUE), padded(hmac));
 
-    String params = "saltSize=\"16\" blockSize=\"16\" keyBits=\"256\" hashSize=\"64\" cipherAlgorithm=\"AES\""
-        + " cipherChaining=\"ChainingModeCBC\" hashAlgorithm=\"SHA512\"";
-    String xml = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<encryption xmlns=\"" + NS_ENC
+    var params = """
+        saltSize="16" blockSize="16" keyBits="256" hashSize="64" cipherAlgorithm="AES"\
+         cipherChaining="ChainingModeCBC" hashAlgorithm="SHA512"\
+        """;
+    var xml = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<encryption xmlns=\"" + NS_ENC
         + "\" xmlns:p=\"" + NS_PWD + "\"><keyData " + params + " saltValue=\"" + b64(keyDataSalt) + "\"/>"
         + "<dataIntegrity encryptedHmacKey=\"" + b64(encHmacKey) + "\" encryptedHmacValue=\"" + b64(encHmacValue)
         + "\"/><keyEncryptors><keyEncryptor uri=\"" + NS_PWD + "\"><p:encryptedKey spinCount=\"" + spin + "\" "
@@ -179,7 +181,7 @@ public final class OfficeCrypto {
     info[4] = 0x40;
     System.arraycopy(xmlBytes, 0, info, 8, xmlBytes.length);
 
-    Map<String, byte[]> files = new LinkedHashMap<String, byte[]>();
+    var files = new LinkedHashMap<String, byte[]>();
     files.put("\u0006DataSpaces/Version", dataSpaceVersion());
     files.put("\u0006DataSpaces/DataSpaceMap", dataSpaceMap());
     files.put("\u0006DataSpaces/DataSpaceInfo/StrongEncryptionDataSpace", dataSpaceDefinition());
@@ -219,20 +221,20 @@ public final class OfficeCrypto {
   }
 
   private static byte[] dataSpaceVersion() {
-    java.io.ByteArrayOutputStream o = new java.io.ByteArrayOutputStream();
+    var o = new java.io.ByteArrayOutputStream();
     lpP4(o, "Microsoft.Container.DataSpaces");
     for (int i = 0; i < 3; i++) put32(o, 1);
     return o.toByteArray();
   }
 
   private static byte[] dataSpaceMap() {
-    java.io.ByteArrayOutputStream entry = new java.io.ByteArrayOutputStream();
+    var entry = new java.io.ByteArrayOutputStream();
     put32(entry, 1);
     put32(entry, 0);
     lpP4(entry, "EncryptedPackage");
     lpP4(entry, "StrongEncryptionDataSpace");
-    byte[] e = entry.toByteArray();
-    java.io.ByteArrayOutputStream o = new java.io.ByteArrayOutputStream();
+    var e = entry.toByteArray();
+    var o = new java.io.ByteArrayOutputStream();
     put32(o, 8);
     put32(o, 1);
     put32(o, e.length + 4);
@@ -241,7 +243,7 @@ public final class OfficeCrypto {
   }
 
   private static byte[] dataSpaceDefinition() {
-    java.io.ByteArrayOutputStream o = new java.io.ByteArrayOutputStream();
+    var o = new java.io.ByteArrayOutputStream();
     put32(o, 8);
     put32(o, 1);
     lpP4(o, "StrongEncryptionTransform");
@@ -249,12 +251,12 @@ public final class OfficeCrypto {
   }
 
   private static byte[] primaryTransform() {
-    java.io.ByteArrayOutputStream id = new java.io.ByteArrayOutputStream();
+    var id = new java.io.ByteArrayOutputStream();
     lpP4(id, "{FF9A3F03-56EF-4613-BDD5-5A41C1D07246}");
-    java.io.ByteArrayOutputStream o = new java.io.ByteArrayOutputStream();
+    var o = new java.io.ByteArrayOutputStream();
     put32(o, 8 + id.size());
     put32(o, 1);
-    byte[] idb = id.toByteArray();
+    var idb = id.toByteArray();
     o.write(idb, 0, idb.length);
     lpP4(o, "Microsoft.Container.EncryptionTransform");
     for (int i = 0; i < 3; i++) put32(o, 1);
@@ -269,9 +271,9 @@ public final class OfficeCrypto {
 
   public static byte[] decrypt(byte[] cfb, String password) throws IOException {
     if (password == null || password.length() < 1) throw new IOException("Wrong password");
-    Map<String, byte[]> files = CompoundFile.read(cfb);
-    byte[] info = files.get("EncryptionInfo");
-    byte[] pkg = files.get("EncryptedPackage");
+    var files = CompoundFile.read(cfb);
+    var info = files.get("EncryptionInfo");
+    var pkg = files.get("EncryptedPackage");
     if (info == null || pkg == null) throw new IOException("Not an encrypted Office package");
     if (info.length < 12 || info[0] != 4 || info[2] != 4)
       throw new IOException("Unsupported encryption version (only Agile Encryption 4.4 is supported)");
@@ -352,7 +354,7 @@ public final class OfficeCrypto {
   }
 
   private static int number(Element e, String name) throws IOException {
-    String v = e.getAttribute(name);
+    var v = e.getAttribute(name);
     if (v == null) throw new IOException(name + " is missing");
     try {
       return Integer.parseInt(v.trim());
@@ -362,9 +364,9 @@ public final class OfficeCrypto {
   }
 
   private static byte[] b64attr(Element e, String name) throws IOException {
-    String v = e.getAttribute(name);
+    var v = e.getAttribute(name);
     if (v == null) throw new IOException(name + " is missing");
-    StringBuilder sb = new StringBuilder();
+    var sb = new StringBuilder();
     for (int i = 0; i < v.length(); i++) if (v.charAt(i) > ' ') sb.append(v.charAt(i));
     try {
       return Base64.decode(utf8(sb.toString()));

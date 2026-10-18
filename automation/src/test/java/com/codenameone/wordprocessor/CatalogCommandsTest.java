@@ -10,7 +10,7 @@ public class CatalogCommandsTest {
   private final Commands commands = new Commands();
 
   private Object run(Session s, String id, Object... kv) {
-    Map<String, Object> a = new LinkedHashMap<String, Object>();
+    var a = new LinkedHashMap<String, Object>();
     for (int i = 0; i < kv.length; i += 2) a.put((String) kv[i], kv[i + 1]);
     return commands.execute(s, id, a);
   }
@@ -21,7 +21,7 @@ public class CatalogCommandsTest {
 
   @Test
   public void characterCommandsToggleAndStep() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("hello world");
     s.select(0, 0, 5);
     run(s, "format.bold");
@@ -46,7 +46,7 @@ public class CatalogCommandsTest {
 
   @Test
   public void paragraphListAndStyleCommands() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("one");
     run(s, "para.alignCenter");
     assertEquals("center", para(s, 0).align);
@@ -75,7 +75,7 @@ public class CatalogCommandsTest {
 
   @Test
   public void editingSelectionAndTableCommands() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     run(s, "edit.paste", "text", "alpha beta");
     assertEquals(Boolean.TRUE, run(s, "select.text", "text", "beta"));
     assertEquals("beta", run(s, "edit.cut"));
@@ -89,7 +89,7 @@ public class CatalogCommandsTest {
     s.enterCell(block, 0, 0);
     run(s, "table.insertRowBelow");
     run(s, "table.insertColumnLeft");
-    Table t = (Table) s.document().blocks.get(block);
+    var t = (Table) s.document().blocks.get(block);
     assertEquals(3, t.rows());
     assertEquals(3, t.columns());
     s.enterCell(block, 0, 0);
@@ -104,7 +104,7 @@ public class CatalogCommandsTest {
 
   @Test
   public void bordersShadingAndHorizontalLine() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("Title");
     run(s, "para.borders", "kind", "bottom", "width", 1.5, "color", "1f4e79");
     assertEquals(1.5f, para(s, 0).format.borders.bottom.width, .001);

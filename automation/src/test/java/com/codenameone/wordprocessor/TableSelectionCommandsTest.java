@@ -8,9 +8,9 @@ import org.junit.Test;
 public class TableSelectionCommandsTest {
   @Test
   public void contextualCommandsAndLiveTokensRespectCellRectangles() {
-    Session s = new Session(Document.empty());
-    Commands c = new Commands();
-    LiveCommands live = new LiveCommands(c);
+    var s = new Session(Document.empty());
+    var c = new Commands();
+    var live = new LiveCommands(c);
     s.insertTable(3, 3);
     s.enterCell(1, 1, 1);
     long revision = s.revision();
@@ -18,7 +18,7 @@ public class TableSelectionCommandsTest {
     assertEquals(0, s.cellSelection().firstRow);
     assertEquals(2, s.cellSelection().lastRow);
     assertEquals(1, s.cellSelection().firstColumn);
-    String token = live.stateId(s);
+    var token = live.stateId(s);
     s.selectCells(1, 1, 1, 2, 1);
     assertFalse(token.equals(live.stateId(s)));
     assertEquals(revision, s.revision());
@@ -41,12 +41,12 @@ public class TableSelectionCommandsTest {
 
   @Test
   public void deletingSelectedRowsOrColumnsIsOneUndoStepAndAllRemovesTable() {
-    Session s = new Session(Document.empty());
-    Commands c = new Commands();
+    var s = new Session(Document.empty());
+    var c = new Commands();
     s.insertTable(3, 3);
     s.setCell(1, 0, 0, "keep");
     s.selectCells(1, 1, 0, 2, 1);
-    Document before = s.document();
+    var before = s.document();
     c.execute(s, "table.deleteRows");
     assertEquals(1, ((Table) s.document().blocks.get(1)).rows());
     s.undo();

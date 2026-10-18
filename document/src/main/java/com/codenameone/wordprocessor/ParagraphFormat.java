@@ -135,7 +135,7 @@ public final class ParagraphFormat {
       String asianOff,
       String dropCap) {
     this.dropCap = dropCap(dropCap);
-    StringBuilder off = new StringBuilder();
+    var off = new StringBuilder();
     for (String a : ASIAN)
       if (("," + asianOff + ",").contains("," + a + ","))
         off.append(off.length() == 0 ? "" : ",").append(a);
@@ -191,7 +191,7 @@ public final class ParagraphFormat {
   public static String dropCap(String spec) {
     if (spec == null || spec.trim().isEmpty() || "none".equals(spec.trim())) return "";
     String[] f = TextUtil.split(spec, ',');
-    String mode = f[0].trim();
+    var mode = f[0].trim();
     if (!"drop".equals(mode) && !"margin".equals(mode))
       throw new IllegalArgumentException("Drop cap position is none, drop or margin");
     int lines;

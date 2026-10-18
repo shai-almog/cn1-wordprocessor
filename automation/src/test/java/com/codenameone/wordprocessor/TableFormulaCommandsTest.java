@@ -13,7 +13,7 @@ public class TableFormulaCommandsTest {
     Locale previous = Locale.getDefault();
     try {
       Locale.setDefault(new Locale("tr", "TR"));
-      Session s = fixture();
+      var s = fixture();
       commands.execute(s, "table.formula", Json.object("formula", "=min(above)"));
       assertEquals("10", field(s, 3, 1).result);
       s.setCell(1, 0, 1, "5");
@@ -25,7 +25,7 @@ public class TableFormulaCommandsTest {
   }
 
   Session fixture() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.insertTable(4, 3);
     s.setCell(1, 0, 1, "10");
     s.setCell(1, 1, 1, "20");
@@ -47,14 +47,14 @@ public class TableFormulaCommandsTest {
     String[] names = {"SUM", "AVERAGE", "COUNT", "MIN", "MAX", "PRODUCT"},
         expected = {"60", "20", "3", "10", "30", "6000"};
     for (int i = 0; i < names.length; i++) {
-      Session s = fixture();
-      Document before = s.document();
+      var s = fixture();
+      var before = s.document();
       commands.execute(s, "table.formula", Json.object("formula", "=" + names[i] + "(ABOVE)"));
       assertEquals(expected[i], field(s, 3, 1).result);
       assertEquals("=" + names[i] + "(ABOVE)", field(s, 3, 1).instruction);
       assertEquals(3, s.cellRow());
       assertEquals(1, s.selection().caret);
-      Document after = s.document();
+      var after = s.document();
       s.undo();
       assertSame(before, s.document());
       s.redo();
@@ -64,7 +64,7 @@ public class TableFormulaCommandsTest {
 
   @Test
   public void directionsRangesConstantsAndMergedOwners() {
-    Session s = fixture();
+    var s = fixture();
     assertEquals("60", TableFormulas.calculate(table(s), 3, 1, "=SUM(B1:B3)"));
     assertEquals("10", TableFormulas.calculate(table(s), 0, 0, "=SUM(RIGHT,BELOW)"));
     assertEquals("65.50", TableFormulas.calculate(table(s), 3, 1, "=SUM(B1:B3,5.5)"));
@@ -77,11 +77,11 @@ public class TableFormulaCommandsTest {
 
   @Test
   public void sourceEditAndUpdateFieldsRecalculateAndUndoPreservesCell() {
-    Session s = fixture();
+    var s = fixture();
     commands.execute(s, "table.formula");
     s.setCell(1, 1, 1, "70");
     s.enterCell(1, 3, 1);
-    Document before = s.document();
+    var before = s.document();
     commands.execute(s, "references.updateFields");
     assertEquals("110", field(s, 3, 1).result);
     assertEquals(3, s.cellRow());
@@ -92,7 +92,7 @@ public class TableFormulaCommandsTest {
 
   @Test
   public void forwardDependenciesResolveInOnePass() {
-    Session s = fixture();
+    var s = fixture();
     s.enterCell(1, 0, 0);
     s.insertField(new InlineField("=SUM(A2)", "old", false, false));
     s.enterCell(1, 1, 0);
@@ -104,7 +104,7 @@ public class TableFormulaCommandsTest {
 
   @Test
   public void cyclesHaveExplicitResultsAndNeverHang() {
-    Session s = fixture();
+    var s = fixture();
     s.enterCell(1, 0, 0);
     s.insertField(new InlineField("=SUM(A2)", "old", false, false));
     s.enterCell(1, 1, 0);
@@ -116,7 +116,7 @@ public class TableFormulaCommandsTest {
 
   @Test
   public void lockedFieldsAndUnsupportedInstructionsKeepCachedResults() {
-    Session s = fixture();
+    var s = fixture();
     s.insertField(new InlineField("=SUM(ABOVE)", "fixed", true, false));
     s.enterCell(1, 0, 0);
     s.insertField(new InlineField("=SUM(B1) \\# \"0.000\"", "12.345", false, false));
@@ -127,9 +127,9 @@ public class TableFormulaCommandsTest {
 
   @Test
   public void invalidInsertionIsAtomicAndDoesNotReplaceSelection() {
-    Session s = fixture();
+    var s = fixture();
     s.select(0, 0, 0);
-    Document before = s.document();
+    var before = s.document();
     for (String formula :
         new String[] {"=SUM(B4)", "=SUM(Z99)", "=SUM(ABOVE);exit()", "=UNKNOWN(ABOVE)", "=SUM()"}) {
       try {
@@ -144,13 +144,13 @@ public class TableFormulaCommandsTest {
 
   @Test
   public void selectionUpdateIsPreservedAndRangeInsertionRejected() {
-    Session s = fixture();
+    var s = fixture();
     commands.execute(s, "table.formula");
     s.selectCells(1, 2, 0, 3, 2);
-    String key = s.cellSelection().key();
+    var key = s.cellSelection().key();
     s.mapFields(TableFormulas.resolver(s.document()));
     assertEquals(key, s.cellSelection().key());
-    Document before = s.document();
+    var before = s.document();
     try {
       commands.execute(s, "table.formula");
       fail();
@@ -162,7 +162,7 @@ public class TableFormulaCommandsTest {
 
   @Test
   public void groupedCurrencyPercentAndNonNumbersFollowEnglishRules() {
-    Session s = fixture();
+    var s = fixture();
     s.setCell(1, 0, 1, "$1,250.50");
     s.setCell(1, 1, 1, "−2.5");
     s.setCell(1, 2, 1, "12 %");
@@ -173,7 +173,7 @@ public class TableFormulaCommandsTest {
 
   @Test
   public void updatesIgnoreDeletedNumbersAndKeepRevisionMetadata() {
-    Session s = fixture();
+    var s = fixture();
     s.trackChanges(true);
     s.enterCell(1, 1, 1);
     s.select(0, 0, 2);

@@ -8,7 +8,7 @@ public class TableRowsCommandsTest {
   private final Commands commands = new Commands();
 
   private Session fixture() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.insertTable(3, 2);
     s.enterCell(1, 1, 0);
     return s;
@@ -20,14 +20,14 @@ public class TableRowsCommandsTest {
 
   @Test
   public void heightPropertiesAndUndoPreserveCaret() {
-    Session s = fixture();
-    Document before = s.document();
-    Selection caret = s.selection();
+    var s = fixture();
+    var before = s.document();
+    var caret = s.selection();
     commands.execute(
         s,
         "table.properties",
         Json.object("rowHeight", 36, "rowHeightRule", "exact", "allowBreak", false));
-    TableFormat.Row row = table(s).format.row(1);
+    var row = table(s).format.row(1);
     assertEquals(36, row.height, 0);
     assertEquals("exact", row.rule);
     assertFalse(row.allowBreak);
@@ -44,9 +44,9 @@ public class TableRowsCommandsTest {
 
   @Test
   public void rowHeightCommandValidatesAtomically() {
-    Session s = fixture();
+    var s = fixture();
     commands.execute(s, "table.rowHeight", Json.object("height", 32, "rule", "exact"));
-    Document before = s.document();
+    var before = s.document();
     for (Object[] bad :
         new Object[][] {{-1, "exact"}, {0, "exact"}, {Float.NaN, "atLeast"}, {22, "wrong"}}) {
       try {
@@ -62,14 +62,14 @@ public class TableRowsCommandsTest {
 
   @Test
   public void rowRulesFollowInsertionCropSplitAndDistribution() {
-    Session s = fixture();
+    var s = fixture();
     commands.execute(
         s,
         "table.properties",
         Json.object("rowHeight", 36, "rowHeightRule", "exact", "allowBreak", false));
     commands.execute(s, "table.insertRowBelow");
     assertRow(table(s).format.row(2));
-    Table crop = table(s).crop(new CellSelection(1, table(s), 2, 0, 2, 1));
+    var crop = table(s).crop(new CellSelection(1, table(s), 2, 0, 2, 1));
     assertRow(crop.format.row(0));
     s.splitCell(1, 2, 0, 2);
     assertRow(table(s).format.row(2));

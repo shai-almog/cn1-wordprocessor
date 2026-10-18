@@ -27,7 +27,7 @@ final class DocxBorders {
     if (e == null) return ParagraphBorders.Side.NONE;
     String val = Xml.attr(e, "val", "none");
     if ("none".equals(val) || "nil".equals(val)) return ParagraphBorders.Side.NONE;
-    String style = val;
+    var style = val;
     if (!Arrays.asList(ParagraphBorders.STYLES).contains(val)) {
       style = "dotDash".equals(val) || "dotDotDash".equals(val) ? "dashed" : "single";
       warnings.add("Paragraph border style " + val + " shown as " + style);

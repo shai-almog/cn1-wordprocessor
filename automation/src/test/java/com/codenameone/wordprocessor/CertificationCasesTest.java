@@ -16,7 +16,7 @@ public class CertificationCasesTest {
   }
 
   private static Session doc(String text) {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace(text);
     return s;
   }
@@ -26,7 +26,7 @@ public class CertificationCasesTest {
     Session s = doc("Intro");
     s.applyStyle("Heading1");
     run(s, "references.toc");
-    String with = s.document().plainText();
+    var with = s.document().plainText();
     run(s, "references.updateToc");
     run(s, "references.removeToc");
     assertNotEquals(with, s.document().plainText());
@@ -82,7 +82,7 @@ public class CertificationCasesTest {
   @Test
   public void positionAndSelectObjects() {
     Session s = doc("Text");
-    Object r = run(s, "insert.shape", "shape", "ellipse");
+    var r = run(s, "insert.shape", "shape", "ellipse");
     int block = -1;
     for (int i = 0; i < s.document().blocks.size(); i++)
       if (s.document().blocks.get(i) instanceof Picture) block = i;

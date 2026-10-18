@@ -40,7 +40,7 @@ public final class ContentControl {
   }
 
   public String get(String key, String fallback) {
-    String v = props.get(key);
+    var v = props.get(key);
     return v == null ? fallback : v;
   }
 
@@ -56,7 +56,7 @@ public final class ContentControl {
     if (value != null && value.length() > 4000) throw new IllegalArgumentException("Property too long");
     if ("lock".equals(key) && value != null && !LOCKS.contains(value))
       throw new IllegalArgumentException("Lock must be one of " + LOCKS);
-    TreeMap<String, String> next = new TreeMap<String, String>(props);
+    var next = new TreeMap<String, String>(props);
     if (value == null || value.isEmpty()) next.remove(key);
     else next.put(key, value);
     return new ContentControl(type, next);
@@ -64,21 +64,21 @@ public final class ContentControl {
 
   /** List items for combo boxes and drop-downs, separated by {@code |}. */
   public List<String> items() {
-    String v = get("items", "");
+    var v = get("items", "");
     if (v.isEmpty()) return Collections.emptyList();
     return Arrays.asList(TextUtil.split(v, '|'));
   }
 
   public boolean contentLocked() {
-    String lock = get("lock", "none");
+    var lock = get("lock", "none");
     return "contentLocked".equals(lock) || "sdtContentLocked".equals(lock);
   }
 
   public String instruction() {
-    StringBuilder b = new StringBuilder(PREFIX).append(type);
+    var b = new StringBuilder(PREFIX).append(type);
     for (Map.Entry<String, String> e : props.entrySet()) {
       b.append(b.length() == PREFIX.length() + type.length() ? " " : ";").append(e.getKey()).append('=');
-      String v = e.getValue();
+      var v = e.getValue();
       for (int i = 0; i < v.length(); i++) {
         char c = v.charAt(i);
         if (c == ';' || c == '\\') b.append('\\');
@@ -90,12 +90,12 @@ public final class ContentControl {
 
   public static ContentControl parse(String instruction) {
     if (!instruction.startsWith(PREFIX)) throw new IllegalArgumentException("Not a content control");
-    String rest = instruction.substring(PREFIX.length());
+    var rest = instruction.substring(PREFIX.length());
     int space = rest.indexOf(' ');
     ContentControl c = of(space < 0 ? rest : rest.substring(0, space));
     if (space < 0) return c;
-    StringBuilder cur = new StringBuilder();
-    String body = rest.substring(space + 1);
+    var cur = new StringBuilder();
+    var body = rest.substring(space + 1);
     for (int i = 0; i <= body.length(); i++) {
       char ch = i < body.length() ? body.charAt(i) : ';';
       if (ch == '\\' && i + 1 < body.length()) {
@@ -103,7 +103,7 @@ public final class ContentControl {
         continue;
       }
       if (ch == ';') {
-        String p = cur.toString();
+        var p = cur.toString();
         cur.setLength(0);
         int eq = p.indexOf('=');
         if (eq > 0) c = c.with(p.substring(0, eq), p.substring(eq + 1));

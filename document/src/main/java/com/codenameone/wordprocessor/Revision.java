@@ -56,7 +56,7 @@ public final class Revision {
 
   public boolean equals(Object other) {
     if (!(other instanceof Revision)) return false;
-    Revision r = (Revision) other;
+    var r = (Revision) other;
     return (previous == null ? r.previous == null : previous.equals(r.previous))
         && id.equals(r.id)
         && kind.equals(r.kind)

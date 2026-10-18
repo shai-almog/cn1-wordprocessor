@@ -8,7 +8,7 @@ public class TableSizingCommandsTest {
   private final Commands commands = new Commands();
 
   private Session fixture() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.insertTable(3, 2);
     s.setCell(1, 0, 0, "short");
     s.setCell(1, 0, 1, "a longer phrase");
@@ -22,10 +22,10 @@ public class TableSizingCommandsTest {
 
   @Test
   public void propertiesAreAtomicAndPreserveCellSelection() {
-    Session s = fixture();
+    var s = fixture();
     s.selectCells(1, 0, 0, 1, 1);
-    Document before = s.document();
-    CellSelection selection = s.cellSelection();
+    var before = s.document();
+    var selection = s.cellSelection();
     commands.execute(
         s, "table.properties", Json.object("widthPct", 50, "align", "center", "indent", 12));
     assertEquals(50, table(s).format.sizing.width, 0);
@@ -39,12 +39,12 @@ public class TableSizingCommandsTest {
 
   @Test
   public void contentsAndFixedWidthsUseActiveSectionAndUndo() {
-    Session s = fixture();
-    Document before = s.document();
+    var s = fixture();
+    var before = s.document();
     commands.execute(s, "table.autofit", Json.object("mode", "contents"));
     assertEquals("auto", table(s).format.sizing.unit);
     assertFalse(table(s).format.sizing.fixed);
-    float[] actual =
+    var actual =
         commands
             .layoutEngine()
             .tableWidths(table(s), s.activeSection().resolved.page.contentWidth());
@@ -60,15 +60,15 @@ public class TableSizingCommandsTest {
 
   @Test
   public void structuralChangesRetainPlacement() {
-    Session s = fixture();
+    var s = fixture();
     commands.execute(
         s, "table.properties", Json.object("width", 180, "align", "right", "indent", -12));
     commands.execute(s, "table.insertRowAbove");
     assertEquals(180, table(s).format.sizing.width, 0);
     commands.execute(s, "table.splitTable");
     for (Block b : s.document().blocks)
-      if (b instanceof Table) {
-        TableFormat.Sizing size = ((Table) b).format.sizing;
+      if (b instanceof Table table) {
+        var size = table.format.sizing;
         assertEquals(180, size.width, 0);
         assertEquals("right", size.align);
         assertEquals(-12, size.indent, 0);
@@ -81,8 +81,8 @@ public class TableSizingCommandsTest {
 
   @Test
   public void invalidSizingRollsBackWithoutUndoEntry() {
-    Session s = fixture();
-    Document before = s.document();
+    var s = fixture();
+    var before = s.document();
     for (java.util.Map<String, Object> args :
         java.util.Arrays.asList(
             Json.object("width", -1),
@@ -106,8 +106,8 @@ public class TableSizingCommandsTest {
 
   @Test
   public void automaticGridWidthsSurviveColumnEditsAndCellClipboard() {
-    Session s = fixture();
-    Table t = table(s);
+    var s = fixture();
+    var t = table(s);
     s.formatTable(
         1,
         t.format
@@ -120,7 +120,7 @@ public class TableSizingCommandsTest {
     assertEquals(60, table(s).format.column(0), .001);
     assertEquals(120, table(s).format.preferredWidth(500), .001);
     s.selectCells(1, 0, 0, 2, 1);
-    Table copy = (Table) s.copySelection().blocks.get(0);
+    var copy = (Table) s.copySelection().blocks.get(0);
     assertEquals("auto", copy.format.sizing.unit);
     assertEquals("right", copy.format.sizing.align);
     assertEquals(120, copy.format.preferredWidth(500), .001);
@@ -133,10 +133,10 @@ public class TableSizingCommandsTest {
 
   @Test
   public void copyingAllSevenColumnsDoesNotRoundPercentPastOneHundred() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.insertTable(2, 7);
     s.selectCells(1, 0, 0, 1, 6);
-    Table copy = (Table) s.copySelection().blocks.get(0);
+    var copy = (Table) s.copySelection().blocks.get(0);
     assertEquals(100, copy.format.sizing.width, 0);
   }
 }

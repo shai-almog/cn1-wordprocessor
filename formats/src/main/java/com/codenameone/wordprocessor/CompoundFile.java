@@ -32,7 +32,7 @@ public final class CompoundFile {
     String name;
     boolean stream;
     byte[] data;
-    List<Node> kids = new ArrayList<Node>();
+    List<Node> kids = new ArrayList<>();
     int id, left = NOSTREAM, right = NOSTREAM, child = NOSTREAM, color = 1, start = END;
     long size;
   }
@@ -49,11 +49,11 @@ public final class CompoundFile {
 
   /** Writes streams (path to bytes, in the given map) as a CFB file. Intermediate storages are created. */
   public static byte[] write(Map<String, byte[]> streams) {
-    Node root = new Node();
+    var root = new Node();
     root.name = "Root Entry";
     for (Map.Entry<String, byte[]> e : streams.entrySet()) {
-      String path = e.getKey();
-      Node dir = root;
+      var path = e.getKey();
+      var dir = root;
       int from = 0;
       while (true) {
         int slash = path.indexOf('/', from);
@@ -73,13 +73,13 @@ public final class CompoundFile {
         from = slash + 1;
       }
     }
-    List<Node> all = new ArrayList<Node>();
+    var all = new ArrayList<Node>();
     all.add(root);
     number(root, all);
 
     // Mini stream and mini FAT.
-    java.io.ByteArrayOutputStream mini = new java.io.ByteArrayOutputStream();
-    List<Integer> miniFat = new ArrayList<Integer>();
+    var mini = new java.io.ByteArrayOutputStream();
+    var miniFat = new ArrayList<Integer>();
     for (Node n : all) {
       if (!n.stream) continue;
       n.size = n.data.length;
@@ -90,11 +90,11 @@ public final class CompoundFile {
       mini.write(n.data, 0, n.data.length);
       for (int i = n.data.length; i < count * 64; i++) mini.write(0);
     }
-    byte[] miniBytes = mini.toByteArray();
+    var miniBytes = mini.toByteArray();
     root.size = miniBytes.length;
 
     // Regular sectors, in order: big streams, mini stream, mini FAT, directory, FAT, DIFAT.
-    List<int[]> chains = new ArrayList<int[]>();
+    var chains = new ArrayList<int[]>();
     int next = 0;
     for (Node n : all) {
       if (n.stream && n.data.length >= MINI_CUTOFF) {
@@ -163,7 +163,7 @@ public final class CompoundFile {
     for (int i = 0; i < dirSectors * 4; i++) {
       int o = 512 + dirStart * 512 + i * 128;
       if (i < all.size()) {
-        Node n = all.get(i);
+        var n = all.get(i);
         for (int k = 0; k < n.name.length(); k++) put16(out, o + k * 2, n.name.charAt(k));
         put16(out, o + 64, n.name.length() * 2 + 2);
         out[o + 66] = (byte) (n == root ? 5 : n.stream ? 2 : 1);
@@ -200,7 +200,7 @@ public final class CompoundFile {
   private static void number(Node dir, List<Node> all) {
     List<Node> kids = dir.kids;
     for (int i = 1; i < kids.size(); i++) {
-      Node k = kids.get(i);
+      var k = kids.get(i);
       int j = i - 1;
       while (j >= 0 && compareNames(kids.get(j).name, k.name) > 0) {
         kids.set(j + 1, kids.get(j));
@@ -224,7 +224,7 @@ public final class CompoundFile {
   private static int tree(List<Node> kids, int lo, int hi, int depth, int levels, boolean full) {
     if (lo > hi) return NOSTREAM;
     int mid = (lo + hi + 1) / 2;
-    Node n = kids.get(mid);
+    var n = kids.get(mid);
     n.color = (!full && depth == levels - 1) ? 0 : 1;
     n.left = tree(kids, lo, mid - 1, depth + 1, levels, full);
     n.right = tree(kids, mid + 1, hi, depth + 1, levels, full);
@@ -289,7 +289,7 @@ public final class CompoundFile {
     int rootStart = get32(dir, 116);
     long rootSize = get32(dir, 120) & 0xffffffffL;
     byte[] miniStream = rootSize == 0 ? new byte[0] : chain(d, fat, rootStart, ssz, (int) rootSize);
-    Map<String, byte[]> out = new LinkedHashMap<String, byte[]>();
+    var out = new LinkedHashMap<String, byte[]>();
     boolean[] seen = new boolean[count];
     walk(d, dir, count, get32(dir, 76), "", fat, miniFat, miniStream, ssz, mssz, cutoff, out, seen);
     return out;
@@ -303,11 +303,11 @@ public final class CompoundFile {
     int o = id * 128;
     int len = get16(dir, o + 64);
     if (len < 2 || len > 64) throw new IOException("Bad compound file entry name");
-    StringBuilder name = new StringBuilder();
+    var name = new StringBuilder();
     for (int i = 0; i < len / 2 - 1; i++) name.append((char) get16(dir, o + i * 2));
     int type = dir[o + 66] & 0xff;
     walk(d, dir, count, get32(dir, o + 68), prefix, fat, miniFat, miniStream, ssz, mssz, cutoff, out, seen);
-    String path = prefix + name;
+    var path = prefix + name;
     if (type == 2) {
       long size = get32(dir, o + 120) & 0xffffffffL;
       int start = get32(dir, o + 116);
@@ -325,14 +325,14 @@ public final class CompoundFile {
 
   /** Follows a regular chain; size -1 means whole sectors. */
   private static byte[] chain(byte[] d, int[] fat, int start, int ssz, int size) throws IOException {
-    java.io.ByteArrayOutputStream o = new java.io.ByteArrayOutputStream();
+    var o = new java.io.ByteArrayOutputStream();
     int s = start, steps = 0, sectors = (d.length - ssz) / ssz;
     while (s >= 0) {
       if (s >= sectors || s >= fat.length || ++steps > fat.length + 1) throw new IOException("Bad compound file chain");
       o.write(d, ssz + s * ssz, ssz);
       s = fat[s];
     }
-    byte[] b = o.toByteArray();
+    var b = o.toByteArray();
     if (size < 0) return b;
     if (b.length < size) throw new IOException("Truncated compound file stream");
     byte[] r = new byte[size];

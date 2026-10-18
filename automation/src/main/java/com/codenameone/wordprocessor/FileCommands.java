@@ -15,7 +15,7 @@ import java.util.Map;
  */
 final class FileCommands implements Commands.Extension {
   public void register(final Commands c) {
-    StringBuilder spec = new StringBuilder();
+    var spec = new StringBuilder();
     for (String key : DocumentProperties.KEYS) spec.append(',').append(key).append("?:string");
     c.register(
         "file.properties",
@@ -23,7 +23,7 @@ final class FileCommands implements Commands.Extension {
         spec.toString().substring(1),
         true,
         (s, a) -> {
-          DocumentProperties p = s.document().properties;
+          var p = s.document().properties;
           for (Map.Entry<String, Object> e : a.entrySet()) p = p.with(e.getKey(), (String) e.getValue());
           if (!p.equals(s.document().properties)) s.replaceDocument(s.document().properties(p));
           return properties(s.document().properties);
@@ -37,8 +37,8 @@ final class FileCommands implements Commands.Extension {
           String mode = Commands.str(a, "mode");
           if (!DocumentProperties.PROTECTION.contains(mode))
             throw new IllegalArgumentException("Unknown protection mode: " + mode);
-          Selection keep = s.selection();
-          Document d = s.document();
+          var keep = s.selection();
+          var d = s.document();
           d = d.properties(d.properties.protection(mode));
           if ("trackedChanges".equals(mode)) d = d.trackChanges(true);
           s.replaceDocument(d);
@@ -60,13 +60,13 @@ final class FileCommands implements Commands.Extension {
           @SuppressWarnings("unchecked")
           List<Object> remove =
               a.containsKey("remove") ? (List<Object>) a.get("remove") : Collections.emptyList();
-          Map<String, Object> before = inspect(s.document());
-          Document d = s.document();
+          var before = inspect(s.document());
+          var d = s.document();
           if (remove.contains("comments")) d = d.comments(Collections.<ReviewComment>emptyList());
           if (remove.contains("properties"))
             d = d.properties(DocumentProperties.EMPTY.protection(d.properties.protection));
           if (d != s.document()) {
-            Selection keep = s.selection();
+            var keep = s.selection();
             s.replaceDocument(d);
             s.selectRange(keep.anchorBlock, keep.anchor, keep.block, keep.caret);
           }
@@ -85,11 +85,11 @@ final class FileCommands implements Commands.Extension {
         "",
         false,
         (s, a) -> {
-          ByteArrayOutputStream out = new ByteArrayOutputStream();
+          var out = new ByteArrayOutputStream();
           try {
             Docx.write(s.document(), out);
             Docx.Opened back = Docx.read(new ByteArrayInputStream(out.toByteArray()));
-            List<Object> issues = new ArrayList<Object>();
+            var issues = new ArrayList<Object>();
             for (String w : back.warnings) issues.add(w);
             if (!s.document().lastSection.decor.watermark.isEmpty())
               issues.add("Watermark is not saved to .docx");
@@ -116,7 +116,7 @@ final class FileCommands implements Commands.Extension {
   }
 
   private static Map<String, Object> properties(DocumentProperties p) {
-    Map<String, Object> out = Json.object("protection", p.protection);
+    var out = Json.object("protection", p.protection);
     for (String key : DocumentProperties.KEYS) out.put(key, p.get(key));
     return out;
   }
@@ -125,7 +125,7 @@ final class FileCommands implements Commands.Extension {
     final int[] revisions = {0}, hidden = {0};
     for (Block b : d.blocks) {
       if (!(b instanceof Paragraph)) continue;
-      Paragraph p = (Paragraph) b;
+      var p = (Paragraph) b;
       if (p.breakRevision != null || p.formatRevision != null) revisions[0]++;
       p.text.visit(
           (o, t, style) -> {
@@ -155,10 +155,10 @@ final class FileCommands implements Commands.Extension {
 
   /** Deletes hidden runs in body paragraphs, last first so earlier offsets stay valid. */
   private static void removeHidden(Session s) {
-    Document d = s.document();
+    var d = s.document();
     for (int i = d.blocks.size() - 1; i >= 0; i--) {
       if (!(d.blocks.get(i) instanceof Paragraph)) continue;
-      final List<int[]> runs = new ArrayList<int[]>();
+      final var runs = new ArrayList<int[]>();
       ((Paragraph) d.blocks.get(i))
           .text.visit(
               (o, t, style) -> {
@@ -172,22 +172,20 @@ final class FileCommands implements Commands.Extension {
   }
 
   private static Map<String, Object> accessibility(Document d) {
-    List<Object> issues = new ArrayList<Object>();
+    var issues = new ArrayList<Object>();
     if (d.properties.get("title").isEmpty())
       issues.add(issue("tip", -1, "missing-title", "Set a document title in File > Properties"));
     int page = d.lastSection.decor.pageColor < 0 ? 0xffffff : d.lastSection.decor.pageColor;
     int lastHeading = 0;
     for (int i = 0; i < d.blocks.size(); i++) {
-      Block b = d.blocks.get(i);
-      if (b instanceof Picture) {
-        if (((Picture) b).alt.trim().isEmpty())
+      var b = d.blocks.get(i);
+      if (b instanceof Picture picture) {
+        if (picture.alt.trim().isEmpty())
           issues.add(issue("error", i, "missing-alt-text", "Picture has no alternative text"));
-      } else if (b instanceof Table) {
-        Table t = (Table) b;
+      } else if (b instanceof Table t) {
         if (t.format.headerRows == 0)
           issues.add(issue("warning", i, "table-header", "Table has no header row"));
-      } else if (b instanceof Paragraph) {
-        final Paragraph p = (Paragraph) b;
+      } else if (b instanceof Paragraph p) {
         final int block = i;
         int level =
             p.style.startsWith("Heading") && p.style.length() == 8

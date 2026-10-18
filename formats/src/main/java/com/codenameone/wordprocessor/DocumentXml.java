@@ -9,7 +9,7 @@ public final class DocumentXml {
   private DocumentXml() {}
 
   public static String write(Document d) {
-    StringBuilder b =
+    var b =
         new StringBuilder(
                 "<?xml version=\"1.0\" encoding=\"UTF-8\"?><document version=\"1\" title=\"")
             .append(Xml.escape(d.title))
@@ -30,7 +30,7 @@ public final class DocumentXml {
             .append(Xml.escape(e.getValue())).append("\"/>");
       b.append("</properties>");
     }
-    PageSpec p = d.page;
+    var p = d.page;
     page(b, p);
     furniture(b, d.furniture);
     b.append("<noteOptions>");
@@ -45,7 +45,7 @@ public final class DocumentXml {
     columns(b, d.lastSection.columns);
     decor(b, d.lastSection.decor);
     for (Map.Entry<String, Section> entry : d.sections.entrySet()) {
-      Section section = entry.getValue();
+      var section = entry.getValue();
       b.append("<section end=\"")
           .append(Xml.escape(entry.getKey()))
           .append("\" start=\"")
@@ -73,9 +73,8 @@ public final class DocumentXml {
     }
     b.append("</styles>");
     for (Block block : d.blocks) {
-      if (block instanceof Paragraph) paragraph(b, (Paragraph) block);
-      else if (block instanceof Table) {
-        Table t = (Table) block;
+      if (block instanceof Paragraph paragraph) paragraph(b, paragraph);
+      else if (block instanceof Table t) {
         b.append("<table id=\"").append(Xml.escape(t.id())).append("\">");
         for (int r = 0; r < t.rows(); r++) {
           b.append("<row>");
@@ -98,8 +97,7 @@ public final class DocumentXml {
               .append("\"/>");
         TableFormats.nativeXml(b, t.format);
         b.append("</table>");
-      } else if (block instanceof Picture) {
-        Picture picture = (Picture) block;
+      } else if (block instanceof Picture picture) {
         b.append("<picture id=\"")
             .append(Xml.escape(picture.id()))
             .append("\" width=\"")
@@ -111,7 +109,7 @@ public final class DocumentXml {
             .append("\" alt=\"")
             .append(Xml.escape(picture.alt))
             .append("\"");
-        Picture.Look look = picture.look;
+        var look = picture.look;
         if (!Picture.Look.NONE.equals(look))
           b.append(" crop=\"")
               .append(look.cropLeft)
@@ -232,13 +230,13 @@ public final class DocumentXml {
 
   private static PageFurniture readFurniture(Element e, Set<String> ids) throws IOException {
     if (e == null) return PageFurniture.EMPTY;
-    Map<String, Sequence<Paragraph>> stories = new LinkedHashMap<String, Sequence<Paragraph>>();
+    var stories = new LinkedHashMap<String, Sequence<Paragraph>>();
     for (Element story : Xml.children(e, "story")) {
       String key = Xml.attr(story, "key", "");
       if (stories.containsKey(key)) throw new IOException("Duplicate header/footer story");
-      Sequence<Paragraph> paragraphs = new Sequence<Paragraph>();
+      var paragraphs = new Sequence<Paragraph>();
       // Header and footer stories are separate id spaces: both start at hf0.
-      Set<String> storyIds = new HashSet<String>();
+      var storyIds = new HashSet<String>();
       for (Element para : Xml.children(story, "p"))
         paragraphs = paragraphs.append(readParagraph(para, storyIds));
       stories.put(key, paragraphs);
@@ -248,7 +246,7 @@ public final class DocumentXml {
   }
 
   private static List<ReviewComment.Reply> readReplies(Element comment) {
-    List<ReviewComment.Reply> replies = new ArrayList<ReviewComment.Reply>();
+    var replies = new ArrayList<ReviewComment.Reply>();
     for (Element r : Xml.children(comment, "reply"))
       replies.add(new ReviewComment.Reply(Xml.attr(r, "author", "Author"), Xml.text(r)));
     return replies;
@@ -401,7 +399,7 @@ public final class DocumentXml {
     String value = Xml.attr(c, "adjust", "");
     if (value.isEmpty()) return look;
     String[] v = TextUtil.split(value, ',');
-    Picture.Look k = look.adjust(Integer.parseInt(v[0]), Integer.parseInt(v[1]), Integer.parseInt(v[2]), v[3]);
+    var k = look.adjust(Integer.parseInt(v[0]), Integer.parseInt(v[1]), Integer.parseInt(v[2]), v[3]);
     if (v.length > 5) k = k.effect(v[4]).removeBackground(Integer.parseInt(v[5]));
     return k;
   }
@@ -413,7 +411,7 @@ public final class DocumentXml {
     try {
       Element page = Xml.child(e, "page");
       if (page == null) throw new IOException("Missing page geometry");
-      PageSpec spec =
+      var spec =
           new PageSpec(
               f(page, "width"),
               f(page, "height"),
@@ -421,27 +419,27 @@ public final class DocumentXml {
               f(page, "right"),
               f(page, "bottom"),
               f(page, "left"));
-      Sequence<Block> blocks = new Sequence<Block>();
-      Set<String> ids = new HashSet<String>();
-      PageFurniture furniture = PageFurniture.EMPTY;
-      List<ReviewComment> comments = new ArrayList<ReviewComment>();
-      Map<String, Bookmark> bookmarks = new LinkedHashMap<String, Bookmark>();
-      Map<String, ParagraphStyle> definitions =
+      var blocks = new Sequence<Block>();
+      var ids = new HashSet<String>();
+      var furniture = PageFurniture.EMPTY;
+      var comments = new ArrayList<ReviewComment>();
+      var bookmarks = new LinkedHashMap<String, Bookmark>();
+      var definitions =
           new LinkedHashMap<String, ParagraphStyle>(ParagraphStyle.defaults());
       for (Element c : Xml.children(e, null)) {
         if ("p".equals(Xml.local(c))) blocks = blocks.append(readParagraph(c, ids));
         else if ("table".equals(Xml.local(c))) {
-          List<List<Sequence<Paragraph>>> rows = new ArrayList<List<Sequence<Paragraph>>>();
+          var rows = new ArrayList<List<Sequence<Paragraph>>>();
           for (Element row : Xml.children(c, "row")) {
-            List<Sequence<Paragraph>> cells = new ArrayList<Sequence<Paragraph>>();
+            var cells = new ArrayList<Sequence<Paragraph>>();
             for (Element cell : Xml.children(row, "cell")) {
-              Sequence<Paragraph> paras = new Sequence<Paragraph>();
+              var paras = new Sequence<Paragraph>();
               for (Element p : Xml.children(cell, "p")) paras = paras.append(readParagraph(p, ids));
               cells.add(paras);
             }
             rows.add(cells);
           }
-          List<Table.Merge> merges = new ArrayList<Table.Merge>();
+          var merges = new ArrayList<Table.Merge>();
           for (Element m : Xml.children(c, "merge"))
             merges.add(
                 new Table.Merge(
@@ -468,13 +466,13 @@ public final class DocumentXml {
                       Xml.attr(c, "align", "left"),
                       pictureAdjust(c, pictureLook(c))));
           if (!Xml.attr(c, "drawing", "").isEmpty()) {
-            Picture last = (Picture) blocks.get(blocks.size() - 1);
+            var last = (Picture) blocks.get(blocks.size() - 1);
             blocks =
                 blocks.set(
                     blocks.size() - 1, last.drawing(Drawing.decode(controlsIn(Xml.attr(c, "drawing", "")))));
           }
         } else if ("bookmark".equals(Xml.local(c))) {
-          Bookmark mark =
+          var mark =
               new Bookmark(
                   Xml.attr(c, "name", ""),
                   Xml.attr(c, "startId", ""),
@@ -504,7 +502,7 @@ public final class DocumentXml {
           // Read after body IDs have been collected.
         } else if ("styles".equals(Xml.local(c))) {
           for (Element style : Xml.children(c, "style")) {
-            Paragraph p = readParagraph(Xml.child(style, "p"), new HashSet<String>());
+            Paragraph p = readParagraph(Xml.child(style, "p"), new HashSet<>());
             String key = Xml.attr(style, "id", "");
             definitions.put(
                 key, new ParagraphStyle(key, Xml.attr(style, "name", key), p, p.text.styleAt(0)));
@@ -515,7 +513,7 @@ public final class DocumentXml {
       for (String id : ids)
         if ((id.startsWith("p") || id.startsWith("t") || id.startsWith("c") || id.startsWith("i"))
             && TextUtil.digits(id, 1)) next = Math.max(next, Long.parseLong(id.substring(1)) + 1);
-      Document result =
+      var result =
           new Document(blocks, spec, Xml.attr(e, "title", "Untitled"), next, comments)
               .styles(definitions)
               .furniture(furniture)
@@ -525,7 +523,7 @@ public final class DocumentXml {
               .properties(readProperties(Xml.child(e, "properties")));
       Element sectionRoot = Xml.child(e, "sections");
       if (sectionRoot != null) {
-        Map<String, Section> sections = new LinkedHashMap<String, Section>();
+        var sections = new LinkedHashMap<String, Section>();
         for (Element item : Xml.children(sectionRoot, "section")) {
           String end = Xml.attr(item, "end", "");
           if (sections.containsKey(end)) throw new IOException("Duplicate section boundary");
@@ -571,7 +569,7 @@ public final class DocumentXml {
    * references; map them to the private-use range U+E000.. and back.
    */
   static String controlsOut(String v) {
-    StringBuilder b = new StringBuilder(v.length());
+    var b = new StringBuilder(v.length());
     for (int i = 0; i < v.length(); i++) {
       char c = v.charAt(i);
       b.append(c < 0x20 && c != '\t' && c != '\n' && c != '\r' ? (char) ('\ue000' + c) : c);
@@ -580,7 +578,7 @@ public final class DocumentXml {
   }
 
   static String controlsIn(String v) {
-    StringBuilder b = new StringBuilder(v.length());
+    var b = new StringBuilder(v.length());
     for (int i = 0; i < v.length(); i++) {
       char c = v.charAt(i);
       b.append(c >= '\ue000' && c < '\ue020' ? (char) (c - '\ue000') : c);
@@ -603,7 +601,7 @@ public final class DocumentXml {
   }
 
   private static Paragraph readParagraph(Element e, Set<String> ids) throws IOException {
-    RichText text = new RichText();
+    var text = new RichText();
     for (Element node : Xml.children(e, null)) {
       if ("previousFormat".equals(Xml.local(node))) continue;
       boolean field = "field".equals(Xml.local(node));
@@ -612,7 +610,7 @@ public final class DocumentXml {
         throw new IOException("Unknown paragraph content");
       Element r = field || note ? Xml.child(node, "r") : node;
       if (r == null) throw new IOException("Missing field character formatting");
-      TextStyle s =
+      var s =
           new TextStyle(
                   Xml.attr(r, "font", "Serif"),
                   Float.parseFloat(Xml.attr(r, "size", "12")),
@@ -631,7 +629,7 @@ public final class DocumentXml {
         s = s.formatRevision(formatting, RevisionFormats.readStyle(r, "before-"));
       if (note) {
         String noteId = id(node, ids);
-        Sequence<Paragraph> story = new Sequence<Paragraph>();
+        var story = new Sequence<Paragraph>();
         for (Element p : Xml.children(node, "p")) story = story.append(readParagraph(p, ids));
         text =
             text.concat(
@@ -657,7 +655,7 @@ public final class DocumentXml {
                       s)
                   : RichText.of(Xml.text(r), s));
     }
-    Paragraph result =
+    var result =
         new Paragraph(
                 id(e, ids),
                 text,
@@ -707,7 +705,7 @@ public final class DocumentXml {
     if (c.equals(Columns.ONE)) return;
     b.append("<columns count=\"").append(c.count).append("\" space=\"").append(c.space)
         .append("\" separator=\"").append(c.separator).append("\">");
-    float[] w = c.widths();
+    var w = c.widths();
     for (int i = 0; i < w.length; i += 2)
       b.append("<col width=\"").append(w[i]).append("\" space=\"").append(w[i + 1]).append("\"/>");
     b.append("</columns>");
@@ -715,7 +713,7 @@ public final class DocumentXml {
 
   private static DocumentProperties readProperties(Element e) {
     if (e == null) return DocumentProperties.EMPTY;
-    DocumentProperties p = DocumentProperties.EMPTY.protection(Xml.attr(e, "protection", "none"));
+    var p = DocumentProperties.EMPTY.protection(Xml.attr(e, "protection", "none"));
     for (String key : DocumentProperties.KEYS) p = p.with(key, Xml.attr(e, key, ""));
     for (Element s : Xml.children(e, "setting"))
       p = p.withSetting(Xml.attr(s, "key", ""), Xml.attr(s, "value", ""));
@@ -739,7 +737,7 @@ public final class DocumentXml {
     Element e = Xml.child(parent, "decor");
     if (e == null) return PageDecor.NONE;
     try {
-      PageDecor d = new PageDecor(
+      var d = new PageDecor(
           Integer.parseInt(Xml.attr(e, "pageColor", "-1")),
           Xml.attr(e, "watermark", ""),
           Integer.parseInt(Xml.attr(e, "watermarkColor", "12632256")),
@@ -757,7 +755,7 @@ public final class DocumentXml {
   private static Columns readColumns(Element parent) throws IOException {
     Element e = Xml.child(parent, "columns");
     if (e == null) return Columns.ONE;
-    List<Element> cols = Xml.children(e, "col");
+    var cols = Xml.children(e, "col");
     float[] widths = new float[cols.size() * 2];
     for (int i = 0; i < cols.size(); i++) {
       widths[i * 2] = Float.parseFloat(Xml.attr(cols.get(i), "width", "0"));

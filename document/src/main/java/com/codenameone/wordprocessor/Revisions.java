@@ -34,12 +34,11 @@ public final class Revisions {
   }
 
   public static List<Change> list(Document d) {
-    final List<Change> changes = new ArrayList<Change>();
+    final var changes = new ArrayList<Change>();
     for (int b = 0; b < d.blocks.size(); b++) {
-      Block block = d.blocks.get(b);
-      if (block instanceof Paragraph) collect(changes, (Paragraph) block, "", b, -1, -1);
-      else if (block instanceof Table) {
-        Table table = (Table) block;
+      var block = d.blocks.get(b);
+      if (block instanceof Paragraph paragraph) collect(changes, paragraph, "", b, -1, -1);
+      else if (block instanceof Table table) {
         for (int r = 0; r < table.rows(); r++)
           for (int c = 0; c < table.columns(); c++)
             if (!table.covered(r, c))
@@ -65,7 +64,7 @@ public final class Revisions {
       final int col) {
     p.text.visit(
         (offset, text, style) -> {
-          for (Revision revision = style.revision;
+          for (var revision = style.revision;
               revision != null && !text.isEmpty();
               revision = revision.previous)
             out.add(
@@ -107,7 +106,7 @@ public final class Revisions {
               col,
               0,
               p.text.length()));
-    for (Revision revision = p.breakRevision; revision != null; revision = revision.previous)
+    for (var revision = p.breakRevision; revision != null; revision = revision.previous)
       out.add(
           new Change(
               revision,
@@ -124,7 +123,7 @@ public final class Revisions {
   public static long nextId(Document document) {
     long next = document.nextId;
     for (Change change : list(document)) {
-      String id = change.revision.id;
+      var id = change.revision.id;
       if (TextUtil.digits(id, 0)) {
         try {
           long value = Long.parseLong(id);
@@ -146,11 +145,10 @@ public final class Revisions {
       boolean paragraphProperties,
       boolean caretMark) {
     Sequence<Block> blocks = d.blocks;
-    Map<String, Section> sections = new LinkedHashMap<String, Section>(d.sections);
+    var sections = new LinkedHashMap<String, Section>(d.sections);
     for (int b = selection.endBlock(); b >= selection.startBlock(); b--) {
-      Block block = blocks.get(b);
-      if (block instanceof Table) {
-        Table table = (Table) block;
+      var block = blocks.get(b);
+      if (block instanceof Table table) {
         for (int r = 0; r < table.rows(); r++)
           for (int c = 0; c < table.columns(); c++)
             if (!table.covered(r, c))
@@ -159,17 +157,17 @@ public final class Revisions {
         continue;
       }
       if (!(block instanceof Paragraph)) continue;
-      Paragraph p = (Paragraph) block;
+      var p = (Paragraph) block;
       int from = b == selection.startBlock() ? selection.start() : 0;
       int to = b == selection.endBlock() ? selection.end() : p.text.length();
       p = p.text(p.text.replace(from, to, p.text.slice(from, to).review(null, accept)));
       if (paragraphProperties && (b != selection.endBlock() || to > from || selection.collapsed()))
         p = p.reviewFormat(null, accept);
       if ((b < selection.endBlock() || caretMark) && p.breakRevision != null) {
-        Revision.Resolution resolution = p.breakRevision.resolve(null, accept);
+        var resolution = p.breakRevision.resolve(null, accept);
         if (resolution.removed && b + 1 < blocks.size() && blocks.get(b + 1) instanceof Paragraph) {
-          Paragraph following = (Paragraph) blocks.get(b + 1);
-          Section boundary = sections.remove(following.id);
+          var following = (Paragraph) blocks.get(b + 1);
+          var boundary = sections.remove(following.id);
           sections.remove(p.id);
           if (boundary != null) sections.put(p.id, boundary);
           p = p.text(p.text.concat(following.text)).breakRevision(following.breakRevision);
@@ -182,17 +180,17 @@ public final class Revisions {
   }
 
   public static Document resolve(Document d, String id, boolean accept) {
-    Map<String, Section> sections = new LinkedHashMap<String, Section>(d.sections);
-    Sequence<Block> blocks = resolveBlocks(d.blocks, id, accept, sections);
-    Map<String, Section> next = new LinkedHashMap<String, Section>();
+    var sections = new LinkedHashMap<String, Section>(d.sections);
+    var blocks = resolveBlocks(d.blocks, id, accept, sections);
+    var next = new LinkedHashMap<String, Section>();
     for (Map.Entry<String, Section> entry : sections.entrySet())
       next.put(entry.getKey(), resolveSection(entry.getValue(), id, accept));
-    Document result = d.blocks(blocks, d.nextId).sections(next, resolveSection(d.lastSection, id, accept));
+    var result = d.blocks(blocks, d.nextId).sections(next, resolveSection(d.lastSection, id, accept));
     return Notes.map(result, note -> note.paragraphs(resolveParagraphs(note.paragraphs, id, accept)));
   }
 
   private static Section resolveSection(Section section, String id, boolean accept) {
-    PageFurniture furniture = section.furniture;
+    var furniture = section.furniture;
     for (String key : PageFurniture.KEYS)
       if (furniture.stories.containsKey(key))
         furniture = furniture.story(key, resolveParagraphs(furniture.get(key), id, accept));
@@ -201,23 +199,21 @@ public final class Revisions {
 
   private static Sequence<Paragraph> resolveParagraphs(
       Sequence<Paragraph> source, String id, boolean accept) {
-    Sequence<Block> blocks = new Sequence<Block>();
+    var blocks = new Sequence<Block>();
     for (Paragraph p : source) blocks = blocks.append(p);
-    Sequence<Paragraph> result = new Sequence<Paragraph>();
-    for (Block b : resolveBlocks(blocks, id, accept, new LinkedHashMap<String, Section>()))
+    var result = new Sequence<Paragraph>();
+    for (Block b : resolveBlocks(blocks, id, accept, new LinkedHashMap<>()))
       result = result.append((Paragraph) b);
     return result;
   }
 
   private static Sequence<Block> resolveBlocks(
       Sequence<Block> source, String id, boolean accept, Map<String, Section> sections) {
-    Sequence<Block> blocks = new Sequence<Block>();
+    var blocks = new Sequence<Block>();
     for (Block block : source) {
-      if (block instanceof Paragraph) {
-        Paragraph p = (Paragraph) block;
+      if (block instanceof Paragraph p) {
         block = p.text(p.text.review(id, accept)).reviewFormat(id, accept);
-      } else if (block instanceof Table) {
-        Table t = (Table) block;
+      } else if (block instanceof Table t) {
         for (int r = 0; r < t.rows(); r++)
           for (int c = 0; c < t.columns(); c++)
             if (!t.covered(r, c)) t = t.setCell(r, c, resolveParagraphs(t.cell(r, c), id, accept));
@@ -227,13 +223,13 @@ public final class Revisions {
     }
     for (int i = 0; i < blocks.size(); i++)
       if (blocks.get(i) instanceof Paragraph) {
-        Paragraph p = (Paragraph) blocks.get(i);
-        Revision r = p.breakRevision;
+        var p = (Paragraph) blocks.get(i);
+        var r = p.breakRevision;
         if (r == null) continue;
-        Revision.Resolution resolution = r.resolve(id, accept);
+        var resolution = r.resolve(id, accept);
         if (resolution.removed && i + 1 < blocks.size() && blocks.get(i + 1) instanceof Paragraph) {
-          Paragraph following = (Paragraph) blocks.get(i + 1);
-          Section boundary = sections.remove(following.id);
+          var following = (Paragraph) blocks.get(i + 1);
+          var boundary = sections.remove(following.id);
           sections.remove(p.id);
           if (boundary != null) sections.put(p.id, boundary);
           blocks =

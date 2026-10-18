@@ -40,9 +40,9 @@ public final class TableContents {
           || identifier.indexOf('"') >= 0 || identifier.indexOf('\\') >= 0
           || identifier.indexOf('\n') >= 0 || identifier.indexOf('\r') >= 0)
         throw new IllegalArgumentException("Invalid contents sources");
-      Map<String, Integer> mapped = new LinkedHashMap<String, Integer>();
+      var mapped = new LinkedHashMap<String, Integer>();
       for (Map.Entry<String, Integer> entry : styles.entrySet()) {
-        String name = entry.getKey(); Integer level = entry.getValue();
+        var name = entry.getKey(); var level = entry.getValue();
         if (name == null || name.trim().isEmpty() || name.length() > 128 || level == null
             || level < 1 || level > 9 || name.indexOf(',') >= 0 || name.indexOf(';') >= 0
             || name.indexOf('"') >= 0 || name.indexOf('\\') >= 0 || name.indexOf('\n') >= 0 || name.indexOf('\r') >= 0)
@@ -56,7 +56,7 @@ public final class TableContents {
     }
 
     String instruction() {
-      StringBuilder out = new StringBuilder("TOC");
+      var out = new StringBuilder("TOC");
       if (caption != null) out.append(" \\c \"").append(caption).append('"');
       else {
         if (headingStyles) out.append(" \\o \"1-").append(levels).append('"');
@@ -87,15 +87,15 @@ public final class TableContents {
 
   /** Exclusive end. Each generated story owns only its consecutive entry paragraphs. */
   public static List<int[]> ranges(Document document) {
-    List<int[]> ranges = new ArrayList<int[]>();
+    var ranges = new ArrayList<int[]>();
     for (int i = 0; i < document.blocks.size(); i++) {
-      Block b = document.blocks.get(i);
-      InlineField field = b instanceof Paragraph ? marker((Paragraph)b) : null;
+      var b = document.blocks.get(i);
+      InlineField field = b instanceof Paragraph p ? marker(p) : null;
       if (field == null) continue;
       boolean figures = new FieldCode(field.instruction).switches.containsKey("c");
       int end = i + 1;
       while (end < document.blocks.size() && document.blocks.get(end) instanceof Paragraph) {
-        Paragraph p = document.paragraph(end);
+        var p = document.paragraph(end);
         if (marker(p) != null || !(figures ? "ListEntry".equals(p.style)
             || "TableofFigures".equals(p.style) : entryLevel(p.style) > 0)) break;
         end++;
@@ -110,7 +110,7 @@ public final class TableContents {
 
   public static int[] range(Document document, String caption) {
     for (int[] range : ranges(document)) {
-      String kind = new FieldCode(marker(document.paragraph(range[0])).instruction).switches.get("c");
+      var kind = new FieldCode(marker(document.paragraph(range[0])).instruction).switches.get("c");
       if (caption == null ? kind == null : caption.equals(kind)) return range;
     }
     return null;
@@ -129,19 +129,19 @@ public final class TableContents {
   public static Options options(Document document, String caption) {
     int[] r = range(document, caption);
     if (r == null) return new Options(3, caption == null ? "Contents" : "", true, true, "dot", true, caption);
-    Paragraph header = document.paragraph(r[0]);
-    FieldCode code = new FieldCode(marker(header).instruction);
+    var header = document.paragraph(r[0]);
+    var code = new FieldCode(marker(header).instruction);
     int levels = 3;
     String outline = code.switches.containsKey("o") ? code.switches.get("o") : code.switches.get("l");
     if (outline != null && outline.length() == 3 && outline.charAt(0) == '1'
         && outline.charAt(1) == '-' && outline.charAt(2) >= '1' && outline.charAt(2) <= '9') levels = outline.charAt(2) - '0';
-    String leader = "dot";
+    var leader = "dot";
     if (r[1] > r[0] + 1) {
       List<TabStop> tabs = document.paragraph(r[0] + 1).format.tabs;
       if (!tabs.isEmpty()) leader = tabs.get(tabs.size() - 1).leader;
     }
-    Map<String, Integer> styles = new LinkedHashMap<String, Integer>();
-    String mapping = code.switches.get("t");
+    var styles = new LinkedHashMap<String, Integer>();
+    var mapping = code.switches.get("t");
     if (mapping != null) {
       String[] parts = TextUtil.split(mapping.replace(';', ','), ',');
       if (parts.length % 2 != 0) throw new IllegalArgumentException("Invalid TOC style mapping");
@@ -160,10 +160,10 @@ public final class TableContents {
         || identifier == null || identifier.length() > 20 || text.indexOf('\n') >= 0
         || text.indexOf('\r') >= 0 || identifier.indexOf('\n') >= 0 || identifier.indexOf('\r') >= 0)
       throw new IllegalArgumentException("Invalid contents entry");
-    String instruction = "TC \"" + quoted(text) + "\" \\l " + level
+    var instruction = "TC \"" + quoted(text) + "\" \\l " + level
         + (identifier.isEmpty() ? "" : " \\f \"" + quoted(identifier) + "\"");
     session.transact(s -> {
-      Selection selected = s.selection();
+      var selected = s.selection();
       s.select(selected.endBlock(), selected.end(), selected.end());
       s.insertField(new InlineField(instruction, "", false, false));
     });
@@ -178,7 +178,7 @@ public final class TableContents {
     int[] r = range(session.document(), caption);
     if (r == null) return;
     session.transact(s -> {
-      Document d = s.document();
+      var d = s.document();
       Sequence<Block> blocks = d.blocks;
       for (int i = r[1] - 1; i >= r[0]; i--) blocks = blocks.remove(i);
       long next = d.nextId;
@@ -192,9 +192,9 @@ public final class TableContents {
   public static void update(Session session, Paginator paginator) { update(session, paginator, null); }
 
   public static void updateFigures(Session session, Paginator paginator) {
-    Set<String> labels = new LinkedHashSet<String>();
+    var labels = new LinkedHashSet<String>();
     for (int[] range : ranges(session.document())) {
-      String label = new FieldCode(marker(session.document().paragraph(range[0])).instruction).switches.get("c");
+      var label = new FieldCode(marker(session.document().paragraph(range[0])).instruction).switches.get("c");
       if (label != null) labels.add(label);
     }
     session.transact(s -> { for (String label : labels) update(s, paginator, label); });
@@ -203,16 +203,16 @@ public final class TableContents {
   public static void update(Session session, Paginator paginator, String caption) {
     int[] range = range(session.document(), caption);
     if (range == null || marker(session.document().paragraph(range[0])).locked) return;
-    Selection selection = session.selection();
+    var selection = session.selection();
     String tableId = session.inCell() ? session.document().blocks.get(session.cellBlock()).id() : null;
     int row = session.cellRow(), column = session.cellColumn();
-    String anchorId = session.editingDocument().blocks.get(selection.anchorBlock).id();
-    String focusId = session.editingDocument().blocks.get(selection.block).id();
+    var anchorId = session.editingDocument().blocks.get(selection.anchorBlock).id();
+    var focusId = session.editingDocument().blocks.get(selection.block).id();
     session.transact(s -> {
       s.leaveCell();
       insert(s, options(s.document(), caption), paginator);
       if (tableId != null) s.enterCell(ReviewComment.block(s.document(), tableId), row, column);
-      Document editing = s.editingDocument();
+      var editing = s.editingDocument();
       int anchor = ReviewComment.block(editing, anchorId), focus = ReviewComment.block(editing, focusId);
       if (anchor >= 0 && focus >= 0 && editing.blocks.get(anchor) instanceof Paragraph
           && editing.blocks.get(focus) instanceof Paragraph)
@@ -239,18 +239,17 @@ public final class TableContents {
         }
       }
       s.mapFields(SequenceFields.resolver(s.document()));
-      Document d = s.document();
-      List<Paragraph> headings = new ArrayList<Paragraph>();
-      List<Integer> levels = new ArrayList<Integer>();
-      List<Integer> sourceOffsets = new ArrayList<Integer>();
-      List<String> anchors = new ArrayList<String>();
-      Map<String, Bookmark> bookmarks = new LinkedHashMap<String, Bookmark>(d.bookmarks);
-      Map<String, Bookmark> headingBookmarks = new HashMap<String, Bookmark>();
+      var d = s.document();
+      var headings = new ArrayList<Paragraph>();
+      var levels = new ArrayList<Integer>();
+      var sourceOffsets = new ArrayList<Integer>();
+      var anchors = new ArrayList<String>();
+      var bookmarks = new LinkedHashMap<String, Bookmark>(d.bookmarks);
+      var headingBookmarks = new HashMap<String, Bookmark>();
       for (Bookmark mark : bookmarks.values())
         if (mark.name.startsWith("_Toc") && mark.startId.equals(mark.endId))
           headingBookmarks.put(mark.startId + ":" + mark.start + ":" + mark.end, mark);
-      for (Block block : d.blocks) if (block instanceof Paragraph) {
-        Paragraph p = (Paragraph) block;
+      for (Block block : d.blocks) if (block instanceof Paragraph p) {
         if (p.style.startsWith("TOC") || marker(p) != null) continue;
         int level = options.caption == null ? sourceLevel(d, p, options)
             : captionMatches(p, options.caption) ? 1 : 0;
@@ -261,7 +260,7 @@ public final class TableContents {
           p.text.visit(new RichText.Visitor() {
             public void run(int offset, String text, TextStyle style) {}
             public void field(int offset, InlineField field, TextStyle style) {
-              FieldCode code = new FieldCode(field.instruction);
+              var code = new FieldCode(field.instruction);
               if (!"TC".equals(code.name) || code.arguments.isEmpty() || code.arguments.get(0).trim().isEmpty()) return;
               String category = code.switches.containsKey("f") ? code.switches.get("f") : "C";
               if (!options.tcIdentifier.isEmpty() && !options.tcIdentifier.equalsIgnoreCase(category)) return;
@@ -277,9 +276,9 @@ public final class TableContents {
       }
       int nextBookmark = 1;
       for (int i = 0; i < headings.size(); i++) {
-        Paragraph p = headings.get(i); int offset = sourceOffsets.get(i);
+        var p = headings.get(i); int offset = sourceOffsets.get(i);
         int start = offset < 0 ? 0 : offset, end = offset < 0 ? p.text.length() : offset + 1;
-        Bookmark existing = headingBookmarks.get(p.id + ":" + start + ":" + end);
+        var existing = headingBookmarks.get(p.id + ":" + start + ":" + end);
         String name = existing == null ? null : existing.name;
         if (name == null) {
           do { name = "_Toc" + nextBookmark++; } while (bookmarks.containsKey(name));
@@ -289,20 +288,20 @@ public final class TableContents {
       }
       d = s.document();
       long next = d.nextId;
-      String headerId = "p" + next++;
-      RichText title = RichText.of(options.title, TextStyle.DEFAULT.with("size", options.title.isEmpty() ? "12" : "18").with("bold", "true"))
+      var headerId = "p" + next++;
+      var title = RichText.of(options.title, TextStyle.DEFAULT.with("size", options.title.isEmpty() ? "12" : "18").with("bold", "true"))
           .concat(RichText.field(new InlineField(options.instruction(), "", false, false), TextStyle.DEFAULT));
-      List<Paragraph> generated = new ArrayList<Paragraph>();
+      var generated = new ArrayList<Paragraph>();
       generated.add(new Paragraph(headerId, title).with("style", "TOCHeading").with("keepNext", "true"));
       float width = d.sectionAt(Math.min(at, d.blocks.size() - 1)).raw.page.contentWidth();
       for (int i = 0; i < headings.size(); i++) {
-        TextStyle textStyle = TextStyle.DEFAULT.with("link", options.hyperlinks ? "#" + anchors.get(i) : "");
+        var textStyle = TextStyle.DEFAULT.with("link", options.hyperlinks ? "#" + anchors.get(i) : "");
         RichText text = RichText.of(sourceLabel(headings.get(i), sourceOffsets.get(i)), textStyle);
         if (options.pageNumbers) text = text.concat(RichText.of(options.rightAlign ? "\t" : " ", textStyle))
             .concat(RichText.field(new InlineField("PAGEREF " + anchors.get(i)
                 + (options.hyperlinks ? " \\h" : ""), "1", false, false), textStyle));
         float indent = (levels.get(i) - 1) * 14;
-        Paragraph entry = new Paragraph("p" + next++, text).with("style", options.caption == null ? "TOC" + levels.get(i) : "ListEntry")
+        var entry = new Paragraph("p" + next++, text).with("style", options.caption == null ? "TOC" + levels.get(i) : "ListEntry")
             .with("indent", "" + indent).with("after", "3");
         if (options.pageNumbers && options.rightAlign)
           entry = entry.with("tabs", TabStop.encode(Collections.singletonList(
@@ -317,23 +316,23 @@ public final class TableContents {
       Sequence<Block> blocks = d.blocks;
       for (int i = 0; i < generated.size(); i++) blocks = blocks.insert(at + i, generated.get(i));
       s.replaceDocument(d.blocks(blocks, next));
-      Map<String, Integer> sourcePositions = new HashMap<String, Integer>();
+      var sourcePositions = new HashMap<String, Integer>();
       for (int i = 0; i < blocks.size(); i++) sourcePositions.put(blocks.get(i).id(), i);
       // Page references must include the space consumed by the contents itself.
       for (int pass = 0; pass < 6; pass++) {
-        Document before = s.document();
+        var before = s.document();
         s.mapFields(DocumentFields.resolver(before, paginator.layout(before), Collections.<String, String>emptyMap()));
         // Headings can contain REF/PAGE fields. Refresh their copied labels after resolution,
         // then paginate again because the updated label can change the contents story's height.
-        Document resolved = s.document();
+        var resolved = s.document();
         Sequence<Block> refreshed = resolved.blocks;
         for (int i = 0; i < headings.size(); i++) {
           int source = sourcePositions.get(headings.get(i).id);
           String label = sourceLabel(resolved.paragraph(source), sourceOffsets.get(i));
-          Paragraph entry = resolved.paragraph(at + 1 + i);
+          var entry = resolved.paragraph(at + 1 + i);
           int labelEnd = entry.text.length() - (options.pageNumbers ? 2 : 0);
           if (!label.equals(entry.text.slice(0, labelEnd).plainText())) {
-            RichText text = RichText.of(label, entry.text.styleAt(0))
+            var text = RichText.of(label, entry.text.styleAt(0))
                 .concat(entry.text.slice(labelEnd, entry.text.length()));
             refreshed = refreshed.set(at + 1 + i, entry.text(text));
           }
@@ -345,7 +344,7 @@ public final class TableContents {
     });
   }
   private static int sourceLevel(Document document, Paragraph p, Options options) {
-    ParagraphStyle style = document.styles.get(p.style);
+    var style = document.styles.get(p.style);
     for (Map.Entry<String, Integer> entry : options.styleLevels.entrySet())
       if (entry.getKey().equals(p.style) || style != null && entry.getKey().equalsIgnoreCase(style.name)) return entry.getValue();
     int direct = p.format.outlineLevel;
@@ -358,9 +357,9 @@ public final class TableContents {
 
   private static String sourceLabel(Paragraph paragraph, int offset) {
     if (offset >= 0) {
-      InlineField field = paragraph.text.fieldAt(offset);
+      var field = paragraph.text.fieldAt(offset);
       if (field == null) return "";
-      FieldCode code = new FieldCode(field.instruction);
+      var code = new FieldCode(field.instruction);
       return code.arguments.isEmpty() ? "" : code.arguments.get(0).trim();
     }
     return paragraph.text.plainText().replace('\t', ' ').replace('\n', ' ').replace('\f', ' ').trim();
@@ -369,9 +368,9 @@ public final class TableContents {
   private static boolean captionMatches(Paragraph p, String label) {
     if (!"Caption".equals(p.style)) return false;
     for (int i = 0; i < p.text.length(); i++) {
-      InlineField field = p.text.fieldAt(i);
+      var field = p.text.fieldAt(i);
       if (field == null) continue;
-      FieldCode code = new FieldCode(field.instruction);
+      var code = new FieldCode(field.instruction);
       if ("SEQ".equals(code.name) && !code.arguments.isEmpty() && label.equals(code.arguments.get(0))) return true;
     }
     return p.text.plainText().startsWith(label + " ");

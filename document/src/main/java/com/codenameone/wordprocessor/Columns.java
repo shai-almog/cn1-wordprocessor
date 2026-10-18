@@ -84,7 +84,7 @@ public final class Columns {
   @Override
   public boolean equals(Object o) {
     if (!(o instanceof Columns)) return false;
-    Columns c = (Columns) o;
+    var c = (Columns) o;
     return count == c.count && space == c.space && separator == c.separator
         && Arrays.equals(widths, c.widths);
   }

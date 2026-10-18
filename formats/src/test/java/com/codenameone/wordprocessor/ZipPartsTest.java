@@ -25,18 +25,18 @@ public class ZipPartsTest {
 
   @Test
   public void archiveReadsBackWithJavaZip() throws Exception {
-    Map<String, byte[]> parts = new LinkedHashMap<String, byte[]>();
-    StringBuilder big = new StringBuilder();
+    var parts = new LinkedHashMap<String, byte[]>();
+    var big = new StringBuilder();
     for (int i = 0; i < 2000; i++) big.append("<w:p>paragraph ").append(i).append("</w:p>");
     parts.put("word/document.xml", ZipParts.utf8(big));
     parts.put("tiny", new byte[] {1});
     parts.put("empty", new byte[0]);
-    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    var out = new ByteArrayOutputStream();
     ZipParts.write(parts, out);
-    ZipInputStream in = new ZipInputStream(new ByteArrayInputStream(out.toByteArray()));
+    var in = new ZipInputStream(new ByteArrayInputStream(out.toByteArray()));
     int count = 0;
     for (ZipEntry e; (e = in.getNextEntry()) != null; count++) {
-      ByteArrayOutputStream read = new ByteArrayOutputStream();
+      var read = new ByteArrayOutputStream();
       byte[] buffer = new byte[4096];
       for (int n; (n = in.read(buffer)) > 0; ) read.write(buffer, 0, n);
       assertArrayEquals(e.getName(), parts.get(e.getName()), read.toByteArray());

@@ -8,11 +8,11 @@ public class FiguresTest {
   private final LayoutEngine engine = new LayoutEngine(new PdfMetrics());
   private TableContents.Paginator pages() { return d -> engine.layout(d,0); }
   private Session fixture() {
-    Sequence<Block> blocks = new Sequence<Block>().append(new Paragraph("p1",new RichText()))
+    var blocks = new Sequence<Block>().append(new Paragraph("p1",new RichText()))
         .append(new Paragraph("p2",RichText.of("Overview",TextStyle.DEFAULT)).with("style","Heading1"));
     for (int i=0; i<3; i++) {
       String label=i==2 ? "Table" : "Figure";
-      RichText text=RichText.of(i==1 ? "" : label+" ",TextStyle.DEFAULT)
+      var text=RichText.of(i==1 ? "" : label+" ",TextStyle.DEFAULT)
           .concat(RichText.field(new InlineField("SEQ "+label,"1",false,false),TextStyle.DEFAULT))
           .concat(RichText.of(": Caption "+i,TextStyle.DEFAULT));
       blocks=blocks.append(new Paragraph("p"+(i+3),text).with("style","Caption"));
@@ -20,7 +20,7 @@ public class FiguresTest {
     return new Session(new Document(blocks,PageSpec.A4,"Figures",6));
   }
   @Test public void figuresUseSequenceLabelsIncludingHiddenLabelsAndCoexistWithContents() throws Exception {
-    Session s=fixture();
+    var s=fixture();
     TableContents.insert(s,TableContents.options(s.document()),pages());
     TableContents.insert(s,TableContents.options(s.document(),"Figure"),pages());
     int[] figures=TableContents.range(s.document(),"Figure");
@@ -30,18 +30,18 @@ public class FiguresTest {
     assertNotNull(TableContents.range(s.document()));
     TableContents.insert(s,TableContents.options(s.document(),"Table"),pages());
     assertEquals(3,TableContents.ranges(s.document()).size());
-    ByteArrayOutputStream out=new ByteArrayOutputStream();Docx.write(s.document(),out);
+    var out=new ByteArrayOutputStream();Docx.write(s.document(),out);
     Docx.Opened opened=Docx.read(new ByteArrayInputStream(out.toByteArray()));
     assertTrue(opened.warnings.toString(),opened.warnings.isEmpty());
     assertEquals(3,TableContents.ranges(opened.document).size());
-    Session reopened=new Session(DocumentXml.read(DocumentXml.write(opened.document)));
+    var reopened=new Session(DocumentXml.read(DocumentXml.write(opened.document)));
     int source=ReviewComment.block(reopened.document(),opened.document.bookmarks.get("_Toc2").startId);
     reopened.select(source,reopened.document().paragraph(source).text.length(),reopened.document().paragraph(source).text.length());
     reopened.replace(" revised");
     TableContents.updateFigures(reopened,pages());
     figures=TableContents.range(reopened.document(),"Figure");
     assertTrue(reopened.document().paragraph(figures[0]+1).text.plainText().contains("revised"));
-    Document before=reopened.document();
+    var before=reopened.document();
     TableContents.remove(reopened,"Figure");
     assertNull(TableContents.range(reopened.document(),"Figure"));
     assertNotNull(TableContents.range(reopened.document(),"Table"));
@@ -50,10 +50,10 @@ public class FiguresTest {
   }
 
   @Test public void updatedCaptionNumbersAreUsedAndCustomLabelDoesNotCollectSimilarNames() {
-    Session s=fixture();
+    var s=fixture();
     TableContents.insert(s,TableContents.options(s.document(),"Figure"),pages());
     int[] figures=TableContents.range(s.document(),"Figure");
-    TableContents.Options noPages=new TableContents.Options(1,"Illustrations",false,true,"dot",false,"Figure");
+    var noPages=new TableContents.Options(1,"Illustrations",false,true,"dot",false,"Figure");
     TableContents.insert(s,noPages,pages());
     figures=TableContents.range(s.document(),"Figure");
     assertEquals("Illustrations",s.document().paragraph(figures[0]).text.plainText());

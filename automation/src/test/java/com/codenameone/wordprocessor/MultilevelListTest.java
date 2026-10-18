@@ -12,20 +12,20 @@ public class MultilevelListTest {
   private final Commands commands = new Commands();
 
   private Object run(Session s, String id, Object... kv) {
-    Map<String, Object> a = new LinkedHashMap<String, Object>();
+    var a = new LinkedHashMap<String, Object>();
     for (int i = 0; i < kv.length; i += 2) a.put((String) kv[i], kv[i + 1]);
     return commands.execute(s, id, a);
   }
 
   private static String labels(Document d) {
-    ListNumbers n = new ListNumbers();
-    StringBuilder b = new StringBuilder();
+    var n = new ListNumbers();
+    var b = new StringBuilder();
     for (Block block : d.blocks) b.append(n.next((Paragraph) block)).append(' ');
     return b.toString().trim();
   }
 
   private Session list(String kind, int... levels) {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     for (int i = 0; i < levels.length; i++) {
       if (i > 0) s.enterParagraph();
       s.replace("item");
@@ -42,9 +42,9 @@ public class MultilevelListTest {
   @Test
   public void outlineAndLegalLabels() throws Exception {
     assertEquals("1. a. i. b. 2.", labels(list("outline", 0, 1, 2, 1, 0).document()));
-    Session legal = list("legal", 0, 1, 2, 1, 0);
+    var legal = list("legal", 0, 1, 2, 1, 0);
     assertEquals("1. 1.1. 1.1.1. 1.2. 2.", labels(legal.document()));
-    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    var out = new ByteArrayOutputStream();
     Docx.write(legal.document(), out);
     Docx.Opened back = Docx.read(new ByteArrayInputStream(out.toByteArray()));
     assertTrue(back.warnings.toString(), back.warnings.isEmpty());
@@ -53,7 +53,7 @@ public class MultilevelListTest {
 
   @Test
   public void customNumberAndBulletRoundTrip() throws Exception {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("one");
     s.enterParagraph();
     s.replace("two");
@@ -65,7 +65,7 @@ public class MultilevelListTest {
     s.replace("tick");
     run(s, "para.defineBullet", "symbol", "✓");
     assertEquals("(A) (B) ✓", labels(s.document()));
-    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    var out = new ByteArrayOutputStream();
     Docx.write(s.document(), out);
     Docx.Opened back = Docx.read(new ByteArrayInputStream(out.toByteArray()));
     assertTrue(back.warnings.toString(), back.warnings.isEmpty());

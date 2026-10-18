@@ -23,15 +23,14 @@ public final class Notes {
   }
 
   public static List<Reference> references(Document document) {
-    List<Reference> result = new ArrayList<Reference>();
+    var result = new ArrayList<Reference>();
     for (int b = 0; b < document.blocks.size(); b++) {
-      Block block = document.blocks.get(b);
-      if (block instanceof Paragraph) references(result, (Paragraph) block, b, -1, -1, 0);
-      else if (block instanceof Table) {
-        Table table = (Table) block;
+      var block = document.blocks.get(b);
+      if (block instanceof Paragraph paragraph) references(result, paragraph, b, -1, -1, 0);
+      else if (block instanceof Table table) {
         for (int r = 0; r < table.rows(); r++) for (int c = 0; c < table.columns(); c++) {
           if (table.covered(r, c)) continue;
-          Sequence<Paragraph> cell = table.cell(r, c);
+          var cell = table.cell(r, c);
           for (int p = 0; p < cell.size(); p++) references(result, cell.get(p), b, r, c, p);
         }
       }
@@ -44,7 +43,7 @@ public final class Notes {
   }
 
   public static List<Note> all(Document document) {
-    final List<Note> result = new ArrayList<Note>();
+    final var result = new ArrayList<Note>();
     map(document, note -> { result.add(note); return note; });
     return result;
   }
@@ -53,9 +52,8 @@ public final class Notes {
     Sequence<Block> blocks = document.blocks;
     for (int i = 0; i < blocks.size(); i++) {
       Block original = blocks.get(i), value = original;
-      if (original instanceof Paragraph) value = paragraph((Paragraph) original, mapper);
-      else if (original instanceof Table) {
-        Table table = (Table) original;
+      if (original instanceof Paragraph paragraph) value = paragraph(paragraph, mapper);
+      else if (original instanceof Table table) {
         for (int row = 0; row < table.rows(); row++)
           for (int column = 0; column < table.columns(); column++) {
             if (table.covered(row, column)) continue;
@@ -74,22 +72,22 @@ public final class Notes {
   }
 
   private static Paragraph paragraph(Paragraph paragraph, Mapper mapper) {
-    RichText value = paragraph.text.mapNotes((offset, note) -> mapper.map(note));
+    var value = paragraph.text.mapNotes((offset, note) -> mapper.map(note));
     return value == paragraph.text ? paragraph : paragraph.text(value);
   }
 
   /** Renumber in document order and detach pasted copies from their original note identities. */
   public static Document normalize(Document document) {
-    final Set<String> ids = new HashSet<String>();
-    final Set<String> reserved = new HashSet<String>();
+    final var ids = new HashSet<String>();
+    final var reserved = new HashSet<String>();
     for (Note note : all(document)) reserved.add(note.id);
     final long[] next = {document.nextId};
     Document result = map(document, note -> {
       if (!ids.add(note.id)) {
-        String id = "n" + next[0]++;
+        var id = "n" + next[0]++;
         while (reserved.contains(id) || !ids.add(id)) id = "n" + next[0]++;
         reserved.add(id);
-        Sequence<Paragraph> story = new Sequence<Paragraph>();
+        var story = new Sequence<Paragraph>();
         for (Paragraph p : note.paragraphs) story = story.append(p.copy("p" + next[0]++, p.text));
         note = new Note(id, note.kind, note.mark, note.label, story);
       }
@@ -99,16 +97,16 @@ public final class Notes {
   }
   /** Page-dependent numbering uses physical anchor pages supplied by pagination. */
   public static Document numbered(Document document, Map<String, Integer> pages) {
-    Map<String, String> labels = new HashMap<String, String>();
+    var labels = new HashMap<String, String>();
     List<Section.Range> sections = document.sectionRanges();
     int section = 0;
     int[] count = {0, 0}, previousSection = {-1, -1}, previousPage = {-1, -1};
     for (Reference reference : references(document)) {
       while (section + 1 < sections.size() && reference.block > sections.get(section).last) section++;
-      Note note = reference.note;
+      var note = reference.note;
       if (!note.mark.isEmpty()) { labels.put(note.id, note.mark); continue; }
       int kind = "footnote".equals(note.kind) ? 0 : 1;
-      NoteOptions.Properties options = sections.get(section).resolved.notes.get(note.kind);
+      var options = sections.get(section).resolved.notes.get(note.kind);
       Integer page = pages == null ? null : pages.get(note.id);
       boolean restart = previousSection[kind] < 0
           || "eachSect".equals(options.numRestart) && previousSection[kind] != section

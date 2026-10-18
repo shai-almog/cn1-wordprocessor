@@ -13,7 +13,7 @@ public final class MailMerge {
   }
 
   public static String placeholder(String instruction) {
-    FieldCode code = new FieldCode(instruction);
+    var code = new FieldCode(instruction);
     if ("MERGEFIELD".equals(code.name))
       return code.arguments.isEmpty() ? "«Field»" : "«" + code.arguments.get(0) + "»";
     if ("ADDRESSBLOCK".equals(code.name)) return "«AddressBlock»";
@@ -26,7 +26,7 @@ public final class MailMerge {
   public static void recipients(Session s, MergeData value) {
     s.transact(
         x -> {
-          MergeData old = x.mergeData();
+          var old = x.mergeData();
           x.mergeData(
               value.options(old.kind, old.preview && !value.rows.isEmpty(), old.highlight, 0));
           refresh(x);
@@ -38,7 +38,7 @@ public final class MailMerge {
       throw new IllegalArgumentException("Select recipients first");
     s.transact(
         x -> {
-          MergeData old = x.mergeData();
+          var old = x.mergeData();
           x.mergeData(old.options(old.kind, enabled, old.highlight, record));
           refresh(x);
         });
@@ -58,10 +58,10 @@ public final class MailMerge {
     s.transact(
         x -> {
           int cell = x.cellBlock(), row = x.cellRow(), col = x.cellColumn();
-          Selection selection = x.selection();
-          Transform transform =
+          var selection = x.selection();
+          var transform =
               new Transform(x.document(), x.mergeData(), false, x.document().nextId, "");
-          Document value = transform.document(x.mergeData().record, x.mergeData().rows.size());
+          var value = transform.document(x.mergeData().record, x.mergeData().rows.size());
           if (value != x.document()) {
             x.replaceDocument(value);
             if (cell >= 0) x.enterCell(cell, row, col);
@@ -85,10 +85,10 @@ public final class MailMerge {
   private static String resolve(MergeData data, String instruction, Cursor cursor) {
     String placeholder = placeholder(instruction);
     if (placeholder == null) return null;
-    FieldCode code = new FieldCode(instruction);
+    var code = new FieldCode(instruction);
     int record = cursor.record < cursor.end ? cursor.record : data.rows.size();
     if ("MERGEFIELD".equals(code.name)) {
-      String value = data.value(code.arguments.isEmpty() ? "" : code.arguments.get(0), record);
+      var value = data.value(code.arguments.isEmpty() ? "" : code.arguments.get(0), record);
       if (!value.isEmpty()) {
         if (code.switches.containsKey("b")) value = code.switches.get("b") + value;
         if (code.switches.containsKey("f")) value += code.switches.get("f");
@@ -103,7 +103,7 @@ public final class MailMerge {
       return "";
     }
     // The supported conditional grammar is deliberately closed; malformed rules never execute.
-    List<String> tokens = FieldCode.tokens(instruction);
+    var tokens = FieldCode.tokens(instruction);
     if (tokens.size() < 7
         || !"{".equals(tokens.get(1))
         || !"MERGEFIELD".equalsIgnoreCase(tokens.get(2))
@@ -120,7 +120,7 @@ public final class MailMerge {
     } catch (NumberFormatException ex) {
       comparison = actual.compareTo(expected);
     }
-    String op = tokens.get(5);
+    var op = tokens.get(5);
     boolean matched;
     if ("=".equals(op)) matched = comparison == 0;
     else if ("<>".equals(op)) matched = comparison != 0;
@@ -158,16 +158,16 @@ public final class MailMerge {
   }
 
   public static List<String> errors(Document document, MergeData data) {
-    Set<String> unknown = new LinkedHashSet<String>();
-    Transform scan =
+    var unknown = new LinkedHashSet<String>();
+    var scan =
         new Transform(document, data, false, document.nextId, "") {
           @Override
           String field(InlineField field, Cursor cursor) {
-            FieldCode code = new FieldCode(field.instruction);
+            var code = new FieldCode(field.instruction);
             if ("MERGEFIELD".equals(code.name)
                 && !code.arguments.isEmpty()
                 && data.column(code.arguments.get(0)) < 0) unknown.add(code.arguments.get(0));
-            List<String> t = FieldCode.tokens(field.instruction);
+            var t = FieldCode.tokens(field.instruction);
             if (Arrays.asList("IF", "NEXTIF", "SKIPIF").contains(code.name)
                 && t.size() > 3
                 && "MERGEFIELD".equalsIgnoreCase(t.get(2))
@@ -176,27 +176,27 @@ public final class MailMerge {
           }
         };
     scan.document(data.record, data.rows.size());
-    return new ArrayList<String>(unknown);
+    return new ArrayList<>(unknown);
   }
 
   public static int finish(Session s, int from, int to) {
-    MergeData data = s.mergeData();
-    Document template = s.document();
+    var data = s.mergeData();
+    var template = s.document();
     if (from < 1 || to < from || to > data.rows.size())
       throw new IllegalArgumentException("Choose a valid recipient range");
-    List<String> missing = errors(template, data);
+    var missing = errors(template, data);
     if (!missing.isEmpty())
       throw new IllegalArgumentException("Unknown recipient fields: " + missing);
-    Sequence<Block> blocks = new Sequence<Block>();
-    Map<String, Section> sections = new LinkedHashMap<String, Section>();
-    List<ReviewComment> comments = new ArrayList<ReviewComment>();
-    Map<String, Bookmark> bookmarks = new LinkedHashMap<String, Bookmark>();
+    var blocks = new Sequence<Block>();
+    var sections = new LinkedHashMap<String, Section>();
+    var comments = new ArrayList<ReviewComment>();
+    var bookmarks = new LinkedHashMap<String, Bookmark>();
     long next = template.nextId, textSize = 0;
     int count = 0;
     Section last = null;
     for (int record = from - 1; record < to; ) {
-      Transform transform = new Transform(template, data, true, next, "m" + (record + 1) + "_");
-      Document copy = transform.document(record, to);
+      var transform = new Transform(template, data, true, next, "m" + (record + 1) + "_");
+      var copy = transform.document(record, to);
       next = copy.nextId;
       record = Math.max(record + 1, transform.consumed + 1);
       if (transform.skipped) continue;
@@ -209,8 +209,8 @@ public final class MailMerge {
           blocks = blocks.append(new Paragraph("p" + next++, new RichText()));
         sections.put(blocks.get(blocks.size() - 1).id(), last);
       }
-      Map<String, Section> copySections = new LinkedHashMap<String, Section>(copy.sections);
-      Section first =
+      var copySections = new LinkedHashMap<String, Section>(copy.sections);
+      var first =
           copy.sectionRanges()
               .get(0)
               .raw
@@ -227,7 +227,7 @@ public final class MailMerge {
       count++;
     }
     if (blocks.size() == 0) blocks = blocks.append(new Paragraph("p" + next++, new RichText()));
-    Document output =
+    var output =
         new Document(blocks, template.page, template.title + " — Merged", next, comments)
             .styles(template.styles)
             .notes(template.notes)
@@ -249,7 +249,7 @@ public final class MailMerge {
     final String prefix;
     final Map<String, String> ids = new HashMap<String, String>(),
         names = new HashMap<String, String>();
-    final Map<String, List<int[]>> shifts = new HashMap<String, List<int[]>>();
+    final Map<String, List<int[]>> shifts = new HashMap<>();
     long next, textSize;
     int consumed;
     boolean skipped;
@@ -280,7 +280,7 @@ public final class MailMerge {
 
     int offset(String id, int offset) {
       int delta = 0;
-      List<int[]> changes = shifts.get(id);
+      var changes = shifts.get(id);
       if (changes != null) for (int[] change : changes) if (change[0] < offset) delta += change[1];
       return offset + delta;
     }
@@ -293,11 +293,11 @@ public final class MailMerge {
 
     InlineField reference(InlineField field) {
       if (!flatten) return field;
-      FieldCode code = new FieldCode(field.instruction);
+      var code = new FieldCode(field.instruction);
       if (!Arrays.asList("REF", "PAGEREF", "NOTEREF").contains(code.name)
           || code.arguments.size() != 1
           || !names.containsKey(code.arguments.get(0))) return field;
-      StringBuilder instruction =
+      var instruction =
           new StringBuilder(code.name).append(' ').append(quote(names.get(code.arguments.get(0))));
       for (Map.Entry<String, String> entry : code.switches.entrySet()) {
         instruction.append(" \\").append(entry.getKey());
@@ -308,17 +308,17 @@ public final class MailMerge {
 
     Paragraph paragraph(Paragraph p, Cursor cursor) {
       if (!flatten) {
-        RichText text =
+        var text =
             p.text.mapFields(
                 (offset, f) -> {
-                  String value = field(f, cursor);
+                  var value = field(f, cursor);
                   return value == null ? f : f.result(value);
                 });
         text =
             text.mapNotes(
                 (offset, note) -> {
                   Sequence<Paragraph> story = note.paragraphs;
-                  Cursor noteCursor = new Cursor(cursor.record, cursor.end);
+                  var noteCursor = new Cursor(cursor.record, cursor.end);
                   for (int i = 0; i < story.size(); i++) {
                     Paragraph original = story.get(i), value = paragraph(original, noteCursor);
                     if (value != original) story = story.set(i, value);
@@ -328,7 +328,7 @@ public final class MailMerge {
         return text == p.text ? p : p.text(text);
       }
       final RichText[] text = {new RichText()};
-      final List<int[]> changes = new ArrayList<int[]>();
+      final var changes = new ArrayList<int[]>();
       p.text.visit(
           new RichText.Visitor() {
             public void run(int offset, String value, TextStyle s) {
@@ -336,7 +336,7 @@ public final class MailMerge {
             }
 
             public void field(int offset, InlineField f, TextStyle s) {
-              String value = fieldValue(f, cursor);
+              var value = fieldValue(f, cursor);
               if (flatten && value != null) {
                 text[0] = text[0].concat(RichText.of(value, style(s)));
                 changes.add(new int[] {offset, value.length() - 1});
@@ -347,8 +347,8 @@ public final class MailMerge {
             }
 
             public void note(int offset, Note note, TextStyle s) {
-              Sequence<Paragraph> story = new Sequence<Paragraph>();
-              Cursor noteCursor = new Cursor(cursor.record, cursor.end);
+              var story = new Sequence<Paragraph>();
+              var noteCursor = new Cursor(cursor.record, cursor.end);
               for (Paragraph p : note.paragraphs) story = story.append(paragraph(p, noteCursor));
               text[0] =
                   text[0].concat(
@@ -368,11 +368,11 @@ public final class MailMerge {
     }
 
     PageFurniture furniture(PageFurniture value, int record, int end) {
-      PageFurniture result = value;
+      var result = value;
       for (String key : PageFurniture.KEYS)
         if (value.stories.containsKey(key)) {
-          Sequence<Paragraph> story = value.get(key);
-          Cursor cursor = new Cursor(record, end);
+          var story = value.get(key);
+          var cursor = new Cursor(record, end);
           for (int i = 0; i < story.size(); i++) {
             Paragraph old = story.get(i), updated = paragraph(old, cursor);
             if (old != updated) story = story.set(i, updated);
@@ -383,13 +383,12 @@ public final class MailMerge {
     }
 
     Document previewDocument(int record, int end) {
-      Cursor cursor = new Cursor(record, end);
+      var cursor = new Cursor(record, end);
       Sequence<Block> blocks = source.blocks;
       for (int i = 0; i < blocks.size(); i++) {
         Block original = blocks.get(i), updated = original;
-        if (original instanceof Paragraph) updated = paragraph((Paragraph) original, cursor);
-        else if (original instanceof Table) {
-          Table table = (Table) original;
+        if (original instanceof Paragraph paragraph) updated = paragraph(paragraph, cursor);
+        else if (original instanceof Table table) {
           for (int r = 0; r < table.rows(); r++)
             for (int c = 0; c < table.columns(); c++) {
               if (table.covered(r, c)) continue;
@@ -405,16 +404,16 @@ public final class MailMerge {
         if (original != updated) blocks = blocks.set(i, updated);
       }
       Document result = blocks == source.blocks ? source : source.blocks(blocks, source.nextId);
-      Map<String, Section> sections = new LinkedHashMap<String, Section>(source.sections);
+      var sections = new LinkedHashMap<String, Section>(source.sections);
       boolean changed = false;
       for (Map.Entry<String, Section> entry : source.sections.entrySet()) {
-        PageFurniture value = furniture(entry.getValue().furniture, record, end);
+        var value = furniture(entry.getValue().furniture, record, end);
         if (value != entry.getValue().furniture) {
           sections.put(entry.getKey(), entry.getValue().furniture(value));
           changed = true;
         }
       }
-      PageFurniture value = furniture(source.furniture, record, end);
+      var value = furniture(source.furniture, record, end);
       return changed || value != source.furniture
           ? result.sections(sections, source.lastSection.furniture(value))
           : result;
@@ -422,19 +421,18 @@ public final class MailMerge {
 
     Document document(int record, int end) {
       if (!flatten) return previewDocument(record, end);
-      Cursor cursor = new Cursor(record, end);
-      Sequence<Block> blocks = new Sequence<Block>();
+      var cursor = new Cursor(record, end);
+      var blocks = new Sequence<Block>();
       for (Block b : source.blocks) {
-        if (b instanceof Paragraph) blocks = blocks.append(paragraph((Paragraph) b, cursor));
-        else if (b instanceof Picture)
-          blocks = blocks.append(flatten ? ((Picture) b).copy(id(b.id(), "i")) : b);
-        else if (b instanceof Table) {
-          Table t = (Table) b;
-          List<List<Sequence<Paragraph>>> cells = new ArrayList<List<Sequence<Paragraph>>>();
+        if (b instanceof Paragraph paragraph) blocks = blocks.append(paragraph(paragraph, cursor));
+        else if (b instanceof Picture picture)
+          blocks = blocks.append(flatten ? picture.copy(id(b.id(), "i")) : b);
+        else if (b instanceof Table t) {
+          var cells = new ArrayList<List<Sequence<Paragraph>>>();
           for (int r = 0; r < t.rows(); r++) {
-            List<Sequence<Paragraph>> row = new ArrayList<Sequence<Paragraph>>();
+            var row = new ArrayList<Sequence<Paragraph>>();
             for (int c = 0; c < t.columns(); c++) {
-              Sequence<Paragraph> cell = new Sequence<Paragraph>();
+              var cell = new Sequence<Paragraph>();
               for (Paragraph p : t.cell(r, c))
                 cell =
                     cell.append(paragraph(p, t.covered(r, c) ? new Cursor(record, end) : cursor));
@@ -447,8 +445,8 @@ public final class MailMerge {
       }
       consumed = cursor.record;
       skipped = cursor.skip;
-      Map<String, Section> sections = new LinkedHashMap<String, Section>();
-      Section last = source.lastSection;
+      var sections = new LinkedHashMap<String, Section>();
+      var last = source.lastSection;
       for (Section.Range range : source.sectionRanges()) {
         // Resolve inherited stories before cloning so later records cannot inherit previous
         // recipients.
@@ -458,7 +456,7 @@ public final class MailMerge {
         if (source.sections.containsKey(old)) sections.put(id(old, "p"), section);
         else last = section;
       }
-      List<ReviewComment> comments = new ArrayList<ReviewComment>();
+      var comments = new ArrayList<ReviewComment>();
       for (ReviewComment c : source.comments)
         comments.add(
             new ReviewComment(
@@ -471,9 +469,9 @@ public final class MailMerge {
                 offset(c.endId, c.end),
                 c.resolved,
                 c.replies));
-      Map<String, Bookmark> marks = new LinkedHashMap<String, Bookmark>();
+      var marks = new LinkedHashMap<String, Bookmark>();
       for (Bookmark b : source.bookmarks.values()) {
-        String name = names.get(b.name);
+        var name = names.get(b.name);
         marks.put(
             name,
             new Bookmark(

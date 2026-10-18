@@ -35,7 +35,7 @@ final class VerticalRuler extends Component {
 
   /** Repaints only when the page geometry or its position changed; edits rarely move it. */
   void sync() {
-    PageSpec p = session.activeSection().raw.page;
+    var p = session.activeSection().raw.page;
     Object[] now = {p.width, p.height, p.top, p.bottom, editor.pixelsPerPoint(), origin()};
     if (java.util.Arrays.equals(now, shown)) return;
     shown = now;
@@ -44,12 +44,12 @@ final class VerticalRuler extends Component {
 
   public void paint(Graphics g) {
     super.paint(g);
-    PageSpec p = session.activeSection().raw.page;
+    var p = session.activeSection().raw.page;
     float scale = editor.pixelsPerPoint();
     int y = origin(), x = getX() + OfficeTheme.px(3), w = OfficeTheme.px(16);
     int h = Math.round(p.height * scale);
     int top = y + Math.round(p.top * scale), bottom = y + Math.round((p.height - p.bottom) * scale);
-    int[] clip = g.getClip();
+    var clip = g.getClip();
     g.clipRect(getX(), getY(), getWidth(), getHeight());
     g.setColor(OfficeTheme.chrome(0xd4d4d4));
     g.fillRect(x, y, w, h);
@@ -79,7 +79,7 @@ final class VerticalRuler extends Component {
   }
 
   public void pointerPressed(int x, int y) {
-    PageSpec p = session.activeSection().raw.page;
+    var p = session.activeSection().raw.page;
     float s = editor.pixelsPerPoint();
     float value = (y - getAbsoluteY() - (origin() - getY())) / s;
     float near = OfficeTheme.px(8) / s;
@@ -88,7 +88,7 @@ final class VerticalRuler extends Component {
 
   public void pointerReleased(int x, int y) {
     if (handle == 0) return;
-    PageSpec p = session.activeSection().raw.page;
+    var p = session.activeSection().raw.page;
     float value = (y - getAbsoluteY() - (origin() - getY())) / editor.pixelsPerPoint();
     float top = p.top, bottom = p.bottom;
     if (handle == 1) top = Math.max(0, Math.min(p.height - bottom - 72, value));

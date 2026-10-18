@@ -7,7 +7,7 @@ import org.junit.Test;
 
 public class SectionsFormatTest {
   private Document sample() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.furniture(
         PageFurniture.EMPTY.story(
             "header",
@@ -27,14 +27,14 @@ public class SectionsFormatTest {
 
   @Test
   public void nativeAndDocxPreserveLinkedSectionsAndRestart() throws Exception {
-    Document d = sample();
+    var d = sample();
     assertEquals(DocumentXml.write(d), DocumentXml.write(DocumentXml.read(DocumentXml.write(d))));
-    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    var out = new ByteArrayOutputStream();
     Docx.write(d, out);
     Docx.Opened opened = Docx.read(new ByteArrayInputStream(out.toByteArray()));
     assertTrue(opened.warnings.toString(), opened.warnings.isEmpty());
     assertEquals(2, opened.document.sectionRanges().size());
-    Section.Range second = opened.document.sectionAt(1);
+    var second = opened.document.sectionAt(1);
     assertEquals(7, second.raw.pageStart);
     assertEquals(842, second.raw.page.width, .01);
     assertTrue(second.raw.furniture.stories.isEmpty());
@@ -50,7 +50,7 @@ public class SectionsFormatTest {
 
   @Test
   public void pdfHasDistinctMediaBoxesForEachSection() throws Exception {
-    String pdf = new String(PdfExporter.write(sample()), "ISO-8859-1");
+    var pdf = new String(PdfExporter.write(sample()), "ISO-8859-1");
     assertTrue(pdf.contains("/MediaBox [0 0 595.280 841.890]"));
     assertTrue(pdf.contains("/MediaBox [0 0 842.000 595.000]"));
     assertTrue(pdf.contains("/Count 2"));

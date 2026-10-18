@@ -41,7 +41,7 @@ public final class Macros {
       Map<String, Object> macro,
       Map<String, String> parameters,
       Cancellation cancel) {
-    Session fork = session.fork();
+    var fork = session.fork();
     run(fork, macro, parameters, cancel);
     return new Preview(session, fork, session.revision());
   }
@@ -65,10 +65,10 @@ public final class Macros {
               throw new IllegalStateException("Macro cancelled");
             if (!(item instanceof Map)) throw new IllegalArgumentException("Invalid macro step");
             Map<?, ?> step = (Map<?, ?>) item;
-            String id = (String) step.get("command");
+            var id = (String) step.get("command");
             if ("edit.undo".equals(id) || "edit.redo".equals(id))
               throw new IllegalArgumentException("History commands cannot run inside a macro");
-            Object raw = step.get("args");
+            var raw = step.get("args");
             if (!(raw instanceof Map))
               throw new IllegalArgumentException("Macro args must be an object");
             commands.execute(s, id, (Map<String, Object>) expand(raw, parameters));
@@ -77,9 +77,8 @@ public final class Macros {
   }
 
   private Object expand(Object value, Map<String, String> params) {
-    if (value instanceof String) {
-      String source = (String) value;
-      StringBuilder b = new StringBuilder();
+    if (value instanceof String source) {
+      var b = new StringBuilder();
       int offset = 0;
       while (true) {
         int a = source.indexOf("${", offset);
@@ -89,7 +88,7 @@ public final class Macros {
         }
         int end = source.indexOf('}', a + 2);
         if (end < 0) throw new IllegalArgumentException("Unclosed macro parameter");
-        String key = source.substring(a + 2, end);
+        var key = source.substring(a + 2, end);
         if (!params.containsKey(key))
           throw new IllegalArgumentException("Missing macro parameter: " + key);
         b.append(source.substring(offset, a)).append(params.get(key));
@@ -97,17 +96,17 @@ public final class Macros {
       }
       return b.toString();
     }
-    if (value instanceof Map) {
-      Map<String, Object> out = new LinkedHashMap<String, Object>();
-      for (Object item : ((Map) value).entrySet()) {
-        Map.Entry e = (Map.Entry) item;
+    if (value instanceof Map map) {
+      var out = new LinkedHashMap<String, Object>();
+      for (Object item : map.entrySet()) {
+        var e = (Map.Entry) item;
         out.put((String) e.getKey(), expand(e.getValue(), params));
       }
       return out;
     }
-    if (value instanceof List) {
-      List<Object> out = new ArrayList<Object>();
-      for (Object v : (List) value) out.add(expand(v, params));
+    if (value instanceof List list) {
+      var out = new ArrayList<Object>();
+      for (Object v : list) out.add(expand(v, params));
       return out;
     }
     return value;

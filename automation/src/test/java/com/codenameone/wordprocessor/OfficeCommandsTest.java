@@ -14,7 +14,7 @@ public class OfficeCommandsTest {
   private final Commands commands = new Commands();
 
   private Object run(Session s, String id, Object... kv) {
-    Map<String, Object> a = new LinkedHashMap<String, Object>();
+    var a = new LinkedHashMap<String, Object>();
     for (int i = 0; i < kv.length; i += 2) a.put((String) kv[i], kv[i + 1]);
     return commands.execute(s, id, a);
   }
@@ -27,9 +27,9 @@ public class OfficeCommandsTest {
 
   @Test
   public void optionsValidateAndPersist() {
-    final List<Map<String, String>> saved = new ArrayList<Map<String, String>>();
+    final var saved = new ArrayList<Map<String, String>>();
     AppOptions.install(v -> saved.add(v), null);
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     run(s, "file.options", "key", "userName", "value", "Ada");
     assertEquals("Ada", AppOptions.get("userName"));
     assertEquals("Ada", saved.get(saved.size() - 1).get("userName"));
@@ -48,7 +48,7 @@ public class OfficeCommandsTest {
 
   @Test
   public void autocorrectEntriesAndRules() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     run(s, "tools.autocorrect", "action", "add", "from", "wrod", "to", "word");
     assertEquals("A word", AppOptions.correct("A wrod"));
     assertEquals("Hello. The", AppOptions.correct("Hello. the"));
@@ -61,7 +61,7 @@ public class OfficeCommandsTest {
 
   @Test
   public void printMarkupResolvesRevisionsWhenOff() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("Hello");
     s.trackChanges(true);
     s.select(0, 5, 5);
@@ -75,7 +75,7 @@ public class OfficeCommandsTest {
 
   @Test
   public void versionsSaveRestoreAndCompare() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("first");
     run(s, "file.versions", "save", "v1");
     s.select(0, 0, 5);
@@ -92,7 +92,7 @@ public class OfficeCommandsTest {
 
   @Test
   public void templatesSaveCreateAttachAndUpdate() {
-    final Map<String, String> store = new LinkedHashMap<String, String>();
+    final var store = new LinkedHashMap<String, String>();
     OfficeCommands.templates(new OfficeCommands.TemplateStore() {
       public void save(String name, String xml) {
         store.put(name, xml);
@@ -102,13 +102,13 @@ public class OfficeCommandsTest {
         store.remove(name);
       }
     }, null);
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     run(s, "file.newFromTemplate", "name", "Report");
     assertTrue(s.document().plainText().contains("Introduction"));
     assertEquals("Heading1", s.document().paragraph(2).style);
     run(s, "file.saveTemplate", "name", "Quarterly");
     assertTrue(store.containsKey("Quarterly"));
-    Session t = new Session(Document.empty());
+    var t = new Session(Document.empty());
     run(t, "file.newFromTemplate", "name", "Quarterly");
     assertEquals(s.document().plainText(), t.document().plainText());
     Map<?, ?> info = (Map<?, ?>) run(t, "tools.templates", "action", "attach", "name", "Letter");
@@ -120,7 +120,7 @@ public class OfficeCommandsTest {
 
   @Test
   public void tellMeFindsAndRunsCommands() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("abc");
     s.select(0, 0, 3);
     List<?> results = (List<?>) ((Map<?, ?>) run(s, "tools.search", "query", "bold")).get("results");
@@ -131,7 +131,7 @@ public class OfficeCommandsTest {
 
   @Test
   public void recordMacroAndReplay() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     run(s, "tools.recordMacro", "action", "start");
     run(s, "text.insert", "text", "Hi ");
     run(s, "tools.recordMacro", "action", "stop", "name", "Greet");
@@ -144,8 +144,8 @@ public class OfficeCommandsTest {
   @Test
   public void researcherCitesAResult() {
     OfficeCommands.research(q -> {
-      List<Map<String, String>> out = new ArrayList<Map<String, String>>();
-      Map<String, String> r = new LinkedHashMap<String, String>();
+      var out = new ArrayList<Map<String, String>>();
+      var r = new LinkedHashMap<String, String>();
       r.put("title", "Ada Lovelace");
       r.put("author", "Wikipedia");
       r.put("year", "2026");
@@ -154,7 +154,7 @@ public class OfficeCommandsTest {
       out.add(r);
       return out;
     });
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     Map<?, ?> r = (Map<?, ?>) run(s, "references.researcher", "query", "Ada", "cite", 0);
     assertNotNull(r.get("cited"));
     assertEquals(1, s.document().bibliography.sources.size());
@@ -162,7 +162,7 @@ public class OfficeCommandsTest {
 
   @Test
   public void readAloudWalksSentences() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("One two. Three four! Five");
     s.select(0, 0, 0);
     assertEquals("One two.", ((Map<?, ?>) run(s, "review.readAloud", "action", "start")).get("text"));
@@ -175,9 +175,9 @@ public class OfficeCommandsTest {
 
   @Test
   public void combineAddsReviewerChanges() throws IOException {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("The quick fox");
-    Session r = new Session(s.document());
+    var r = new Session(s.document());
     r.select(0, 4, 9);
     r.replace("slow");
     Map<?, ?> out = (Map<?, ?>) run(s, "review.combine", "xml", DocumentXml.write(r.document()), "author", "Bo");
@@ -188,7 +188,7 @@ public class OfficeCommandsTest {
 
   @Test
   public void hideInkAltPaneShareAndComments() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("x");
     run(s, "draw.pen", "points", "0,0 10,10");
     int pictures = 0;
@@ -211,12 +211,12 @@ public class OfficeCommandsTest {
 
   @Test
   public void encryptedShareDecryptsWithThePassword() throws Exception {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("secret text");
     assertEquals(Boolean.TRUE, ((Map<?, ?>) run(s, "file.encrypt", "password", "pa55")).get("encrypted"));
     byte[] data = com.codename1.util.Base64.decode(((String) ((Map<?, ?>) run(s, "file.share")).get("base64")).getBytes("UTF-8"));
     assertTrue(OfficeCrypto.isEncrypted(data));
-    Document d = Docx.read(new java.io.ByteArrayInputStream(OfficeCrypto.decrypt(data, "pa55"))).document;
+    var d = Docx.read(new java.io.ByteArrayInputStream(OfficeCrypto.decrypt(data, "pa55"))).document;
     assertEquals("secret text", d.plainText().trim());
     run(s, "file.encrypt", "password", "");
     assertFalse(OfficeCrypto.isEncrypted(com.codename1.util.Base64.decode(((String) ((Map<?, ?>) run(s, "file.share")).get("base64")).getBytes("UTF-8"))));

@@ -6,7 +6,7 @@ import org.junit.Test;
 
 public class CaseConversionTest {
   private Session session(String text) {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace(text);
     s.select(0, 0, text.length());
     return s;
@@ -14,7 +14,7 @@ public class CaseConversionTest {
 
   @Test
   public void deletedTextDoesNotConsumeSentenceCapitalization() {
-    Session s = session("OLD hELLO");
+    var s = session("OLD hELLO");
     s.trackChanges(true);
     s.select(0, 0, 4);
     s.replace("");
@@ -26,7 +26,7 @@ public class CaseConversionTest {
 
   @Test
   public void sentenceTitleAndToggleAcrossStyleBoundaries() {
-    Session s = session("hELLO WORLD. aGAIN!");
+    var s = session("hELLO WORLD. aGAIN!");
     s.select(0, 2, 9);
     s.format("bold", "true");
     s.select(0, 0, 18);
@@ -44,7 +44,7 @@ public class CaseConversionTest {
 
   @Test
   public void sentenceCaseInsideParagraphDoesNotCapitalizeFirstWord() {
-    Session s = session("prefix hELLO. wORLD");
+    var s = session("prefix hELLO. wORLD");
     s.select(0, 7, 19);
     s.changeCase("sentence");
     assertEquals("prefix hello. World", s.document().plainText());
@@ -52,7 +52,7 @@ public class CaseConversionTest {
 
   @Test
   public void collapsedCaretInsideWordAndCycleModes() {
-    Session s = session("some hello world");
+    var s = session("some hello world");
     s.select(0, 7, 7);
     s.changeCase((String) null);
     assertEquals("some HELLO world", s.document().plainText());
@@ -61,14 +61,14 @@ public class CaseConversionTest {
     s.changeCase((String) null);
     assertEquals("some hello world", s.document().plainText());
     s.select(0, 4, 4);
-    Document before = s.document();
+    var before = s.document();
     s.changeCase("upper");
     assertSame(before, s.document());
   }
 
   @Test
   public void unicodeExpansionAndSigmaKeepCommentOffsetsAndFormatting() {
-    Session s = session("Straße ΟΣ");
+    var s = session("Straße ΟΣ");
     s.select(0, 4, 5);
     s.format("bold", "true");
     s.addComment("Reviewer", "Expansion");
@@ -85,13 +85,13 @@ public class CaseConversionTest {
   @Test
   public void allModesRetainRejectionBaselineAndCellUndo() {
     for (String mode : new String[] {"sentence", "title", "toggle"}) {
-      Session s = session("mIXED text. hERE");
+      var s = session("mIXED text. hERE");
       s.trackChanges(true);
       s.select(0, 0, 16);
       s.changeCase(mode);
       assertEquals("mIXED text. hERE", Revisions.resolve(s.document(), null, false).plainText());
     }
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.insertTable(1, 1);
     s.enterCell(1, 0, 0);
     s.replace("cELL text");

@@ -7,7 +7,7 @@ import org.junit.Test;
 
 public class ColumnsFormatTest {
   private static Document sample() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("Intro");
     s.sectionBreak("continuous");
     s.replace("Left column");
@@ -21,7 +21,7 @@ public class ColumnsFormatTest {
   @Test
   public void nativeAndDocxKeepColumnsSeparatorWidthsAndBreaks() throws Exception {
     Document d = sample();
-    Columns c = d.lastSection.columns;
+    var c = d.lastSection.columns;
     assertEquals(2, c.count);
     assertTrue(c.separator);
     assertFalse(c.equalWidth());
@@ -29,22 +29,22 @@ public class ColumnsFormatTest {
 
     assertEquals(DocumentXml.write(d), DocumentXml.write(DocumentXml.read(DocumentXml.write(d))));
 
-    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    var out = new ByteArrayOutputStream();
     Docx.write(d, out);
     Docx.Opened opened = Docx.read(new ByteArrayInputStream(out.toByteArray()));
     assertTrue(opened.warnings.toString(), opened.warnings.isEmpty());
-    Document back = opened.document;
+    var back = opened.document;
     assertEquals(c, back.lastSection.columns);
     int breaks = 0;
     for (Block b : back.blocks)
-      if (b instanceof Paragraph && ((Paragraph) b).format.columnBreak) breaks++;
+      if (b instanceof Paragraph paragraph && paragraph.format.columnBreak) breaks++;
     assertEquals(1, breaks);
     assertEquals(d.plainText(), back.plainText());
   }
 
   @Test
   public void applyToDocumentSetsEverySection() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("a");
     s.sectionBreak("nextPage");
     s.replace("b");

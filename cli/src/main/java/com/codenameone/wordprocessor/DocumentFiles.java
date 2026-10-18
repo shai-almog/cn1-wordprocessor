@@ -22,7 +22,7 @@ public final class DocumentFiles {
   private DocumentFiles() {}
 
   private static final PdfExporter.FontProvider FONTS =
-      BundledFonts.provider(path -> DocumentFiles.class.getResourceAsStream(path));
+      BundledFonts.provider(DocumentFiles.class::getResourceAsStream);
 
   static Commands commands() {
     return new Commands(PdfExporter.layoutEngine(FONTS));
@@ -50,8 +50,9 @@ public final class DocumentFiles {
         d.title(path.getFileName().toString()),
         null,
         Collections.singletonList(
-            "Text format import supports a documented rich-text subset; use native project files"
-                + " for lossless editing"));
+            """
+            Text format import supports a documented rich-text subset; use native project files\
+             for lossless editing"""));
   }
 
   public static byte[] write(
@@ -61,7 +62,7 @@ public final class DocumentFiles {
         FONTS);
     if ("cn1doc".equals(extension)) return ProjectFile.write(d, source);
     if ("docx".equals(extension)) {
-      ByteArrayOutputStream out = new ByteArrayOutputStream();
+      var out = new ByteArrayOutputStream();
       Docx.write(d, source, out, allowConversion);
       return out.toByteArray();
     }
@@ -75,7 +76,7 @@ public final class DocumentFiles {
   }
 
   public static String extension(Path p) {
-    String n = p.getFileName().toString();
+    var n = p.getFileName().toString();
     int i = n.lastIndexOf('.');
     return i < 0 ? "" : n.substring(i + 1).toLowerCase(java.util.Locale.ROOT);
   }

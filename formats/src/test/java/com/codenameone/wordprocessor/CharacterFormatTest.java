@@ -12,7 +12,7 @@ public class CharacterFormatTest {
   };
 
   private TextStyle advanced() {
-    TextStyle style = TextStyle.DEFAULT;
+    var style = TextStyle.DEFAULT;
     for (int i = 0; i < VALUES.length; i++) style = style.with(CharacterFormat.KEYS[i], VALUES[i]);
     return style;
   }
@@ -24,7 +24,7 @@ public class CharacterFormatTest {
   }
 
   private Document docx(Document d) throws Exception {
-    ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+    var bytes = new ByteArrayOutputStream();
     Docx.write(d, bytes);
     Docx.Opened opened = Docx.read(new ByteArrayInputStream(bytes.toByteArray()));
     assertTrue(opened.warnings.toString(), opened.warnings.isEmpty());
@@ -33,7 +33,7 @@ public class CharacterFormatTest {
 
   @Test
   public void allPropertiesSurviveNativeAndDocxWithSourceCaseIntact() throws Exception {
-    Document d = document(advanced());
+    var d = document(advanced());
     for (Document copy : Arrays.asList(DocumentXml.read(DocumentXml.write(d)), docx(d))) {
       assertEquals(d.plainText(), copy.plainText());
       assertEquals(advanced(), copy.paragraph(0).text.styleAt(0));
@@ -43,22 +43,22 @@ public class CharacterFormatTest {
   @Test
   public void eachPropertyCanBeIndependentlyDisabledThroughDocx() throws Exception {
     for (String key : CharacterFormat.KEYS) {
-      TextStyle style = advanced().with(key, CharacterFormat.DEFAULT.value(key));
+      var style = advanced().with(key, CharacterFormat.DEFAULT.value(key));
       assertEquals(key, style, docx(document(style)).paragraph(0).text.styleAt(0));
     }
   }
 
   @Test
   public void trackedPreviousPropertiesSurviveBothFormatsAndReject() throws Exception {
-    TextStyle before = advanced();
-    TextStyle after =
+    var before = advanced();
+    var after =
         before
             .with("characterSpacing", "0")
             .with("smallCaps", "false")
             .trackedProperties(before, new Revision("r1", "format", "Author", "2026-10-17"));
-    Document d = document(after);
+    var d = document(after);
     for (Document copy : Arrays.asList(DocumentXml.read(DocumentXml.write(d)), docx(d))) {
-      TextStyle style = copy.paragraph(0).text.styleAt(0);
+      var style = copy.paragraph(0).text.styleAt(0);
       assertEquals(before, style.previousStyle);
       assertEquals(before, style.reviewFormat(null, false));
       assertEquals(after.clean(), style.reviewFormat(null, true));
@@ -87,12 +87,12 @@ public class CharacterFormatTest {
 
   @Test
   public void pdfHasScalingBothDecorationsAndNoHiddenGlyphs() throws Exception {
-    TextStyle style =
+    var style =
         TextStyle.DEFAULT
             .with("characterScale", "125")
             .with("doubleUnderline", "true")
             .with("doubleStrike", "true");
-    String pdf = new String(PdfExporter.write(document(style)), "ISO-8859-1");
+    var pdf = new String(PdfExporter.write(document(style)), "ISO-8859-1");
     assertTrue(pdf, pdf.matches("(?s).*125(?:\\.0+)? Tz.*"));
     assertEquals(4, pdf.split(" l S\\n", -1).length - 1);
     pdf = new String(PdfExporter.write(document(style.with("hidden", "true"))), "ISO-8859-1");
@@ -101,10 +101,10 @@ public class CharacterFormatTest {
 
   @Test
   public void smallCapsUseOnePdfBaselineForMixedCaseRuns() throws Exception {
-    Document d =
+    var d =
         document(TextStyle.DEFAULT.with("smallCaps", "true").with("doubleUnderline", "true"));
-    LayoutEngine.Result result = PdfExporter.layoutEngine(null).layout(d, 0);
-    LayoutEngine.Line line = result.pages.get(0).lines.get(0);
+    var result = PdfExporter.layoutEngine(null).layout(d, 0);
+    var line = result.pages.get(0).lines.get(0);
     float baseline = line.spans.get(0).top + line.spans.get(0).glyphStyle.size;
     for (LayoutEngine.Span span : line.spans)
       assertEquals(baseline, span.top + span.glyphStyle.size, .001);
@@ -121,24 +121,24 @@ public class CharacterFormatTest {
 
   @Test
   public void underlineModesReplaceOneAnotherWithoutLatentRoundTripState() throws Exception {
-    TextStyle doubleLine =
+    var doubleLine =
         TextStyle.DEFAULT.with("underline", "true").with("doubleUnderline", "true");
     assertFalse(doubleLine.underline);
     assertTrue(doubleLine.characters.doubleUnderline);
     assertEquals(doubleLine, docx(document(doubleLine)).paragraph(0).text.styleAt(0));
-    TextStyle single = doubleLine.with("underline", "true");
+    var single = doubleLine.with("underline", "true");
     assertTrue(single.underline);
     assertFalse(single.characters.doubleUnderline);
     assertEquals(single, docx(document(single)).paragraph(0).text.styleAt(0));
-    TextStyle none = doubleLine.with("underline", "false");
+    var none = doubleLine.with("underline", "false");
     assertFalse(none.underline);
     assertFalse(none.characters.doubleUnderline);
   }
 
   @Test
   public void spacedSmallCapFieldPdfDrawsItsResultRatherThanObjectPlaceholder() throws Exception {
-    TextStyle style = TextStyle.DEFAULT.with("smallCaps", "true").with("characterSpacing", "2");
-    Document d =
+    var style = TextStyle.DEFAULT.with("smallCaps", "true").with("characterSpacing", "2");
+    var d =
         Document.empty()
             .blocks(
                 new Sequence<Block>()
@@ -148,7 +148,7 @@ public class CharacterFormatTest {
                             RichText.field(
                                 new InlineField("MERGEFIELD Name", "aB", true, false), style))),
                 2);
-    String pdf = new String(PdfExporter.write(d), "ISO-8859-1");
+    var pdf = new String(PdfExporter.write(d), "ISO-8859-1");
     assertTrue(pdf.contains("(A) Tj"));
     assertTrue(pdf.contains("(B) Tj"));
     assertTrue(pdf.contains("9.600 Tf"));
@@ -157,12 +157,12 @@ public class CharacterFormatTest {
 
   @Test
   public void scaledSpacedTabLeadersFitTheirAllocatedWidth() throws Exception {
-    TextStyle style = TextStyle.DEFAULT.with("characterScale", "200").with("characterSpacing", "1");
-    Paragraph p = new Paragraph("p1", RichText.of("A\tB", style)).with("tabs", "120,left,dot");
-    Document d = Document.empty().blocks(new Sequence<Block>().append(p), 2);
-    LayoutEngine.Line line = PdfExporter.layoutEngine(null).layout(d, 0).pages.get(0).lines.get(0);
-    LayoutEngine.Span gap = line.spans.get(1);
-    String pdf = new String(PdfExporter.write(d), "ISO-8859-1");
+    var style = TextStyle.DEFAULT.with("characterScale", "200").with("characterSpacing", "1");
+    var p = new Paragraph("p1", RichText.of("A\tB", style)).with("tabs", "120,left,dot");
+    var d = Document.empty().blocks(new Sequence<Block>().append(p), 2);
+    var line = PdfExporter.layoutEngine(null).layout(d, 0).pages.get(0).lines.get(0);
+    var gap = line.spans.get(1);
+    var pdf = new String(PdfExporter.write(d), "ISO-8859-1");
     assertEquals(gap.displayText.length(), pdf.split("\\(\\.\\) Tj", -1).length - 1);
     float advance = CharacterMetrics.width(new PdfMetrics(), ".", style);
     assertTrue(gap.displayText.length() * advance <= gap.width + .001);

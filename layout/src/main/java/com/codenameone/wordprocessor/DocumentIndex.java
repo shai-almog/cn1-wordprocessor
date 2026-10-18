@@ -56,17 +56,17 @@ public final class DocumentIndex {
     int[] range = range(d, kind);
     if ("TOA".equals(kind)) {
       if (range == null) return new Options("Table of Authorities", false, false, true, "dot");
-      Paragraph header = d.paragraph(range[0]);
-      FieldCode code = new FieldCode(marker(header, kind).instruction);
+      var header = d.paragraph(range[0]);
+      var code = new FieldCode(marker(header, kind).instruction);
       if (!code.switches.isEmpty()) throw new IllegalArgumentException("TOA field switches cannot be regenerated yet");
-      String leader = "dot";
+      var leader = "dot";
       if (range[1] > range[0] + 1 && !d.paragraph(range[0] + 1).format.tabs.isEmpty())
         leader = d.paragraph(range[0] + 1).format.tabs.get(0).leader;
       return new Options(header.text.plainText(), false, false, true, leader);
     }
     if (range == null) return new Options("Index", false, true, false, "dot");
-    Paragraph p = d.paragraph(range[0]);
-    FieldCode code = new FieldCode(marker(p).instruction);
+    var p = d.paragraph(range[0]);
+    var code = new FieldCode(marker(p).instruction);
     for (String key : code.switches.keySet())
       if (!Arrays.asList("h", "e", "r", "c", "*").contains(key))
         throw new IllegalArgumentException("Unsupported INDEX switch: " + key);
@@ -76,7 +76,7 @@ public final class DocumentIndex {
       throw new IllegalArgumentException("Custom index separators are not implemented yet");
     if (code.switches.containsKey("h") && !"A".equals(code.switches.get("h")))
       throw new IllegalArgumentException("Custom index headings are not implemented yet");
-    String leader = "dot";
+    var leader = "dot";
     for (int i = range[0] + 1; i < range[1]; i++) {
       List<TabStop> tabs = d.paragraph(i).format.tabs;
       if (!tabs.isEmpty()) { leader = tabs.get(tabs.size() - 1).leader; break; }
@@ -101,28 +101,26 @@ public final class DocumentIndex {
     if (!bookmark.isEmpty() && !session.document().bookmarks.containsKey(bookmark))
       throw new IllegalArgumentException("Unknown bookmark: " + bookmark);
     if (!cross.isEmpty() && !bookmark.isEmpty()) throw new IllegalArgumentException("Choose a cross-reference or page range");
-    String instruction = "XE \"" + quote(main + (sub.isEmpty() ? "" : ":" + sub)) + "\""
+    var instruction = "XE \"" + quote(main + (sub.isEmpty() ? "" : ":" + sub)) + "\""
         + (cross.isEmpty() ? "" : " \\t \"" + quote(cross) + "\"")
         + (bookmark.isEmpty() ? "" : " \\r " + bookmark) + (bold ? " \\b" : "") + (italic ? " \\i" : "");
-    final InlineField field = new InlineField(instruction, "", false, false);
+    final var field = new InlineField(instruction, "", false, false);
     if (all && (search == null || search.isEmpty())) throw new IllegalArgumentException("Enter text to mark");
     final int[] count = {0};
     session.transact(s -> {
       if (!all) {
-        Selection selection = s.selection(); s.select(selection.endBlock(), selection.end(), selection.end());
+        var selection = s.selection(); s.select(selection.endBlock(), selection.end(), selection.end());
         s.insertField(field); count[0] = 1;
       } else {
         s.leaveCell();
         for (int b = 0; b < s.document().blocks.size(); b++) {
-          Block block = s.document().blocks.get(b);
-          if (block instanceof Paragraph) {
-            Paragraph p = (Paragraph) block;
+          var block = s.document().blocks.get(b);
+          if (block instanceof Paragraph p) {
             int at = match(p, search, instruction);
             if (at >= 0) { s.select(b, at, at); s.insertField(field); count[0]++; }
-          } else if (block instanceof Table) {
-            Table table = (Table) block;
+          } else if (block instanceof Table table) {
             for (int r = 0; r < table.rows(); r++) for (int c = 0; c < table.columns(); c++) {
-              Table.Merge span = table.span(r, c);
+              var span = table.span(r, c);
               if (span.row != r || span.column != c) continue;
               for (int p = 0; p < table.cell(r, c).size(); p++) {
                 int at = match(table.cell(r, c).get(p), search, instruction);
@@ -139,11 +137,11 @@ public final class DocumentIndex {
   private static int match(Paragraph p, String search, String instruction) {
     if (entryStyle(p.style) || p.style.startsWith("TOC") || marker(p) != null) return -1;
     for (int i = 0; i < p.text.length(); i++) {
-      InlineField f = p.text.fieldAt(i);
+      var f = p.text.fieldAt(i);
       if (f != null && instruction.equals(f.instruction)) return -1;
     }
     // Raw model offsets preserve the positions of atomic fields and note references.
-    String text = p.text.toString();
+    var text = p.text.toString();
     for (int start = text.indexOf(search); start >= 0; start = text.indexOf(search, start + 1)) {
       int end = start + search.length();
       if ((start == 0 || !wordCharacter(text.charAt(start - 1)))
@@ -162,7 +160,7 @@ public final class DocumentIndex {
     if (session.inCell()) throw new IllegalArgumentException("Reference tables belong in the document body");
     int[] r = range(session.document(), kind); if (r == null) return;
     session.transact(s -> {
-      Document d = s.document(); Sequence<Block> blocks = d.blocks; long next = d.nextId;
+      var d = s.document(); Sequence<Block> blocks = d.blocks; long next = d.nextId;
       for (int i = r[1] - 1; i >= r[0]; i--) blocks = blocks.remove(i);
       if (blocks.size() == 0) blocks = blocks.append(new Paragraph("p" + next++, new RichText()));
       s.replaceDocument(d.blocks(blocks, next));
@@ -177,9 +175,9 @@ public final class DocumentIndex {
     int[] range = range(session.document(), kind);
     if (range == null || marker(session.document().paragraph(range[0]), kind).locked) return;
     Options options = options(session.document(), kind);
-    Selection selection = session.selection();
-    String anchor = session.editingDocument().blocks.get(selection.anchorBlock).id();
-    String focus = session.editingDocument().blocks.get(selection.block).id();
+    var selection = session.selection();
+    var anchor = session.editingDocument().blocks.get(selection.anchorBlock).id();
+    var focus = session.editingDocument().blocks.get(selection.block).id();
     String table = session.inCell() ? session.document().blocks.get(session.cellBlock()).id() : null;
     int row = session.cellRow(), column = session.cellColumn();
     session.transact(s -> {
@@ -204,13 +202,13 @@ public final class DocumentIndex {
         if (s.selection().caret > 0) s.replace("\n");
         at = s.selection().block;
       }
-      Document base = s.document(); long firstId = base.nextId;
+      var base = s.document(); long firstId = base.nextId;
       String previous = null;
       for (int pass = 0; pass < 8; pass++) {
-        SortedMap<String, Entry> entries = collect(base, paginator.layout(s.document()), kind);
-        List<Paragraph> generated = generate(entries, options, firstId,
+        var entries = collect(base, paginator.layout(s.document()), kind);
+        var generated = generate(entries, options, firstId,
             base.sectionAt(Math.min(at, base.blocks.size() - 1)).raw.page.contentWidth(), kind);
-        StringBuilder signature = new StringBuilder();
+        var signature = new StringBuilder();
         for (Paragraph p : generated) signature.append(p.text.plainText()).append('\n');
         if (signature.toString().equals(previous)) { s.select(at, 0, 0); return; }
         previous = signature.toString();
@@ -224,25 +222,24 @@ public final class DocumentIndex {
 
   private static final class Entry {
     final List<String> levels;
-    final LinkedHashMap<String, TextStyle> pages = new LinkedHashMap<String, TextStyle>();
-    final Set<String> see = new LinkedHashSet<String>();
-    Entry(List<String> levels) { this.levels = new ArrayList<String>(levels); }
+    final LinkedHashMap<String, TextStyle> pages = new LinkedHashMap<>();
+    final Set<String> see = new LinkedHashSet<>();
+    Entry(List<String> levels) { this.levels = new ArrayList<>(levels); }
   }
 
   private static SortedMap<String, Entry> collect(Document d, LayoutEngine.Result layout, String kind) {
-    SortedMap<String, Entry> entries = new TreeMap<String, Entry>();
-    Map<String, List<LayoutEngine.Line>> lines = new HashMap<String, List<LayoutEngine.Line>>();
+    var entries = new TreeMap<String, Entry>();
+    var lines = new HashMap<String, List<LayoutEngine.Line>>();
     for (LayoutEngine.Page page : layout.pages) for (LayoutEngine.Line line : page.lines) {
-      List<LayoutEngine.Line> group = lines.get(line.paragraphId);
+      var group = lines.get(line.paragraphId);
       if (group == null) lines.put(line.paragraphId, group = new ArrayList<LayoutEngine.Line>());
       group.add(line);
     }
     for (Block b : d.blocks) {
-      if (b instanceof Paragraph) collectParagraph(d, (Paragraph) b, layout, lines, entries, kind);
-      else if (b instanceof Table) {
-        Table t = (Table) b;
+      if (b instanceof Paragraph paragraph) collectParagraph(d, paragraph, layout, lines, entries, kind);
+      else if (b instanceof Table t) {
         for (int r = 0; r < t.rows(); r++) for (int c = 0; c < t.columns(); c++) {
-          Table.Merge span = t.span(r, c); if (span.row != r || span.column != c) continue;
+          var span = t.span(r, c); if (span.row != r || span.column != c) continue;
           for (Paragraph p : t.cell(r, c)) collectParagraph(d, p, layout, lines, entries, kind);
         }
       }
@@ -256,11 +253,11 @@ public final class DocumentIndex {
       public void run(int offset, String text, TextStyle style) {}
       public void field(int offset, InlineField field, TextStyle style) {
         if (style.revision != null && !style.revision.inserted()) return;
-        FieldCode code = new FieldCode(field.instruction);
+        var code = new FieldCode(field.instruction);
         boolean authorities = "TOA".equals(kind);
         String label = authorities ? code.switches.get("l") : code.arguments.isEmpty() ? null : code.arguments.get(0);
         if (!(authorities ? "TA" : "XE").equals(code.name) || label == null) return;
-        List<String> levels = new ArrayList<String>(); String key = "";
+        var levels = new ArrayList<String>(); var key = "";
         for (String part : authorities ? new String[]{label} : TextUtil.split(label, ':')) {
           if (part.trim().isEmpty()) continue;
           levels.add(part.trim()); key += part.trim().toLowerCase() + '\u0000';
@@ -268,12 +265,12 @@ public final class DocumentIndex {
           if (levels.size() == 9) break;
         }
         if (levels.isEmpty()) return;
-        Entry entry = entries.get(key);
+        var entry = entries.get(key);
         if (!authorities && code.switches.containsKey("t")) { entry.see.add(code.switches.get("t")); return; }
         int page = page(layout, lines.get(p.id), offset);
-        String reference = "" + page;
+        var reference = "" + page;
         if (!authorities && code.switches.containsKey("r")) {
-          Bookmark mark = d.bookmarks.get(code.switches.get("r"));
+          var mark = d.bookmarks.get(code.switches.get("r"));
           if (mark == null) { reference = "Error! Bookmark not defined."; }
           else {
             int start = page(layout, lines.get(mark.startId), mark.start);
@@ -281,7 +278,7 @@ public final class DocumentIndex {
             reference = "" + start + (end > start ? "\u2013" + end : "");
           }
         }
-        TextStyle previous = entry.pages.get(reference);
+        var previous = entry.pages.get(reference);
         boolean bold = !authorities && code.switches.containsKey("b") || previous != null && previous.bold;
         boolean italic = !authorities && code.switches.containsKey("i") || previous != null && previous.italic;
         entry.pages.put(reference, TextStyle.DEFAULT.with("bold", "" + bold).with("italic", "" + italic));
@@ -309,14 +306,14 @@ public final class DocumentIndex {
 
   private static List<Paragraph> generate(SortedMap<String, Entry> entries, Options options, long id, float width, String kind) {
     boolean authorities = "TOA".equals(kind);
-    List<Paragraph> out = new ArrayList<Paragraph>();
+    var out = new ArrayList<Paragraph>();
     out.add(new Paragraph("p" + id++, RichText.of(options.title, TextStyle.DEFAULT.with("bold", "true").with("size", "18"))
         .concat(RichText.field(new InlineField(options.instruction(kind), "", false, false), TextStyle.DEFAULT)))
         .with("style", authorities ? "TOAHeading" : "IndexHeading").with("keepNext", "true"));
     String letter = null;
-    List<Entry> values = new ArrayList<Entry>(entries.values());
+    var values = new ArrayList<Entry>(entries.values());
     for (int i = 0; i < values.size(); i++) {
-      Entry entry = values.get(i); String main = entry.levels.get(0);
+      var entry = values.get(i); var main = entry.levels.get(0);
       String group = Character.isLetter(main.charAt(0)) ? main.substring(0, 1).toUpperCase() : "#";
       if (options.headings && !group.equals(letter)) {
         out.add(new Paragraph("p" + id++, RichText.of(group, TextStyle.DEFAULT.with("bold", "true")))
@@ -328,15 +325,15 @@ public final class DocumentIndex {
         boolean first = true;
         while (i + 1 < values.size() && values.get(i + 1).levels.size() > 1
             && main.equalsIgnoreCase(values.get(i + 1).levels.get(0))) {
-          Entry sub = values.get(++i);
-          String label = "";
+          var sub = values.get(++i);
+          var label = "";
           for (int l = 1; l < sub.levels.size(); l++) label += (l == 1 ? "" : ", ") + sub.levels.get(l);
           text = text.concat(RichText.of((first ? ": " : "; ") + label)); first = false;
           text = references(text, sub, ", ");
         }
       }
       float indent = authorities ? 0 : 18 * (level + 1);
-      Paragraph p = new Paragraph("p" + id++, text).with("style", authorities ? "TableofAuthorities" : "Index" + (level + 1))
+      var p = new Paragraph("p" + id++, text).with("style", authorities ? "TableofAuthorities" : "Index" + (level + 1))
           .with("indent", "" + indent).with("firstIndent", authorities ? "0" : "-18").with("after", "0");
       if (options.rightAlign) p = p.with("tabs", TabStop.encode(Collections.singletonList(
           new TabStop(Math.max(18, width - indent), "right", options.leader))));

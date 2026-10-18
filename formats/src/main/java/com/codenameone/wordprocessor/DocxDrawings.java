@@ -23,7 +23,7 @@ final class DocxDrawings {
   private DocxDrawings() {}
 
   static void write(StringBuilder b, Picture p, int docId) {
-    Drawing d = p.drawing;
+    var d = p.drawing;
     if ("equation".equals(d.kind)) {
       equation(b, p);
       return;
@@ -115,11 +115,11 @@ final class DocxDrawings {
     fill(b, d.color("fill", box ? 0xffffff : 0x4472c4), alpha);
     line(b, d.color("line", box ? 0 : 0x2f528f), d.num("lineWidth", 1), 255);
     b.append("</wps:spPr>");
-    String text = d.get("text", "");
+    var text = d.get("text", "");
     if (!text.isEmpty()) {
       b.append("<wps:txbx><w:txbxContent>");
       for (String para : DrawingOps.split(text, '\n')) {
-        String align = d.get("align", box ? "left" : "center");
+        var align = d.get("align", box ? "left" : "center");
         b.append("<w:p><w:pPr><w:jc w:val=\"").append("right".equals(align) ? "right" : "center".equals(align) ? "center" : "left")
             .append("\"/></w:pPr><w:r><w:rPr>");
         if (d.flag("bold")) b.append("<w:b/>");
@@ -130,8 +130,8 @@ final class DocxDrawings {
       }
       b.append("</w:txbxContent></wps:txbx>");
     }
-    String valign = d.get("valign", "middle");
-    String direction = d.get("textDirection", "horizontal");
+    var valign = d.get("valign", "middle");
+    var direction = d.get("textDirection", "horizontal");
     b.append("<wps:bodyPr anchor=\"").append("top".equals(valign) ? "t" : "bottom".equals(valign) ? "b" : "ctr").append('"');
     if ("rotate90".equals(direction)) b.append(" vert=\"vert\"");
     else if ("rotate270".equals(direction)) b.append(" vert=\"vert270\"");
@@ -184,12 +184,12 @@ final class DocxDrawings {
   }
 
   private static void equation(StringBuilder b, Picture p) {
-    Drawing d = p.drawing;
-    String justify = d.get("justify", "center");
+    var d = p.drawing;
+    var justify = d.get("justify", "center");
     b.append("<w:p><w:pPr><w:jc w:val=\"").append("left".equals(justify) ? "left" : "right".equals(justify) ? "right" : "center")
         .append("\"/></w:pPr><m:oMathPara xmlns:m=\"").append(M).append("\"><m:oMath><m:r>");
     if (d.flag("normalText")) b.append("<m:rPr><m:nor/></m:rPr>");
-    String number = d.get("number", "");
+    var number = d.get("number", "");
     b.append("<m:t xml:space=\"preserve\">").append(Xml.escape(DrawingOps.professional(d.get("text", ""))))
         .append(number.isEmpty() ? "" : NUMBER + "(" + Xml.escape(number) + ")")
         .append("</m:t></m:r></m:oMath></m:oMathPara></w:p>");
@@ -235,7 +235,7 @@ final class DocxDrawings {
     }
     Element content = DocxPictures.descendant(wsp, "txbxContent");
     if (content != null) {
-      StringBuilder text = new StringBuilder();
+      var text = new StringBuilder();
       for (Element para : Xml.children(content, null)) {
         if (!"p".equals(Xml.local(para))) continue;
         if (text.length() > 0) text.append('\n');
@@ -269,7 +269,7 @@ final class DocxDrawings {
 
   /** An Office Math zone as an equation drawing. */
   static Drawing math(Element oMath) {
-    StringBuilder text = new StringBuilder();
+    var text = new StringBuilder();
     collectText(oMath, text);
     String value = text.toString(), number = "";
     int mark = value.lastIndexOf(NUMBER);
@@ -277,7 +277,7 @@ final class DocxDrawings {
       number = value.substring(mark + NUMBER.length() + 1, value.length() - 1);
       value = value.substring(0, mark);
     }
-    Drawing d = Drawing.of("equation").with("text", value).with("number", number);
+    var d = Drawing.of("equation").with("text", value).with("number", number);
     if (DocxPictures.descendant(oMath, "nor") != null) d = d.with("normalText", "true");
     return d;
   }

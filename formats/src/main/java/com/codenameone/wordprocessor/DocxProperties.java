@@ -31,7 +31,7 @@ final class DocxProperties {
 
   static DocumentProperties read(Map<String, byte[]> parts, Element settings, Set<String> warnings)
       throws IOException {
-    DocumentProperties p = DocumentProperties.EMPTY;
+    var p = DocumentProperties.EMPTY;
     for (String part : new String[] {CORE, APP}) {
       if (!parts.containsKey(part)) continue;
       Element root;
@@ -92,10 +92,10 @@ final class DocxProperties {
       for (String[] m : MAP) {
         if (!m[1].equals(part)) continue;
         for (int i = root.getNumChildren() - 1; i >= 0; i--) {
-          Element c = root.getChildAt(i);
+          var c = root.getChildAt(i);
           if (!c.isTextElement() && m[3].equals(Xml.local(c))) root.removeChildAt(i);
         }
-        String v = p.get(m[0]);
+        var v = p.get(m[0]);
         if (v.isEmpty()) continue;
         String tag = m[2].isEmpty() ? m[3] : m[2] + ":" + m[3];
         String ns = "dc".equals(m[2]) ? DC : "cp".equals(m[2]) ? CP : EP;
@@ -105,7 +105,7 @@ final class DocxProperties {
                     + Xml.escape(v) + "</" + tag + ">"));
       }
       parts.put(part, Xml.write(root).getBytes("UTF-8"));
-      String rels = new String(parts.get("_rels/.rels"), "UTF-8");
+      var rels = new String(parts.get("_rels/.rels"), "UTF-8");
       if (!rels.contains("/" + part + "\"") && !rels.contains("\"" + part + "\"")) {
         String type =
             core
@@ -121,7 +121,7 @@ final class DocxProperties {
                         + "\" Target=\"" + part + "\"/>")
                 .getBytes("UTF-8"));
       }
-      String types = new String(parts.get("[Content_Types].xml"), "UTF-8");
+      var types = new String(parts.get("[Content_Types].xml"), "UTF-8");
       if (!types.contains("\"/" + part + "\""))
         parts.put(
             "[Content_Types].xml",
@@ -147,14 +147,14 @@ final class DocxProperties {
       for (int i = vars.getNumChildren() - 1; i >= 0; i--)
         if (Xml.attr(vars.getChildAt(i), "name", "").startsWith(VAR)) vars.removeChildAt(i);
     if (!p.settings().isEmpty()) {
-      StringBuilder b = new StringBuilder("<w:docVars xmlns:w=\"" + w + "\">");
+      var b = new StringBuilder("<w:docVars xmlns:w=\"" + w + "\">");
       for (Map.Entry<String, String> e : p.settings().entrySet())
         b.append("<w:docVar w:name=\"").append(VAR).append(Xml.escape(e.getKey()))
             .append("\" w:val=\"").append(Xml.escape(e.getValue())).append("\"/>");
       Element fresh = Xml.parse(b.append("</w:docVars>").toString());
       if (vars == null) {
         // CT_Settings is a sequence: docVars precedes rsids and every later element.
-        java.util.List<String> later =
+        var later =
             java.util.Arrays.asList(
                 "rsids", "mathPr", "attachedSchema", "themeFontLang", "clrSchemeMapping",
                 "doNotIncludeSubdocsInStats", "doNotAutoCompressPictures", "forceUpgrade",
@@ -171,7 +171,7 @@ final class DocxProperties {
       }
       else
         while (fresh.getNumChildren() > 0) {
-          Element c = fresh.getChildAt(0);
+          var c = fresh.getChildAt(0);
           fresh.removeChildAt(0);
           vars.addChild(c);
         }

@@ -132,10 +132,10 @@ public final class Document {
   public Document blocks(Sequence<Block> b, long next) {
     Map<String, Section> kept = sections;
     if (!sections.isEmpty()) {
-      Set<String> present = new HashSet<String>();
+      var present = new HashSet<String>();
       for (Block block : b) if (block instanceof Paragraph) present.add(block.id());
       if (!present.containsAll(sections.keySet())) {
-        kept = new LinkedHashMap<String, Section>(sections);
+        kept = new LinkedHashMap<>(sections);
         kept.keySet().retainAll(present);
         kept = Collections.unmodifiableMap(kept);
       }
@@ -296,7 +296,7 @@ public final class Document {
 
   public Document sections(Map<String, Section> value, Section last) {
     if (value == null || last == null) throw new NullPointerException();
-    Set<String> ids = new HashSet<String>();
+    var ids = new HashSet<String>();
     for (Block block : blocks) if (block instanceof Paragraph) ids.add(block.id());
     if (!ids.containsAll(value.keySet()) || value.containsValue(null))
       throw new IllegalArgumentException("Section boundary must end a body paragraph");
@@ -320,13 +320,13 @@ public final class Document {
   }
 
   public List<Section.Range> sectionRanges() {
-    List<Section.Range> result = new ArrayList<Section.Range>();
+    var result = new ArrayList<Section.Range>();
     int first = 0;
-    PageFurniture previous = PageFurniture.EMPTY;
+    var previous = PageFurniture.EMPTY;
     for (int i = 0; i < blocks.size(); i++) {
-      Section section = sections.get(blocks.get(i).id());
+      var section = sections.get(blocks.get(i).id());
       if (section != null) {
-        Section.Range range = new Section.Range(first, i, section, previous, notes);
+        var range = new Section.Range(first, i, section, previous, notes);
         result.add(range);
         previous = range.resolved.furniture;
         first = i + 1;
@@ -343,10 +343,10 @@ public final class Document {
   }
 
   public Document section(int block, Section value) {
-    Section.Range range = sectionAt(block);
+    var range = sectionAt(block);
     if (range.last == blocks.size() - 1 && !sections.containsKey(blocks.get(range.last).id()))
       return sections(sections, value);
-    Map<String, Section> changed = new LinkedHashMap<String, Section>(sections);
+    var changed = new LinkedHashMap<String, Section>(sections);
     changed.put(blocks.get(range.last).id(), value);
     return sections(changed, lastSection);
   }
@@ -367,15 +367,14 @@ public final class Document {
   }
 
   public String plainText() {
-    StringBuilder s = new StringBuilder();
+    var s = new StringBuilder();
     boolean first = true;
     for (Block b : blocks) {
       if (!first) s.append('\n');
       first = false;
-      if (b instanceof Paragraph) s.append(((Paragraph) b).text.plainText());
-      else if (b instanceof Picture) s.append("[Picture: ").append(((Picture) b).alt).append("]");
-      else if (b instanceof Table) {
-        Table t = (Table) b;
+      if (b instanceof Paragraph paragraph) s.append(paragraph.text.plainText());
+      else if (b instanceof Picture picture) s.append("[Picture: ").append(picture.alt).append("]");
+      else if (b instanceof Table t) {
         for (int r = 0; r < t.rows(); r++) {
           if (r > 0) s.append('\n');
           for (int c = 0; c < t.columns(); c++) {
@@ -393,7 +392,7 @@ public final class Document {
   }
 
   public Paragraph paragraph(int index) {
-    Block b = blocks.get(index);
+    var b = blocks.get(index);
     if (!(b instanceof Paragraph)) throw new IllegalArgumentException("Select a paragraph");
     return (Paragraph) b;
   }

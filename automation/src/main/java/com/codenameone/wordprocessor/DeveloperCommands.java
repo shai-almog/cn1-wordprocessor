@@ -41,8 +41,8 @@ final class DeveloperCommands implements Commands.Extension {
         "title?:string,tag?:string,lock?:string,items?:string,value?:string,checked?:boolean,date?:string,format?:string,gallery?:string",
         true,
         (s, a) -> {
-          final List<Object> found = new ArrayList<Object>();
-          final String para = s.document().paragraph(s.selection().block).id;
+          final var found = new ArrayList<Object>();
+          final var para = s.document().paragraph(s.selection().block).id;
           final int from = s.selection().start(), to = s.selection().end();
           final Map<String, Object> args = a;
           s.mapFields(
@@ -52,7 +52,7 @@ final class DeveloperCommands implements Commands.Extension {
                         && (from == to ? offset == from || offset == from - 1 : offset >= from && offset < to);
                 if (!inside || !ContentControl.is(f) || !found.isEmpty()) return f;
                 ContentControl control = ContentControl.parse(f.instruction);
-                String result = f.result;
+                var result = f.result;
                 for (String key : new String[] {"title", "tag", "lock", "items", "date", "format", "gallery"})
                   if (args.containsKey(key)) control = control.with(key, Commands.str(args, key));
                 if (args.containsKey("checked")) {
@@ -71,7 +71,7 @@ final class DeveloperCommands implements Commands.Extension {
                 if (args.containsKey("date") || args.containsKey("format") && "datePicker".equals(control.type))
                   result = formatDate(control.get("date", ""), control.get("format", "M/d/yyyy"));
                 found.add(Json.object("type", control.type, "properties", control.properties(), "value", result));
-                InlineField next = control.field(result);
+                var next = control.field(result);
                 return f.showCode ? next.showCode(true) : next;
               });
           if (found.isEmpty()) throw new IllegalArgumentException("Place the caret on a content control");
@@ -124,7 +124,7 @@ final class DeveloperCommands implements Commands.Extension {
       throw new IllegalArgumentException("Date must be yyyy-mm-dd");
     }
     if (m < 1 || m > 12 || d < 1 || d > 31) throw new IllegalArgumentException("Invalid date");
-    StringBuilder b = new StringBuilder();
+    var b = new StringBuilder();
     for (int i = 0; i < format.length(); ) {
       char ch = format.charAt(i);
       int n = 1;

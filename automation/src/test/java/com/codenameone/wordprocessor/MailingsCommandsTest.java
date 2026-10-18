@@ -8,8 +8,8 @@ import org.junit.Test;
 public class MailingsCommandsTest {
   @Test
   public void typedListsPreviewSearchAndFinishUseOneHistoryEntry() {
-    Session s = new Session(Document.empty());
-    Commands c = new Commands();
+    var s = new Session(Document.empty());
+    var c = new Commands();
     long revision = s.revision();
     c.execute(
         s,
@@ -22,7 +22,7 @@ public class MailingsCommandsTest {
     assertTrue(s.revision() > revision);
     assertEquals(Arrays.asList("Name", "City"), s.mergeData().fields);
     c.execute(s, "mailings.insertField", Json.object("field", "City"));
-    Document before = s.document();
+    var before = s.document();
     c.execute(s, "mailings.findRecipient", Json.object("text", "alan"));
     assertEquals("Wilmslow", s.document().plainText());
     s.undo();
@@ -37,10 +37,10 @@ public class MailingsCommandsTest {
 
   @Test
   public void invalidRowsDoNotReplaceRecipients() {
-    Session s = new Session(Document.empty());
-    Commands c = new Commands();
+    var s = new Session(Document.empty());
+    var c = new Commands();
     c.execute(s, "mailings.recipients", Json.object("csv", "Name\nAda"));
-    MergeData before = s.mergeData();
+    var before = s.mergeData();
     for (Map<String, Object> args :
         Arrays.asList(
             Json.object(
@@ -60,16 +60,16 @@ public class MailingsCommandsTest {
 
   @Test
   public void previewCommitIncludesRecipientStateAndStaleChangesAreRejected() {
-    Session s = new Session(Document.empty());
-    Session draft = s.fork();
-    Commands c = new Commands();
+    var s = new Session(Document.empty());
+    var draft = s.fork();
+    var c = new Commands();
     c.execute(draft, "mailings.recipients", Json.object("csv", "Name\nAda"));
     s.applyPreview(draft, s.revision());
     assertEquals(1, s.mergeData().rows.size());
     s.undo();
     assertEquals(0, s.mergeData().rows.size());
     long version = s.revision();
-    Session stale = s.fork();
+    var stale = s.fork();
     c.execute(s, "mailings.start", Json.object("kind", "directory"));
     try {
       s.applyPreview(stale, version);
@@ -81,9 +81,9 @@ public class MailingsCommandsTest {
 
   @Test
   public void overflowingLabelsRejectAtomically() {
-    Session s = new Session(Document.empty());
-    Document before = s.document();
-    Commands c = new Commands();
+    var s = new Session(Document.empty());
+    var before = s.document();
+    var c = new Commands();
     try {
       c.execute(
           s,

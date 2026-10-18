@@ -21,7 +21,7 @@ public class SectionsLayoutTest {
 
   @Test
   public void mixedPaperAndLinkedFieldsUseSectionPageNumbers() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.furniture(
         PageFurniture.EMPTY.story(
             "footer",
@@ -35,7 +35,7 @@ public class SectionsLayoutTest {
     s.sectionBreak("nextPage");
     s.replace("Landscape");
     s.section(s.activeSection().raw.page(new PageSpec(842, 595, 54, 54, 54, 54)).numbering(7));
-    LayoutEngine.Result r = layout(s.document());
+    var r = layout(s.document());
     assertTrue(r.warnings.toString(), r.warnings.isEmpty());
     assertEquals(2, r.pages.size());
     assertEquals(595.28, r.pages.get(0).spec.width, .01);
@@ -52,11 +52,11 @@ public class SectionsLayoutTest {
   @Test
   public void continuousSectionsKeepTextOnPageWhileOddAndEvenBreaksPad() {
     for (String kind : new String[] {"continuous", "oddPage", "evenPage"}) {
-      Session s = new Session(Document.empty());
+      var s = new Session(Document.empty());
       s.replace("First");
       s.sectionBreak(kind);
       s.replace("Second");
-      LayoutEngine.Result r = layout(s.document());
+      var r = layout(s.document());
       int count = "continuous".equals(kind) ? 1 : "oddPage".equals(kind) ? 3 : 2;
       assertEquals(kind, count, r.pages.size());
       assertEquals(
@@ -68,8 +68,8 @@ public class SectionsLayoutTest {
 
   @Test
   public void differentFirstHeaderRestartsAtSectionBoundary() {
-    Session s = new Session(Document.empty());
-    PageFurniture f =
+    var s = new Session(Document.empty());
+    var f =
         PageFurniture.EMPTY
             .options(true, false, 18, 18)
             .story(
@@ -83,7 +83,7 @@ public class SectionsLayoutTest {
     s.sectionBreak("nextPage");
     s.replace("Two\nThree");
     s.paragraph("pageBreak", "true");
-    LayoutEngine.Result r = layout(s.document());
+    var r = layout(s.document());
     assertEquals(3, r.pages.size());
     assertEquals("First", r.pages.get(0).header.get(0).spans.get(0).text);
     assertEquals("First", r.pages.get(1).header.get(0).spans.get(0).text);
@@ -92,14 +92,14 @@ public class SectionsLayoutTest {
 
   @Test
   public void oddBreaksFollowLogicalNumbersAndRestartsMatchRequestedParity() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("One");
     s.sectionBreak("nextPage");
     s.replace("Seven");
     s.section(s.activeSection().raw.numbering(7));
     s.sectionBreak("oddPage");
     s.replace("Nine");
-    LayoutEngine.Result r = layout(s.document());
+    var r = layout(s.document());
     assertEquals(4, r.pages.size());
     assertEquals(8, r.pages.get(2).number);
     assertTrue(r.pages.get(2).lines.isEmpty());

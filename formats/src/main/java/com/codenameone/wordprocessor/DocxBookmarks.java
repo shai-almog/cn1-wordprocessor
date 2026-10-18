@@ -4,13 +4,13 @@ import java.util.*;
 
 /** OOXML bookmark ranges share the paragraph offset walk with comment ranges. */
 final class DocxBookmarks {
-  private final Map<String, String> names = new LinkedHashMap<String, String>();
+  private final Map<String, String> names = new LinkedHashMap<>();
   private final Map<String, String> startIds = new HashMap<String, String>(),
       endIds = new HashMap<String, String>();
   private final Map<String, Integer> starts = new HashMap<String, Integer>(),
       ends = new HashMap<String, Integer>();
   private final List<Bookmark> marks;
-  private final Set<String> problems = new LinkedHashSet<String>();
+  private final Set<String> problems = new LinkedHashSet<>();
   boolean supported = true;
 
   DocxBookmarks() {
@@ -18,7 +18,7 @@ final class DocxBookmarks {
   }
 
   DocxBookmarks(Document document) {
-    marks = new ArrayList<Bookmark>(document.bookmarks.values());
+    marks = new ArrayList<>(document.bookmarks.values());
   }
 
   void record(
@@ -46,12 +46,12 @@ final class DocxBookmarks {
 
   Map<String, Bookmark> read(Document d, Set<String> warnings) {
     warnings(warnings);
-    Map<String, Bookmark> result = new LinkedHashMap<String, Bookmark>();
+    var result = new LinkedHashMap<String, Bookmark>();
     for (Map.Entry<String, String> entry : names.entrySet()) {
       String id = entry.getKey(), name = entry.getValue();
       try {
         if (!ends.containsKey(id) || result.containsKey(name)) throw new IllegalArgumentException();
-        Bookmark mark =
+        var mark =
             new Bookmark(name, startIds.get(id), starts.get(id), endIds.get(id), ends.get(id));
         mark.validate(d);
         result.put(name, mark);
@@ -79,7 +79,7 @@ final class DocxBookmarks {
 
   void markers(StringBuilder out, String paragraph, int offset) {
     for (int i = 0; i < marks.size(); i++) {
-      Bookmark mark = marks.get(i);
+      var mark = marks.get(i);
       if (mark.startId.equals(paragraph) && mark.start == offset)
         out.append("<w:bookmarkStart w:id=\"")
             .append(i)
@@ -88,7 +88,7 @@ final class DocxBookmarks {
             .append("\"/>");
     }
     for (int i = 0; i < marks.size(); i++) {
-      Bookmark mark = marks.get(i);
+      var mark = marks.get(i);
       if (mark.endId.equals(paragraph) && mark.end == offset)
         out.append("<w:bookmarkEnd w:id=\"").append(i).append("\"/>");
     }

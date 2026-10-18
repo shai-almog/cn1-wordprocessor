@@ -23,14 +23,14 @@ public class DropCapTest {
   private final Commands commands = new Commands();
 
   private Object run(Session s, String id, Object... kv) {
-    Map<String, Object> a = new LinkedHashMap<String, Object>();
+    var a = new LinkedHashMap<String, Object>();
     for (int i = 0; i < kv.length; i += 2) a.put((String) kv[i], kv[i + 1]);
     return commands.execute(s, id, a);
   }
 
   private static Session sample() {
-    Session s = new Session(Document.empty());
-    StringBuilder b = new StringBuilder("Once");
+    var s = new Session(Document.empty());
+    var b = new StringBuilder("Once");
     for (int i = 0; i < 60; i++) b.append(" upon a time");
     s.replace(b.toString());
     s.select(0, 0, 0);
@@ -40,10 +40,10 @@ public class DropCapTest {
   @Test
   public void droppedLetterIndentsTheFirstLinesOnly() {
     Session s = sample();
-    LayoutEngine.Page plain = new LayoutEngine(METRICS).layout(s.document(), 0).pages.get(0);
+    var plain = new LayoutEngine(METRICS).layout(s.document(), 0).pages.get(0);
     run(s, "insert.dropCap", "position", "drop", "lines", 3, "distance", 4);
     assertEquals("drop,3,4,", s.document().paragraph(0).format.dropCap);
-    LayoutEngine.Page page = new LayoutEngine(METRICS).layout(s.document(), 0).pages.get(0);
+    var page = new LayoutEngine(METRICS).layout(s.document(), 0).pages.get(0);
     LayoutEngine.Line first = page.lines.get(0), letter = page.lines.get(1);
     assertEquals("O", letter.spans.get(0).text);
     assertEquals(0, letter.start);
@@ -74,10 +74,10 @@ public class DropCapTest {
     run(s, "insert.dropCap", "lines", 4, "font", "Georgia");
     Document xml = DocumentXml.read(DocumentXml.write(s.document()));
     assertEquals("drop,4,0,Georgia", xml.paragraph(0).format.dropCap);
-    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    var out = new ByteArrayOutputStream();
     Docx.write(s.document(), out);
-    String bytes = new String(out.toByteArray(), "ISO-8859-1");
-    Document docx = Docx.read(new ByteArrayInputStream(out.toByteArray())).document;
+    var bytes = new String(out.toByteArray(), "ISO-8859-1");
+    var docx = Docx.read(new ByteArrayInputStream(out.toByteArray())).document;
     assertEquals(s.document().paragraph(0).text.plainText(), docx.paragraph(0).text.plainText());
     assertEquals("drop", docx.paragraph(0).format.dropMode());
     assertEquals(4, docx.paragraph(0).format.dropLines());
@@ -87,7 +87,7 @@ public class DropCapTest {
 
   @Test
   public void cellsRejectDropCaps() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     run(s, "table.insert", "rows", 1, "columns", 1);
     for (int i = 0; i < s.document().blocks.size(); i++)
       if (s.document().blocks.get(i) instanceof Table) s.enterCell(i, 0, 0);

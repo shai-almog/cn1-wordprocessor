@@ -4,17 +4,17 @@ import java.util.*;
 
 /** Per-block cached word counts. Updating a status bar does not flatten the entire document. */
 public final class DocumentStats {
-  private Map<Block, Integer> cache = new HashMap<Block, Integer>();
+  private Map<Block, Integer> cache = new HashMap<>();
   private Document previous;
   private int words, measured;
 
   public int words(Document document) {
     if (document == previous) return words;
-    Map<Block, Integer> next = new HashMap<Block, Integer>();
+    var next = new HashMap<Block, Integer>();
     words = 0;
     measured = 0;
     for (Block block : document.blocks) {
-      Integer count = cache.get(block);
+      var count = cache.get(block);
       if (count == null) {
         count = count(block);
         measured++;
@@ -32,10 +32,9 @@ public final class DocumentStats {
   }
 
   private int count(Block block) {
-    if (block instanceof Paragraph) return countText(((Paragraph) block).text);
+    if (block instanceof Paragraph paragraph) return countText(paragraph.text);
     int sum = 0;
-    if (block instanceof Table) {
-      Table t = (Table) block;
+    if (block instanceof Table t) {
       for (int r = 0; r < t.rows(); r++)
         for (int c = 0; c < t.columns(); c++)
           for (Paragraph p : t.cell(r, c)) sum += countText(p.text);

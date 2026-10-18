@@ -7,11 +7,11 @@ import java.util.*;
 final class TextEffects {
   private static final int PIXEL_BUDGET = 262144;
   private int pixels;
-  private final LinkedHashMap<Key, Image> outlines = new LinkedHashMap<Key, Image>(32, .75f, true);
+  private final LinkedHashMap<Key, Image> outlines = new LinkedHashMap<>(32, .75f, true);
 
   void draw(Graphics g, String text, int x, int y, Font font, TextStyle style, float scale) {
     if (text.isEmpty()) return;
-    CharacterFormat c = style.characters;
+    var c = style.characters;
     int color = g.getColor();
     int offset = Math.max(1, Math.round(scale));
     if (c.shading >= 0 || c.border >= 0 || !"none".equals(c.enclose) || !c.ruby.isEmpty()) {
@@ -64,11 +64,11 @@ final class TextEffects {
     int tile = Math.max(1, Math.min(width, 65536 / Math.max(1, height)));
     for (int at = 0; at < width; at += tile) {
       int size = Math.min(tile, width - at);
-      Key key = new Key(font, text, color, radius, at, size);
-      Image mask = outlines.get(key);
+      var key = new Key(font, text, color, radius, at, size);
+      var mask = outlines.get(key);
       if (mask == null) {
         Image source = Image.createImage(size + 2 * radius, height, 0);
-        Graphics canvas = source.getGraphics();
+        var canvas = source.getGraphics();
         canvas.setFont(font);
         canvas.setColor(0xffffff);
         canvas.drawString(text, 2 * radius - at, radius);
@@ -90,7 +90,7 @@ final class TextEffects {
           while (!outlines.isEmpty()
               && (pixels + out.length > PIXEL_BUDGET || outlines.size() >= 64)) {
             Iterator<Map.Entry<Key, Image>> entries = outlines.entrySet().iterator();
-            Image old = entries.next().getValue();
+            var old = entries.next().getValue();
             pixels -= old.getWidth() * old.getHeight();
             entries.remove();
           }
@@ -122,7 +122,7 @@ final class TextEffects {
 
     public boolean equals(Object other) {
       if (!(other instanceof Key)) return false;
-      Key k = (Key) other;
+      var k = (Key) other;
       return font == k.font
           && text.equals(k.text)
           && color == k.color

@@ -31,7 +31,7 @@ final class OfficeBorder extends Border {
 
   @Override
   public void paintBorderBackground(Graphics g, Component c) {
-    Style s = c.getStyle();
+    var s = c.getStyle();
     boolean aa = g.isAntiAliased();
     g.setAntiAliased(true);
     int alpha = g.getAlpha();
@@ -61,8 +61,8 @@ final class OfficeBorder extends Border {
 
   /** The color showing through behind c: the nearest opaque ancestor background. */
   private static int behind(Component c) {
-    for (Component p = c.getParent(); p != null; p = p.getParent()) {
-      Style ps = p.getStyle();
+    for (var p = c.getParent(); p != null; p = p.getParent()) {
+      var ps = p.getStyle();
       if ((ps.getBgTransparency() & 0xff) == 255) return ps.getBgColor();
     }
     return OfficeTheme.chrome(OfficeTheme.PAPER);

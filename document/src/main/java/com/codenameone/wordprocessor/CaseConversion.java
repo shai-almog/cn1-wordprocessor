@@ -8,7 +8,7 @@ final class CaseConversion {
 
   CaseConversion(
       RichText text, String mode, boolean paragraphStart, Revision insertion, Revision deletion) {
-    String source = text.toString();
+    var source = text.toString();
     converted = new String[source.length()];
     offsets = new int[source.length() + 1];
     final boolean[] deleted = new boolean[source.length()];
@@ -24,7 +24,7 @@ final class CaseConversion {
     boolean upperNext = "title".equals(mode) || paragraphStart;
     for (int i = 0; i < source.length(); ) {
       int cp = Character.codePointAt(source, i), length = Character.charCount(cp);
-      String original = source.substring(i, i + length);
+      var original = source.substring(i, i + length);
       if (deleted[i]) {
         converted[i] = original;
         i += length;
@@ -100,7 +100,7 @@ final class CaseConversion {
   }
 
   private String segment(int start, int end) {
-    StringBuilder out = new StringBuilder();
+    var out = new StringBuilder();
     for (int i = start; i < end; i++) if (converted[i] != null) out.append(converted[i]);
     return out.toString();
   }
@@ -122,7 +122,7 @@ final class CaseConversion {
 
   private static boolean isLetterAt(String text, int offset) {
     int cp = Character.codePointAt(text, offset);
-    String value = text.substring(offset, offset + Character.charCount(cp));
+    var value = text.substring(offset, offset + Character.charCount(cp));
     return Character.isLetter(cp) || !value.toUpperCase().equals(value.toLowerCase());
   }
 
@@ -134,7 +134,7 @@ final class CaseConversion {
     boolean lower = false, upper = false;
     for (int i = 0; i < text.length(); ) {
       int cp = Character.codePointAt(text, i);
-      String value = text.substring(i, i + Character.charCount(cp));
+      var value = text.substring(i, i + Character.charCount(cp));
       lower |= !value.equals(value.toUpperCase());
       upper |= !value.equals(value.toLowerCase());
       i += Character.charCount(cp);

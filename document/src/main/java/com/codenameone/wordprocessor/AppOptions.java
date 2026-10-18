@@ -18,7 +18,7 @@ public final class AppOptions {
   public static final Map<String, String> DEFAULTS;
 
   static {
-    Map<String, String> d = new LinkedHashMap<String, String>();
+    var d = new LinkedHashMap<String, String>();
     d.put("userName", "");
     d.put("userInitials", "");
     d.put("units", "inches");
@@ -43,7 +43,7 @@ public final class AppOptions {
     DEFAULTS = Collections.unmodifiableMap(d);
   }
 
-  private static final TreeMap<String, String> VALUES = new TreeMap<String, String>();
+  private static final TreeMap<String, String> VALUES = new TreeMap<>();
   private static Backend backend;
 
   private AppOptions() {}
@@ -59,7 +59,7 @@ public final class AppOptions {
 
   public static synchronized String get(String key) {
     if (!DEFAULTS.containsKey(key)) throw new IllegalArgumentException("Unknown option: " + key);
-    String v = VALUES.get(key);
+    var v = VALUES.get(key);
     return v == null ? DEFAULTS.get(key) : v;
   }
 
@@ -71,11 +71,11 @@ public final class AppOptions {
     if (!DEFAULTS.containsKey(key)) throw new IllegalArgumentException("Unknown option: " + key);
     if (value == null || value.equals(DEFAULTS.get(key))) VALUES.remove(key);
     else VALUES.put(key, value);
-    if (backend != null) backend.save(new TreeMap<String, String>(VALUES));
+    if (backend != null) backend.save(new TreeMap<>(VALUES));
   }
 
   public static synchronized Map<String, String> all() {
-    Map<String, String> out = new LinkedHashMap<String, String>();
+    var out = new LinkedHashMap<String, String>();
     for (String k : DEFAULTS.keySet()) out.put(k, get(k));
     return out;
   }
@@ -83,12 +83,12 @@ public final class AppOptions {
   /** Reset every option to its default (tests and "Reset" in the dialog). */
   public static synchronized void reset() {
     VALUES.clear();
-    if (backend != null) backend.save(new TreeMap<String, String>());
+    if (backend != null) backend.save(new TreeMap<>());
   }
 
   /** AutoCorrect replacement list as from-to pairs. */
   public static Map<String, String> autocorrect() {
-    Map<String, String> out = new LinkedHashMap<String, String>();
+    var out = new LinkedHashMap<String, String>();
     String raw = get("autocorrect.entries");
     if (raw.isEmpty()) return out;
     for (String pair : TextUtil.split(raw, '|')) {
@@ -99,7 +99,7 @@ public final class AppOptions {
   }
 
   public static void autocorrect(Map<String, String> entries) {
-    StringBuilder b = new StringBuilder();
+    var b = new StringBuilder();
     for (Map.Entry<String, String> e : entries.entrySet()) {
       if (e.getKey().isEmpty() || e.getKey().indexOf('|') >= 0 || e.getValue().indexOf('|') >= 0)
         throw new IllegalArgumentException("AutoCorrect entries cannot contain '|'");
@@ -117,11 +117,11 @@ public final class AppOptions {
   public static String correct(String before) {
     int start = before.length();
     while (start > 0 && !Character.isWhitespace(before.charAt(start - 1))) start--;
-    String word = before.substring(start);
+    var word = before.substring(start);
     if (word.isEmpty()) return null;
-    String out = word;
+    var out = word;
     if (flag("autocorrect.replaceText")) {
-      String r = autocorrect().get(word);
+      var r = autocorrect().get(word);
       if (r == null) r = autocorrect().get(word.toLowerCase());
       if (r != null) out = r;
     }
@@ -145,7 +145,7 @@ public final class AppOptions {
   public static String numerals(String text, boolean rtl) {
     String mode = get("numeral");
     if (!"hindi".equals(mode) && !("context".equals(mode) && rtl)) return text;
-    char[] c = text.toCharArray();
+    var c = text.toCharArray();
     for (int i = 0; i < c.length; i++) if (c[i] >= '0' && c[i] <= '9') c[i] = (char) ('\u0660' + c[i] - '0');
     return new String(c);
   }

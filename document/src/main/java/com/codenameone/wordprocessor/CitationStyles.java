@@ -10,9 +10,9 @@ public final class CitationStyles {
   private static final String[] ALIASES = {"apa", "chicago", "gb", "gostname", "gosttitle", "harvard", "ieee", "iso690", "iso690num", "mla", "sist", "turabian"};
   public static int index(String name) {
     for (int i = 0; i < NAMES.length; i++) if (NAMES[i].equalsIgnoreCase(name.trim())) return i;
-    StringBuilder key = new StringBuilder();
+    var key = new StringBuilder();
     for (char c : name.toLowerCase().toCharArray()) if (c >= 'a' && c <= 'z' || c >= '0' && c <= '9') key.append(c);
-    String text = key.toString(); int found = -1, length = -1;
+    var text = key.toString(); int found = -1, length = -1;
     for (int i = 0; i < ALIASES.length; i++) if (text.startsWith(ALIASES[i]) && ALIASES[i].length() > length) {
       found = i; length = ALIASES[i].length();
     }
@@ -28,7 +28,7 @@ public final class CitationStyles {
     return left.isEmpty() || right.isEmpty() ? left + right : left + separator + right;
   }
   private static String initials(String name, boolean dots) {
-    StringBuilder result = new StringBuilder();
+    var result = new StringBuilder();
     for (String part : TextUtil.split(name.trim(), ' ')) if (!part.isEmpty()) {
       if (result.length() > 0) result.append(' ');
       int length = Character.isHighSurrogate(part.charAt(0)) && part.length() > 1 && Character.isLowSurrogate(part.charAt(1)) ? 2 : 1;
@@ -47,9 +47,9 @@ public final class CitationStyles {
     return join(last, ", ", first);
   }
   public static String authors(CitationSource source, int style) {
-    List<String[]> names = CitationSource.names(source.get("author"));
+    var names = CitationSource.names(source.get("author"));
     int limit = style == 2 ? 3 : style == 9 ? 1 : names.size(), shown = Math.min(limit, names.size());
-    StringBuilder out = new StringBuilder();
+    var out = new StringBuilder();
     for (int i = 0; i < shown; i++) {
       if (i > 0) {
         if (style == 10) out.append("; ");
@@ -68,8 +68,8 @@ public final class CitationStyles {
       String suffix = pages.isEmpty() || style == 6 ? "" : (style == 2 ? ", " : ", p. ") + pages;
       return style == 8 || style == 10 ? "(" + number + suffix + ")" : "[" + number + suffix + "]";
     }
-    List<String[]> names = CitationSource.names(source.get("author"));
-    String who = source.get("title"); int maximum = style == 5 || style == 7 || style == 11 ? 4 : 3;
+    var names = CitationSource.names(source.get("author"));
+    var who = source.get("title"); int maximum = style == 5 || style == 7 || style == 11 ? 4 : 3;
     if (!names.isEmpty()) {
       who = names.get(0)[0];
       if (names.size() >= maximum) who += " et al.";
@@ -88,7 +88,7 @@ public final class CitationStyles {
     String city = source.get("city"), publisher = source.get("publisher"), pub = join(city, ": ", publisher);
     String journal = source.get("journal"), volume = source.get("volume"), pages = source.get("pages"), url = source.get("url");
     boolean article = !journal.isEmpty(); String result;
-    String container = journal + optional(volume, ", ", "") + optional(pages, ", ", "");
+    var container = journal + optional(volume, ", ", "") + optional(pages, ", ", "");
     switch (style) {
       case 0:
         result = optional(names, "", " ") + "(" + year + "). " + sentence(title)
@@ -96,7 +96,7 @@ public final class CitationStyles {
       case 1:
         result = sentence(names) + sentence(year) + sentence(title) + sentence(article ? container : pub) + url; break;
       case 2:
-        String kind = source.get("kind").toLowerCase();
+        var kind = source.get("kind").toLowerCase();
         String type = kind.equals("web") || kind.equals("website") ? "EB/OL"
             : (article || kind.equals("article") ? "J" : kind.equals("book") ? "M" : kind.equals("report") ? "R" : "Z") + (url.isEmpty() ? "" : "/OL");
         result = "[" + number + "] " + sentence(names) + title + "[" + type + "]. "

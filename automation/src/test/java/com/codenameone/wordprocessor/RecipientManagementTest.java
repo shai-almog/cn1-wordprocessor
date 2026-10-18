@@ -13,18 +13,18 @@ public class RecipientManagementTest {
 
   @Test
   public void sortingIsStableAndRetainsSourceExclusionsMappingsAndCurrentPerson() {
-    MergeData d =
+    var d =
         data()
             .options("directory", true, true, 1)
             .mapping(Collections.singletonMap("firstName", "Name"));
-    MergeData selected = d.manage("Name", false, "", "contains", "", Arrays.asList(2));
+    var selected = d.manage("Name", false, "", "contains", "", Arrays.asList(2));
     assertEquals(Arrays.asList(1, 4, 3, 0), selected.sourceIndices);
     assertEquals("Ada", selected.value("Name", selected.record));
     assertEquals(d.mapping, selected.mapping);
     assertEquals("directory", selected.kind);
     assertTrue(selected.preview && selected.highlight);
     assertEquals(d.csv(), selected.csv());
-    MergeData reverse = selected.manage("Name", true, "", "contains", "", selected.excluded);
+    var reverse = selected.manage("Name", true, "", "contains", "", selected.excluded);
     assertEquals(Arrays.asList(0, 3, 1, 4), reverse.sourceIndices);
     assertEquals(2, reverse.record);
     assertEquals(
@@ -36,7 +36,7 @@ public class RecipientManagementTest {
 
   @Test
   public void filtersHandleCaseNumericInequalityBlankAndTextualIds() {
-    MergeData d = data();
+    var d = data();
     assertEquals(
         Arrays.asList(1, 2),
         d.manage("", false, "City", "contains", "LON", d.excluded).sourceIndices);
@@ -54,13 +54,13 @@ public class RecipientManagementTest {
 
   @Test
   public void invalidManagementIsAtomicAndEmptySelectionDisablesPreview() {
-    Session s = new Session(Document.empty());
-    Commands c = new Commands();
+    var s = new Session(Document.empty());
+    var c = new Commands();
     MailMerge.recipients(s, data());
     MailMerge.insert(s, "MERGEFIELD Name");
     MailMerge.preview(s, true, 1);
-    MergeData before = s.mergeData();
-    Document doc = s.document();
+    var before = s.mergeData();
+    var doc = s.document();
     long revision = s.revision();
     for (Map<String, Object> a :
         Arrays.asList(
@@ -95,8 +95,8 @@ public class RecipientManagementTest {
 
   @Test
   public void previewNavigationFindAndFinishUseTheSelectedOrderAndUndoAsOneChange() {
-    Session s = new Session(Document.empty());
-    Commands c = new Commands();
+    var s = new Session(Document.empty());
+    var c = new Commands();
     MailMerge.recipients(s, data());
     MailMerge.insert(s, "MERGEFIELD Name");
     c.execute(s, "mailings.start", Json.object("kind", "directory"));
@@ -124,13 +124,13 @@ public class RecipientManagementTest {
       fail();
     } catch (IllegalArgumentException expected) {
     }
-    Document before = s.document();
-    MergeData recipients = s.mergeData();
+    var before = s.document();
+    var recipients = s.mergeData();
     c.execute(s, "mailings.finish");
     assertEquals("Alan\nAda", s.document().plainText());
     // Also validate the real DOCX export/import path for the resulting recipient order.
     try {
-      java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+      var out = new java.io.ByteArrayOutputStream();
       Docx.write(s.document(), null, out, true);
       assertEquals(
           s.document().plainText(),
@@ -147,8 +147,8 @@ public class RecipientManagementTest {
 
   @Test
   public void nextRecordRulesSkipExcludedSourceRows() {
-    Session s = new Session(Document.empty());
-    Commands c = new Commands();
+    var s = new Session(Document.empty());
+    var c = new Commands();
     MailMerge.recipients(s, data());
     MailMerge.insert(s, "MERGEFIELD Name");
     s.replace(" / ");

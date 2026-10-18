@@ -13,15 +13,14 @@ public final class Reflow {
     for (Section.Range section : original.sectionRanges()) {
       float ratio = Math.min(1, (width - 24) / section.raw.page.contentWidth());
       for (int i = section.first; i <= section.last; i++) {
-        Block block = blocks.get(i);
-        if (block instanceof Paragraph) {
-          Paragraph adapted = paragraph((Paragraph) block, ratio);
+        var block = blocks.get(i);
+        if (block instanceof Paragraph paragraph) {
+          Paragraph adapted = paragraph(paragraph, ratio);
           if (adapted != block) blocks = blocks.set(i, adapted);
-        } else if (block instanceof Table) {
-          Table table = (Table) block;
+        } else if (block instanceof Table table) {
           for (int row = 0; row < table.rows(); row++)
             for (int column = 0; column < table.columns(); column++) {
-              Sequence<Paragraph> cell = table.cell(row, column);
+              var cell = table.cell(row, column);
               Sequence<Paragraph> adapted = cell;
               for (int p = 0; p < cell.size(); p++) {
                 Paragraph value = paragraph(cell.get(p), ratio);
@@ -29,7 +28,7 @@ public final class Reflow {
               }
               if (adapted != cell) table = table.setCell(row, column, adapted);
             }
-          TableFormat.Sizing size = table.format.sizing;
+          var size = table.format.sizing;
           if (ratio < 1 && ("points".equals(size.unit) || size.indent != 0))
             table =
                 table.format(
@@ -44,7 +43,7 @@ public final class Reflow {
         }
       }
     }
-    Map<String, Section> sections = new LinkedHashMap<String, Section>();
+    var sections = new LinkedHashMap<String, Section>();
     for (Map.Entry<String, Section> entry : original.sections.entrySet())
       sections.put(entry.getKey(), entry.getValue().page(page(entry.getValue().page, width)));
     return original
@@ -54,7 +53,7 @@ public final class Reflow {
 
   private static Paragraph paragraph(Paragraph p, float ratio) {
     if (ratio == 1) return p;
-    RichText text =
+    var text =
         p.text.mapNotes(
             (offset, note) -> {
               Sequence<Paragraph> story = note.paragraphs;
@@ -69,7 +68,7 @@ public final class Reflow {
     if (p.format.rightIndent != 0) p = p.with("rightIndent", "" + p.format.rightIndent * ratio);
     if (p.format.firstIndent != 0) p = p.with("firstIndent", "" + p.format.firstIndent * ratio);
     if (!p.format.tabs.isEmpty()) {
-      List<TabStop> tabs = new ArrayList<TabStop>();
+      var tabs = new ArrayList<TabStop>();
       for (TabStop tab : p.format.tabs)
         tabs.add(new TabStop(Math.max(.01f, tab.position * ratio), tab.alignment, tab.leader));
       p = p.with("tabs", TabStop.encode(tabs));

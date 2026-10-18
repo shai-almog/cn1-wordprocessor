@@ -24,7 +24,7 @@ final class DocxFields {
   private final RunReader reader;
   private final DocxLinks links;
   private final Set<String> warnings;
-  private final List<Pending> stack = new ArrayList<Pending>();
+  private final List<Pending> stack = new ArrayList<>();
   private RichText text = new RichText();
   private Revision revision;
 
@@ -35,7 +35,7 @@ final class DocxFields {
   }
 
   static RichText read(Element paragraph, RunReader reader, DocxLinks links, Set<String> warnings) {
-    DocxFields parser = new DocxFields(reader, links, warnings);
+    var parser = new DocxFields(reader, links, warnings);
     for (Element child : Xml.children(paragraph, null)) parser.node(child, "");
     while (!parser.stack.isEmpty()) {
       warnings.add("Unclosed complex field");
@@ -46,26 +46,26 @@ final class DocxFields {
 
   private void append(RichText value) {
     if (revision != null) {
-      final Revision mark = revision;
+      final var mark = revision;
       value = value.mapStyles(s -> s.revision(mark));
     }
     if (stack.isEmpty()) text = text.concat(value);
     else {
-      Pending field = stack.get(stack.size() - 1);
+      var field = stack.get(stack.size() - 1);
       if (field.separated) field.result = field.result.concat(value);
     }
   }
 
   private void close() {
-    Pending field = stack.remove(stack.size() - 1);
-    String instruction = field.instruction.toString().trim();
+    var field = stack.remove(stack.size() - 1);
+    var instruction = field.instruction.toString().trim();
     if (instruction.isEmpty()) {
       warnings.add("Field without instructions");
       append(field.result);
       return;
     }
     if (!stack.isEmpty()) {
-      Pending parent = stack.get(stack.size() - 1);
+      var parent = stack.get(stack.size() - 1);
       if (!parent.separated) {
         parent.instruction.append(" { ").append(instruction).append(" } ");
         return;
@@ -87,7 +87,7 @@ final class DocxFields {
         || "bookmarkStart".equals(kind)
         || "bookmarkEnd".equals(kind)) return;
     if ("ins".equals(kind) || "del".equals(kind)) {
-      Revision before = revision;
+      var before = revision;
       revision = RevisionFormats.docxRead(node).previous(before);
       for (Element child : Xml.children(node, null)) node(child, link);
       revision = before;
@@ -120,7 +120,7 @@ final class DocxFields {
         return;
       }
       RichText result = read(content, reader, links, warnings);
-      String value = result.plainText();
+      var value = result.plainText();
       // Repeating section items are stored as the section's "; "-separated content.
       if ("repeatingSection".equals(control.type) && !value.isEmpty())
         control = control.with("items", value.replace("; ", "|"));
@@ -135,19 +135,19 @@ final class DocxFields {
       for (Element child : Xml.children(node, null)) node(child, link);
       return;
     }
-    TextStyle style = reader.read(node, link).styleAt(0).revision(revision);
+    var style = reader.read(node, link).styleAt(0).revision(revision);
     boolean skipCustomMark = false;
     for (Element child : Xml.children(node, null)) {
       String type = Xml.local(child);
       if ("footnoteReference".equals(type) || "endnoteReference".equals(type)) {
         if (links.notes == null) throw new IllegalArgumentException("Notes outside the main story are unsupported");
-        String mark = "";
+        var mark = "";
         if (enabled(child, "customMarkFollows")) {
           Element literal = Xml.child(node, "t");
           if (literal == null) throw new IllegalArgumentException("Missing custom note mark");
           mark = Xml.text(literal); skipCustomMark = true;
         }
-        Note note = links.notes.read(type.startsWith("foot") ? "footnote" : "endnote",
+        var note = links.notes.read(type.startsWith("foot") ? "footnote" : "endnote",
             Xml.attr(child, "id", ""), mark, warnings);
         append(RichText.note(note, style.with("script", "superscript")));
         continue;

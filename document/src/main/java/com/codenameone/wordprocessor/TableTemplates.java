@@ -37,14 +37,14 @@ public final class TableTemplates {
     } else throw new IllegalArgumentException("Unknown quick table: " + kind);
     boolean calendar = "calendar".equals(kind);
     long id = firstId + 1;
-    TableFormat format = new TableFormat(data.length, data[0].length).headerRows(1);
-    List<List<Sequence<Paragraph>>> cells = new ArrayList<List<Sequence<Paragraph>>>();
+    var format = new TableFormat(data.length, data[0].length).headerRows(1);
+    var cells = new ArrayList<List<Sequence<Paragraph>>>();
     for (int r = 0; r < data.length; r++) {
-      List<Sequence<Paragraph>> row = new ArrayList<Sequence<Paragraph>>();
+      var row = new ArrayList<Sequence<Paragraph>>();
       for (int c = 0; c < data[r].length; c++) {
-        TextStyle text = TextStyle.DEFAULT.with("bold", (r == 0 || c == 0) ? "true" : "false");
+        var text = TextStyle.DEFAULT.with("bold", (r == 0 || c == 0) ? "true" : "false");
         if (!calendar && r == 0) text = text.with("color", "ffffff");
-        Paragraph paragraph =
+        var paragraph =
             new Paragraph("p" + id++, RichText.of(data[r][c], text))
                 .with("after", "0")
                 .with("spacing", "1");

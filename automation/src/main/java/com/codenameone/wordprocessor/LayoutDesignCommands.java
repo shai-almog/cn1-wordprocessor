@@ -96,7 +96,7 @@ final class LayoutDesignCommands implements Commands.Extension {
           final Map<String, Object> args = a;
           s.mapParagraphs(
               p -> {
-                StringBuilder off = new StringBuilder();
+                var off = new StringBuilder();
                 for (String option : ParagraphFormat.ASIAN) {
                   boolean on =
                       args.containsKey(option)
@@ -106,17 +106,18 @@ final class LayoutDesignCommands implements Commands.Extension {
                 }
                 return p.with("asianOff", off.toString());
               });
-          Paragraph p = s.document().paragraph(s.selection().block);
-          Map<String, Object> out = new LinkedHashMap<String, Object>();
+          var p = s.document().paragraph(s.selection().block);
+          var out = new LinkedHashMap<String, Object>();
           for (String option : ParagraphFormat.ASIAN) out.put(option, p.format.asian(option));
           return out;
         });
     c.register(
         "para.dialog",
         "Paragraph dialog: set several paragraph properties at once and return them",
-        "align?:string,left?:number,right?:number,firstLine?:number,before?:number,after?:number,"
-            + "lineSpacing?:number,lineRule?:string,outlineLevel?:number,keepNext?:boolean,"
-            + "keepLines?:boolean,widowControl?:boolean,pageBreak?:boolean",
+        """
+        align?:string,left?:number,right?:number,firstLine?:number,before?:number,after?:number,\
+        lineSpacing?:number,lineRule?:string,outlineLevel?:number,keepNext?:boolean,\
+        keepLines?:boolean,widowControl?:boolean,pageBreak?:boolean""",
         true,
         (s, a) -> {
           String[][] keys = {
@@ -128,12 +129,12 @@ final class LayoutDesignCommands implements Commands.Extension {
           };
           for (String[] k : keys)
             if (a.containsKey(k[0])) {
-              Object v = a.get(k[0]);
+              var v = a.get(k[0]);
               String value =
-                  v instanceof Number
+                  v instanceof Number n
                       ? ("outlineLevel".equals(k[0])
-                          ? String.valueOf(((Number) v).intValue())
-                          : String.valueOf(((Number) v).floatValue()))
+                          ? String.valueOf(n.intValue())
+                          : String.valueOf(n.floatValue()))
                       : String.valueOf(v);
               if ("align".equals(k[0])) {
                 if ("justify".equals(value)) value = "both";
@@ -142,8 +143,8 @@ final class LayoutDesignCommands implements Commands.Extension {
               }
               s.paragraph(k[1], value);
             }
-          Paragraph p = s.document().paragraph(s.selection().block);
-          Map<String, Object> out = new LinkedHashMap<String, Object>();
+          var p = s.document().paragraph(s.selection().block);
+          var out = new LinkedHashMap<String, Object>();
           out.put("align", p.align);
           out.put("left", p.indent);
           out.put("right", p.format.rightIndent);
@@ -184,8 +185,8 @@ final class LayoutDesignCommands implements Commands.Extension {
         "type:string,linePitch?:number,charPitch?:number",
         true,
         (s, a) -> {
-          Section r = s.activeSection().raw;
-          PageDecor d = r.decor.withLayout("grid", Commands.str(a, "type"));
+          var r = s.activeSection().raw;
+          var d = r.decor.withLayout("grid", Commands.str(a, "type"));
           d = d.withLayout("gridPitch", a.containsKey("linePitch") ? num(a, "linePitch") : d.layout("gridPitch", ""));
           d = d.withLayout("charPitch", a.containsKey("charPitch") ? num(a, "charPitch") : d.layout("charPitch", ""));
           if ("default".equals(d.layout("grid", "default"))) d = d.withLayout("gridPitch", "").withLayout("charPitch", "");
@@ -198,8 +199,8 @@ final class LayoutDesignCommands implements Commands.Extension {
         "width?:number,height?:number,orientation?:string,top?:number,right?:number,bottom?:number,left?:number,verticalAlign?:string",
         true,
         (s, a) -> {
-          Section r = s.activeSection().raw;
-          PageSpec p = r.page;
+          var r = s.activeSection().raw;
+          var p = r.page;
           float w = f(a, "width", p.width), h = f(a, "height", p.height);
           if (a.containsKey("orientation")) {
             String o = Commands.str(a, "orientation");
@@ -217,12 +218,12 @@ final class LayoutDesignCommands implements Commands.Extension {
             throw new IllegalArgumentException("Page size must be 1 to 22 inches");
           if (top < 0 || right < 0 || bottom < 0 || left < 0 || left + right > w - 36 || top + bottom > h - 36)
             throw new IllegalArgumentException("Margins leave no room for text");
-          Section next = r.page(new PageSpec(w, h, top, right, bottom, left));
+          var next = r.page(new PageSpec(w, h, top, right, bottom, left));
           if (a.containsKey("verticalAlign"))
             next = next.decor(next.decor.withLayout("verticalAlign", Commands.str(a, "verticalAlign")));
           s.section(next);
-          PageSpec q = s.activeSection().raw.page;
-          Map<String, Object> out = new LinkedHashMap<String, Object>();
+          var q = s.activeSection().raw.page;
+          var out = new LinkedHashMap<String, Object>();
           out.put("width", q.width);
           out.put("height", q.height);
           out.put("orientation", q.width > q.height ? "landscape" : "portrait");
@@ -242,7 +243,7 @@ final class LayoutDesignCommands implements Commands.Extension {
           String mode = Commands.str(a, "mode");
           if (!Arrays.asList("none", "automatic", "manual").contains(mode))
             throw new IllegalArgumentException("Hyphenation is none, automatic or manual");
-          DocumentProperties p = s.document().properties.withSetting("hyphenation", "none".equals(mode) ? "" : mode);
+          var p = s.document().properties.withSetting("hyphenation", "none".equals(mode) ? "" : mode);
           if (a.containsKey("zone")) p = p.withSetting("hyphenation.zone", num(a, "zone"));
           if (a.containsKey("limit")) p = p.withSetting("hyphenation.limit", String.valueOf(((Number) a.get("limit")).intValue()));
           if (a.containsKey("caps")) p = p.withSetting("hyphenation.caps", Boolean.TRUE.equals(a.get("caps")) ? "" : "false");
@@ -304,8 +305,8 @@ final class LayoutDesignCommands implements Commands.Extension {
           String name = Commands.str(a, "name");
           for (Object[] p : SPACING)
             if (p[0].equals(name)) {
-              ParagraphStyle n = s.document().styles.get("Normal");
-              Paragraph q =
+              var n = s.document().styles.get("Normal");
+              var q =
                   n.paragraph
                       .with("before", String.valueOf(p[1]))
                       .with("after", String.valueOf(p[2]))
@@ -327,11 +328,11 @@ final class LayoutDesignCommands implements Commands.Extension {
           if (!EFFECTS.contains(name)) throw new IllegalArgumentException("Unknown effects: " + name);
           boolean shadow = !Arrays.asList("Office", "Subtle Solids", "Banded Edge", "Riblet", "Glow Edge").contains(name);
           String glow = name.contains("Glow") || name.contains("Glass") ? "c9d9f0" : "";
-          Document d = s.document();
+          var d = s.document();
           Sequence<Block> blocks = d.blocks;
           for (int i = 0; i < blocks.size(); i++)
             if (blocks.get(i) instanceof Picture) {
-              Picture pic = (Picture) blocks.get(i);
+              var pic = (Picture) blocks.get(i);
               if (pic.drawing == null
                   || Arrays.asList("ink", "equation", "signature").contains(pic.drawing.kind)) continue;
               blocks =
@@ -348,8 +349,8 @@ final class LayoutDesignCommands implements Commands.Extension {
         "",
         false,
         (s, a) -> {
-          DocumentProperties p = s.document().properties;
-          StringBuilder b = new StringBuilder();
+          var p = s.document().properties;
+          var b = new StringBuilder();
           for (String k : new String[] {"design.theme", "design.colors", "design.fonts", "design.styleSet", "design.spacing"})
             b.append(k).append('=').append(p.setting(k, "")).append('\n');
           defaults = b.toString();
@@ -371,7 +372,7 @@ final class LayoutDesignCommands implements Commands.Extension {
               : "design.colors".equals(key) ? "design.themeColors"
               : "design.fonts".equals(key) ? "design.themeFonts"
               : "design.styleSet".equals(key) ? "design.styleSet" : "design.paragraphSpacing";
-      Map<String, Object> args = new LinkedHashMap<String, Object>();
+      var args = new LinkedHashMap<String, Object>();
       args.put("name", value);
       c.execute(s, id, args);
     }
@@ -392,14 +393,14 @@ final class LayoutDesignCommands implements Commands.Extension {
   }
 
   private static Object sectionLayout(Session s, String key, String value) {
-    Section r = s.activeSection().raw;
+    var r = s.activeSection().raw;
     s.section(r.decor(r.decor.withLayout(key, value)));
     return s.activeSection().raw.decor.layout();
   }
 
   private static String[] find(String[][] table, String name) {
     for (String[] row : table) if (row[0].equalsIgnoreCase(name)) return row;
-    StringBuilder b = new StringBuilder();
+    var b = new StringBuilder();
     for (String[] row : table) b.append(b.length() == 0 ? "" : ", ").append(row[0]);
     throw new IllegalArgumentException("Unknown name " + name + "; choose " + b);
   }
@@ -408,9 +409,9 @@ final class LayoutDesignCommands implements Commands.Extension {
   private static void restyle(Session s, String heading, String title, String headFont, String bodyFont) {
     Map<String, ParagraphStyle> styles = s.document().styles;
     for (String id : HEADINGS) {
-      ParagraphStyle st = styles.get(id);
+      var st = styles.get(id);
       if (st == null) continue;
-      TextStyle t = st.text;
+      var t = st.text;
       boolean isTitle = "Title".equals(id);
       if (heading != null && !"Subtitle".equals(id)) t = t.with("color", isTitle ? title : heading);
       if (headFont != null) t = t.with("font", "Subtitle".equals(id) && bodyFont != null ? bodyFont : headFont);
@@ -418,7 +419,7 @@ final class LayoutDesignCommands implements Commands.Extension {
     }
     if (bodyFont != null)
       for (String id : new String[] {"Normal", "NoSpacing", "Caption"}) {
-        ParagraphStyle st = styles.get(id);
+        var st = styles.get(id);
         if (st != null && !bodyFont.equals(st.text.font))
           s.defineStyle(new ParagraphStyle(st.id, st.name, st.paragraph, st.text.with("font", bodyFont)));
       }
@@ -431,9 +432,9 @@ final class LayoutDesignCommands implements Commands.Extension {
       ParagraphStyle st = styles.get(id), def = base.get(id);
       if (st == null || def == null) continue;
       // Keep the theme's color and font; reset shape properties from the built-in definition.
-      TextStyle t =
+      var t =
           def.text.with("color", TextUtil.padded(st.text.color, 16, 6)).with("font", st.text.font);
-      Paragraph p = def.paragraph;
+      var p = def.paragraph;
       String color = TextUtil.padded(st.text.color, 16, 6);
       boolean heading = id.startsWith("Heading");
       if ("Basic (Elegant)".equals(name)) t = t.with("allCaps", "true").with("characterSpacing", "1");
@@ -454,7 +455,7 @@ final class LayoutDesignCommands implements Commands.Extension {
   }
 
   private static void settings(Session s, String... kv) {
-    DocumentProperties p = s.document().properties;
+    var p = s.document().properties;
     for (int i = 0; i < kv.length; i += 2) p = p.withSetting(kv[i], kv[i + 1]);
     s.documentProperties(p);
   }

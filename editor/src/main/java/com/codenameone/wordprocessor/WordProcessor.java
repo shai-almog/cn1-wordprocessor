@@ -46,13 +46,13 @@ public class WordProcessor {
   private VerticalRuler verticalRuler;
   private Slider zoomSlider;
   private Button quickUndo, quickRedo, documentTitle;
-  private final Map<String, Runnable> uiActions = new LinkedHashMap<String, Runnable>();
-  private final Map<String, Container> styleTiles = new LinkedHashMap<String, Container>();
+  private final Map<String, Runnable> uiActions = new LinkedHashMap<>();
+  private final Map<String, Container> styleTiles = new LinkedHashMap<>();
   private OfficeRibbon ribbon;
   private TextStyle paintStyle;
   private Button painterButton;
   private ComboBox<String> fontChoice, sizeChoice;
-  private final Map<String, Button> formatButtons = new HashMap<String, Button>();
+  private final Map<String, Button> formatButtons = new HashMap<>();
   private boolean syncingControls;
   private RecoveryStore recovery;
   private long savedRevision = -1, lastEdit;
@@ -75,7 +75,7 @@ public class WordProcessor {
       save(fileFormat, false, true);
       return;
     }
-    ComboBox<String> format =
+    var format =
         new ComboBox<String>("Word document (.docx)", "CN1 document (.cn1doc)");
     format.setSelectedIndex("docx".equals(fileFormat) ? 0 : 1);
     if (showDialog("Save As", format, "Choose location", "Cancel"))
@@ -98,7 +98,7 @@ public class WordProcessor {
   /** Options, templates and Researcher persist in app storage; Researcher queries Wikipedia. */
   private static void installOfficeServices() {
     final Storage storage = Storage.getInstance();
-    Map<String, String> options = new LinkedHashMap<String, String>();
+    var options = new LinkedHashMap<String, String>();
     try {
       if (storage.exists("wordprocessor-options.json"))
         for (Map.Entry<String, Object> e : Json.parse(new String(readStorage(storage, "wordprocessor-options.json"), "UTF-8")).entrySet())
@@ -108,14 +108,14 @@ public class WordProcessor {
     }
     AppOptions.install(
         values -> {
-          try (OutputStream out = storage.createOutputStream("wordprocessor-options.json")) {
+          try (var out = storage.createOutputStream("wordprocessor-options.json")) {
             out.write(Json.write(new LinkedHashMap<String, Object>(values)).getBytes("UTF-8"));
           } catch (IOException ex) {
             Log.e(ex);
           }
         },
         options);
-    Map<String, String> templates = new LinkedHashMap<String, String>();
+    var templates = new LinkedHashMap<String, String>();
     for (String key : storage.listEntries())
       if (key.startsWith("template-") && key.endsWith(".cn1xml"))
         try {
@@ -126,7 +126,7 @@ public class WordProcessor {
     OfficeCommands.templates(
         new OfficeCommands.TemplateStore() {
           public void save(String name, String xml) throws IOException {
-            try (OutputStream out = storage.createOutputStream("template-" + name + ".cn1xml")) {
+            try (var out = storage.createOutputStream("template-" + name + ".cn1xml")) {
               out.write(xml.getBytes("UTF-8"));
             }
           }
@@ -140,14 +140,14 @@ public class WordProcessor {
   }
 
   private static byte[] readStorage(Storage storage, String key) throws IOException {
-    try (java.io.InputStream in = storage.createInputStream(key)) {
+    try (var in = storage.createInputStream(key)) {
       return com.codename1.io.Util.readInputStream(in);
     }
   }
 
   /** Researcher: Wikipedia's search API (title, summary, URL), run off the EDT. */
   static java.util.List<Map<String, String>> wikipedia(String query) throws IOException {
-    ConnectionRequest r = new ConnectionRequest();
+    var r = new ConnectionRequest();
     r.setPost(false);
     r.setUrl("https://en.wikipedia.org/w/api.php");
     r.addArgument("action", "query");
@@ -160,25 +160,25 @@ public class WordProcessor {
     NetworkManager.getInstance().addToQueueAndWait(r);
     if (r.getResponseCode() != 200 || r.getResponseData() == null)
       throw new IOException("Researcher could not reach Wikipedia (" + r.getResponseCode() + ")");
-    Map<String, Object> json = Json.parse(new String(r.getResponseData(), "UTF-8"));
-    java.util.List<Map<String, String>> out = new ArrayList<Map<String, String>>();
-    Object q = json.get("query");
+    var json = Json.parse(new String(r.getResponseData(), "UTF-8"));
+    var out = new ArrayList<Map<String, String>>();
+    var q = json.get("query");
     if (!(q instanceof Map)) return out;
-    Object hits = ((Map<?, ?>) q).get("search");
+    var hits = ((Map<?, ?>) q).get("search");
     if (!(hits instanceof java.util.List)) return out;
     String year = String.valueOf(java.util.Calendar.getInstance().get(java.util.Calendar.YEAR));
     for (Object h : (java.util.List<?>) hits) {
       if (!(h instanceof Map)) continue;
       String title = String.valueOf(((Map<?, ?>) h).get("title"));
       String snippet = String.valueOf(((Map<?, ?>) h).get("snippet"));
-      StringBuilder plain = new StringBuilder();
+      var plain = new StringBuilder();
       boolean tag = false;
       for (char c : snippet.toCharArray()) {
         if (c == '<') tag = true;
         else if (c == '>') tag = false;
         else if (!tag) plain.append(c);
       }
-      Map<String, String> m = new LinkedHashMap<String, String>();
+      var m = new LinkedHashMap<String, String>();
       m.put("title", title);
       m.put("author", "Wikipedia contributors");
       m.put("year", year);
@@ -195,7 +195,7 @@ public class WordProcessor {
       startAgentDebugging();
       return;
     }
-    Document recovered = recovery.recover();
+    var recovered = recovery.recover();
     source = recovery.recoveredSource();
     session = new Session(recovered == null ? Document.empty().title("Document1") : recovered);
     if (recovered == null) fileDocument = session.document();
@@ -233,10 +233,10 @@ public class WordProcessor {
     applyRibbonOptions();
     ribbon.select(0);
     if (OfficeTheme.mobile()) ribbon.toggleCollapsed();
-    Button commentsButton = iconButton("Comments", FontImage.MATERIAL_COMMENT, this::comments, false);
+    var commentsButton = iconButton("Comments", FontImage.MATERIAL_COMMENT, this::comments, false);
     editingButton = iconButton("Editing \u25be", FontImage.MATERIAL_EDIT, this::editingMode, false);
     editingButton.setAccessibilityText("Editing mode");
-    Button share = iconButton("Share", FontImage.MATERIAL_IOS_SHARE, this::share, false);
+    var share = iconButton("Share", FontImage.MATERIAL_IOS_SHARE, this::share, false);
     OfficeTheme.framed(commentsButton);
     OfficeTheme.framed(editingButton);
     OfficeTheme.primary(share);
@@ -263,7 +263,7 @@ public class WordProcessor {
         .getAllStyles()
         .setBorder(
             Border.createCompoundBorder(null, null, null, Border.createLineBorder(1, 0xd0d0d0)));
-    EditField search = field();
+    var search = field();
     search.setHint("Search document");
     search.setAccessibilityText("Search document");
     OfficeTheme.field(search, 184);
@@ -282,7 +282,7 @@ public class WordProcessor {
     OfficeTheme.space(outline, 10, 0, 0, 0);
     outline.setScrollableY(true);
     navigation.add(BorderLayout.CENTER, outline);
-    Container documentPane = new Container(new BorderLayout());
+    var documentPane = new Container(new BorderLayout());
     ruler = new PageRuler(editor, session, this::edited);
     verticalRuler = new VerticalRuler(editor, session, this::edited);
     if (!OfficeTheme.mobile()) {
@@ -334,7 +334,7 @@ public class WordProcessor {
     }
     // Word's zoom thumb: a small upright white bar with a gray outline, no accent fill.
     Image thumb = Image.createImage(OfficeTheme.px(6), OfficeTheme.px(14), 0);
-    Graphics tg = thumb.getGraphics();
+    var tg = thumb.getGraphics();
     tg.setAntiAliased(true);
     tg.setColor(0xffffff);
     tg.fillRoundRect(0, 0, thumb.getWidth() - 1, thumb.getHeight() - 1, OfficeTheme.px(2), OfficeTheme.px(2));
@@ -368,7 +368,7 @@ public class WordProcessor {
           iconButton("", FontImage.MATERIAL_REDO, () -> run("edit.redo", Json.object()), false);
       quickUndo.setAccessibilityText("Undo");
       quickRedo.setAccessibilityText("Redo");
-      Container touchTools = new Container(new GridLayout(1, 7));
+      var touchTools = new Container(new GridLayout(1, 7));
       touchTools.addAll(
           quickUndo,
           quickRedo,
@@ -437,12 +437,12 @@ public class WordProcessor {
                 editor.startInput();
               }
             });
-    new UITimer(() -> autosave()).schedule(1000, true, form);
+    new UITimer(this::autosave).schedule(1000, true, form);
   }
 
   private void configureMobileViewport() {
     if (!OfficeTheme.mobile()) return;
-    com.codename1.ui.geom.Rectangle safe =
+    var safe =
         Display.getInstance().getDisplaySafeArea(new com.codename1.ui.geom.Rectangle());
     form.getToolbar().setSafeArea(true);
     form.getToolbar().setPreferredH(OfficeTheme.px(44) + safe.getY());
@@ -461,9 +461,9 @@ public class WordProcessor {
     quickRedo =
         iconButton("", FontImage.MATERIAL_REDO, () -> run("edit.redo", Json.object()), false);
     quickRedo.setAccessibilityText("Redo");
-    Button save = iconButton("", FontImage.MATERIAL_SAVE, () -> saveDocument(false), false);
+    var save = iconButton("", FontImage.MATERIAL_SAVE, () -> saveDocument(false), false);
     save.setAccessibilityText("Save document");
-    Container header =
+    var header =
         new Container(new BorderLayout(BorderLayout.CENTER_BEHAVIOR_CENTER_ABSOLUTE));
     OfficeTheme.space(header, 0, 0, 0, 0);
     // AutoSave (Word's title-bar switch): saves the open file automatically; with no file yet
@@ -481,7 +481,7 @@ public class WordProcessor {
     OfficeTheme.space(auto, 0, 0, 0, 8);
     autoLabel.getAllStyles().setMarginUnit(Style.UNIT_TYPE_PIXELS);
     autoLabel.getAllStyles().setMargin(0, 0, 0, OfficeTheme.px(6));
-    Button more = iconButton("", FontImage.MATERIAL_MORE_HORIZ, this::quickAccessMore, false);
+    var more = iconButton("", FontImage.MATERIAL_MORE_HORIZ, this::quickAccessMore, false);
     more.setAccessibilityText("More Quick Access commands");
     header.add(BorderLayout.WEST,
         OfficeTheme.row(auto, save, split(quickUndo, "Undo history", this::undoHistory), quickRedo, more));
@@ -489,7 +489,7 @@ public class WordProcessor {
     documentTitle.setAccessibilityText("Document name");
     documentTitle.getAllStyles().setFont(OfficeTheme.font(12, true));
     header.add(BorderLayout.CENTER, documentTitle);
-    Button search =
+    var search =
         iconButton("Search commands and help", FontImage.MATERIAL_SEARCH, this::searchCommands, false);
     search.setAccessibilityText("Search commands");
     search.getAllStyles().setBorder(OfficeBorder.of(OfficeTheme.BORDER_STRONG, 6));
@@ -508,22 +508,22 @@ public class WordProcessor {
 
   private void searchCommands() {
     editor.stopInput();
-    Dialog dialog = officeDialog("Search commands");
+    var dialog = officeDialog("Search commands");
     dialog.setLayout(new BorderLayout());
-    EditField query = field();
+    var query = field();
     query.setHint("Find a command, such as table or heading");
     query.setAccessibilityText("Search commands");
-    Container results = new Container(BoxLayout.y());
+    var results = new Container(BoxLayout.y());
     results.setScrollableY(true);
     results.setPreferredH(OfficeTheme.px(320));
     results.setPreferredW(OfficeTheme.px(440));
     Runnable refresh =
         () -> {
           results.removeAll();
-          String filter = query.getText().toLowerCase();
+          var filter = query.getText().toLowerCase();
           for (Map.Entry<String, Runnable> action : uiActions.entrySet()) {
             if (!action.getKey().toLowerCase().contains(filter)) continue;
-            Button choice =
+            var choice =
                 button(
                     action.getKey(),
                     () -> {
@@ -544,7 +544,7 @@ public class WordProcessor {
                       || d.id.toLowerCase().contains(filter)
                       || d.description.toLowerCase().contains(filter))) continue;
               shown++;
-              Button choice =
+              var choice =
                   button(
                       label,
                       () -> {
@@ -572,11 +572,11 @@ public class WordProcessor {
 
   private Map<String, String> commandLabels() {
     if (commandLabels == null) {
-      commandLabels = new HashMap<String, String>();
-      try (java.io.InputStream in =
+      commandLabels = new HashMap<>();
+      try (var in =
           Display.getInstance().getResourceAsStream(WordProcessor.class, "/command-labels.properties")) {
         if (in != null) {
-          com.codename1.io.Properties p = new com.codename1.io.Properties();
+          var p = new com.codename1.io.Properties();
           p.load(in);
           for (Object k : p.keySet()) commandLabels.put((String) k, p.getProperty((String) k));
         }
@@ -594,9 +594,9 @@ public class WordProcessor {
       run(d.id, args);
       return;
     }
-    final String key = keys.get(i);
+    final var key = keys.get(i);
     final int next = i + 1;
-    final String type = d.parameters.get(key);
+    final var type = d.parameters.get(key);
     prompt(
         key + " (" + type + ")",
         "",
@@ -619,7 +619,7 @@ public class WordProcessor {
   }
 
   private void styleCombo(ComboBox<String> combo) {
-    com.codename1.ui.list.DefaultListCellRenderer<String> renderer =
+    var renderer =
         new com.codename1.ui.list.DefaultListCellRenderer<String>(false);
     renderer.getAllStyles().setFont(OfficeTheme.font(12, false));
     renderer.getAllStyles().setFgColor(OfficeTheme.INK);
@@ -629,13 +629,13 @@ public class WordProcessor {
     renderer.getUnselectedStyle().setBgColor(OfficeTheme.PAPER);
     renderer.getSelectedStyle().setBgColor(0xDCE9FB);
     renderer.getSelectedStyle().setFgColor(OfficeTheme.INK);
-    Component focus = renderer.getListFocusComponent(combo);
+    var focus = renderer.getListFocusComponent(combo);
     focus.getAllStyles().setBgImage(null);
     focus.getAllStyles().setBorder(Border.createEmpty());
     OfficeTheme.surface(focus, 0xDCE9FB);
     OfficeTheme.space(renderer, 2, 2, 4, 4);
     combo.setRenderer(renderer);
-    Style arrow = new Style();
+    var arrow = new Style();
     arrow.setFgColor(OfficeTheme.chrome(0x454545));
     arrow.setBgTransparency(0);
     combo.setComboBoxImage(
@@ -647,7 +647,7 @@ public class WordProcessor {
   private void applyPaintStyle() {
     if (paintStyle == null || session.cellSelection() == null && session.selection().collapsed())
       return;
-    TextStyle copied = paintStyle;
+    var copied = paintStyle;
     paintStyle = null;
     session.transact(
         s -> {
@@ -667,7 +667,7 @@ public class WordProcessor {
   }
 
   private void changeCase() {
-    ComboBox<String> choice =
+    var choice =
         new ComboBox<String>(
             "Sentence case", "lowercase", "UPPERCASE", "Capitalize Each Word", "tOGGLE cASE");
     if (!showDialog("Change case", choice, "Apply", "Cancel")) return;
@@ -686,13 +686,13 @@ public class WordProcessor {
   }
 
   private EditField field(String text) {
-    EditField field = new EditField(text);
+    var field = new EditField(text);
     configureField(field, 220);
     return field;
   }
 
   private EditField field(String text, int rows, int columns) {
-    EditField field = new EditField(text, rows, columns);
+    var field = new EditField(text, rows, columns);
     configureField(field, Math.min(560, columns * 8));
     return field;
   }
@@ -703,7 +703,7 @@ public class WordProcessor {
         e -> {
           if (OfficeTheme.mobile() && field.isSingleLineTextArea()) {
             field.finishComposing();
-            Form owner = field.getComponentForm();
+            var owner = field.getComponentForm();
             if (owner != null) owner.setFocused(null);
             Display.getInstance().setShowVirtualKeyboard(false);
           }
@@ -724,7 +724,7 @@ public class WordProcessor {
   }
 
   private Dialog officeDialog(String title) {
-    Dialog dialog =
+    var dialog =
         new Dialog(title) {
           @Override
           protected void initNativeWindow(Window window) {
@@ -735,7 +735,7 @@ public class WordProcessor {
     if (OfficeTheme.mobile()) dialog.setFormBottomPaddingEditingMode(true);
     // The shared light dialog surface must also override a native theme's title color.
     dialog.getTitleComponent().getAllStyles().setFgColor(OfficeTheme.INK);
-    Container frame = dialog.getDialogComponent();
+    var frame = dialog.getDialogComponent();
     if (OfficeTheme.mobile()) frame.setSafeArea(true);
     OfficeTheme.surface(frame, OfficeTheme.PAPER);
     OfficeTheme.space(frame, 8, 8, 8, 8);
@@ -758,22 +758,21 @@ public class WordProcessor {
     if (body instanceof ComboBox) {
       OfficeTheme.field(body, 180);
       styleCombo((ComboBox<String>) body);
-    } else if (body instanceof CheckBox) {
+    } else if (body instanceof CheckBox box) {
       body.getAllStyles().setFont(OfficeTheme.font(13, false));
       body.getAllStyles().setBgTransparency(0);
-      ((CheckBox) body).setGap(OfficeTheme.px(8));
+      box.setGap(OfficeTheme.px(8));
       body.setPreferredH(OfficeTheme.px(OfficeTheme.mobile() ? 44 : 28));
     }
-    if (body instanceof Container) {
+    if (body instanceof Container container) {
       OfficeTheme.surface(body, OfficeTheme.PAPER);
-      Container container = (Container) body;
       for (int i = 0; i < container.getComponentCount(); i++)
         styleDialogBody(container.getComponentAt(i));
     }
   }
 
   static String languageName(String tag) {
-    String[] parts = com.codename1.util.StringUtil.tokenize(tag, '-').toArray(new String[0]);
+    var parts = com.codename1.util.StringUtil.tokenize(tag, '-').toArray(new String[0]);
     if (parts.length == 0) return tag;
     String[][] known = {
       {"en", "English"}, {"fr", "French"}, {"de", "German"}, {"es", "Spanish"}, {"it", "Italian"},
@@ -784,10 +783,10 @@ public class WordProcessor {
       {"US", "United States"}, {"GB", "United Kingdom"}, {"FR", "France"}, {"DE", "Germany"},
       {"ES", "Spain"}, {"IL", "Israel"}, {"CA", "Canada"}, {"AU", "Australia"}, {"BR", "Brazil"}
     };
-    String lang = parts[0];
+    var lang = parts[0];
     for (String[] k : known) if (k[0].equalsIgnoreCase(parts[0])) lang = k[1];
     if (parts.length < 2) return lang;
-    String region = parts[1];
+    var region = parts[1];
     for (String[] r : regions) if (r[0].equalsIgnoreCase(parts[1])) region = r[1];
     return lang + " (" + region + ")";
   }
@@ -801,7 +800,7 @@ public class WordProcessor {
 
   /** Status bar Focus: icon and label, as in Word. */
   private Button focusButton() {
-    Button b = statusIcon("Focus", FontImage.MATERIAL_CENTER_FOCUS_STRONG, "view.focus");
+    var b = statusIcon("Focus", FontImage.MATERIAL_CENTER_FOCUS_STRONG, "view.focus");
     b.setText("Focus");
     b.getAllStyles().setFont(OfficeTheme.font(11, false));
     b.getAllStyles().setFgColor(OfficeTheme.DIM);
@@ -810,7 +809,7 @@ public class WordProcessor {
 
   /** Status bar view toggle: 22x20 icon button, rounded 3pt, checked when it is the current view. */
   private Button statusIcon(String name, char icon, String command) {
-    Button b = iconButton("", icon, () -> run(command, new HashMap<String, Object>()), false);
+    var b = iconButton("", icon, () -> run(command, new HashMap<String, Object>()), false);
     b.setAccessibilityText(name);
     OfficeTheme.icon(b, icon, 14, OfficeTheme.DIM);
     OfficeTheme.space(b, 3, 3, 4, 4);
@@ -819,7 +818,7 @@ public class WordProcessor {
   }
 
   private Button iconButton(String name, char icon, Runnable action, boolean large) {
-    Button b = button(name, action);
+    var b = button(name, action);
     b.setAccessibilityText(name.isEmpty() ? iconName(icon) : name);
     OfficeTheme.icon(b, icon, large ? 27 : 18, OfficeTheme.INK);
     if (large) {
@@ -856,7 +855,7 @@ public class WordProcessor {
   }
 
   private Button toggle(String text, char icon, String property) {
-    Button b = iconButton(text, icon, () -> format(property), false);
+    var b = iconButton(text, icon, () -> format(property), false);
     b.setText("");
     b.setAccessibilityText(text);
     b.setPreferredW(OfficeTheme.px(30));
@@ -865,7 +864,7 @@ public class WordProcessor {
   }
 
   private Button scriptButton(String label, String name, String value) {
-    Button b =
+    var b =
         button(
             label,
             () ->
@@ -912,11 +911,11 @@ public class WordProcessor {
                 iconButton("Cut", FontImage.MATERIAL_CONTENT_CUT, () -> clipboard("cut"), false),
                 iconButton("Copy", FontImage.MATERIAL_CONTENT_COPY, () -> clipboard("copy"), false),
                 painterButton));
-    fontChoice = new ComboBox<String>("Source Sans 3", "Source Serif 4", "JetBrains Mono");
+    fontChoice = new ComboBox<>("Source Sans 3", "Source Serif 4", "JetBrains Mono");
     OfficeTheme.field(fontChoice, 122);
     styleCombo(fontChoice);
     sizeChoice =
-        new ComboBox<String>(
+        new ComboBox<>(
             "8", "9", "10", "11", "12", "14", "16", "18", "20", "24", "28", "36", "48", "72");
     sizeChoice.setSelectedItem("12");
     OfficeTheme.field(sizeChoice, 48);
@@ -1009,14 +1008,14 @@ public class WordProcessor {
     styles.setScrollableX(true);
     styles.setScrollVisible(false);
     // Word's gallery scroller: row up, row down and the expand button, stacked at the right.
-    Button up = galleryArrow(FontImage.MATERIAL_KEYBOARD_ARROW_UP, "Previous styles", () -> scrollGallery(styles, -1));
-    Button down = galleryArrow(FontImage.MATERIAL_KEYBOARD_ARROW_DOWN, "Next styles", () -> scrollGallery(styles, 1));
-    Button expand = galleryArrow(FontImage.MATERIAL_MORE_HORIZ, "More styles", this::moreStyles);
+    var up = galleryArrow(FontImage.MATERIAL_KEYBOARD_ARROW_UP, "Previous styles", () -> scrollGallery(styles, -1));
+    var down = galleryArrow(FontImage.MATERIAL_KEYBOARD_ARROW_DOWN, "Next styles", () -> scrollGallery(styles, 1));
+    var expand = galleryArrow(FontImage.MATERIAL_MORE_HORIZ, "More styles", this::moreStyles);
     Container moreStyles = BoxLayout.encloseY(up, down, expand);
     Container gallery = OfficeTheme.row(styles, moreStyles);
     OfficeTheme.surface(gallery, OfficeTheme.PAPER);
     gallery.getAllStyles().setBorder(OfficeBorder.of(OfficeTheme.BORDER_STRONG, 4));
-    Button select =
+    var select =
         iconButton(
             "Select",
             FontImage.MATERIAL_NEAR_ME,
@@ -1052,13 +1051,13 @@ public class WordProcessor {
       workspace.revalidate();
       return;
     }
-    Container pane = new Container(new BorderLayout());
+    var pane = new Container(new BorderLayout());
     OfficeTheme.surface(pane, 0xfafafa);
     OfficeTheme.space(pane, 10, 10, 10, 10);
-    ComboBox<String> names = new ComboBox<String>();
-    java.util.List<ParagraphStyle> definitions =
+    var names = new ComboBox<String>();
+    var definitions =
         new ArrayList<ParagraphStyle>(session.document().styles.values());
-    String current = session.editingDocument().paragraph(session.selection().block).style;
+    var current = session.editingDocument().paragraph(session.selection().block).style;
     for (ParagraphStyle definition : definitions) {
       names.addItem(definition.name);
       if (current.equals(definition.id)) names.setSelectedIndex(names.getModel().getSize() - 1);
@@ -1068,7 +1067,7 @@ public class WordProcessor {
         () -> {
           if (names.getSelectedIndex() < 0 || names.getSelectedIndex() >= definitions.size())
             return;
-          ParagraphStyle style =
+          var style =
               session.document().styles.get(definitions.get(names.getSelectedIndex()).id);
           if (style == null) return;
           preview.setText(style.name);
@@ -1127,8 +1126,8 @@ public class WordProcessor {
             button(
                 "Update to match selection",
                 () -> {
-                  ParagraphStyle selected = definitions.get(names.getSelectedIndex());
-                  Paragraph paragraph =
+                  var selected = definitions.get(names.getSelectedIndex());
+                  var paragraph =
                       session.editingDocument().paragraph(session.selection().block);
                   session.defineStyle(
                       new ParagraphStyle(
@@ -1139,9 +1138,9 @@ public class WordProcessor {
             button(
                 "Style inspector",
                 () -> {
-                  Paragraph paragraph =
+                  var paragraph =
                       session.editingDocument().paragraph(session.selection().block);
-                  TextStyle text = session.activeStyle();
+                  var text = session.activeStyle();
                   showDialog(
                       "Style inspector",
                       "Paragraph style: "
@@ -1171,11 +1170,13 @@ public class WordProcessor {
             button(
                 "Delete custom style",
                 () -> {
-                  ParagraphStyle selected = definitions.get(names.getSelectedIndex());
+                  var selected = definitions.get(names.getSelectedIndex());
                   if (ParagraphStyle.defaults().containsKey(selected.id)) {
                     showDialog(
                         "Built-in style",
-                        "Built-in styles can be modified but cannot be" + " deleted.",
+                        """
+                        Built-in styles can be modified but cannot be\
+                         deleted.""",
                         "OK",
                         null);
                     return;
@@ -1193,7 +1194,7 @@ public class WordProcessor {
     actions.setScrollableY(true);
     pane.add(BorderLayout.CENTER, actions);
     if (OfficeTheme.mobile()) {
-      Dialog dialog = officeDialog("Styles");
+      var dialog = officeDialog("Styles");
       dialog.setLayout(new BorderLayout());
       dialog.add(BorderLayout.CENTER, pane);
       dialog.add(BorderLayout.SOUTH, button("Close", dialog::dispose));
@@ -1228,7 +1229,7 @@ public class WordProcessor {
   }
 
   private void editStyle(ParagraphStyle existing) {
-    Paragraph active = session.editingDocument().paragraph(session.selection().block);
+    var active = session.editingDocument().paragraph(session.selection().block);
     Paragraph p = existing == null ? active : existing.paragraph;
     TextStyle text = existing == null ? session.activeStyle() : existing.text;
     EditField name = field(existing == null ? "New style" : existing.name),
@@ -1237,7 +1238,7 @@ public class WordProcessor {
         before = field("" + p.before),
         after = field("" + p.after),
         spacing = field("" + p.lineSpacing);
-    ComboBox<String> lineRule = lineRuleChoice(p);
+    var lineRule = lineRuleChoice(p);
     ComboBox<String>
         font = new ComboBox<String>("Source Sans 3", "Source Serif 4", "JetBrains Mono"),
         align = new ComboBox<String>("left", "center", "right", "justify");
@@ -1271,13 +1272,13 @@ public class WordProcessor {
       String id = existing == null ? name.getText().trim().replace(" ", "") : existing.id;
       if (existing == null && session.document().styles.containsKey(id))
         throw new IllegalArgumentException("A style with that name already exists");
-      TextStyle next =
+      var next =
           text.with("font", font.getSelectedItem())
               .with("size", size.getText())
               .with("color", color.getText())
               .with("bold", "" + bold.isSelected())
               .with("italic", "" + italic.isSelected());
-      Paragraph template =
+      var template =
           p.with("align", align.getSelectedItem())
               .with("before", before.getText())
               .with("after", after.getText())
@@ -1290,12 +1291,12 @@ public class WordProcessor {
   }
 
   private int lastParagraphLength() {
-    Block b = session.document().blocks.get(session.document().blocks.size() - 1);
-    return b instanceof Paragraph ? ((Paragraph) b).text.length() : 0;
+    var b = session.document().blocks.get(session.document().blocks.size() - 1);
+    return b instanceof Paragraph p ? p.text.length() : 0;
   }
 
   private Button galleryArrow(char icon, String name, Runnable action) {
-    Button b = iconButton("", icon, action, false);
+    var b = iconButton("", icon, action, false);
     b.setAccessibilityText(name);
     OfficeTheme.icon(b, icon, 14, OfficeTheme.DIM);
     OfficeTheme.space(b, 1, 1, 2, 2);
@@ -1312,7 +1313,7 @@ public class WordProcessor {
     // Word's gallery previews: Heading 1/2 in the accent teal, Title large, Subtitle gray.
     String sample = level == 3 ? "AaBb" : level == 1 ? "AaBbCc" : "AaBbCcDd";
     int color = level == 1 || level == 2 ? 0x0f4761 : level == 4 ? 0x595959 : OfficeTheme.INK;
-    Button preview = button(sample, () -> applyStyle(name, level));
+    var preview = button(sample, () -> applyStyle(name, level));
     preview.setAccessibilityText(name);
     OfficeTheme.space(preview, 3, 0, 4, 2);
     preview.setAlignment(Component.LEFT);
@@ -1323,7 +1324,7 @@ public class WordProcessor {
     Label caption = OfficeTheme.label(name, 11, OfficeTheme.INK);
     caption.setAlignment(Component.CENTER);
     OfficeTheme.space(caption, 0, 3, 0, 0);
-    Container c = new Container(new BorderLayout());
+    var c = new Container(new BorderLayout());
     c.add(BorderLayout.NORTH, preview).add(BorderLayout.SOUTH, caption);
     OfficeTheme.space(c, 2, 2, 2, 2);
     c.getAllStyles().setMarginUnit(Style.UNIT_TYPE_PIXELS);
@@ -1401,18 +1402,18 @@ public class WordProcessor {
   }
 
   private void editFurniture(boolean footerPart) {
-    final Section.Range active = session.activeSection();
-    final PageFurniture original = active.resolved.furniture;
+    final var active = session.activeSection();
+    final var original = active.resolved.furniture;
     final PageFurniture[] draft = {active.raw.furniture};
-    PageFurniture previous = PageFurniture.EMPTY;
+    var previous = PageFurniture.EMPTY;
     for (Section.Range range : session.document().sectionRanges()) {
       if (range.first == active.first) break;
       previous = range.resolved.furniture;
     }
-    final PageFurniture inherited = previous;
+    final var inherited = previous;
     final String[] current = {footerPart ? "footer" : "header"};
-    ComboBox<String> variant = new ComboBox<String>("Default", "First page", "Even pages");
-    CheckBox linked = new CheckBox("Link to previous section");
+    var variant = new ComboBox<String>("Default", "First page", "Even pages");
+    var linked = new CheckBox("Link to previous section");
     linked.setEnabled(active.first > 0);
     linked.setSelected(active.first > 0 && !draft[0].stories.containsKey(current[0]));
     CheckBox first = new CheckBox("Different first page"),
@@ -1421,11 +1422,11 @@ public class WordProcessor {
     even.setSelected(original.differentEven);
     EditField headerDistance = field("" + original.headerDistance),
         footerDistance = field("" + original.footerDistance);
-    Sequence<Block> blocks = new Sequence<Block>();
+    var blocks = new Sequence<Block>();
     for (Paragraph para : original.get(current[0])) blocks = blocks.append(para);
     if (blocks.size() == 0)
       blocks = blocks.append(new Paragraph("part1", new RichText()).with("after", "0"));
-    final Session part =
+    final var part =
         new Session(
             new Document(
                     blocks,
@@ -1436,7 +1437,7 @@ public class WordProcessor {
                 .trackChanges(session.document().trackChanges));
     part.reviewAuthor(session.reviewAuthor());
     part.trackFormatting(session.trackFormatting());
-    final EditorSurface view = new EditorSurface(part, new Commands(), () -> {}, (b, r, c) -> {});
+    final var view = new EditorSurface(part, new Commands(), () -> {}, (b, r, c) -> {});
     view.setPreferredW(OfficeTheme.px(520));
     view.setPreferredH(OfficeTheme.px(200));
     view.setReflow(true);
@@ -1444,7 +1445,7 @@ public class WordProcessor {
         e -> {
           if (linked.isSelected()) {
             view.stopInput();
-            Sequence<Block> linkedBlocks = new Sequence<Block>();
+            var linkedBlocks = new Sequence<Block>();
             for (Paragraph para : inherited.get(current[0]))
               linkedBlocks = linkedBlocks.append(para);
             if (linkedBlocks.size() == 0)
@@ -1461,11 +1462,11 @@ public class WordProcessor {
     final Runnable capture =
         () -> {
           view.stopInput();
-          Sequence<Paragraph> paragraphs = new Sequence<Paragraph>();
+          var paragraphs = new Sequence<Paragraph>();
           for (Block b : part.document().blocks)
-            if (b instanceof Paragraph) paragraphs = paragraphs.append((Paragraph) b);
+            if (b instanceof Paragraph paragraph) paragraphs = paragraphs.append(paragraph);
           if (linked.isSelected()) {
-            Sequence<Paragraph> base = inherited.get(current[0]);
+            var base = inherited.get(current[0]);
             boolean unchanged = base.size() == paragraphs.size();
             for (int i = 0; unchanged && i < base.size(); i++)
               unchanged = base.get(i) == paragraphs.get(i);
@@ -1487,7 +1488,7 @@ public class WordProcessor {
               selected == 0
                   ? (footerPart ? "footer" : "header")
                   : (selected == 1 ? "first" : "even") + (footerPart ? "Footer" : "Header");
-          Sequence<Block> next = new Sequence<Block>();
+          var next = new Sequence<Block>();
           linked.setSelected(active.first > 0 && !draft[0].stories.containsKey(current[0]));
           PageFurniture source = linked.isSelected() ? inherited : draft[0];
           for (Paragraph para : source.get(current[0])) next = next.append(para);
@@ -1596,9 +1597,9 @@ public class WordProcessor {
   }
 
   private void fieldDialog(boolean edit, String initial) {
-    Block block = session.editingDocument().blocks.get(session.selection().block);
+    var block = session.editingDocument().blocks.get(session.selection().block);
     if (!(block instanceof Paragraph)) return;
-    Paragraph paragraph = (Paragraph) block;
+    var paragraph = (Paragraph) block;
     int caret = session.selection().caret;
     int at = paragraph.text.fieldAt(caret) != null ? caret : caret - 1;
     InlineField existing = edit && at >= 0 ? paragraph.text.fieldAt(at) : null;
@@ -1606,19 +1607,19 @@ public class WordProcessor {
       showDialog("Edit field", "Place the caret next to a field first.", "OK", null);
       return;
     }
-    ComboBox<String> type =
+    var type =
         new ComboBox<String>(
             "PAGE", "NUMPAGES", "TITLE", "DATE", "TIME", "FILENAME", "MERGEFIELD", "DOCPROPERTY");
-    EditField code = field(existing == null ? initial : existing.instruction);
-    EditField result = field(existing == null ? "" : existing.result);
+    var code = field(existing == null ? initial : existing.instruction);
+    var result = field(existing == null ? "" : existing.result);
     CheckBox locked = new CheckBox("Lock field"), showCode = new CheckBox("Show field code");
     locked.setSelected(existing != null && existing.locked);
     showCode.setSelected(existing != null && existing.showCode);
-    java.util.List<String> tokens = DocumentFields.tokens(code.getText());
+    var tokens = DocumentFields.tokens(code.getText());
     if (!tokens.isEmpty()) type.setSelectedItem(tokens.get(0));
     type.addActionListener(
         e -> {
-          String selected = type.getSelectedItem();
+          var selected = type.getSelectedItem();
           code.setText(
               "DATE".equals(selected)
                   ? "DATE \\@ \"yyyy-MM-dd\""
@@ -1640,7 +1641,7 @@ public class WordProcessor {
             showCode);
     if (!showDialog(
         edit ? "Edit field" : "Insert field", body, edit ? "Apply" : "Insert", "Cancel")) return;
-    final InlineField value =
+    final var value =
         new InlineField(
             code.getText(), result.getText(), locked.isSelected(), showCode.isSelected());
     final int offset = at;
@@ -1654,8 +1655,8 @@ public class WordProcessor {
   }
 
   private void updateFields() {
-    final java.util.Date now = new java.util.Date();
-    final java.util.Map<String, String> values = new java.util.HashMap<String, String>();
+    final var now = new java.util.Date();
+    final var values = new java.util.HashMap<String, String>();
     values.put("DATE", new com.codename1.l10n.SimpleDateFormat("yyyy-MM-dd").format(now));
     values.put("TIME", new com.codename1.l10n.SimpleDateFormat("HH:mm").format(now));
     values.put(
@@ -1670,13 +1671,13 @@ public class WordProcessor {
           DocumentIndex.update(s, editor::printLayout);
           TableAuthorities.update(s, editor::printLayout);
           for (int pass = 0; pass < 4; pass++) {
-            Document before = s.document();
+            var before = s.document();
             Session.FieldResolver resolver =
                 DocumentFields.resolver(before, editor.printLayout(), values);
             s.mapFields(
                 (paragraph, offset, value) -> {
                   if (value.locked) return value;
-                  java.util.List<String> tokens = DocumentFields.tokens(value.instruction);
+                  var tokens = DocumentFields.tokens(value.instruction);
                   if (!tokens.isEmpty()
                       && ("DATE".equalsIgnoreCase(tokens.get(0))
                           || "TIME".equalsIgnoreCase(tokens.get(0)))) {
@@ -1723,13 +1724,13 @@ public class WordProcessor {
   }
 
   private void editPicture(int block) {
-    Picture pic = (Picture) session.document().blocks.get(block);
+    var pic = (Picture) session.document().blocks.get(block);
     EditField width = field(Float.toString(pic.width)),
         height = field(Float.toString(pic.height)),
         alt = field(pic.alt);
-    CheckBox aspect = new CheckBox("Keep proportions");
+    var aspect = new CheckBox("Keep proportions");
     aspect.setSelected(true);
-    ComboBox<String> align = new ComboBox<String>("left", "center", "right");
+    var align = new ComboBox<String>("left", "center", "right");
     align.setSelectedItem(pic.align);
     Container content =
         BoxLayout.encloseY(
@@ -1748,8 +1749,8 @@ public class WordProcessor {
                   if (Dialog.show("Delete picture?", "This can be undone.", "Delete", "Cancel")) {
                     session.updatePicture(block, pic.width, pic.height, pic.alt, pic.align, true);
                     edited();
-                    Form current = Display.getInstance().getCurrent();
-                    if (current instanceof Dialog) ((Dialog) current).dispose();
+                    var current = Display.getInstance().getCurrent();
+                    if (current instanceof Dialog dialog) dialog.dispose();
                   }
                 }));
     if (showDialog("Picture", content, "Apply", "Cancel")) {
@@ -1771,17 +1772,17 @@ public class WordProcessor {
 
   private void quickTables() {
     if (session.inCell()) throw new IllegalArgumentException("Nested tables are not supported yet");
-    ComboBox<String> template = new ComboBox<String>("Tabular list", "Matrix", "Calendar");
+    var template = new ComboBox<String>("Tabular list", "Matrix", "Calendar");
     template.setAccessibilityText("Table template");
     String[] kinds = {"tabular", "matrix", "calendar"};
-    Container preview = new Container(new BorderLayout());
+    var preview = new Container(new BorderLayout());
     Runnable update =
         () -> {
           Table table = TableTemplates.create(kinds[template.getSelectedIndex()], 1);
-          Container grid = new Container(new GridLayout(table.rows(), table.columns()));
+          var grid = new Container(new GridLayout(table.rows(), table.columns()));
           for (int r = 0; r < table.rows(); r++)
             for (int c = 0; c < table.columns(); c++) {
-              Label cell = new Label(Table.cellText(table.cell(r, c)));
+              var cell = new Label(Table.cellText(table.cell(r, c)));
               cell.getAllStyles().setBgTransparency(255);
               cell.getAllStyles().setBgColor(table.format.cell(r, c).background);
               cell.getAllStyles().setFgColor(table.cell(r, c).get(0).text.styleAt(0).color);
@@ -1804,8 +1805,9 @@ public class WordProcessor {
             template,
             preview,
             new SpanLabelCompat(
-                "Editable tables with a repeating header row. Calendar is a"
-                    + " reusable 31-day sample.")),
+                """
+                Editable tables with a repeating header row. Calendar is a\
+                 reusable 31-day sample.""")),
         "Insert",
         "Cancel")) run("table.quick", Json.object("kind", kinds[template.getSelectedIndex()]));
   }
@@ -1878,7 +1880,7 @@ public class WordProcessor {
   }
 
   private void nextNote() {
-    java.util.List<Note> notes = Notes.all(editor.printLayout(session.document()).document);
+    var notes = Notes.all(editor.printLayout(session.document()).document);
     if (notes.isEmpty()) {
       showDialog("Notes", new Label("This document has no notes."), "Close", "Close");
       return;
@@ -1889,27 +1891,27 @@ public class WordProcessor {
   }
 
   private void showNotes() {
-    java.util.List<Note> notes = Notes.all(editor.printLayout(session.document()).document);
+    var notes = Notes.all(editor.printLayout(session.document()).document);
     if (notes.isEmpty()) {
       showDialog("Notes", new Label("This document has no notes."), "Close", "Close");
       return;
     }
     String[] labels = new String[notes.size()];
     for (int i = 0; i < labels.length; i++) {
-      Note note = notes.get(i);
-      String preview = note.plainText().replace('\n', ' ');
+      var note = notes.get(i);
+      var preview = note.plainText().replace('\n', ' ');
       if (preview.length() > 36) preview = preview.substring(0, 36) + "\u2026";
       labels[i] =
           ("footnote".equals(note.kind) ? "Footnote " : "Endnote ") + note.label + ": " + preview;
     }
-    ComboBox<String> chosen = new ComboBox<String>(labels);
-    ComboBox<String> action = new ComboBox<String>("Edit", "Go to reference", "Delete");
+    var chosen = new ComboBox<String>(labels);
+    var action = new ComboBox<String>("Edit", "Go to reference", "Delete");
     if (!showDialog(
         "Notes",
         BoxLayout.encloseY(formRow("Note", chosen), formRow("Action", action)),
         "Continue",
         "Cancel")) return;
-    Note note = notes.get(chosen.getSelectedIndex());
+    var note = notes.get(chosen.getSelectedIndex());
     if (action.getSelectedIndex() == 0) noteDialog(note, note.kind);
     else if (action.getSelectedIndex() == 1) {
       session.selectNote(note.id);
@@ -1921,9 +1923,9 @@ public class WordProcessor {
   }
 
   private void noteOptionsDialog() {
-    ComboBox<String> type = new ComboBox<String>("Footnotes", "Endnotes");
-    ComboBox<String> scope = new ComboBox<String>("Whole document", "Selected sections");
-    ComboBox<String> format =
+    var type = new ComboBox<String>("Footnotes", "Endnotes");
+    var scope = new ComboBox<String>("Whole document", "Selected sections");
+    var format =
         new ComboBox<String>(
             "1, 2, 3",
             "i, ii, iii",
@@ -1936,14 +1938,14 @@ public class WordProcessor {
             "*, \u2020, \u2021, \u00a7",
             "- 1 -, - 2 -",
             "No number");
-    EditField start = field("1");
+    var start = field("1");
     start.setConstraint(TextArea.NUMERIC);
-    ComboBox<String> restart = new ComboBox<String>();
-    ComboBox<String> position = new ComboBox<String>();
+    var restart = new ComboBox<String>();
+    var position = new ComboBox<String>();
     Runnable load =
         () -> {
           boolean foot = type.getSelectedIndex() == 0;
-          NoteOptions.Properties p =
+          var p =
               session.activeSection().resolved.notes.get(foot ? "footnote" : "endnote");
           format.setSelectedIndex(NoteOptions.FORMATS.indexOf(p.numFmt));
           start.setText("" + p.numStart);
@@ -1993,10 +1995,10 @@ public class WordProcessor {
 
   private void noteDialog(Note original, String kind) {
     editor.stopInput();
-    ComboBox<String> type = new ComboBox<String>("Footnote", "Endnote");
+    var type = new ComboBox<String>("Footnote", "Endnote");
     type.setSelectedIndex("endnote".equals(kind) ? 1 : 0);
-    EditField mark = field(original == null ? "" : original.mark);
-    Sequence<Block> blocks = new Sequence<Block>();
+    var mark = field(original == null ? "" : original.mark);
+    var blocks = new Sequence<Block>();
     if (original != null) for (Paragraph p : original.paragraphs) blocks = blocks.append(p);
     if (blocks.size() == 0)
       blocks =
@@ -2006,7 +2008,7 @@ public class WordProcessor {
                       RichText.of("", TextStyle.DEFAULT.with("size", "10")))
                   .with("after", "0")
                   .with("spacing", "1"));
-    Session draft =
+    var draft =
         new Session(
             new Document(
                     blocks,
@@ -2017,7 +2019,7 @@ public class WordProcessor {
                 .trackChanges(original != null && session.document().trackChanges));
     draft.reviewAuthor(session.reviewAuthor());
     draft.trackFormatting(session.trackFormatting());
-    EditorSurface view = new EditorSurface(draft, new Commands(), () -> {}, (b, r, c) -> {});
+    var view = new EditorSurface(draft, new Commands(), () -> {}, (b, r, c) -> {});
     view.setPreferredW(OfficeTheme.px(520));
     view.setPreferredH(OfficeTheme.px(200));
     view.setReflow(true);
@@ -2050,7 +2052,7 @@ public class WordProcessor {
     boolean apply = showDialog(title, body, original == null ? "Insert" : "Apply", "Cancel");
     view.stopInput();
     if (!apply) return;
-    Sequence<Paragraph> paragraphs = new Sequence<Paragraph>();
+    var paragraphs = new Sequence<Paragraph>();
     for (Block b : draft.document().blocks) paragraphs = paragraphs.append((Paragraph) b);
     final Sequence<Paragraph> story = paragraphs;
     String selectedKind = type.getSelectedIndex() == 0 ? "footnote" : "endnote";
@@ -2058,12 +2060,12 @@ public class WordProcessor {
         s -> {
           if (original == null) {
             s.insertNote(selectedKind, "", mark.getText());
-            Selection selection = s.selection();
-            Note inserted =
+            var selection = s.selection();
+            var inserted =
                 s.editingDocument().paragraph(selection.block).text.noteAt(selection.caret - 1);
             // Allocate fresh story identities after the reference insertion to avoid ID
             // collisions.
-            Sequence<Paragraph> owned = new Sequence<Paragraph>();
+            var owned = new Sequence<Paragraph>();
             long id = s.document().nextId;
             for (Paragraph p : story) owned = owned.append(p.copy("p" + id++, p.text));
             s.updateNote(inserted.id, inserted.paragraphs(owned));
@@ -2282,7 +2284,7 @@ public class WordProcessor {
   }
 
   private void envelopeDialog() {
-    ComboBox<String> size = new ComboBox<String>(MailingSheets.ENVELOPES);
+    var size = new ComboBox<String>(MailingSheets.ENVELOPES);
     EditField
         delivery =
             field(
@@ -2292,7 +2294,7 @@ public class WordProcessor {
                 5,
                 40),
         returned = field("", 3, 40);
-    CheckBox add = check("Add before the current document", true);
+    var add = check("Add before the current document", true);
     if (showDialog(
         "Envelopes",
         BoxLayout.encloseY(
@@ -2340,7 +2342,7 @@ public class WordProcessor {
             formRow("Label column", column)),
         "Create",
         "Cancel")) {
-      Map<String, Object> args =
+      var args =
           Json.object(
               "product",
               product.getSelectedItem(),
@@ -2360,9 +2362,9 @@ public class WordProcessor {
   }
 
   private void mergeStartDialog() {
-    ComboBox<String> type =
+    var type =
         new ComboBox<String>("Letters", "Directory", "Envelopes", "Labels", "Emails", "Normal");
-    String current = session.mergeData().kind;
+    var current = session.mergeData().kind;
     for (int i = 0; i < type.getModel().getSize(); i++)
       if (type.getModel().getItemAt(i).equalsIgnoreCase(current)) type.setSelectedIndex(i);
     if (showDialog("Start mail merge", formRow("Document type", type), "Apply", "Cancel"))
@@ -2370,7 +2372,7 @@ public class WordProcessor {
   }
 
   private void recipientsDialog() {
-    ComboBox<String> method =
+    var method =
         new ComboBox<String>("Type or paste a list", "Open CSV, TSV or spreadsheet");
     if (!showDialog("Select recipients", formRow("Source", method), "Continue", "Cancel")) return;
     if (method.getSelectedIndex() == 0) {
@@ -2382,11 +2384,11 @@ public class WordProcessor {
         (name, path, bytes) -> {
           try {
             if (bytes.length > 2 && bytes[0] == 'P' && bytes[1] == 'K') {
-              RecipientWorkbook workbook = new RecipientWorkbook(bytes);
-              ComboBox<String> sheets =
+              var workbook = new RecipientWorkbook(bytes);
+              var sheets =
                   new ComboBox<String>(
                       workbook.sheets().toArray(new String[workbook.sheets().size()]));
-              CheckBox headers = check("First row contains field names", true);
+              var headers = check("First row contains field names", true);
               if (showDialog(
                   "Import worksheet",
                   BoxLayout.encloseY(formRow("Worksheet", sheets), headers),
@@ -2404,8 +2406,8 @@ public class WordProcessor {
                             || (bytes[0] & 255) == 254 && (bytes[1] & 255) == 255)
                     ? "UTF-16"
                     : "UTF-8";
-            String text = new String(bytes, encoding);
-            CheckBox headers = check("First row contains field names", true);
+            var text = new String(bytes, encoding);
+            var headers = check("First row contains field names", true);
             if (showDialog(
                 "Import recipients",
                 BoxLayout.encloseY(OfficeTheme.label(name, 12, OfficeTheme.INK), headers),
@@ -2423,20 +2425,20 @@ public class WordProcessor {
   }
 
   private void editRecipientsDialog() {
-    final MergeData data = session.mergeData();
+    final var data = session.mergeData();
     if (data.fields.isEmpty()) {
       editRecipientSourceDialog();
       return;
     }
-    java.util.List<String> names = new ArrayList<String>();
+    var names = new ArrayList<String>();
     names.add("(None)");
     names.addAll(data.fields);
-    ComboBox<String> sort = new ComboBox<String>(names.toArray(new String[names.size()]));
-    ComboBox<String> filter = new ComboBox<String>(names.toArray(new String[names.size()]));
+    var sort = new ComboBox<String>(names.toArray(new String[names.size()]));
+    var filter = new ComboBox<String>(names.toArray(new String[names.size()]));
     sort.setSelectedIndex(data.column(data.sortField) + 1);
     filter.setSelectedIndex(data.column(data.filterField) + 1);
     String[] operators = {"contains", "=", "<>", "<", ">", "<=", ">=", "blank", "notBlank"};
-    ComboBox<String> comparison =
+    var comparison =
         new ComboBox<String>(
             "Contains",
             "Equals",
@@ -2448,11 +2450,11 @@ public class WordProcessor {
             "Is blank",
             "Is not blank");
     comparison.setSelectedIndex(java.util.Arrays.asList(operators).indexOf(data.filterOperator));
-    CheckBox descending = check("Descending order", data.descending);
-    EditField value = field(data.filterValue);
-    final java.util.Set<Integer> excluded = new java.util.LinkedHashSet<Integer>(data.excluded);
+    var descending = check("Descending order", data.descending);
+    var value = field(data.filterValue);
+    final var excluded = new java.util.LinkedHashSet<Integer>(data.excluded);
     final int[] page = {0};
-    Container rows = new Container(BoxLayout.y());
+    var rows = new Container(BoxLayout.y());
     Label count = OfficeTheme.label("", 12, OfficeTheme.INK);
     Label pageLabel = OfficeTheme.label("", 12, OfficeTheme.INK);
     Runnable render =
@@ -2470,7 +2472,7 @@ public class WordProcessor {
                       + data.sourceRows.size());
           for (int i = start; i < end; i++) {
             final int index = i;
-            CheckBox include = check(recipientSummary(data, i), !excluded.contains(i));
+            var include = check(recipientSummary(data, i), !excluded.contains(i));
             include.setAccessibilityText("Include recipient " + (i + 1));
             include.addActionListener(
                 e -> {
@@ -2484,7 +2486,7 @@ public class WordProcessor {
         };
     Runnable preview =
         () -> {
-          MergeData draft =
+          var draft =
               data.manage(
                   sort.getSelectedIndex() == 0 ? "" : sort.getSelectedItem(),
                   descending.isSelected(),
@@ -2561,17 +2563,17 @@ public class WordProcessor {
   }
 
   private String recipientSummary(MergeData data, int index) {
-    StringBuilder text = new StringBuilder("" + (index + 1) + ". ");
+    var text = new StringBuilder("" + (index + 1) + ". ");
     for (int i = 0; i < Math.min(OfficeTheme.mobile() ? 1 : 3, data.fields.size()); i++) {
       if (i > 0) text.append(" \u00b7 ");
-      String cell = data.sourceRows.get(index).get(i).replace('\n', ' ').replace('\r', ' ');
+      var cell = data.sourceRows.get(index).get(i).replace('\n', ' ').replace('\r', ' ');
       text.append(cell.length() > 24 ? cell.substring(0, 24) + "\u2026" : cell);
     }
     return text.toString();
   }
 
   private void editRecipientSourceDialog() {
-    EditField csv =
+    var csv =
         field(
             session.mergeData().fields.isEmpty()
                 ? "First Name,Last Name,Address,City,State,PostalCode\n"
@@ -2591,7 +2593,7 @@ public class WordProcessor {
   private ComboBox<String> recipientFields() {
     if (session.mergeData().fields.isEmpty())
       throw new IllegalArgumentException("Select recipients first");
-    return new ComboBox<String>(
+    return new ComboBox<>(
         session.mergeData().fields.toArray(new String[session.mergeData().fields.size()]));
   }
 
@@ -2636,19 +2638,19 @@ public class WordProcessor {
 
   private void mergeMappingDialog() {
     recipientFields();
-    Map<String, ComboBox<String>> inputs = new LinkedHashMap<String, ComboBox<String>>();
-    Container body = new Container(BoxLayout.y());
-    java.util.List<String> names = new ArrayList<String>();
+    var inputs = new LinkedHashMap<String, ComboBox<String>>();
+    var body = new Container(BoxLayout.y());
+    var names = new ArrayList<String>();
     names.add("");
     names.addAll(session.mergeData().fields);
     for (Map.Entry<String, String> entry : session.mergeData().mappedFields().entrySet()) {
-      ComboBox<String> input = new ComboBox<String>(names.toArray(new String[names.size()]));
+      var input = new ComboBox<String>(names.toArray(new String[names.size()]));
       input.setSelectedItem(entry.getValue());
       inputs.put(entry.getKey(), input);
       body.add(formRow(entry.getKey(), input));
     }
     if (showDialog("Match fields", body, "Apply", "Cancel")) {
-      Map<String, String> mapping = new LinkedHashMap<String, String>();
+      var mapping = new LinkedHashMap<String, String>();
       for (Map.Entry<String, ComboBox<String>> e : inputs.entrySet())
         mapping.put(e.getKey(), e.getValue().getSelectedItem());
       mailing("matchFields", Json.object("mapping", mapping));
@@ -2656,13 +2658,13 @@ public class WordProcessor {
   }
 
   private void findRecipientDialog() {
-    EditField text = field("");
+    var text = field("");
     if (showDialog("Find recipient", formRow("Find text", text), "Find", "Cancel"))
       mailing("findRecipient", Json.object("text", text.getText()));
   }
 
   private void mergeErrorsDialog() {
-    java.util.List<String> errors = MailMerge.errors(session.document(), session.mergeData());
+    var errors = MailMerge.errors(session.document(), session.mergeData());
     String message =
         session.mergeData().rows.isEmpty()
             ? "Select recipients first."
@@ -2715,11 +2717,11 @@ public class WordProcessor {
       "Accessed",
       "DOI"
     };
-    Map<String, EditField> fields = new LinkedHashMap<String, EditField>();
-    Container body = new Container(BoxLayout.y());
+    var fields = new LinkedHashMap<String, EditField>();
+    var body = new Container(BoxLayout.y());
     for (int i = 0; i < CitationSource.KEYS.length; i++) {
-      String key = CitationSource.KEYS[i];
-      EditField input =
+      var key = CitationSource.KEYS[i];
+      var input =
           field(original == null ? "kind".equals(key) ? "book" : "" : original.get(key));
       if (original != null && "tag".equals(key)) input.setEditable(false);
       fields.put(key, input);
@@ -2728,15 +2730,15 @@ public class WordProcessor {
     body.add(new Label("Authors: Last, First; Last, First"));
     if (!showDialog(original == null ? "Create source" : "Edit source", body, "Save", "Cancel"))
       return null;
-    Map<String, String> values = new LinkedHashMap<String, String>();
+    var values = new LinkedHashMap<String, String>();
     for (Map.Entry<String, EditField> entry : fields.entrySet())
       values.put(entry.getKey(), entry.getValue().getText());
-    CitationSource result = new CitationSource(values);
+    var result = new CitationSource(values);
     if (original == null && session.document().bibliography.sources.containsKey(result.tag())) {
       if (!values.get("tag").trim().isEmpty())
         throw new IllegalArgumentException(
             "Source tag already exists; use Manage Sources to edit it");
-      String base = result.tag();
+      var base = result.tag();
       if (base.length() > 58) base = base.substring(0, 58);
       int suffix = 2;
       while (session.document().bibliography.sources.containsKey(base + suffix)) suffix++;
@@ -2748,14 +2750,14 @@ public class WordProcessor {
 
   private void sourcesDialog() {
     editor.stopInput();
-    java.util.List<CitationSource> sources =
+    var sources =
         new ArrayList<CitationSource>(session.document().bibliography.sources.values());
     String[] labels = new String[Math.max(1, sources.size())];
     if (sources.isEmpty()) labels[0] = "No sources";
     for (int i = 0; i < sources.size(); i++)
       labels[i] = sources.get(i).tag() + " \u2014 " + sources.get(i).get("title");
-    ComboBox<String> source = new ComboBox<String>(labels);
-    ComboBox<String> action =
+    var source = new ComboBox<String>(labels);
+    var action =
         new ComboBox<String>(
             sources.isEmpty()
                 ? new String[] {"New source"}
@@ -2766,7 +2768,7 @@ public class WordProcessor {
         "Continue",
         "Cancel")) return;
     if ("Delete source".equals(action.getSelectedItem())) {
-      CitationSource selected = sources.get(source.getSelectedIndex());
+      var selected = sources.get(source.getSelectedIndex());
       if (showDialog(
           "Delete source",
           new Label("Existing citations will show a missing-source message."),
@@ -2776,7 +2778,7 @@ public class WordProcessor {
         edited();
       }
     } else {
-      CitationSource editedSource =
+      var editedSource =
           sourceDialog(
               "New source".equals(action.getSelectedItem())
                   ? null
@@ -2790,15 +2792,15 @@ public class WordProcessor {
 
   private void citationDialog() {
     editor.stopInput();
-    java.util.List<CitationSource> sources =
+    var sources =
         new ArrayList<CitationSource>(session.document().bibliography.sources.values());
     String[] choices = new String[sources.size() + 1];
     choices[0] = "Add new source";
     for (int i = 0; i < sources.size(); i++)
       choices[i + 1] = sources.get(i).tag() + " \u2014 " + sources.get(i).get("title");
-    ComboBox<String> source = new ComboBox<String>(choices);
+    var source = new ComboBox<String>(choices);
     if (!sources.isEmpty()) source.setSelectedIndex(1);
-    EditField pages = field("");
+    var pages = field("");
     if (!showDialog(
         "Insert citation",
         BoxLayout.encloseY(formRow("Source", source), formRow("Citation pages", pages)),
@@ -2815,7 +2817,7 @@ public class WordProcessor {
   }
 
   private void citationStyleDialog() {
-    ComboBox<String> style = new ComboBox<String>(CitationStyles.NAMES);
+    var style = new ComboBox<String>(CitationStyles.NAMES);
     style.setSelectedItem(session.document().bibliography.style);
     if (showDialog("Citation style", formRow("Style", style), "Apply", "Cancel")) {
       Citations.style(session, style.getSelectedItem());
@@ -2825,7 +2827,7 @@ public class WordProcessor {
 
   private void bibliographyDialog() {
     int[] range = Citations.range(session.document());
-    EditField title =
+    var title =
         field(
             range == null
                 ? CitationStyles.title(CitationStyles.index(session.document().bibliography.style))
@@ -2838,7 +2840,7 @@ public class WordProcessor {
 
   private void markAuthorityDialog() {
     editor.stopInput();
-    EditField entry = field(session.selectedText());
+    var entry = field(session.selectedText());
     if (showDialog("Mark citation", formRow("Citation", entry), "Mark", "Cancel")) {
       TableAuthorities.mark(session, entry.getText());
       edited();
@@ -2848,9 +2850,9 @@ public class WordProcessor {
   private void authoritiesDialog() {
     editor.stopInput();
     DocumentIndex.Options old = TableAuthorities.options(session.document());
-    EditField title = field(old.title);
+    var title = field(old.title);
     String[] leaders = {"none", "dot", "hyphen", "underscore", "middleDot"};
-    ComboBox<String> leader =
+    var leader =
         new ComboBox<String>("None", "Dots", "Hyphens", "Underscores", "Middle dots");
     leader.setSelectedIndex(Arrays.asList(leaders).indexOf(old.leader));
     if (showDialog(
@@ -2865,7 +2867,7 @@ public class WordProcessor {
   }
 
   private CheckBox check(String text, boolean selected) {
-    CheckBox result = new CheckBox(text);
+    var result = new CheckBox(text);
     result.setSelected(selected);
     return result;
   }
@@ -2877,8 +2879,8 @@ public class WordProcessor {
         cross = field(""),
         bookmark = field("");
     CheckBox bold = check("Bold page numbers", false), italic = check("Italic page numbers", false);
-    CheckBox all = check("Mark all occurrences", false);
-    EditField search = field(session.selectedText());
+    var all = check("Mark all occurrences", false);
+    var search = field(session.selectedText());
     if (!showDialog(
         "Mark index entry",
         BoxLayout.encloseY(
@@ -2908,13 +2910,13 @@ public class WordProcessor {
   private void indexDialog() {
     editor.stopInput();
     DocumentIndex.Options old = DocumentIndex.options(session.document());
-    EditField title = field(old.title);
-    ComboBox<String> type = new ComboBox<String>("Indented", "Run-in");
+    var title = field(old.title);
+    var type = new ComboBox<String>("Indented", "Run-in");
     type.setSelectedIndex(old.runIn ? 1 : 0);
     CheckBox headings = check("Letter headings", old.headings),
         right = check("Right-align page numbers", old.rightAlign);
     String[] leaders = {"none", "dot", "hyphen", "underscore", "middleDot"};
-    ComboBox<String> leader =
+    var leader =
         new ComboBox<String>("None", "Dots", "Hyphens", "Underscores", "Middle dots");
     leader.setSelectedIndex(Arrays.asList(leaders).indexOf(old.leader));
     if (!showDialog(
@@ -2940,7 +2942,7 @@ public class WordProcessor {
   }
 
   private void removeFiguresDialog() {
-    EditField label = field("Figure");
+    var label = field("Figure");
     if (showDialog(
         "Remove table of figures", formRow("Caption label", label), "Remove", "Cancel")) {
       TableContents.remove(session, label.getText().trim());
@@ -2955,22 +2957,22 @@ public class WordProcessor {
   private void contentsDialog(String caption) {
     editor.stopInput();
     TableContents.Options old = TableContents.options(session.document(), caption);
-    EditField captionLabel = field(caption == null ? "" : caption);
-    EditField title = field(old.title);
+    var captionLabel = field(caption == null ? "" : caption);
+    var title = field(old.title);
     title.setAccessibilityText("Contents title");
-    ComboBox<String> levels = new ComboBox<String>("1", "2", "3", "4", "5", "6", "7", "8", "9");
+    var levels = new ComboBox<String>("1", "2", "3", "4", "5", "6", "7", "8", "9");
     levels.setSelectedIndex(old.levels - 1);
     levels.setAccessibilityText("Contents levels");
-    ComboBox<String> leader =
+    var leader =
         new ComboBox<String>("Dot", "Hyphen", "Underscore", "None", "Middle dot");
     String[] leaders = {"dot", "hyphen", "underscore", "none", "middleDot"};
     leader.setSelectedIndex(Arrays.asList(leaders).indexOf(old.leader));
     leader.setAccessibilityText("Contents tab leader");
-    CheckBox pages = new CheckBox("Show page numbers");
+    var pages = new CheckBox("Show page numbers");
     pages.setSelected(old.pageNumbers);
-    CheckBox right = new CheckBox("Right align page numbers");
+    var right = new CheckBox("Right align page numbers");
     right.setSelected(old.rightAlign);
-    CheckBox links = new CheckBox("Link entries to headings");
+    var links = new CheckBox("Link entries to headings");
     links.setSelected(old.hyperlinks);
     CheckBox headings = new CheckBox("Use heading styles"),
         outlines = new CheckBox("Use outline levels"),
@@ -2978,8 +2980,8 @@ public class WordProcessor {
     headings.setSelected(old.headingStyles);
     outlines.setSelected(old.outlineLevels);
     marked.setSelected(old.tcFields);
-    EditField identifier = field(old.tcIdentifier);
-    Map<String, Integer> styleLevels = new LinkedHashMap<String, Integer>(old.styleLevels);
+    var identifier = field(old.tcIdentifier);
+    var styleLevels = new LinkedHashMap<String, Integer>(old.styleLevels);
     Container body =
         BoxLayout.encloseY(
             formRow("Title", title),
@@ -3021,14 +3023,14 @@ public class WordProcessor {
   }
 
   private void contentsStyleDialog(Map<String, Integer> levels) {
-    java.util.Set<String> names = new java.util.LinkedHashSet<String>();
+    var names = new java.util.LinkedHashSet<String>();
     for (ParagraphStyle style : session.document().styles.values())
       if (!style.id.startsWith("TOC") && !"ListEntry".equals(style.id)) names.add(style.name);
     names.addAll(levels.keySet());
-    Map<String, ComboBox<String>> choices = new LinkedHashMap<String, ComboBox<String>>();
-    Container body = new Container(BoxLayout.y());
+    var choices = new LinkedHashMap<String, ComboBox<String>>();
+    var body = new Container(BoxLayout.y());
     for (String name : names) {
-      ComboBox<String> choice =
+      var choice =
           new ComboBox<String>("Not included", "1", "2", "3", "4", "5", "6", "7", "8", "9");
       choice.setSelectedIndex(levels.containsKey(name) ? levels.get(name) : 0);
       choices.put(name, choice);
@@ -3042,7 +3044,7 @@ public class WordProcessor {
   }
 
   private void outlineDialog() {
-    ComboBox<String> level =
+    var level =
         new ComboBox<String>(
             "Do not show",
             "Level 1",
@@ -3054,7 +3056,7 @@ public class WordProcessor {
             "Level 7",
             "Level 8",
             "Level 9");
-    Paragraph p = session.editingDocument().paragraph(session.selection().block);
+    var p = session.editingDocument().paragraph(session.selection().block);
     level.setSelectedIndex(
         p.format.outlineLevel >= 0 ? p.format.outlineLevel : SequenceFields.headingLevel(p.style));
     if (showDialog("Add text to contents", formRow("Outline level", level), "Apply", "Cancel")) {
@@ -3065,7 +3067,7 @@ public class WordProcessor {
 
   private void markContentsDialog() {
     EditField text = field(session.selectedText()), identifier = field("C");
-    ComboBox<String> level = new ComboBox<String>("1", "2", "3", "4", "5", "6", "7", "8", "9");
+    var level = new ComboBox<String>("1", "2", "3", "4", "5", "6", "7", "8", "9");
     if (showDialog(
         "Mark contents entry",
         BoxLayout.encloseY(
@@ -3082,13 +3084,13 @@ public class WordProcessor {
 
   private void bookmarkDialog() {
     editor.stopInput();
-    Dialog dialog = officeDialog("Bookmarks");
+    var dialog = officeDialog("Bookmarks");
     dialog.setLayout(new BorderLayout());
-    EditField name = field("");
+    var name = field("");
     name.setAccessibilityText("Bookmark name");
-    java.util.List<String> names = new ArrayList<String>(session.document().bookmarks.keySet());
+    var names = new ArrayList<String>(session.document().bookmarks.keySet());
     java.util.Collections.sort(names);
-    ComboBox<String> existing =
+    var existing =
         new ComboBox<String>(
             names.isEmpty()
                 ? new String[] {"No bookmarks"}
@@ -3098,7 +3100,7 @@ public class WordProcessor {
         e -> {
           if (!names.isEmpty()) name.setText(existing.getSelectedItem());
         });
-    Button add =
+    var add =
         button(
             "Add",
             () -> {
@@ -3106,7 +3108,7 @@ public class WordProcessor {
               dialog.dispose();
               edited();
             });
-    Button go =
+    var go =
         button(
             "Go To",
             () -> {
@@ -3114,7 +3116,7 @@ public class WordProcessor {
               dialog.dispose();
               edited();
             });
-    Button remove =
+    var remove =
         button(
             "Delete",
             () -> {
@@ -3136,17 +3138,17 @@ public class WordProcessor {
 
   private void crossReferenceDialog() {
     editor.stopInput();
-    ComboBox<String> kind =
+    var kind =
         new ComboBox<String>("Heading", "Bookmark", "Figure", "Table", "Equation");
     kind.setAccessibilityText("Reference type");
-    ComboBox<String> target = new ComboBox<String>();
+    var target = new ComboBox<String>();
     target.setAccessibilityText("Reference target");
-    ComboBox<String> show =
+    var show =
         new ComboBox<String>("Text", "Page number", "Label and number", "Above or below");
     show.setAccessibilityText("Reference display");
     Runnable refresh =
         () -> {
-          com.codename1.ui.list.DefaultListModel<String> model =
+          var model =
               new com.codename1.ui.list.DefaultListModel<String>();
           for (String label :
               CrossReferences.targets(session.document(), kind.getSelectedItem().toLowerCase())
@@ -3169,7 +3171,7 @@ public class WordProcessor {
     if (target.getSelectedItem() == null)
       throw new IllegalArgumentException(
           "No targets of this type; add a heading, caption or bookmark first");
-    String display = new String[] {"text", "page", "number", "aboveBelow"}[show.getSelectedIndex()];
+    var display = new String[] {"text", "page", "number", "aboveBelow"}[show.getSelectedIndex()];
     session.transact(
         s -> {
           commands.execute(
@@ -3188,12 +3190,12 @@ public class WordProcessor {
   }
 
   private void followReference() {
-    Paragraph p = session.editingDocument().paragraph(session.selection().block);
+    var p = session.editingDocument().paragraph(session.selection().block);
     int caret = session.selection().caret;
     InlineField field = caret < p.text.length() ? p.text.fieldAt(caret) : null;
     if (field == null && caret > 0) field = p.text.fieldAt(caret - 1);
     if (field == null && p.text.length() > 0) {
-      String link = p.text.styleAt(Math.min(caret, p.text.length() - 1)).link;
+      var link = p.text.styleAt(Math.min(caret, p.text.length() - 1)).link;
       if (link.startsWith("#")) {
         session.goToBookmark(link.substring(1));
         edited();
@@ -3203,7 +3205,7 @@ public class WordProcessor {
     if (field == null)
       throw new IllegalArgumentException(
           "Place the caret in a cross-reference or linked contents entry");
-    FieldCode code = new FieldCode(field.instruction);
+    var code = new FieldCode(field.instruction);
     if (!("REF".equals(code.name) || "PAGEREF".equals(code.name)) || code.arguments.isEmpty())
       throw new IllegalArgumentException("Select a cross-reference field");
     session.goToBookmark(code.arguments.get(0));
@@ -3215,10 +3217,10 @@ public class WordProcessor {
     EditField label = field("Figure"), text = field("");
     label.setAccessibilityText("Caption label");
     text.setAccessibilityText("Caption text");
-    ComboBox<String> position = new ComboBox<String>("Below selected item", "Above selected item");
-    ComboBox<String> format =
+    var position = new ComboBox<String>("Below selected item", "Above selected item");
+    var format =
         new ComboBox<String>("1, 2, 3", "a, b, c", "A, B, C", "i, ii, iii", "I, II, III");
-    ComboBox<String> chapter =
+    var chapter =
         new ComboBox<String>(
             "No chapter number",
             "Heading 1",
@@ -3230,8 +3232,8 @@ public class WordProcessor {
             "Heading 7",
             "Heading 8",
             "Heading 9");
-    ComboBox<String> separator = new ComboBox<String>("-", ".", ":", "\u2014", "\u2013");
-    CheckBox exclude = new CheckBox("Exclude label from caption");
+    var separator = new ComboBox<String>("-", ".", ":", "\u2014", "\u2013");
+    var exclude = new CheckBox("Exclude label from caption");
     Container body =
         BoxLayout.encloseY(
             new Label("Label"),
@@ -3265,11 +3267,11 @@ public class WordProcessor {
   private Button trackingButton;
 
   private void trackingOptions() {
-    CheckBox enabled = new CheckBox("Track changes");
+    var enabled = new CheckBox("Track changes");
     enabled.setSelected(session.document().trackChanges);
-    CheckBox formatting = new CheckBox("Track formatting");
+    var formatting = new CheckBox("Track formatting");
     formatting.setSelected(session.trackFormatting());
-    EditField author = field(session.reviewAuthor());
+    var author = field(session.reviewAuthor());
     author.setAccessibilityText("Revision author");
     if (showDialog(
         "Track Changes",
@@ -3367,7 +3369,7 @@ public class WordProcessor {
     displayedRevisions = null;
     refreshRevisions();
     if (OfficeTheme.mobile()) {
-      Dialog dialog = officeDialog("Reviewing Pane");
+      var dialog = officeDialog("Reviewing Pane");
       dialog.setLayout(new BorderLayout());
       revisionPane.setPreferredW(Display.getInstance().getDisplayWidth() - OfficeTheme.px(32));
       revisionPane.setPreferredH(Display.getInstance().getDisplayHeight() / 2);
@@ -3475,7 +3477,7 @@ public class WordProcessor {
 
   private void compareDialog() {
     editor.stopInput();
-    ComboBox<String> sourceChoice =
+    var sourceChoice =
         new ComboBox<String>("Type or paste revised text", "Open revised document");
     if (!showDialog(
         "Compare documents", formRow("Revised source", sourceChoice), "Continue", "Cancel")) return;
@@ -3515,7 +3517,7 @@ public class WordProcessor {
 
   private void compareOptions(Document revised) {
     EditField text = field("", 6, 40), author = field(session.reviewAuthor());
-    ComboBox<String> level = new ComboBox<String>("Word", "Character");
+    var level = new ComboBox<String>("Word", "Character");
     CheckBox cases = check("Case changes", true),
         spaces = check("Whitespace changes", true),
         formatting = check("Formatting changes", true);
@@ -3531,11 +3533,12 @@ public class WordProcessor {
         .add(formatting);
     body.add(
         new SpanLabelCompat(
-            "Compares paragraph and table-cell text and direct formatting. Resolve"
-                + " existing tracked changes first. Page layout and headers use the"
-                + " original document. Undo restores the original."));
+            """
+            Compares paragraph and table-cell text and direct formatting. Resolve\
+             existing tracked changes first. Page layout and headers use the\
+             original document. Undo restores the original."""));
     if (!showDialog("Comparison options", body, "Compare", "Cancel")) return;
-    Map<String, Object> args =
+    var args =
         Json.object(
             "author",
             author.getText(),
@@ -3566,8 +3569,8 @@ public class WordProcessor {
   }
 
   private void newComment() {
-    EditField author = field("Author");
-    EditField text = field("", 4, 28);
+    var author = field("Author");
+    var text = field("", 4, 28);
     author.setAccessibilityText("Author");
     text.setAccessibilityText("Comment");
     if (showDialog(
@@ -3582,7 +3585,7 @@ public class WordProcessor {
 
   private void navigateComment(boolean backwards) {
     editor.stopInput();
-    String id = session.navigateComment(backwards);
+    var id = session.navigateComment(backwards);
     if (id == null) {
       showText("Comments", "No comments");
       return;
@@ -3593,7 +3596,7 @@ public class WordProcessor {
 
   private void editComment(Dialog parent, ReviewComment comment, int replyIndex) {
     String title = replyIndex < 0 ? "Edit comment" : "Edit reply";
-    EditField text =
+    var text =
         field(replyIndex < 0 ? comment.text : comment.replies.get(replyIndex).text, 4, 28);
     if (showDialog(title, formRow("Text", text), "Save", "Cancel")) {
       session.editComment(comment.id, replyIndex, text.getText());
@@ -3605,23 +3608,23 @@ public class WordProcessor {
 
   private void comments() {
     editor.stopInput();
-    Dialog dialog = officeDialog("Comments");
+    var dialog = officeDialog("Comments");
     dialog.setLayout(new BorderLayout());
-    Container list = new Container(BoxLayout.y());
+    var list = new Container(BoxLayout.y());
     list.setScrollableY(true);
     list.setPreferredW(
         Math.min(
             OfficeTheme.px(420), Display.getInstance().getDisplayWidth() - OfficeTheme.px(32)));
     list.setPreferredH(Display.getInstance().getDisplayHeight() / 2);
     for (ReviewComment c : session.document().comments) {
-      Container row = new Container(BoxLayout.y());
+      var row = new Container(BoxLayout.y());
       OfficeTheme.space(row, 6, 6, 8, 8);
       row.add(new Label(c.author + (c.resolved ? " \u00b7 Resolved" : "")));
       row.add(new SpanLabelCompat(c.text));
       for (int replyIndex = 0; replyIndex < c.replies.size(); replyIndex++) {
         final int index = replyIndex;
-        ReviewComment.Reply reply = c.replies.get(index);
-        Button editReply = button("Edit reply", () -> editComment(dialog, c, index));
+        var reply = c.replies.get(index);
+        var editReply = button("Edit reply", () -> editComment(dialog, c, index));
         editReply.setAccessibilityText("Edit reply " + (index + 1) + " by " + reply.author);
         Container replyView =
             BoxLayout.encloseY(new Label(reply.author), new SpanLabelCompat(reply.text), editReply);
@@ -3802,12 +3805,12 @@ public class WordProcessor {
     });
     view("outline.showFormatting", "Show text formatting in Outline view", "value?:boolean", a -> {
       outlineView(true);
-      OutlineView o = editor.getOutline();
+      var o = editor.getOutline();
       editor.setOutline(o.showFormatting(a.containsKey("value") ? (Boolean) a.get("value") : !o.showFormatting));
     });
     view("outline.firstLineOnly", "Show only the first line of body paragraphs", "value?:boolean", a -> {
       outlineView(true);
-      OutlineView o = editor.getOutline();
+      var o = editor.getOutline();
       editor.setOutline(o.firstLineOnly(a.containsKey("value") ? (Boolean) a.get("value") : !o.firstLineOnly));
     });
     view("view.focus", "Focus mode: hide the ribbon and status bar", "value?:boolean", a ->
@@ -3864,8 +3867,8 @@ public class WordProcessor {
       int page = a.containsKey("page") ? ((Number) a.get("page")).intValue() - 1 : currentPage();
       int width = a.containsKey("width") ? ((Number) a.get("width")).intValue() : 1240;
       if (width < 64 || width > 6000) throw new IllegalArgumentException("Width is 64-6000 pixels");
-      Image image = editor.renderPage(page, width);
-      ByteArrayOutputStream out = new ByteArrayOutputStream();
+      var image = editor.renderPage(page, width);
+      var out = new ByteArrayOutputStream();
       try {
         com.codename1.ui.util.ImageIO.getImageIO().save(image, out, com.codename1.ui.util.ImageIO.FORMAT_PNG, 1);
       } catch (IOException ex) {
@@ -3881,13 +3884,13 @@ public class WordProcessor {
         custom.clear();
       }
       if (a.containsKey("hide")) {
-        String t = (String) a.get("hide");
+        var t = (String) a.get("hide");
         if (!ribbon.titles().contains(t) || "Custom".equals(t)) throw new IllegalArgumentException("No ribbon tab " + t);
         if (!hidden.contains(t)) hidden.add(t);
       }
       if (a.containsKey("show")) hidden.remove(a.get("show"));
       if (a.containsKey("add")) {
-        String id = (String) a.get("add");
+        var id = (String) a.get("add");
         if (!commandIds().contains(id)) throw new IllegalArgumentException("Unknown command " + id);
         if (!custom.contains(id)) custom.add(id);
       }
@@ -3897,12 +3900,12 @@ public class WordProcessor {
       applyRibbonOptions();
     });
     view("tools.customizeKeyboard", "Customize Keyboard: assign a shortcut (e.g. ctrl+shift+K) to a command, remove one or list them", "keys?:string,command?:string,remove?:boolean", a -> {
-      java.util.List<String> bindings = optionList("keys.custom");
+      var bindings = optionList("keys.custom");
       if (a.containsKey("keys")) {
         String keys = normalizeKeys((String) a.get("keys"));
         for (int i = bindings.size() - 1; i >= 0; i--) if (bindings.get(i).startsWith(keys + "=")) bindings.remove(i);
         if (!Boolean.TRUE.equals(a.get("remove"))) {
-          String id = (String) a.get("command");
+          var id = (String) a.get("command");
           if (id == null || !commandIds().contains(id)) throw new IllegalArgumentException("Unknown command " + id);
           bindings.add(keys + "=" + id);
         }
@@ -3928,7 +3931,7 @@ public class WordProcessor {
   private Container secondPane;
 
   private void toggleSecondView(String side) {
-    Container documentPane = editor.getParent();
+    var documentPane = editor.getParent();
     if (secondView != null) {
       secondPane.remove();
       secondView = null;
@@ -3949,8 +3952,8 @@ public class WordProcessor {
   }
 
   private int currentPage() {
-    LayoutEngine.Result r = editor.layout();
-    Selection x = session.selection();
+    var r = editor.layout();
+    var x = session.selection();
     for (int p = 0; p < r.pages.size(); p++)
       for (LayoutEngine.Line line : r.pages.get(p).lines)
         if (line.block == x.block && x.caret >= line.start && x.caret <= line.end) return p;
@@ -3958,13 +3961,13 @@ public class WordProcessor {
   }
 
   private static java.util.List<String> optionList(String key) {
-    java.util.List<String> out = new ArrayList<String>();
+    var out = new ArrayList<String>();
     for (String v : TextUtil.split(AppOptions.get(key), ',')) if (!v.isEmpty()) out.add(v);
     return out;
   }
 
   private static String joinComma(java.util.List<String> values) {
-    StringBuilder b = new StringBuilder();
+    var b = new StringBuilder();
     for (String v : values) b.append(b.length() == 0 ? "" : ",").append(v);
     return b.toString();
   }
@@ -3972,14 +3975,14 @@ public class WordProcessor {
   /** Customize Keyboard dialog: current assignments plus a shortcut and the command it runs. */
   private void customizeKeyboardDialog() {
     Container body = BoxLayout.encloseY();
-    java.util.List<String> bindings = optionList("keys.custom");
+    var bindings = optionList("keys.custom");
     body.add(new Label(bindings.isEmpty() ? "No custom shortcuts" : "Current shortcuts"));
     for (String b : bindings) body.add(new Label(b.replace("=", "  ->  ")));
-    TextField keys = new TextField("", "Press new shortcut, e.g. ctrl+shift+K", 24, TextField.ANY);
-    TextField command = new TextField("", "Command, e.g. format.bold", 24, TextField.ANY);
+    var keys = new TextField("", "Press new shortcut, e.g. ctrl+shift+K", 24, TextField.ANY);
+    var command = new TextField("", "Command, e.g. format.bold", 24, TextField.ANY);
     keys.setAccessibilityText("Shortcut");
     command.setAccessibilityText("Command");
-    com.codename1.ui.CheckBox remove = new com.codename1.ui.CheckBox("Remove this shortcut");
+    var remove = new com.codename1.ui.CheckBox("Remove this shortcut");
     body.add(new Label("Shortcut")).add(keys).add(new Label("Command")).add(command).add(remove);
     if (!showDialog("Customize Keyboard", body, "Assign", "Close") || keys.getText().trim().isEmpty()) return;
     try {
@@ -3992,7 +3995,7 @@ public class WordProcessor {
   }
 
   private java.util.List<String> commandIds() {
-    java.util.List<String> out = new ArrayList<String>();
+    var out = new ArrayList<String>();
     for (Commands.Descriptor d : commands.descriptors()) out.add(d.id);
     return out;
   }
@@ -4000,13 +4003,13 @@ public class WordProcessor {
   private Container customTab;
 
   private void applyRibbonOptions() {
-    java.util.List<String> hidden = optionList("ribbon.hidden");
+    var hidden = optionList("ribbon.hidden");
     for (String t : ribbon.titles())
       if (!"Table Layout".equals(t) && !"Custom".equals(t)) ribbon.setTabVisible(t, !hidden.contains(t));
     customTab.removeAll();
-    java.util.List<String> custom = optionList("ribbon.custom");
+    var custom = optionList("ribbon.custom");
     for (final String id : custom) {
-      String label = id.substring(id.indexOf('.') + 1);
+      var label = id.substring(id.indexOf('.') + 1);
       customTab.add(button(Character.toUpperCase(label.charAt(0)) + label.substring(1), () -> run(id, new LinkedHashMap<String, Object>())));
     }
     ribbon.setTabVisible("Custom", !custom.isEmpty());
@@ -4028,21 +4031,21 @@ public class WordProcessor {
     return (ctrl ? "ctrl+" : "") + (alt ? "alt+" : "") + (shift ? "shift+" : "") + key;
   }
 
-  private final java.util.List<String> installedKeys = new ArrayList<String>();
+  private final java.util.List<String> installedKeys = new ArrayList<>();
 
   private void installCustomKeys() {
     for (String binding : optionList("keys.custom")) {
       if (installedKeys.contains(binding)) continue;
       installedKeys.add(binding);
       int eq = binding.indexOf('=');
-      String keys = binding.substring(0, eq);
-      final String id = binding.substring(eq + 1);
+      var keys = binding.substring(0, eq);
+      final var id = binding.substring(eq + 1);
       int mods = (keys.indexOf("ctrl+") >= 0 ? Command.DESKTOP_SHORTCUT_MODIFIER_PRIMARY : 0)
           | (keys.indexOf("shift+") >= 0 ? Command.DESKTOP_SHORTCUT_MODIFIER_SHIFT : 0)
           | (keys.indexOf("alt+") >= 0 ? Command.DESKTOP_SHORTCUT_MODIFIER_ALT : 0);
       menu("Custom", keys + "  " + id, keys.charAt(keys.length() - 1), mods, () -> {
         // A later reassignment or removal disables this binding.
-        if (optionList("keys.custom").contains(binding)) run(id, new LinkedHashMap<String, Object>());
+        if (optionList("keys.custom").contains(binding)) run(id, new LinkedHashMap<>());
       });
     }
   }
@@ -4064,7 +4067,7 @@ public class WordProcessor {
         (s, a) -> {
           editor.onKeyCommand(
               key, Boolean.TRUE.equals(a.get("extend")) ? EditorSurface.MOD_SHIFT : 0);
-          Selection x = s.selection();
+          var x = s.selection();
           return Json.object("block", x.block, "caret", x.caret, "anchor", x.anchor);
         });
   }
@@ -4114,22 +4117,22 @@ public class WordProcessor {
   private void quickAccessMore() {
     String[] labels = {"New", "Open", "Print", "Customize Ribbon"};
     String[] ids = {"file.new", "file.open", "file.print", "tools.customizeRibbon"};
-    ComboBox<String> pick = new ComboBox<String>(labels);
+    var pick = new ComboBox<String>(labels);
     if (showDialog("Quick Access", pick, "Run", "Cancel")) runPrompted(ids[pick.getSelectedIndex()]);
   }
 
   /** Office Clipboard: the last copies, newest first; pick one to paste it, or clear them. */
   private void officeClipboard() {
-    Object listed = commands.execute(session, "edit.clipboardPane", Json.object("action", "list"));
-    java.util.List<?> items = listed instanceof java.util.List ? (java.util.List<?>) listed : new ArrayList<Object>();
+    var listed = commands.execute(session, "edit.clipboardPane", Json.object("action", "list"));
+    java.util.List<?> items = listed instanceof java.util.List<?> l ? l : new ArrayList<Object>();
     if (items.isEmpty()) {
       showDialog("Clipboard", new Label("Copy or cut to collect items here."), "OK", null);
       return;
     }
     String[] labels = new String[items.size()];
     for (int i = 0; i < labels.length; i++) labels[i] = String.valueOf(items.get(i)).replace('\n', ' ');
-    ComboBox<String> pick = new ComboBox<String>(labels);
-    CheckBox clear = new CheckBox("Clear all instead");
+    var pick = new ComboBox<String>(labels);
+    var clear = new CheckBox("Clear all instead");
     if (!showDialog("Clipboard", BoxLayout.encloseY(pick, clear), "Paste", "Cancel")) return;
     if (clear.isSelected()) run("edit.clipboardPane", Json.object("action", "clear"));
     else run("edit.clipboardPane", Json.object("action", "paste", "index", pick.getSelectedIndex()));
@@ -4139,7 +4142,7 @@ public class WordProcessor {
 
   /** Word's mode switcher: Editing, Reviewing (Track Changes on) or Viewing (read only). */
   private void editingMode() {
-    ComboBox<String> mode = new ComboBox<String>("Editing", "Reviewing", "Viewing");
+    var mode = new ComboBox<String>("Editing", "Reviewing", "Viewing");
     mode.setSelectedIndex(editor.isViewOnly() ? 2 : session.document().trackChanges ? 1 : 0);
     if (!showDialog("Mode", mode, "Apply", "Cancel")) return;
     int m = mode.getSelectedIndex();
@@ -4159,10 +4162,10 @@ public class WordProcessor {
     try {
       @SuppressWarnings("unchecked")
       Map<String, Object> r =
-          (Map<String, Object>) commands.execute(session, "file.share", new HashMap<String, Object>());
+          (Map<String, Object>) commands.execute(session, "file.share", new HashMap<>());
       com.codename1.io.FileSystemStorage fs = com.codename1.io.FileSystemStorage.getInstance();
-      String path = fs.getAppHomePath() + String.valueOf(r.get("name"));
-      try (java.io.OutputStream out = fs.openOutputStream(path)) {
+      var path = fs.getAppHomePath() + String.valueOf(r.get("name"));
+      try (var out = fs.openOutputStream(path)) {
         out.write(com.codename1.util.Base64.decode(String.valueOf(r.get("base64")).getBytes("UTF-8")));
       }
       Display.getInstance().share(null, path, String.valueOf(r.get("mime")));
@@ -4179,7 +4182,7 @@ public class WordProcessor {
   private void runPrompted(String id) {
     for (Commands.Descriptor d : commands.descriptors())
       if (d.id.equals(id)) {
-        promptArgs(d, new ArrayList<String>(d.parameters.keySet()), 0, new LinkedHashMap<String, Object>());
+        promptArgs(d, new ArrayList<>(d.parameters.keySet()), 0, new LinkedHashMap<>());
         return;
       }
   }
@@ -4190,7 +4193,7 @@ public class WordProcessor {
         label + " \u25be",
         icon,
         () -> {
-          ComboBox<String> pick = new ComboBox<String>(names.toArray(new String[0]));
+          var pick = new ComboBox<String>(names.toArray(new String[0]));
           if (showDialog(label, pick, "Apply", "Cancel"))
             run(id, Json.object("name", pick.getSelectedItem()));
         },
@@ -4198,12 +4201,12 @@ public class WordProcessor {
   }
 
   private static java.util.List<String> names(Object[][] table) {
-    java.util.List<String> out = new ArrayList<String>();
+    var out = new ArrayList<String>();
     for (Object[] row : table) out.add(String.valueOf(row[0]));
     return out;
   }
 
-  private final java.util.List<Button> drawTools = new ArrayList<Button>();
+  private final java.util.List<Button> drawTools = new ArrayList<>();
   private String drawTool = "";
 
   private Container draw() {
@@ -4233,7 +4236,7 @@ public class WordProcessor {
   }
 
   private Button drawTool(String label, char icon, String tool) {
-    Button b = iconButton(label, icon, () -> selectDrawTool(tool), true);
+    var b = iconButton(label, icon, () -> selectDrawTool(tool), true);
     b.putClientProperty("drawTool", tool);
     drawTools.add(b);
     OfficeTheme.checked(b, tool.isEmpty());
@@ -4253,19 +4256,19 @@ public class WordProcessor {
       status.setText("");
       return;
     }
-    if (!inkAtCaret()) run("insert.canvas", new HashMap<String, Object>());
+    if (!inkAtCaret()) run("insert.canvas", new HashMap<>());
     editor.setInk(this::inkStroke, "highlighter".equals(tool) ? 0xffd800 : "eraser".equals(tool) ? 0x9e9e9e : 0x000000);
     status.setText("eraser".equals(tool) ? "Drag over ink to erase" : "Draw inside the canvas");
     editor.repaint();
   }
 
   private boolean inkAtCaret() {
-    Document d = session.document();
+    var d = session.document();
     int b = session.selection().block;
     for (int i = Math.min(b, d.blocks.size() - 1); i >= 0 && i >= b - 2; i--) {
-      Block block = d.blocks.get(i);
-      if (block instanceof Picture && ((Picture) block).drawing != null
-          && ("ink".equals(((Picture) block).drawing.kind) || "canvas".equals(((Picture) block).drawing.kind)))
+      var block = d.blocks.get(i);
+      if (block instanceof Picture picture && picture.drawing != null
+          && ("ink".equals(picture.drawing.kind) || "canvas".equals(picture.drawing.kind)))
         return true;
     }
     return false;
@@ -4276,7 +4279,7 @@ public class WordProcessor {
       safe(() -> {
         session.transact(t -> {
           for (String pt : com.codename1.util.StringUtil.tokenize(points, ' ')) {
-            java.util.List<String> xy = com.codename1.util.StringUtil.tokenize(pt, ',');
+            var xy = com.codename1.util.StringUtil.tokenize(pt, ',');
             if (xy.size() < 2) continue;
             try {
               commands.execute(t, "draw.eraser", Json.object("block", block,
@@ -4392,13 +4395,13 @@ public class WordProcessor {
     editor.finishComposing();
     editor.stopInput();
     backstage = true;
-    Container panel = new Container(new BorderLayout());
-    Container rail = new Container(OfficeTheme.mobile() ? BoxLayout.x() : BoxLayout.y());
+    var panel = new Container(new BorderLayout());
+    var rail = new Container(OfficeTheme.mobile() ? BoxLayout.x() : BoxLayout.y());
     rail.setScrollableX(OfficeTheme.mobile());
     OfficeTheme.surface(rail, OfficeTheme.BLUE);
     OfficeTheme.space(rail, 12, 12, 12, 12);
     if (!OfficeTheme.mobile()) rail.setPreferredW(OfficeTheme.px(180));
-    Container page = new Container(new BorderLayout());
+    var page = new Container(new BorderLayout());
     OfficeTheme.surface(page, 0xf8f8f8);
     OfficeTheme.space(page, 12, 12, OfficeTheme.mobile() ? 12 : 32, 12);
     page.setScrollableY(true);
@@ -4406,7 +4409,7 @@ public class WordProcessor {
       "\u2039 Back to document", "New", "Open", "Info", "Save", "Save As", "Print", "Export"
     };
     for (String label : labels) {
-      Button item =
+      var item =
           button(
               label,
               () -> {
@@ -4466,18 +4469,21 @@ public class WordProcessor {
     Label title = OfficeTheme.label(section, 28, OfficeTheme.INK);
     OfficeTheme.space(title, 0, 24, 0, 0);
     page.add(BorderLayout.NORTH, title);
-    Container content = new Container(BoxLayout.y());
+    var content = new Container(BoxLayout.y());
     content.setScrollableY(true);
     if ("New".equals(section)) {
-      Container choices = new Container(new FlowLayout(Component.LEFT));
+      var choices = new Container(new FlowLayout(Component.LEFT));
       for (String name : new String[] {"Blank document", "Writing studio"}) {
-        Button preview =
+        var preview =
             button(
                 "Blank document".equals(name)
                     ? ""
-                    : "The writing studio\n\n"
-                        + "A better place for words.\n\n"
-                        + "Your ideas, beautifully structured",
+                    : """
+                        The writing studio
+                        
+                        A better place for words.
+                        
+                        Your ideas, beautifully structured""",
                 () -> {
                   replaceAfterSaving(
                       () -> {
@@ -4558,9 +4564,9 @@ public class WordProcessor {
   private Image templatePreview(Document document) {
     int width = OfficeTheme.px(138), height = OfficeTheme.px(180);
     Image image = Image.createImage(width, height, 0xffffff);
-    Graphics g = image.getGraphics();
+    var g = image.getGraphics();
     g.setAntiAliased(true);
-    LayoutEngine engine =
+    var engine =
         new LayoutEngine(
             new LayoutEngine.Metrics() {
               public float width(String text, TextStyle style) {
@@ -4571,7 +4577,7 @@ public class WordProcessor {
                 return DocumentFonts.font(style, style.size * 2).getHeight() / 2f;
               }
             });
-    LayoutEngine.Result pages = engine.layout(document, 0);
+    var pages = engine.layout(document, 0);
     float scale = width / pages.pages.get(0).spec.width;
     for (LayoutEngine.Line line : pages.pages.get(0).lines) {
       for (LayoutEngine.Span span : line.spans) {
@@ -4605,13 +4611,13 @@ public class WordProcessor {
       return;
     }
     editor.stopInput();
-    Dialog dialog = officeDialog("Save changes?");
+    var dialog = officeDialog("Save changes?");
     dialog.setLayout(new BorderLayout());
     dialog.add(
         BorderLayout.CENTER,
         new SpanLabelCompat(
             "Save changes to \u201c" + session.document().title + "\u201d before continuing?"));
-    Container actions = new Container(new FlowLayout(Component.RIGHT));
+    var actions = new Container(new FlowLayout(Component.RIGHT));
     actions.add(button("Cancel", dialog::dispose));
     actions.add(
         button(
@@ -4634,18 +4640,18 @@ public class WordProcessor {
 
   private void propertiesDialog() {
     editor.stopInput();
-    Container form = new Container(BoxLayout.y());
-    Map<String, EditField> fields = new java.util.LinkedHashMap<String, EditField>();
+    var form = new Container(BoxLayout.y());
+    var fields = new java.util.LinkedHashMap<String, EditField>();
     for (String key : DocumentProperties.KEYS) {
-      EditField f = field(session.document().properties.get(key));
-      String label = Character.toUpperCase(key.charAt(0)) + key.substring(1);
+      var f = field(session.document().properties.get(key));
+      var label = Character.toUpperCase(key.charAt(0)) + key.substring(1);
       f.setAccessibilityText(label);
       form.add(OfficeTheme.label(label, 12, 0x555555));
       form.add(f);
       fields.put(key, f);
     }
     if (showDialog("Properties", form, "Apply", "Cancel")) {
-      Map<String, Object> args = new java.util.LinkedHashMap<String, Object>();
+      var args = new java.util.LinkedHashMap<String, Object>();
       for (Map.Entry<String, EditField> e : fields.entrySet()) args.put(e.getKey(), e.getValue().getText());
       run("file.properties", args);
     }
@@ -4659,10 +4665,10 @@ public class WordProcessor {
       {"comments", "Comments only"},
       {"trackedChanges", "Tracked changes only"}
     };
-    Container list = new Container(BoxLayout.y());
+    var list = new Container(BoxLayout.y());
     final Dialog[] shown = new Dialog[1];
     for (String[] mode : modes) {
-      Button b =
+      var b =
           button(
               (mode[0].equals(session.document().properties.protection) ? "\u2713 " : "") + mode[1],
               () -> {
@@ -4672,7 +4678,7 @@ public class WordProcessor {
               });
       list.add(b);
     }
-    Dialog d = officeDialog("Restrict editing");
+    var d = officeDialog("Restrict editing");
     shown[0] = d;
     d.setLayout(new BorderLayout());
     d.add(BorderLayout.CENTER, list);
@@ -4682,12 +4688,12 @@ public class WordProcessor {
 
   private void inspectDialog() {
     editor.stopInput();
-    Object found = commands.execute(session, "file.inspect", Json.object());
+    var found = commands.execute(session, "file.inspect", Json.object());
     Map<?, ?> counts = (Map<?, ?>) ((Map<?, ?>) found).get("found");
-    StringBuilder text = new StringBuilder();
+    var text = new StringBuilder();
     for (Map.Entry<?, ?> e : counts.entrySet())
       text.append(e.getKey()).append(": ").append(e.getValue()).append('\n');
-    com.codename1.ui.TextArea area = new com.codename1.ui.TextArea(text.toString());
+    var area = new com.codename1.ui.TextArea(text.toString());
     area.setEditable(false);
     if (showDialog("Inspect document", area, "Remove comments, hidden text and properties", "Close"))
       run(
@@ -4699,10 +4705,9 @@ public class WordProcessor {
   private void report(String title, String id) {
     editor.stopInput();
     Map<?, ?> r = (Map<?, ?>) commands.execute(session, id, Json.object());
-    StringBuilder text = new StringBuilder();
+    var text = new StringBuilder();
     for (Object o : (java.util.List<?>) r.get("issues")) {
-      if (o instanceof Map) {
-        Map<?, ?> i = (Map<?, ?>) o;
+      if (o instanceof Map<?, ?> i) {
         text.append(i.get("severity")).append(": ").append(i.get("message"));
         if (((Number) i.get("block")).intValue() >= 0)
           text.append(" (paragraph ").append(((Number) i.get("block")).intValue() + 1).append(')');
@@ -4710,7 +4715,7 @@ public class WordProcessor {
       text.append('\n');
     }
     if (text.length() == 0) text.append("No issues found.");
-    com.codename1.ui.TextArea area = new com.codename1.ui.TextArea(text.toString());
+    var area = new com.codename1.ui.TextArea(text.toString());
     area.setEditable(false);
     showDialog(title, area, "Close", null);
   }
@@ -4724,7 +4729,7 @@ public class WordProcessor {
 
   private void menu(String group, String name, char key, int modifiers, Runnable action) {
     uiActions.put(name, action);
-    Command command =
+    var command =
         new Command(name) {
           @Override
           public void actionPerformed(com.codename1.ui.events.ActionEvent event) {
@@ -4813,7 +4818,7 @@ public class WordProcessor {
         (char) 0,
         0,
         () -> prompt("Start at", "1", v -> paragraph("listStart", v)));
-    menu("Format", "Number Format\u2026", (char) 0, 0, () -> chooseNumberFormat());
+    menu("Format", "Number Format\u2026", (char) 0, 0, this::chooseNumberFormat);
     menu(
         "View",
         "Actual Size",
@@ -4864,9 +4869,8 @@ public class WordProcessor {
   }
 
   private void indent(int delta) {
-    Block b = session.editingDocument().blocks.get(session.selection().block);
-    if (b instanceof Paragraph) {
-      Paragraph p = (Paragraph) b;
+    var b = session.editingDocument().blocks.get(session.selection().block);
+    if (b instanceof Paragraph p) {
       if (!p.list.isEmpty())
         paragraph(
             "listLevel",
@@ -4876,15 +4880,15 @@ public class WordProcessor {
   }
 
   private void chooseNumberFormat() {
-    ComboBox<String> choice =
+    var choice =
         new ComboBox<String>("decimal", "lowerLetter", "upperLetter", "lowerRoman", "upperRoman");
     if (showDialog("Number format", choice, "Apply", "Cancel"))
       paragraph("listFormat", choice.getSelectedItem());
   }
 
   private void list(String kind) {
-    Block b = session.editingDocument().blocks.get(session.selection().block);
-    paragraph("list", b instanceof Paragraph && kind.equals(((Paragraph) b).list) ? "" : kind);
+    var b = session.editingDocument().blocks.get(session.selection().block);
+    paragraph("list", b instanceof Paragraph p && kind.equals(p.list) ? "" : kind);
   }
 
   private void clearFormatting() {
@@ -4912,7 +4916,7 @@ public class WordProcessor {
 
   /** Word's split button: the main control plus a narrow chevron that opens its options. */
   private Container split(Button main, String more, Runnable options) {
-    Button chevron = iconButton("", FontImage.MATERIAL_ARROW_DROP_DOWN, options, false);
+    var chevron = iconButton("", FontImage.MATERIAL_ARROW_DROP_DOWN, options, false);
     chevron.setAccessibilityText(more);
     OfficeTheme.icon(chevron, FontImage.MATERIAL_ARROW_DROP_DOWN, 12, OfficeTheme.DIM);
     OfficeTheme.space(chevron, 4, 4, 0, 1);
@@ -4927,11 +4931,11 @@ public class WordProcessor {
       int c = "background".equals(property) ? highlight : fontColor;
       run("format.set", Json.object("property", property, "value", Integer.toHexString(0x1000000 | c).substring(1)));
     };
-    Button b = new Button("") {
+    var b = new Button("") {
       @Override
       public void paint(Graphics g) {
         super.paint(g);
-        Object c = getClientProperty("barColor");
+        var c = getClientProperty("barColor");
         if (!(c instanceof Integer)) return;
         int w = OfficeTheme.px(14), h = OfficeTheme.px(3);
         g.setColor(((Integer) c).intValue());
@@ -4963,7 +4967,7 @@ public class WordProcessor {
   }
 
   private void pasteOptions() {
-    ComboBox<String> pick =
+    var pick =
         new ComboBox<String>("Keep Source Formatting", "Keep Text Only", "Office Clipboard...");
     if (!showDialog("Paste Options", pick, "Paste", "Cancel")) return;
     int i = pick.getSelectedIndex();
@@ -4977,7 +4981,7 @@ public class WordProcessor {
     if (depth == 0) return;
     String[] steps = new String[Math.min(depth, 20)];
     for (int i = 0; i < steps.length; i++) steps[i] = i == 0 ? "Undo 1 action" : "Undo " + (i + 1) + " actions";
-    ComboBox<String> pick = new ComboBox<String>(steps);
+    var pick = new ComboBox<String>(steps);
     if (!showDialog("Undo", pick, "Undo", "Cancel")) return;
     for (int i = 0; i <= pick.getSelectedIndex(); i++) run("edit.undo", Json.object());
   }
@@ -4985,7 +4989,7 @@ public class WordProcessor {
   private void underlineStyles() {
     String[] styles = {"single", "double", "thick", "dotted", "dash", "dotDash", "wave", "none"};
     String[] names = {"Single", "Double", "Thick", "Dotted", "Dashed", "Dot-dash", "Wave", "None"};
-    ComboBox<String> pick = new ComboBox<String>(names);
+    var pick = new ComboBox<String>(names);
     if (showDialog("Underline", pick, "Apply", "Cancel"))
       run("format.underline", Json.object("style", styles[pick.getSelectedIndex()]));
   }
@@ -4998,9 +5002,9 @@ public class WordProcessor {
     String[] formats = bullets
         ? new String[] {"bullet", "bullet|\u25e6", "bullet|\u25aa", "bullet|\u25c6", "bullet|\u27a2", "bullet|\u2713", "bullet|\u2013"}
         : new String[] {"decimal", "decimal|%1)", "upperRoman", "upperLetter", "lowerLetter|%1)", "lowerLetter", "lowerRoman"};
-    ComboBox<String> pick = new ComboBox<String>(labels);
+    var pick = new ComboBox<String>(labels);
     if (!showDialog(bullets ? "Bullet Library" : "Numbering Library", pick, "Apply", "Cancel")) return;
-    String format = formats[pick.getSelectedIndex()];
+    var format = formats[pick.getSelectedIndex()];
     editor.finishComposing();
     safe(() -> {
       session.transact(x -> {
@@ -5012,15 +5016,15 @@ public class WordProcessor {
   }
 
   private void color(String property) {
-    Dialog d = officeDialog("background".equals(property) ? "Text highlight color" : "Font color");
+    var d = officeDialog("background".equals(property) ? "Text highlight color" : "Font color");
     d.setLayout(new BorderLayout());
-    Container grid = new Container(new GridLayout(3, 6));
+    var grid = new Container(new GridLayout(3, 6));
     for (String hex :
         new String[] {
           "242424", "ffffff", "185abd", "c00000", "ffc000", "008450", "7030a0", "4472c4", "ed7d31",
           "70ad47", "ff66aa", "00b0f0", "fff2cc", "e2efd9", "dae3f3", "fbe4d5", "e4dfec", "ffff00"
         }) {
-      Button swatch =
+      var swatch =
           button(
               "  ",
               () -> {
@@ -5042,18 +5046,18 @@ public class WordProcessor {
 
   /** Layout > Columns: Word's presets, a count, spacing, a separator and the apply scope. */
   private void columnsDialog() {
-    Columns current = session.activeSection().raw.columns;
-    ComboBox<String> preset =
+    var current = session.activeSection().raw.columns;
+    var preset =
         new ComboBox<String>("One", "Two", "Three", "Left", "Right", "Custom count");
     preset.setSelectedIndex(
         current.equalWidth() && current.count <= 3
             ? current.count - 1
             : current.equalWidth() ? 5 : current.widths()[0] < current.widths()[2] ? 3 : 4);
-    EditField count = field(String.valueOf(current.count));
-    EditField space = field(String.valueOf(current.space));
-    CheckBox separator = new CheckBox("Line between");
+    var count = field(String.valueOf(current.count));
+    var space = field(String.valueOf(current.space));
+    var separator = new CheckBox("Line between");
     separator.setSelected(current.separator);
-    ComboBox<String> apply =
+    var apply =
         new ComboBox<String>("This section", "Whole document", "This point forward");
     for (Component c : new Component[] {preset, count, space, separator, apply})
       styleDialogBody(c);
@@ -5083,7 +5087,7 @@ public class WordProcessor {
   }
 
   private void margins() {
-    PageSpec p = session.activeSection().raw.page;
+    var p = session.activeSection().raw.page;
     EditField top = field(String.valueOf(p.top)),
         bottom = field(String.valueOf(p.bottom)),
         left = field(String.valueOf(p.left)),
@@ -5129,7 +5133,7 @@ public class WordProcessor {
       int block = Commands.integer(match, "block"),
           start = Commands.integer(match, "start"),
           end = Commands.integer(match, "end");
-      Button result =
+      var result =
           button(
               Commands.matchedParagraph(session.document(), match).text.toString(),
               () -> {
@@ -5152,7 +5156,7 @@ public class WordProcessor {
   private boolean showDialog(String title, Component body, String ok, String cancel) {
     if (editor != null) editor.stopInput();
     final boolean[] accepted = {false};
-    Dialog dialog = officeDialog(title);
+    var dialog = officeDialog(title);
     dialog.setLayout(new BorderLayout());
     styleDialogBody(body);
     Container content = BoxLayout.encloseY(body);
@@ -5165,20 +5169,20 @@ public class WordProcessor {
     content.setPreferredH(
         Math.min(body.getPreferredH(), Display.getInstance().getDisplayHeight() * 2 / 3));
     dialog.add(BorderLayout.CENTER, content);
-    Container actions = new Container(new FlowLayout(Component.RIGHT));
+    var actions = new Container(new FlowLayout(Component.RIGHT));
     if (cancel != null) {
-      Command back =
+      var back =
           new Command(cancel) {
             public void actionPerformed(com.codename1.ui.events.ActionEvent e) {
               dialog.dispose();
             }
           };
-      Button cancelButton = new Button(back);
+      var cancelButton = new Button(back);
       OfficeTheme.button(cancelButton);
       actions.add(cancelButton);
       dialog.setBackCommand(back);
     }
-    Command accept =
+    var accept =
         new Command(ok) {
           public void actionPerformed(com.codename1.ui.events.ActionEvent e) {
             accepted[0] = true;
@@ -5186,7 +5190,7 @@ public class WordProcessor {
           }
         };
     acceptOpenDialog = () -> accept.actionPerformed(null);
-    Button acceptButton = new Button(accept);
+    var acceptButton = new Button(accept);
     OfficeTheme.button(acceptButton);
     actions.add(acceptButton);
     dialog.setDefaultCommand(accept);
@@ -5201,14 +5205,14 @@ public class WordProcessor {
   }
 
   private void setPage(float w, float h) {
-    PageSpec p = session.activeSection().raw.page;
+    var p = session.activeSection().raw.page;
     session.section(
         session.activeSection().raw.page(new PageSpec(w, h, p.top, p.right, p.bottom, p.left)));
     edited();
   }
 
   private void sectionBreakDialog() {
-    ComboBox<String> type =
+    var type =
         new ComboBox<String>("Next page", "Continuous", "Odd page", "Even page");
     if (showDialog(
         "Insert section break", formRow("Start new section", type), "Insert", "Cancel")) {
@@ -5219,13 +5223,13 @@ public class WordProcessor {
   }
 
   private void sectionSettings() {
-    Section current = session.activeSection().raw;
+    var current = session.activeSection().raw;
     String[] types = {"nextPage", "continuous", "oddPage", "evenPage"};
-    ComboBox<String> start =
+    var start =
         new ComboBox<String>("Next page", "Continuous", "Odd page", "Even page");
     for (int i = 0; i < types.length; i++)
       if (types[i].equals(current.start)) start.setSelectedIndex(i);
-    EditField number = field("" + current.pageStart);
+    var number = field("" + current.pageStart);
     if (showDialog(
         "Section settings",
         BoxLayout.encloseY(
@@ -5244,7 +5248,7 @@ public class WordProcessor {
     field.getSemantics().setLabel(label);
     Label caption = OfficeTheme.label(label, 12, OfficeTheme.INK);
     if (OfficeTheme.mobile()) return BoxLayout.encloseY(caption, field);
-    Container row = new Container(new BorderLayout());
+    var row = new Container(new BorderLayout());
     caption.setPreferredW(OfficeTheme.px(170));
     row.add(BorderLayout.WEST, caption);
     row.add(BorderLayout.CENTER, field);
@@ -5253,13 +5257,13 @@ public class WordProcessor {
   }
 
   private void fontDialog() {
-    TextStyle style = session.activeStyle();
-    ComboBox<String> family =
+    var style = session.activeStyle();
+    var family =
         new ComboBox<String>("Source Sans 3", "Source Serif 4", "JetBrains Mono");
     family.setSelectedItem(DocumentFonts.family(style.font));
-    EditField size = field(Float.toString(style.size));
+    var size = field(Float.toString(style.size));
     size.setAccessibilityText("Font size in points");
-    ComboBox<String> baseline = new ComboBox<String>("Normal", "Superscript", "Subscript");
+    var baseline = new ComboBox<String>("Normal", "Superscript", "Subscript");
     baseline.setSelectedIndex(
         "superscript".equals(style.script) ? 1 : "subscript".equals(style.script) ? 2 : 0);
     CheckBox bold = new CheckBox("Bold"),
@@ -5293,14 +5297,14 @@ public class WordProcessor {
       "engrave"
     };
     CheckBox[] effects = new CheckBox[names.length];
-    Container effectsPanel = new Container(new GridLayout((names.length + 5) / 2, 2));
+    var effectsPanel = new Container(new GridLayout((names.length + 5) / 2, 2));
     effectsPanel.add(bold).add(italic).add(underline).add(strike);
     for (int i = 0; i < names.length; i++) {
       effects[i] = new CheckBox(names[i]);
       effects[i].setSelected(Boolean.parseBoolean(style.characters.value(effectKeys[i])));
       effectsPanel.add(effects[i]);
     }
-    ComboBox<String> underlineType =
+    var underlineType =
         new ComboBox<String>(
             "None",
             "Single",
@@ -5323,7 +5327,7 @@ public class WordProcessor {
     for (int i = 0; i < CharacterFormat.UNDERLINES.length; i++)
       if (CharacterFormat.UNDERLINES[i].equals(style.characters.underlineStyle))
         underlineType.setSelectedIndex(i);
-    EditField underlineColor = field(style.characters.value("underlineColor"));
+    var underlineColor = field(style.characters.value("underlineColor"));
     underline.addActionListener(
         e -> {
           if (underline.isSelected()) {
@@ -5385,7 +5389,7 @@ public class WordProcessor {
   }
 
   private ComboBox<String> lineRuleChoice(Paragraph p) {
-    ComboBox<String> rule = new ComboBox<String>("Multiple", "At least", "Exactly");
+    var rule = new ComboBox<String>("Multiple", "At least", "Exactly");
     rule.setAccessibilityText("Line spacing rule");
     rule.setSelectedIndex(
         "exact".equals(p.format.lineRule) ? 2 : "atLeast".equals(p.format.lineRule) ? 1 : 0);
@@ -5406,7 +5410,7 @@ public class WordProcessor {
   }
 
   private Button toggleMarks() {
-    Button b = button("\u00b6", () -> run("view.marks", new HashMap<String, Object>()));
+    var b = button("\u00b6", () -> run("view.marks", new HashMap<String, Object>()));
     b.setAccessibilityText("Show formatting marks");
     return b;
   }
@@ -5415,10 +5419,10 @@ public class WordProcessor {
   private void bordersDialog() {
     if (!(session.editingDocument().blocks.get(session.selection().block) instanceof Paragraph))
       return;
-    Paragraph p = session.editingDocument().paragraph(session.selection().block);
-    ComboBox<String> kind =
+    var p = session.editingDocument().paragraph(session.selection().block);
+    var kind =
         new ComboBox<String>("outside", "top", "bottom", "left", "right", "none");
-    ComboBox<String> style = new ComboBox<String>(ParagraphBorders.STYLES);
+    var style = new ComboBox<String>(ParagraphBorders.STYLES);
     EditField width = field("0.5"), color = field("000000"), shading = field("");
     shading.setHint("RRGGBB or empty");
     shading.setText(
@@ -5442,7 +5446,7 @@ public class WordProcessor {
                   "style", style.getSelectedItem(),
                   "width", Double.parseDouble(width.getText().trim()),
                   "color", color.getText().trim()));
-          String fill = shading.getText().trim();
+          var fill = shading.getText().trim();
           commands.execute(
               s, "para.shading", Json.object("color", fill.isEmpty() ? "none" : fill));
         });
@@ -5450,12 +5454,12 @@ public class WordProcessor {
   }
 
   private void lineSpacingDialog() {
-    Paragraph p = session.editingDocument().paragraph(session.selection().block);
+    var p = session.editingDocument().paragraph(session.selection().block);
     if (p == null) return;
-    ComboBox<String> rule = lineRuleChoice(p);
-    EditField value = field("" + p.lineSpacing);
+    var rule = lineRuleChoice(p);
+    var value = field("" + p.lineSpacing);
     value.setAccessibilityText("Line spacing");
-    Label unit = new Label();
+    var unit = new Label();
     Runnable update =
         () -> unit.setText(rule.getSelectedIndex() == 0 ? "Multiple of single line" : "Points");
     rule.addActionListener(e -> update.run());
@@ -5468,7 +5472,7 @@ public class WordProcessor {
   private void paragraphDialog() {
     if (!(session.editingDocument().blocks.get(session.selection().block) instanceof Paragraph))
       return;
-    Paragraph p = session.editingDocument().paragraph(session.selection().block);
+    var p = session.editingDocument().paragraph(session.selection().block);
     String[] keys = {
       "indent", "rightIndent", "firstIndent", "before", "after", "spacing", "tabInterval"
     };
@@ -5490,7 +5494,7 @@ public class WordProcessor {
       p.lineSpacing,
       p.format.tabInterval
     };
-    Container body = new Container(BoxLayout.y());
+    var body = new Container(BoxLayout.y());
     body.setScrollableY(true);
     EditField[] inputs = new EditField[keys.length];
     for (int i = 0; i < keys.length; i++) {
@@ -5498,10 +5502,10 @@ public class WordProcessor {
       inputs[i].setAccessibilityText(labels[i]);
       body.add(formRow(labels[i], inputs[i]));
     }
-    ComboBox<String> lineRule = lineRuleChoice(p);
+    var lineRule = lineRuleChoice(p);
     body.add(formRow("Line spacing rule", lineRule));
     body.add(new Label("Multiple uses lines; At least / Exactly use points."));
-    ComboBox<String> alignment =
+    var alignment =
         new ComboBox<String>("Left", "Center", "Right", "Justified", "Distributed");
     String[] align = {"left", "center", "right", "both", "distribute"};
     for (int i = 0; i < align.length; i++)
@@ -5534,12 +5538,12 @@ public class WordProcessor {
   }
 
   private void editTabs(final java.util.List<TabStop>[] result) {
-    java.util.List<TabStop> stops = new java.util.ArrayList<TabStop>(result[0]);
-    EditField position = field("72");
-    ComboBox<String> alignment = new ComboBox<String>("left", "center", "right", "decimal", "bar");
-    ComboBox<String> leader =
+    var stops = new java.util.ArrayList<TabStop>(result[0]);
+    var position = field("72");
+    var alignment = new ComboBox<String>("left", "center", "right", "decimal", "bar");
+    var leader =
         new ComboBox<String>("none", "dot", "hyphen", "underscore", "middleDot");
-    ComboBox<String> existing = new ComboBox<String>();
+    var existing = new ComboBox<String>();
     Runnable reload =
         () -> {
           while (existing.getModel().getSize() > 0) existing.getModel().removeItem(0);
@@ -5553,14 +5557,14 @@ public class WordProcessor {
         e -> {
           int i = existing.getSelectedIndex();
           if (i >= 0 && i < stops.size()) {
-            TabStop stop = stops.get(i);
+            var stop = stops.get(i);
             position.setText(String.valueOf(stop.position));
             alignment.setSelectedItem(stop.alignment);
             leader.setSelectedItem(stop.leader);
           }
         });
     if (!stops.isEmpty()) {
-      TabStop first = stops.get(0);
+      var first = stops.get(0);
       position.setText(String.valueOf(first.position));
       alignment.setSelectedItem(first.alignment);
       leader.setSelectedItem(first.leader);
@@ -5575,7 +5579,7 @@ public class WordProcessor {
         button(
             "Set",
             () -> {
-              TabStop stop =
+              var stop =
                   new TabStop(
                       Float.parseFloat(position.getText()),
                       alignment.getSelectedItem(),
@@ -5584,7 +5588,7 @@ public class WordProcessor {
                 if (stops.get(i).position == stop.position) stops.remove(i);
               if (stops.size() >= 64) throw new IllegalArgumentException("At most 64 tab stops");
               stops.add(stop);
-              java.util.List<TabStop> sorted = TabStop.normalized(stops);
+              var sorted = TabStop.normalized(stops);
               stops.clear();
               stops.addAll(sorted);
               reload.run();
@@ -5617,8 +5621,8 @@ public class WordProcessor {
   }
 
   private void format(String property) {
-    Selection x = session.selection();
-    TextStyle style = session.activeStyle();
+    var x = session.selection();
+    var style = session.activeStyle();
     boolean current =
         "superscript".equals(property) || "subscript".equals(property)
             ? property.equals(style.script)
@@ -5641,13 +5645,13 @@ public class WordProcessor {
 
   private void prompt(String name, String initial, TextValue callback) {
     editor.stopInput();
-    EditField field = field(initial);
+    var field = field(initial);
     field.setAccessibilityText(name);
     if (showDialog(name, field, "Apply", "Cancel")) safe(() -> callback.accept(field.getText()));
   }
 
   private Button button(String text, Runnable action) {
-    Button b = new Button(text);
+    var b = new Button(text);
     OfficeTheme.button(b);
     b.addActionListener(
         e -> {
@@ -5684,7 +5688,7 @@ public class WordProcessor {
   }
 
   private void edited(boolean resumeKeyboard) {
-    MergeData merge = session.mergeData();
+    var merge = session.mergeData();
     mergeStatus.setText(
         merge.rows.isEmpty()
             ? "No recipients"
@@ -5743,7 +5747,7 @@ public class WordProcessor {
     if (ruler != null) ruler.sync();
     if (verticalRuler != null) verticalRuler.sync();
     if (language != null) {
-      String tag = session.activeStyle().characters.lang;
+      var tag = session.activeStyle().characters.lang;
       String name = tag == null || tag.isEmpty() ? "English (United States)" : languageName(tag);
       if (!name.equals(language.getText())) language.setText(name);
     }
@@ -5755,7 +5759,7 @@ public class WordProcessor {
     }
     if (zoomValue != null) zoomValue.setText(Math.round(editor.getZoom() * 100) + "%");
     if (zoomSlider != null) zoomSlider.setProgress(Math.round(editor.getZoom() * 100));
-    TextStyle style = session.activeStyle();
+    var style = session.activeStyle();
     if (fontChoice != null) fontChoice.setSelectedItem(DocumentFonts.family(style.font));
     if (sizeChoice != null) {
       String size =
@@ -5777,11 +5781,11 @@ public class WordProcessor {
                   : "italic".equals(property)
                       ? style.italic
                       : "underline".equals(property) ? style.hasUnderline() : style.strike;
-      Button b = formatButtons.get(property);
+      var b = formatButtons.get(property);
       OfficeTheme.checked(b, active);
     }
     if (documentTitle != null) {
-      String title =
+      var title =
           session.document().title
               + (filePath != null && fileDocument == session.document()
                   ? " \u2014 Saved"
@@ -5795,12 +5799,12 @@ public class WordProcessor {
     if (autoSave != null) autoSave.setOn(AppOptions.flag("autosave"));
     if (quickUndo != null) quickUndo.setEnabled(session.canUndo());
     if (quickRedo != null) quickRedo.setEnabled(session.canRedo());
-    Block selectedBlock = session.editingDocument().blocks.get(session.selection().block);
+    var selectedBlock = session.editingDocument().blocks.get(session.selection().block);
     String selectedStyle =
-        selectedBlock instanceof Paragraph ? ((Paragraph) selectedBlock).style : "";
+        selectedBlock instanceof Paragraph p ? p.style : "";
     for (Map.Entry<String, Container> entry : styleTiles.entrySet()) {
       boolean selected = entry.getKey().replace(" ", "").equals(selectedStyle.replace(" ", ""));
-      Container tile = entry.getValue();
+      var tile = entry.getValue();
       tile.getAllStyles().setBgColor(OfficeTheme.CHECKED);
       tile.getAllStyles().setBgTransparency(selected ? 255 : 0);
       tile.getAllStyles().setBorder(OfficeBorder.of(selected ? OfficeTheme.ACCENT : -1, 3));
@@ -5810,11 +5814,10 @@ public class WordProcessor {
   }
 
   private void updateOutline() {
-    StringBuilder signature = new StringBuilder();
+    var signature = new StringBuilder();
     for (int i = 0; i < session.document().blocks.size(); i++) {
-      Block block = session.document().blocks.get(i);
-      if (block instanceof Paragraph) {
-        Paragraph p = (Paragraph) block;
+      var block = session.document().blocks.get(i);
+      if (block instanceof Paragraph p) {
         if (p.style.startsWith("Heading") && p.text.length() > 0)
           signature.append(i).append(':').append(p.id).append(':').append(p.text).append('\n');
       }
@@ -5827,12 +5830,11 @@ public class WordProcessor {
     label.getAllStyles().setFgColor(0x748494);
     outline.add(label);
     for (int i = 0; i < session.document().blocks.size(); i++) {
-      Block block = session.document().blocks.get(i);
-      if (block instanceof Paragraph) {
-        Paragraph p = (Paragraph) block;
+      var block = session.document().blocks.get(i);
+      if (block instanceof Paragraph p) {
         if (p.style.startsWith("Heading") && p.text.length() > 0) {
           final int index = i;
-          Button b =
+          var b =
               button(
                   p.text.toString(),
                   () -> {
@@ -5935,10 +5937,10 @@ public class WordProcessor {
 
   private void tableRowHeight() {
     if (!session.inCell()) throw new IllegalArgumentException("Click inside a table first");
-    TableFormat.Row row =
+    var row =
         ((Table) session.document().blocks.get(session.cellBlock())).format.row(session.cellRow());
-    EditField height = field("" + (row.height == 0 ? 18 : row.height));
-    ComboBox<String> rule = new ComboBox<String>("At least", "Exactly");
+    var height = field("" + (row.height == 0 ? 18 : row.height));
+    var rule = new ComboBox<String>("At least", "Exactly");
     rule.setSelectedIndex("exact".equals(row.rule) ? 1 : 0);
     if (showDialog(
         "Row height",
@@ -5956,28 +5958,29 @@ public class WordProcessor {
 
   private void tableFormula() {
     if (!session.inCell()) throw new IllegalArgumentException("Click inside a table first");
-    EditField formula = field("=SUM(ABOVE)");
+    var formula = field("=SUM(ABOVE)");
     Container body =
         BoxLayout.encloseY(
             formRow("Formula", formula),
             new SpanLabelCompat(
-                "Use SUM, AVERAGE, COUNT, MIN, MAX or PRODUCT with ABOVE, BELOW,"
-                    + " LEFT, RIGHT, or cell ranges such as A1:B3. Numbers use a"
-                    + " decimal point."));
+                """
+                Use SUM, AVERAGE, COUNT, MIN, MAX or PRODUCT with ABOVE, BELOW,\
+                 LEFT, RIGHT, or cell ranges such as A1:B3. Numbers use a\
+                 decimal point."""));
     if (showDialog("Table Formula", body, "Insert", "Cancel"))
       run("table.formula", Json.object("formula", formula.getText()));
   }
 
   private void splitCells() {
     if (!session.inCell()) throw new IllegalArgumentException("Click inside a table first");
-    EditField columns = field("2");
+    var columns = field("2");
     columns.setAccessibilityText("Number of split columns");
     if (showDialog("Split Cells", formRow("Number of columns", columns), "Split", "Cancel"))
       run("table.split", Json.object("columns", Integer.parseInt(columns.getText())));
   }
 
   private Container cellAlignmentControls() {
-    Container grid = new Container(new GridLayout(3, 3));
+    var grid = new Container(new GridLayout(3, 3));
     String[] values = {
       "topLeft",
       "topCenter",
@@ -6001,9 +6004,9 @@ public class WordProcessor {
       "Align Bottom Right"
     };
     for (int i = 0; i < values.length; i++) {
-      final String value = values[i];
+      final var value = values[i];
       final int alignment = i;
-      Button control =
+      var control =
           new Button() {
             public void paint(Graphics graphics) {
               super.paint(graphics);
@@ -6044,12 +6047,12 @@ public class WordProcessor {
 
   private void selectCellRange() {
     if (!session.inCell()) throw new IllegalArgumentException("Click inside a table first");
-    CellSelection range = session.cellSelection();
-    EditField firstRow = field("" + (range == null ? session.cellRow() + 1 : range.firstRow + 1));
-    EditField firstColumn =
+    var range = session.cellSelection();
+    var firstRow = field("" + (range == null ? session.cellRow() + 1 : range.firstRow + 1));
+    var firstColumn =
         field("" + (range == null ? session.cellColumn() + 1 : range.firstColumn + 1));
-    EditField lastRow = field("" + (range == null ? session.cellRow() + 1 : range.lastRow + 1));
-    EditField lastColumn =
+    var lastRow = field("" + (range == null ? session.cellRow() + 1 : range.lastRow + 1));
+    var lastColumn =
         field("" + (range == null ? session.cellColumn() + 1 : range.lastColumn + 1));
     if (showDialog(
         "Select table cells",
@@ -6078,10 +6081,10 @@ public class WordProcessor {
 
   private void editCell(int block, int row, int col) {
     editor.stopInput();
-    Table t = (Table) session.document().blocks.get(block);
-    Dialog dialog = officeDialog("Table \u00b7 row " + (row + 1) + ", column " + (col + 1));
+    var t = (Table) session.document().blocks.get(block);
+    var dialog = officeDialog("Table \u00b7 row " + (row + 1) + ", column " + (col + 1));
     dialog.setLayout(new BorderLayout());
-    Container actions = new Container(new GridLayout(OfficeTheme.mobile() ? 2 : 3));
+    var actions = new Container(new GridLayout(OfficeTheme.mobile() ? 2 : 3));
     for (String action : new String[] {"insertRow", "deleteRow", "insertColumn", "deleteColumn"}) {
       String label =
           "insertRow".equals(action)
@@ -6142,7 +6145,7 @@ public class WordProcessor {
         button(
             "Sort\u2026",
             () -> {
-              ComboBox<String> order = new ComboBox<String>("Ascending", "Descending");
+              var order = new ComboBox<String>("Ascending", "Descending");
               CheckBox header = new CheckBox("Keep first row as header"),
                   numeric = new CheckBox("Numeric values");
               if (showDialog(
@@ -6183,10 +6186,10 @@ public class WordProcessor {
   }
 
   private void tableProperties(int block, int row, int column) {
-    Table t = (Table) session.document().blocks.get(block);
-    CellSelection selectedCells = session.cellSelection();
-    TableFormat.Cell cell = t.format.cell(row, column);
-    TableFormat.Sizing size = t.format.sizing;
+    var t = (Table) session.document().blocks.get(block);
+    var selectedCells = session.cellSelection();
+    var cell = t.format.cell(row, column);
+    var size = t.format.sizing;
     EditField preferredWidth = field("" + size.width), tableIndent = field("" + size.indent);
     ComboBox<String> widthUnit = new ComboBox<String>("Percent", "Points", "Contents"),
         tableAlign = new ComboBox<String>("left", "center", "right");
@@ -6204,12 +6207,12 @@ public class WordProcessor {
         horizontal = field("" + cell.horizontalPadding),
         vertical = field("" + cell.verticalPadding),
         headers = field("" + t.format.headerRows);
-    ComboBox<String> rowRule = new ComboBox<String>("Automatic", "At least", "Exactly");
+    var rowRule = new ComboBox<String>("Automatic", "At least", "Exactly");
     rowRule.setSelectedItem(
         "exact".equals(t.format.row(row).rule)
             ? "Exactly"
             : "atLeast".equals(t.format.row(row).rule) ? "At least" : "Automatic");
-    CheckBox allowBreak = new CheckBox("Allow row to break across pages");
+    var allowBreak = new CheckBox("Allow row to break across pages");
     allowBreak.setSelected(t.format.row(row).allowBreak);
     ComboBox<String> alignment = new ComboBox<String>("top", "center", "bottom"),
         scope =
@@ -6239,7 +6242,7 @@ public class WordProcessor {
     body.setScrollableY(true);
     if (OfficeTheme.mobile()) body.setPreferredH(Display.getInstance().getDisplayHeight() / 2);
     if (showDialog("Table properties", body, "Apply", "Cancel")) {
-      TableFormat.Cell value =
+      var value =
           new TableFormat.Cell(
               Integer.parseInt(background.getText(), 16),
               Integer.parseInt(border.getText(), 16),
@@ -6248,7 +6251,7 @@ public class WordProcessor {
               Float.parseFloat(vertical.getText()),
               alignment.getSelectedItem(),
               t.format.cell(row, column).sides);
-      TableFormat format =
+      var format =
           t.format
               .columnFraction(column, Float.parseFloat(width.getText()) / 100)
               .row(
@@ -6292,15 +6295,15 @@ public class WordProcessor {
     query.setAccessibilityText("Find text");
     replace.setHint("Replace with");
     replace.setAccessibilityText("Replace with");
-    Button find =
+    var find =
         button(
             "Find next",
             () -> {
-              java.util.List<Map<String, Object>> matches =
+              var matches =
                   Commands.find(session.document(), query.getText());
               if (matches.isEmpty()) showDialog("Find", "No matches", "OK", null);
               else {
-                Map<String, Object> match = matches.get(0);
+                var match = matches.get(0);
                 for (Map<String, Object> m : matches)
                   if (Commands.followsSelection(session, m)) {
                     match = m;
@@ -6311,7 +6314,7 @@ public class WordProcessor {
                 editor.refresh();
               }
             });
-    Button all =
+    var all =
         button(
             "Replace all",
             () ->
@@ -6326,9 +6329,9 @@ public class WordProcessor {
   }
 
   private void commandDialog() {
-    EditField command = field("document.inspect");
-    EditField args = field("{}", 5, 45);
-    StringBuilder available = new StringBuilder();
+    var command = field("document.inspect");
+    var args = field("{}", 5, 45);
+    var available = new StringBuilder();
     for (Commands.Descriptor d : commands.descriptors())
       available.append(d.id).append(" \u2014 ").append(d.description).append('\n');
     if (showDialog(
@@ -6339,7 +6342,7 @@ public class WordProcessor {
       safe(
           () -> {
             try {
-              Object result =
+              var result =
                   commands.execute(session, command.getText(), Json.parse(args.getText()));
               edited();
               if (result != null) showText("Result", Json.write(result));
@@ -6350,7 +6353,7 @@ public class WordProcessor {
   }
 
   private void macroDialog() {
-    EditField area =
+    var area =
         field(
             "{\"version\":1,\"steps\":[{\"command\":\"replace.all\",\"args\":{\"text\":\"document\",\"replacement\":\"manuscript\"}}]}",
             9,
@@ -6367,9 +6370,9 @@ public class WordProcessor {
   }
 
   private void preview(Map<String, Object> macro) {
-    Macros.Preview p =
+    var p =
         new Macros(commands).preview(session, macro, Collections.<String, String>emptyMap(), null);
-    EditField after = field(join(p.changes) + "\n" + p.after, 12, 55);
+    var after = field(join(p.changes) + "\n" + p.after, 12, 55);
     after.setEditable(false);
     if (showDialog("Proposed document \u2014 one undo step", after, "Apply", "Cancel")) {
       p.apply(session);
@@ -6378,7 +6381,7 @@ public class WordProcessor {
   }
 
   private void showText(String title, String text) {
-    EditField area = field(text, 15, 60);
+    var area = field(text, 15, 60);
     area.setEditable(false);
     showDialog(title, area, "Close", null);
   }
@@ -6399,9 +6402,9 @@ public class WordProcessor {
         || session.isComposing()
         || session.revision() == savedRevision
         || System.currentTimeMillis() - lastEdit < 1000) return;
-    final Document snapshot = session.document();
+    final var snapshot = session.document();
     final long revision = session.revision();
-    final Docx.Opened original = source;
+    final var original = source;
     saving = true;
     Display.getInstance()
         .scheduleBackgroundTask(
@@ -6412,7 +6415,7 @@ public class WordProcessor {
               } catch (IOException ex) {
                 error = ex.getMessage();
               }
-              final String problem = error;
+              final var problem = error;
               Display.getInstance()
                   .callSerially(
                       () -> {
@@ -6443,7 +6446,7 @@ public class WordProcessor {
                     Document document;
                     String password = null;
                     if (name.toLowerCase().endsWith(".docx")) {
-                      byte[] plain = bytes;
+                      var plain = bytes;
                       if (OfficeCrypto.isEncrypted(bytes)) {
                         password = askPassword(name);
                         if (password == null) return;
@@ -6463,7 +6466,7 @@ public class WordProcessor {
                       document = project.document;
                       source = project.source;
                     } else {
-                      String ext = name.substring(name.lastIndexOf('.') + 1).toLowerCase();
+                      var ext = name.substring(name.lastIndexOf('.') + 1).toLowerCase();
                       RichTextFormat format =
                           "md".equals(ext)
                               ? RichTextFormat.MARKDOWN
@@ -6502,7 +6505,7 @@ public class WordProcessor {
 
   /** Prompts for an encrypted document's password; null when cancelled. */
   private String askPassword(String name) {
-    TextField field = new TextField("", "Password", 20, TextArea.PASSWORD);
+    var field = new TextField("", "Password", 20, TextArea.PASSWORD);
     field.setAccessibilityText("Password");
     return showDialog("\"" + name + "\" is protected", field, "Open", "Cancel") ? field.getText() : null;
   }
@@ -6525,9 +6528,9 @@ public class WordProcessor {
     }
     editor.finishComposing();
     editor.stopInput();
-    final PageSpec spec = session.document().page;
-    final LayoutEngine.Result pages = editor.printLayout();
-    final String path =
+    final var spec = session.document().page;
+    final var pages = editor.printLayout();
+    final var path =
         FileSystemStorage.getInstance().getAppHomePath()
             + "wordprocessor-print-"
             + System.currentTimeMillis()
@@ -6539,7 +6542,7 @@ public class WordProcessor {
             () -> {
               try {
                 byte[] pdf = PdfExporter.write(spec, pages, DocumentFonts.PDF);
-                try (OutputStream out = FileSystemStorage.getInstance().openOutputStream(path)) {
+                try (var out = FileSystemStorage.getInstance().openOutputStream(path)) {
                   out.write(pdf);
                 }
                 Display.getInstance()
@@ -6558,10 +6561,11 @@ public class WordProcessor {
                                               ? "Print" + " cancelled"
                                               : result.isFailed()
                                                   ? "Print" + " failed:" + " " + result.getError()
-                                                  : "Document"
-                                                      + " sent"
-                                                      + " to printing"
-                                                      + " system");
+                                                  : """
+                                                      Document\
+                                                       sent\
+                                                       to printing\
+                                                       system""");
                                     });
                           } catch (RuntimeException ex) {
                             printing = false;
@@ -6589,7 +6593,7 @@ public class WordProcessor {
     }
     editor.finishComposing();
     editor.stopInput();
-    final Document snapshot = session.document();
+    final var snapshot = session.document();
     final int epoch = documentEpoch;
     safe(
         () -> {
@@ -6597,7 +6601,7 @@ public class WordProcessor {
             byte[] bytes;
             if ("docx".equals(format)) {
               boolean allow = false;
-              java.util.List<String> losses = Docx.conversionWarnings(snapshot, source);
+              var losses = Docx.conversionWarnings(snapshot, source);
               if (!losses.isEmpty()) {
                 allow =
                     showDialog(
@@ -6610,7 +6614,7 @@ public class WordProcessor {
                         "Cancel");
                 if (!allow) return;
               }
-              ByteArrayOutputStream out = new ByteArrayOutputStream();
+              var out = new ByteArrayOutputStream();
               Docx.write(snapshot, source, out, allow);
               bytes = out.toByteArray();
               String password = OfficeCommands.password(session);
@@ -6629,7 +6633,9 @@ public class WordProcessor {
                 for (Block b : snapshot.blocks)
                   if (b instanceof Table)
                     throw new IOException(
-                        "Use DOCX, HTML or native project format to retain" + " tables");
+                        """
+                        Use DOCX, HTML or native project format to retain\
+                         tables""");
               bytes = TextFormats.write(snapshot, type).getBytes("UTF-8");
             }
             files.save(
@@ -6652,8 +6658,9 @@ public class WordProcessor {
                     else
                       showDialog(
                           "Document changed",
-                          "The saved copy is complete. Save the newer"
-                              + " changes before continuing.",
+                          """
+                          The saved copy is complete. Save the newer\
+                           changes before continuing.""",
                           "OK",
                           null);
                   }
@@ -6665,7 +6672,7 @@ public class WordProcessor {
   }
 
   private static String join(java.util.List<String> list) {
-    StringBuilder b = new StringBuilder();
+    var b = new StringBuilder();
     for (String s : list) b.append("\u2022 ").append(s).append('\n');
     return b.toString();
   }
@@ -6725,25 +6732,26 @@ public class WordProcessor {
   }
 
   public static Document sample() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace(
-        "A better place for words.\n"
-            + "A document engine built with Codename One\n"
-            + "Write, revise, and automate from one shared Java codebase. This canvas uses"
-            + " a structured document model, cached paragraph layout, and paginated"
-            + " rendering.\n"
-            + "Your ideas, beautifully structured\n"
-            + "Select text to format it. Use the Home tab for headings and alignment,"
-            + " Insert for tables, and Layout to change the page. Every edit is undoable.\n"
-            + "Automation you can inspect\n"
-            + "Open Automate and preview a macro. Changes run on an isolated document;"
-            + " applying them creates one undo step. If the document changes first, the"
-            + " preview cannot overwrite it.\n"
-            + "Dear {{name}}, thank you for trying a different kind of document editor.\n"
-            + "A foundation with honest boundaries\n"
-            + "This development build supports an initial DOCX subset. It reports"
-            + " unsupported content before conversion and preserves the original package"
-            + " when exported without edits.");
+        """
+        A better place for words.
+        A document engine built with Codename One
+        Write, revise, and automate from one shared Java codebase. This canvas uses\
+         a structured document model, cached paragraph layout, and paginated\
+         rendering.
+        Your ideas, beautifully structured
+        Select text to format it. Use the Home tab for headings and alignment,\
+         Insert for tables, and Layout to change the page. Every edit is undoable.
+        Automation you can inspect
+        Open Automate and preview a macro. Changes run on an isolated document;\
+         applying them creates one undo step. If the document changes first, the\
+         preview cannot overwrite it.
+        Dear {{name}}, thank you for trying a different kind of document editor.
+        A foundation with honest boundaries
+        This development build supports an initial DOCX subset. It reports\
+         unsupported content before conversion and preserves the original package\
+         when exported without edits.""");
     s.select(0, 0, s.document().paragraph(0).text.length());
     s.format("size", "30");
     s.format("bold", "true");
@@ -6776,8 +6784,8 @@ public class WordProcessor {
   /** Collapses or expands the heading that owns the caret (or every heading). */
   private void outlineCollapse(boolean all, boolean collapse) {
     outlineView(true);
-    Document d = session.document();
-    OutlineView o = editor.getOutline();
+    var d = session.document();
+    var o = editor.getOutline();
     if (all) {
       for (int i = 0; i < d.blocks.size(); i++)
         if (OutlineView.hasChildren(d, i)) o = o.collapse(d.blocks.get(i).id(), collapse);
@@ -6806,7 +6814,7 @@ public class WordProcessor {
         img = img.scaled(Math.max(1, Math.round(cw * f)), Math.max(1, Math.round(ch * f)));
       }
       boolean png = mime != null && mime.indexOf("png") >= 0;
-      java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+      var out = new java.io.ByteArrayOutputStream();
       com.codename1.ui.util.ImageIO.getImageIO()
           .save(img, out, png ? com.codename1.ui.util.ImageIO.FORMAT_PNG : com.codename1.ui.util.ImageIO.FORMAT_JPEG, .85f);
       return out.toByteArray();

@@ -7,11 +7,11 @@ import org.junit.Test;
 public class BookmarkTest {
   @Test
   public void rangeFollowsEditsAndSplitAndUndo() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("alpha beta gamma");
     s.select(0, 6, 10);
     s.addBookmark("Spot");
-    Document original = s.document();
+    var original = s.document();
     s.select(0, 0, 0);
     s.replace("A ");
     s.goToBookmark("Spot");
@@ -28,7 +28,7 @@ public class BookmarkTest {
 
   @Test
   public void replacementDeleteAndRenameExistingAreUndoable() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("first second");
     s.select(0, 0, 5);
     s.addBookmark("Spot");
@@ -47,7 +47,7 @@ public class BookmarkTest {
 
   @Test
   public void repeatedTextAndCaseExpansionPreserveExactAnchors() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("aaaa ßeta");
     s.select(0, 1, 3);
     s.addBookmark("Middle");
@@ -67,7 +67,7 @@ public class BookmarkTest {
 
   @Test
   public void pointAndMultipleParagraphRangeHaveNoVisibleMarkers() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("one\ntwo");
     s.selectRange(0, 1, 1, 2);
     s.addBookmark("Across");
@@ -84,9 +84,9 @@ public class BookmarkTest {
 
   @Test
   public void invalidNamesAndOffsetsDoNotChangeDocument() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("hello");
-    Document before = s.document();
+    var before = s.document();
     for (String name : new String[] {"", "1bad", "with space", "a-b"}) {
       try {
         s.addBookmark(name);
@@ -102,7 +102,7 @@ public class BookmarkTest {
   @Test
   public void trackedEditsInsideRangesSurviveAcceptAndReject() {
     for (boolean accept : new boolean[] {true, false}) {
-      Session s = new Session(Document.empty());
+      var s = new Session(Document.empty());
       s.replace("alpha beta omega");
       s.select(0, 6, 10);
       s.addBookmark("Spot");

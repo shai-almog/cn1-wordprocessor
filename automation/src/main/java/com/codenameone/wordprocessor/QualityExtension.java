@@ -11,12 +11,12 @@ public final class QualityExtension implements Commands.Extension {
         "",
         false,
         (session, args) -> {
-          List<Object> issues = new ArrayList<Object>();
+          var issues = new ArrayList<Object>();
           for (int i = 0; i < session.document().blocks.size(); i++) {
-            Block b = session.document().blocks.get(i);
+            var b = session.document().blocks.get(i);
             if (!(b instanceof Paragraph)) continue;
-            Paragraph p = (Paragraph) b;
-            String text = p.text.toString();
+            var p = (Paragraph) b;
+            var text = p.text.toString();
             if (text.contains("  "))
               issues.add(
                   Json.object("block", i, "code", "repeated-space", "message", "Repeated spaces"));

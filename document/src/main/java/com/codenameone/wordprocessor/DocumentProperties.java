@@ -25,7 +25,7 @@ public final class DocumentProperties {
   private final java.util.TreeMap<String, String> settings;
 
   private DocumentProperties(String[] values, String protection) {
-    this(values, protection, new java.util.TreeMap<String, String>());
+    this(values, protection, new java.util.TreeMap<>());
   }
 
   private DocumentProperties(
@@ -50,7 +50,7 @@ public final class DocumentProperties {
   public DocumentProperties with(String key, String value) {
     int i = KEYS.indexOf(key);
     if (i < 0) throw new IllegalArgumentException("Unknown property: " + key);
-    String[] next = values.clone();
+    var next = values.clone();
     next[i] = value;
     return new DocumentProperties(next, protection, settings);
   }
@@ -60,7 +60,7 @@ public final class DocumentProperties {
   }
 
   public String setting(String key, String fallback) {
-    String v = settings.get(key);
+    var v = settings.get(key);
     return v == null ? fallback : v;
   }
 
@@ -78,7 +78,7 @@ public final class DocumentProperties {
         throw new IllegalArgumentException("Invalid setting: " + key);
     }
     if (value != null && value.length() > 65536) throw new IllegalArgumentException("Setting too long");
-    java.util.TreeMap<String, String> next = new java.util.TreeMap<String, String>(settings);
+    var next = new java.util.TreeMap<String, String>(settings);
     if (value == null || value.isEmpty()) next.remove(key);
     else next.put(key, value);
     return new DocumentProperties(values, protection, next);
@@ -86,10 +86,10 @@ public final class DocumentProperties {
 
   @Override
   public boolean equals(Object o) {
-    return o instanceof DocumentProperties
-        && Arrays.equals(values, ((DocumentProperties) o).values)
-        && protection.equals(((DocumentProperties) o).protection)
-        && settings.equals(((DocumentProperties) o).settings);
+    return o instanceof DocumentProperties dp
+        && Arrays.equals(values, dp.values)
+        && protection.equals(dp.protection)
+        && settings.equals(dp.settings);
   }
 
   @Override

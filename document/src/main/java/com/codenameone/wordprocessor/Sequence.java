@@ -79,22 +79,22 @@ public final class Sequence<T> implements Iterable<T> {
 
   private static <T> Node<T> left(Node<T> n) {
     Node<T> r = n.r;
-    return new Node<T>(new Node<T>(n.l, n.value, r.l), r.value, r.r);
+    return new Node<>(new Node<T>(n.l, n.value, r.l), r.value, r.r);
   }
 
   private static <T> Node<T> right(Node<T> n) {
     Node<T> l = n.l;
-    return new Node<T>(l.l, l.value, new Node<T>(l.r, n.value, n.r));
+    return new Node<>(l.l, l.value, new Node<T>(l.r, n.value, n.r));
   }
 
   public Sequence<T> insert(int i, T v) {
     check(i, true);
     if (v == null) throw new NullPointerException();
-    return new Sequence<T>(insert(root, i, v));
+    return new Sequence<>(insert(root, i, v));
   }
 
   private Node<T> insert(Node<T> n, int i, T v) {
-    if (n == null) return new Node<T>(null, v, null);
+    if (n == null) return new Node<>(null, v, null);
     int k = size(n.l);
     return balance(
         i <= k
@@ -109,12 +109,12 @@ public final class Sequence<T> implements Iterable<T> {
   public Sequence<T> set(int i, T v) {
     check(i, false);
     if (v == null) throw new NullPointerException();
-    return new Sequence<T>(set(root, i, v));
+    return new Sequence<>(set(root, i, v));
   }
 
   private Node<T> set(Node<T> n, int i, T v) {
     int k = size(n.l);
-    if (i == k) return new Node<T>(n.l, v, n.r);
+    if (i == k) return new Node<>(n.l, v, n.r);
     return i < k
         ? new Node<T>(set(n.l, i, v), n.value, n.r)
         : new Node<T>(n.l, n.value, set(n.r, i - k - 1, v));
@@ -122,7 +122,7 @@ public final class Sequence<T> implements Iterable<T> {
 
   public Sequence<T> remove(int i) {
     check(i, false);
-    return new Sequence<T>(remove(root, i));
+    return new Sequence<>(remove(root, i));
   }
 
   private Node<T> remove(Node<T> n, int i) {
@@ -138,7 +138,7 @@ public final class Sequence<T> implements Iterable<T> {
 
   public Iterator<T> iterator() {
     return new Iterator<T>() {
-      final ArrayList<Node<T>> stack = new ArrayList<Node<T>>();
+      final ArrayList<Node<T>> stack = new ArrayList<>();
 
       {
         push(root);
@@ -157,7 +157,7 @@ public final class Sequence<T> implements Iterable<T> {
 
       public T next() {
         if (!hasNext()) throw new NoSuchElementException();
-        Node<T> n = stack.remove(stack.size() - 1);
+        var n = stack.remove(stack.size() - 1);
         push(n.r);
         return n.value;
       }

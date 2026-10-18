@@ -9,14 +9,14 @@ public class LineSpacingCommandsTest {
 
   @Test
   public void commandIsAtomicUndoableAndPreservesSelection() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("alpha\nbeta");
     s.selectRange(0, 1, 1, 3);
-    Document before = s.document();
-    Selection selection = s.selection();
+    var before = s.document();
+    var selection = s.selection();
     commands.execute(s, "paragraph.spacing", Json.object("rule", "exact", "value", 18));
     for (Block block : s.document().blocks) {
-      Paragraph p = (Paragraph) block;
+      var p = (Paragraph) block;
       assertEquals("exact", p.format.lineRule);
       assertEquals(18, p.lineSpacing, 0);
     }
@@ -40,7 +40,7 @@ public class LineSpacingCommandsTest {
 
   @Test
   public void formattingRevisionRejectRestoresValueAndUnits() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("alpha");
     s.trackChanges(true);
     commands.execute(s, "paragraph.spacing", Json.object("rule", "exact", "value", 18));
@@ -56,7 +56,7 @@ public class LineSpacingCommandsTest {
 
   @Test
   public void cellSpacingAndSplitParagraphRetainRule() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.insertTable(1, 1);
     s.enterCell(1, 0, 0);
     commands.execute(s, "paragraph.spacing", Json.object("rule", "atLeast", "value", 22));
@@ -69,7 +69,7 @@ public class LineSpacingCommandsTest {
 
   @Test
   public void styleUpdatePreservesDimensionedDirectOverride() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("alpha");
     s.applyStyle("Normal");
     commands.execute(s, "paragraph.spacing", Json.object("rule", "exact", "value", 18));

@@ -17,15 +17,16 @@ public final class Cli {
   static void run(String[] args) throws Exception {
     if (args.length == 0 || "help".equals(args[0])) {
       System.out.println(
-          "CN1 Word Processor\n"
-              + "  commands\n"
-              + "  new OUT.cn1doc\n"
-              + "  inspect INPUT\n"
-              + "  text INPUT\n"
-              + "  convert INPUT OUTPUT [--allow-conversion]\n"
-              + "  run INPUT MACRO.json OUTPUT [--params JSON] [--preview] [--allow-conversion]\n"
-              + "  mcp --root DIRECTORY\n"
-              + "Existing output files are not overwritten by the CLI.");
+          """
+          CN1 Word Processor
+            commands
+            new OUT.cn1doc
+            inspect INPUT
+            text INPUT
+            convert INPUT OUTPUT [--allow-conversion]
+            run INPUT MACRO.json OUTPUT [--params JSON] [--preview] [--allow-conversion]
+            mcp --root DIRECTORY
+          Existing output files are not overwritten by the CLI.""");
       return;
     }
     switch (args[0]) {
@@ -65,10 +66,10 @@ public final class Cli {
       case "run":
         require(args, 4);
         DocumentFiles.Opened source = DocumentFiles.read(Paths.get(args[1]));
-        Session session = new Session(source.document);
-        Map<String, Object> macro =
+        var session = new Session(source.document);
+        var macro =
             Json.parse(new String(Files.readAllBytes(Paths.get(args[2])), "UTF-8"));
-        Map<String, String> params = new LinkedHashMap<String, String>();
+        var params = new LinkedHashMap<String, String>();
         for (int i = 4; i < args.length; i++)
           if ("--params".equals(args[i])) {
             if (++i == args.length) throw new IllegalArgumentException("Missing --params JSON");
@@ -78,7 +79,7 @@ public final class Cli {
               params.put(e.getKey(), (String) e.getValue());
             }
           }
-        Macros.Preview preview = new Macros(DocumentFiles.commands()).preview(session, macro, params, null);
+        var preview = new Macros(DocumentFiles.commands()).preview(session, macro, params, null);
         if (has(args, "--preview")) {
           System.out.println(
               Json.write(

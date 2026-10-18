@@ -12,8 +12,8 @@ final class DocxLinks {
   private static final String TYPE =
       "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink";
   private final String path;
-  private final Map<String, String> targets = new LinkedHashMap<String, String>();
-  private final Set<String> ids = new HashSet<String>();
+  private final Map<String, String> targets = new LinkedHashMap<>();
+  private final Set<String> ids = new HashSet<>();
 
   DocxLinks(Map<String, byte[]> parts) throws IOException {
     this(parts, PATH);
@@ -21,7 +21,7 @@ final class DocxLinks {
 
   DocxLinks(Map<String, byte[]> parts, String path) throws IOException {
     this.path = path;
-    byte[] bytes = parts.get(path);
+    var bytes = parts.get(path);
     if (bytes != null)
       for (Element e : Xml.children(Xml.parse(bytes), null)) {
         String id = Xml.attr(e, "Id", "");
@@ -35,14 +35,14 @@ final class DocxLinks {
   String target(Element link) {
     String anchor = Xml.attr(link, "anchor", "");
     if (!anchor.isEmpty()) return "#" + anchor;
-    String value = targets.get(Xml.attr(link, "id", ""));
+    var value = targets.get(Xml.attr(link, "id", ""));
     return value == null ? "" : value;
   }
 
   String id(String target) {
     for (Map.Entry<String, String> e : targets.entrySet())
       if (e.getValue().equals(target)) return e.getKey();
-    String id = "cn1Link" + (targets.size() + 1);
+    var id = "cn1Link" + (targets.size() + 1);
     while (ids.contains(id)) id += "x";
     ids.add(id);
     targets.put(id, target);
@@ -54,7 +54,7 @@ final class DocxLinks {
         parts.containsKey(path)
             ? new String(parts.get(path), "UTF-8")
             : "<Relationships xmlns=\"" + NS + "\"></Relationships>";
-    Set<String> existing = new HashSet<String>();
+    var existing = new HashSet<String>();
     for (Element e : Xml.children(Xml.parse(xml), null)) existing.add(Xml.attr(e, "Id", ""));
     for (Map.Entry<String, String> e : targets.entrySet())
       if (!existing.contains(e.getKey()))

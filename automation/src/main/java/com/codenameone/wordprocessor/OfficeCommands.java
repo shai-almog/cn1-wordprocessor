@@ -29,7 +29,7 @@ final class OfficeCommands implements Commands.Extension {
 
   private static Research research;
   private static TemplateStore templateStore;
-  private static final TreeMap<String, String> TEMPLATES = new TreeMap<String, String>();
+  private static final TreeMap<String, String> TEMPLATES = new TreeMap<>();
 
   static final class Version {
     final String label, date;
@@ -42,10 +42,10 @@ final class OfficeCommands implements Commands.Extension {
     }
   }
 
-  private static final SessionMap<List<Version>> VERSIONS = new SessionMap<List<Version>>();
-  private static final SessionMap<List<Object>> RECORDING = new SessionMap<List<Object>>();
-  private static final SessionMap<int[]> READING = new SessionMap<int[]>();
-  private static final SessionMap<String> PASSWORDS = new SessionMap<String>();
+  private static final SessionMap<List<Version>> VERSIONS = new SessionMap<>();
+  private static final SessionMap<List<Object>> RECORDING = new SessionMap<>();
+  private static final SessionMap<int[]> READING = new SessionMap<>();
+  private static final SessionMap<String> PASSWORDS = new SessionMap<>();
 
   /** The password Word documents saved from this session are encrypted with, or null. */
   public static String password(Session s) {
@@ -74,7 +74,7 @@ final class OfficeCommands implements Commands.Extension {
   /** Snapshot for version history; the editor calls this on save and AutoSave. */
   public static void snapshot(Session s, String label) {
     synchronized (VERSIONS) {
-      List<Version> list = VERSIONS.get(s);
+      var list = VERSIONS.get(s);
       if (list == null) VERSIONS.put(s, list = new ArrayList<Version>());
       if (!list.isEmpty() && list.get(list.size() - 1).document == s.document()) return;
       list.add(new Version(label, s.document()));
@@ -84,7 +84,7 @@ final class OfficeCommands implements Commands.Extension {
 
   static List<Version> versions(Session s) {
     synchronized (VERSIONS) {
-      List<Version> list = VERSIONS.get(s);
+      var list = VERSIONS.get(s);
       return list == null ? new ArrayList<Version>() : new ArrayList<Version>(list);
     }
   }
@@ -98,7 +98,7 @@ final class OfficeCommands implements Commands.Extension {
 
   /** The document as displayed: ink hidden when Hide Ink is on. */
   private static boolean isInk(Block b) {
-    return b instanceof Picture && ((Picture) b).drawing != null && "ink".equals(((Picture) b).drawing.kind);
+    return b instanceof Picture p && p.drawing != null && "ink".equals(p.drawing.kind);
   }
 
   public static Document shown(Document d) {
@@ -108,7 +108,7 @@ final class OfficeCommands implements Commands.Extension {
     boolean ink = false;
     for (Block b : d.blocks) if (isInk(b)) ink = true;
     if (!ink) return d;
-    Sequence<Block> out = new Sequence<Block>();
+    var out = new Sequence<Block>();
     for (Block b : d.blocks) if (!isInk(b)) out = out.append(b);
     if (out.size() == 0) out = out.append(new Paragraph("ink-hidden", new RichText()));
     return d.blocks(out, d.nextId);
@@ -178,7 +178,7 @@ final class OfficeCommands implements Commands.Extension {
           option("hideInk", String.valueOf(a.containsKey("value") ? Boolean.TRUE.equals(a.get("value")) : !AppOptions.flag("hideInk")));
           int ink = 0;
           for (Block b : s.document().blocks)
-            if (b instanceof Picture && ((Picture) b).drawing != null && "ink".equals(((Picture) b).drawing.kind)) ink++;
+            if (b instanceof Picture picture && picture.drawing != null && "ink".equals(picture.drawing.kind)) ink++;
           return Json.object("hidden", AppOptions.flag("hideInk"), "ink", ink);
         });
     c.register(
@@ -188,9 +188,9 @@ final class OfficeCommands implements Commands.Extension {
         false,
         (s, a) -> {
           if (a.containsKey("value")) option("showComments", String.valueOf(Boolean.TRUE.equals(a.get("value"))));
-          List<Object> out = new ArrayList<Object>();
+          var out = new ArrayList<Object>();
           for (ReviewComment rc : s.document().comments) {
-            List<Object> replies = new ArrayList<Object>();
+            var replies = new ArrayList<Object>();
             for (ReviewComment.Reply r : rc.replies) replies.add(Json.object("author", r.author, "text", r.text));
             out.add(Json.object("id", rc.id, "author", rc.author, "text", rc.text, "resolved", rc.resolved, "replies", replies));
           }
@@ -203,7 +203,7 @@ final class OfficeCommands implements Commands.Extension {
         false,
         (s, a) -> {
           String format = a.containsKey("format") ? Commands.str(a, "format") : "docx";
-          String title = s.document().properties.get("title");
+          var title = s.document().properties.get("title");
           String name = a.containsKey("name") ? Commands.str(a, "name") : title == null || title.trim().isEmpty() ? "Document" : title.trim();
           byte[] data;
           String mime;
@@ -212,7 +212,7 @@ final class OfficeCommands implements Commands.Extension {
               data = PdfExporter.write(printable(s.document()));
               mime = "application/pdf";
             } else if ("docx".equals(format)) {
-              ByteArrayOutputStream out = new ByteArrayOutputStream();
+              var out = new ByteArrayOutputStream();
               Docx.write(s.document(), out);
               data = out.toByteArray();
               if (password(s) != null) data = OfficeCrypto.encrypt(data, password(s));
@@ -232,7 +232,7 @@ final class OfficeCommands implements Commands.Extension {
         false,
         (s, a) -> {
           if (a.containsKey("save")) snapshot(s, Commands.str(a, "save"));
-          List<Version> list = versions(s);
+          var list = versions(s);
           if (a.containsKey("restore")) {
             final Version v = version(list, Commands.integer(a, "restore"));
             snapshot(s, "Before restoring " + v.label);
@@ -251,7 +251,7 @@ final class OfficeCommands implements Commands.Extension {
         "open?:integer",
         false,
         (s, a) -> {
-          List<Version> list = versions(s);
+          var list = versions(s);
           if (a.containsKey("open")) {
             final Version v = version(list, Commands.integer(a, "open"));
             s.transact(x -> x.replaceDocument(v.document));
@@ -324,9 +324,9 @@ final class OfficeCommands implements Commands.Extension {
         "query:string,run?:boolean,limit?:integer",
         false,
         (s, a) -> {
-          String q = Commands.str(a, "query").trim().toLowerCase();
+          var q = Commands.str(a, "query").trim().toLowerCase();
           if (q.isEmpty()) throw new IllegalArgumentException("Search for what?");
-          final Map<Commands.Descriptor, Integer> score = new java.util.HashMap<Commands.Descriptor, Integer>();
+          final var score = new java.util.HashMap<Commands.Descriptor, Integer>();
           String[] words = TextUtil.split(q, ' ');
           for (Commands.Descriptor d : c.descriptors()) {
             String id = d.id.toLowerCase(), desc = d.description.toLowerCase();
@@ -343,10 +343,10 @@ final class OfficeCommands implements Commands.Extension {
             }
             if (sc > 0) score.put(d, sc);
           }
-          List<Commands.Descriptor> hits = new ArrayList<Commands.Descriptor>(score.keySet());
+          var hits = new ArrayList<Commands.Descriptor>(score.keySet());
           Collections.sort(hits, (x, y) -> score.get(y) - score.get(x) != 0 ? score.get(y) - score.get(x) : x.id.compareTo(y.id));
           int limit = a.containsKey("limit") ? Commands.integer(a, "limit") : 10;
-          List<Object> out = new ArrayList<Object>();
+          var out = new ArrayList<Object>();
           for (int i = 0; i < hits.size() && i < limit; i++)
             out.add(Json.object("id", hits.get(i).id, "description", hits.get(i).description, "parameters", new LinkedHashMap<String, Object>(hits.get(i).parameters)));
           Object ran = null;
@@ -366,8 +366,8 @@ final class OfficeCommands implements Commands.Extension {
         (s, a) -> {
           String action = a.containsKey("action") ? Commands.str(a, "action") : RECORDING.containsKey(s) ? "stop" : "start";
           if ("start".equals(action)) {
-            final List<Object> steps = new ArrayList<Object>();
-            final Session owner = s;
+            final var steps = new ArrayList<Object>();
+            final var owner = s;
             synchronized (RECORDING) {
               if (RECORDING.containsKey(s)) throw new IllegalStateException("Already recording");
               RECORDING.put(s, steps);
@@ -399,7 +399,7 @@ final class OfficeCommands implements Commands.Extension {
             return Json.object("recording", false, "name", name, "steps", steps.size());
           }
           if ("run".equals(action)) {
-            String json = s.document().properties.setting("macro." + Commands.str(a, "name"), null);
+            var json = s.document().properties.setting("macro." + Commands.str(a, "name"), null);
             if (json == null) throw new IllegalArgumentException("No macro " + a.get("name"));
             try {
               new Macros(c).run(s, Json.parse(json), Collections.<String, String>emptyMap(), null);
@@ -426,14 +426,14 @@ final class OfficeCommands implements Commands.Extension {
             if (entries.remove(Commands.str(a, "from")) == null) throw new IllegalArgumentException("No entry " + a.get("from"));
             AppOptions.autocorrect(entries);
           } else if ("option".equals(action)) {
-            String key = "autocorrect." + Commands.str(a, "option");
+            var key = "autocorrect." + Commands.str(a, "option");
             if ("autocorrect.entries".equals(key)) throw new IllegalArgumentException("Use add or remove for entries");
             option(key, String.valueOf(Boolean.TRUE.equals(a.get("value"))));
           } else if ("apply".equals(action)) {
             String text = Commands.str(a, "text"), out = AppOptions.correct(text);
             return Json.object("text", out == null ? text : out, "changed", out != null);
           } else if (!"list".equals(action)) throw new IllegalArgumentException("Action is list, add, remove, option or apply");
-          Map<String, Object> out = new LinkedHashMap<String, Object>();
+          var out = new LinkedHashMap<String, Object>();
           for (Map.Entry<String, String> e : AppOptions.all().entrySet())
             if (e.getKey().startsWith("autocorrect.") && !e.getKey().equals("autocorrect.entries"))
               out.put(e.getKey().substring(12), Boolean.valueOf(e.getValue()));
@@ -457,16 +457,16 @@ final class OfficeCommands implements Commands.Extension {
           if (a.containsKey("cite")) {
             int i = Commands.integer(a, "cite");
             if (i < 0 || i >= results.size()) throw new IllegalArgumentException("No result " + i);
-            Map<String, String> r = results.get(i);
-            Map<String, Object> source = new LinkedHashMap<String, Object>();
+            var r = results.get(i);
+            var source = new LinkedHashMap<String, Object>();
             source.put("kind", "website");
             for (String k : new String[] {"title", "author", "year", "url"})
               if (r.get(k) != null && !r.get(k).isEmpty()) source.put(k, r.get(k));
-            Map<String, Object> args = new LinkedHashMap<String, Object>();
+            var args = new LinkedHashMap<String, Object>();
             args.put("source", source);
             tag = ((Map<?, ?>) c.execute(s, "references.citation", args)).get("tag");
           }
-          List<Object> out = new ArrayList<Object>();
+          var out = new ArrayList<Object>();
           for (Map<String, String> r : results) out.add(new LinkedHashMap<String, Object>(r));
           return Json.object("results", out, "cited", tag);
         });
@@ -483,10 +483,10 @@ final class OfficeCommands implements Commands.Extension {
           }
           float rate = a.containsKey("rate") ? ((Number) a.get("rate")).floatValue() : 1f;
           if (rate < .25f || rate > 4f) throw new IllegalArgumentException("Rate is 0.25-4");
-          Document d = s.document();
+          var d = s.document();
           int[] at;
           if ("start".equals(action)) {
-            Selection x = s.selection();
+            var x = s.selection();
             at = new int[] {x.block, Math.min(x.anchor, x.caret)};
           } else {
             at = READING.get(s);
@@ -527,15 +527,15 @@ final class OfficeCommands implements Commands.Extension {
           }
           // The revised copy's own pending changes are its author's final text.
           for (Revisions.Change ch : Revisions.list(revised)) revised = Revisions.resolve(revised, ch.revision.id, true);
-          Document base = s.document();
+          var base = s.document();
           int pending = Revisions.list(base).size();
           for (Revisions.Change ch : Revisions.list(base)) base = Revisions.resolve(base, ch.revision.id, true);
-          DocumentComparison.Options o = new DocumentComparison.Options();
+          var o = new DocumentComparison.Options();
           String author = a.containsKey("author") ? Commands.str(a, "author") : revised.properties.get("lastModifiedBy");
           o.author = author == null || author.trim().isEmpty() ? "Reviewer" : author;
           o.formatting = true;
           DocumentComparison.Result r = DocumentComparison.compare(base, revised, o);
-          List<ReviewComment> comments = new ArrayList<ReviewComment>(r.document.comments);
+          var comments = new ArrayList<ReviewComment>(r.document.comments);
           for (ReviewComment rc : revised.comments) comments.add(rc);
           s.replaceDocument(r.document.comments(comments));
           return Json.object("changes", r.changes, "author", o.author, "acceptedOwnRevisions", pending, "comments", revised.comments.size());
@@ -550,17 +550,17 @@ final class OfficeCommands implements Commands.Extension {
             int b = Commands.integer(a, "block");
             if (b < 0 || b >= s.document().blocks.size() || !(s.document().blocks.get(b) instanceof Picture))
               throw new IllegalArgumentException("Block " + b + " is not a picture or object");
-            Picture p = (Picture) s.document().blocks.get(b);
+            var p = (Picture) s.document().blocks.get(b);
             String text = a.containsKey("text") ? Commands.str(a, "text") : p.alt;
             if (text.length() > 2000) throw new IllegalArgumentException("Alt text is too long");
             s.updatePicture(b, p.width, p.height, text, p.align, false);
           }
-          List<Object> out = new ArrayList<Object>();
+          var out = new ArrayList<Object>();
           int missing = 0;
           for (int i = 0; i < s.document().blocks.size(); i++) {
-            Block b = s.document().blocks.get(i);
+            var b = s.document().blocks.get(i);
             if (!(b instanceof Picture)) continue;
-            Picture p = (Picture) b;
+            var p = (Picture) b;
             if (p.alt == null || p.alt.trim().isEmpty()) missing++;
             out.add(Json.object("block", i, "kind", p.drawing == null ? "picture" : p.drawing.kind, "alt", p.alt == null ? "" : p.alt));
           }
@@ -585,7 +585,7 @@ final class OfficeCommands implements Commands.Extension {
                           + (a.containsKey("font") ? Commands.str(a, "font").replace(",", "") : ""));
           if (s.inCell()) throw new IllegalArgumentException("Drop caps apply to body paragraphs, not table cells");
           s.mapParagraphs(p -> p.with("dropCap", spec));
-          Paragraph p = s.document().paragraph(s.selection().block);
+          var p = s.document().paragraph(s.selection().block);
           return Json.object("position", p.format.dropMode(), "lines", p.format.dropLines(), "distance", p.format.dropDistance(), "font", p.format.dropFont());
         });
   }
@@ -606,14 +606,14 @@ final class OfficeCommands implements Commands.Extension {
       }
       if (m < 1 || m > 120) throw new IllegalArgumentException("AutoSave interval is 1-120 minutes");
     }
-    String d = AppOptions.DEFAULTS.get(key);
+    var d = AppOptions.DEFAULTS.get(key);
     if (("true".equals(d) || "false".equals(d)) && !"true".equals(value) && !"false".equals(value))
       throw new IllegalArgumentException(key + " is true or false");
     AppOptions.set(key, value);
   }
 
   private static List<Object> macros(Session s) {
-    List<Object> out = new ArrayList<Object>();
+    var out = new ArrayList<Object>();
     for (Map.Entry<String, String> e : s.document().properties.settings().entrySet())
       if (e.getKey().startsWith("macro.")) out.add(e.getKey().substring(6));
     return out;
@@ -625,14 +625,14 @@ final class OfficeCommands implements Commands.Extension {
   }
 
   private static List<Object> listing(List<Version> list) {
-    List<Object> out = new ArrayList<Object>();
+    var out = new ArrayList<Object>();
     for (int i = 0; i < list.size(); i++)
       out.add(Json.object("index", i, "label", list.get(i).label, "date", list.get(i).date, "words", words(list.get(i).document)));
     return out;
   }
 
   private static int words(Document d) {
-    String t = d.plainText();
+    var t = d.plainText();
     int n = 0;
     boolean in = false;
     for (int i = 0; i < t.length(); i++) {
@@ -646,7 +646,7 @@ final class OfficeCommands implements Commands.Extension {
   static final List<String> BUILT_IN = java.util.Arrays.asList("Blank", "Letter", "Memo", "Report", "Resume");
 
   private static String templateName(String name) {
-    String n = name.trim();
+    var n = name.trim();
     if (n.isEmpty() || n.length() > 80 || n.indexOf('/') >= 0 || n.indexOf('\\') >= 0)
       throw new IllegalArgumentException("Invalid template name");
     if (BUILT_IN.contains(n)) throw new IllegalArgumentException(n + " is a built-in template");
@@ -654,7 +654,7 @@ final class OfficeCommands implements Commands.Extension {
   }
 
   private static synchronized List<Object> templateNames() {
-    List<Object> out = new ArrayList<Object>(BUILT_IN);
+    var out = new ArrayList<Object>(BUILT_IN);
     out.addAll(TEMPLATES.keySet());
     return out;
   }
@@ -671,7 +671,7 @@ final class OfficeCommands implements Commands.Extension {
         throw new IllegalStateException("Template " + name + " is damaged: " + e.getMessage(), e);
       }
     if (!BUILT_IN.contains(name)) throw new IllegalArgumentException("No template " + name);
-    Session t = new Session(Document.empty());
+    var t = new Session(Document.empty());
     if ("Letter".equals(name))
       lines(t, null, "[Your Name]", null, "[Street Address]", null, "[City, ST ZIP]", null, "", null, "[Date]", null, "",
           null, "[Recipient Name]", null, "[Company]", null, "", null, "Dear [Recipient]:", null, "[Body of the letter.]", null, "",
@@ -700,7 +700,7 @@ final class OfficeCommands implements Commands.Extension {
 
   private static int[] sentence(Document d, int[] at) {
     if (at[0] >= d.blocks.size() || !(d.blocks.get(at[0]) instanceof Paragraph)) return null;
-    String t = d.paragraph(at[0]).text.plainText();
+    var t = d.paragraph(at[0]).text.plainText();
     int start = Math.min(at[1], t.length());
     while (start < t.length() && Character.isWhitespace(t.charAt(start))) start++;
     if (start >= t.length()) return null;

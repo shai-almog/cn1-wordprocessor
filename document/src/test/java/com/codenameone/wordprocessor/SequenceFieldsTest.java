@@ -11,12 +11,12 @@ public class SequenceFieldsTest {
 
   @Test
   public void quotedArgumentsRemainDataEvenWhenTheyLookLikeSwitches() {
-    FieldCode code = new FieldCode("SEQ \"\\\\h\" \\* \"ROMAN\"");
+    var code = new FieldCode("SEQ \"\\\\h\" \\* \"ROMAN\"");
     assertEquals("\\h", code.arguments.get(0));
     assertFalse(code.switches.containsKey("h"));
     assertEquals("ROMAN", code.switches.get("*"));
     assertEquals("", FieldCode.tokens("TITLE \"\"").get(1));
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.insertField(new InlineField("SEQ \"\\\\h\" \\* ROMAN", "?", false, false));
     s.mapFields(SequenceFields.resolver(s.document()));
     assertEquals("I", s.document().plainText());
@@ -24,7 +24,7 @@ public class SequenceFieldsTest {
 
   @Test
   public void captionsRenumberInDocumentOrderAndUndoAsOneOperation() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("Object");
     caption(s, "Figure", "First", false);
     caption(s, "Figure", "Second", false);
@@ -42,7 +42,7 @@ public class SequenceFieldsTest {
   @Test
   public void trackedCaptionsCanBeAcceptedOrRejectedOnEitherSide() {
     for (boolean above : new boolean[] {true, false}) {
-      Session s = new Session(Document.empty());
+      var s = new Session(Document.empty());
       s.replace("Object");
       s.trackChanges(true);
       caption(s, "Figure", "Description", above);
@@ -57,7 +57,7 @@ public class SequenceFieldsTest {
 
   @Test
   public void cellCaptionIsPlacedOutsideTheWholeTable() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.insertTable(1, 1);
     int block = 0;
     while (!(s.document().blocks.get(block) instanceof Table)) block++;
@@ -71,7 +71,7 @@ public class SequenceFieldsTest {
 
   @Test
   public void sequencesSupportResetRepeatHideFormatsAndLockedFields() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     for (String code :
         new String[] {
           "SEQ Figure \\* ROMAN",
@@ -91,7 +91,7 @@ public class SequenceFieldsTest {
 
   @Test
   public void chapterCaptionsRestartAndHeadingReferencesUseTextOrNumber() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("First");
     s.applyStyle("Heading1");
     s.insertCaption("Figure", "One", false, "ARABIC", false, 1, "-");

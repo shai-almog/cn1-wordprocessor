@@ -13,11 +13,11 @@ public class CharacterCommandsTest {
 
   @Test
   public void allCharacterCommandsAreUndoableWithoutReplacingSourceText() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("Original Text");
     s.selectRange(0, 0, 0, 8);
     for (String key : CharacterFormat.KEYS) {
-      Document before = s.document();
+      var before = s.document();
       String value =
           key.equals("underlineStyle")
               ? "wave"
@@ -44,10 +44,10 @@ public class CharacterCommandsTest {
 
   @Test
   public void groupedFontChangesRollbackAllOnInvalidGeometry() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("abc");
     s.selectRange(0, 0, 0, 3);
-    Document before = s.document();
+    var before = s.document();
     try {
       s.transact(
           t -> {
@@ -62,7 +62,7 @@ public class CharacterCommandsTest {
 
   @Test
   public void trackingRejectAndAcceptCoverTheWholeFormatGroup() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("abc");
     s.selectRange(0, 0, 0, 3);
     s.trackChanges(true);
@@ -81,7 +81,7 @@ public class CharacterCommandsTest {
 
   @Test
   public void styleUpdateKeepsDirectCharacterOverrides() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("abc");
     s.applyStyle("Normal");
     s.selectRange(0, 0, 0, 3);
@@ -98,11 +98,11 @@ public class CharacterCommandsTest {
 
   @Test
   public void caretInsideWordFormatsWholeWordWithoutMovingCaret() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("one alpha_beta two");
     s.select(0, 6, 6);
-    Document before = s.document();
-    Selection caret = s.selection();
+    var before = s.document();
+    var caret = s.selection();
     apply(s, "smallCaps", "true");
     assertSame(caret, s.selection());
     for (int i = 0; i < 18; i++)
@@ -117,10 +117,10 @@ public class CharacterCommandsTest {
   @Test
   public void wordBoundaryChangesTypingStyleWithoutChangingExistingWord() {
     for (int offset : new int[] {0, 3, 4, 7}) {
-      Session s = new Session(Document.empty());
+      var s = new Session(Document.empty());
       s.replace("one two");
       s.select(0, offset, offset);
-      Document before = s.document();
+      var before = s.document();
       apply(s, "allCaps", "true");
       assertSame(before, s.document());
       s.replace("x");
@@ -130,7 +130,7 @@ public class CharacterCommandsTest {
 
   @Test
   public void caretWordFormattingTracksAndRejectsAcrossCombiningMarks() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("a\u0301bc rest");
     s.select(0, 2, 2);
     s.trackChanges(true);
@@ -144,10 +144,10 @@ public class CharacterCommandsTest {
 
   @Test
   public void repeatedFontEditsAtCaretFormOneUndoTransaction() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("hello world");
     s.select(0, 2, 2);
-    Document before = s.document();
+    var before = s.document();
     s.transact(
         t -> {
           t.format("characterScale", "130");
@@ -163,7 +163,7 @@ public class CharacterCommandsTest {
 
   @Test
   public void styleUnderlineModeDoesNotOverwriteDirectSingleUnderline() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("alpha");
     s.applyStyle("Normal");
     s.select(0, 0, 5);
@@ -172,7 +172,7 @@ public class CharacterCommandsTest {
         s,
         "styles.modify",
         Json.object("id", "Normal", "property", "doubleUnderline", "value", "true"));
-    TextStyle actual = s.document().paragraph(0).text.styleAt(0);
+    var actual = s.document().paragraph(0).text.styleAt(0);
     assertTrue(actual.underline);
     assertFalse(actual.characters.doubleUnderline);
   }

@@ -5,9 +5,9 @@ import static org.junit.Assert.*;
 
 public class InputBindingTest {
   @Test public void oldSessionCannotChangeNewSelectionTextOrFocus() {
-    Client client = new Client(); InputBinding old = new InputBinding(client);
+    var client = new Client(); var old = new InputBinding(client);
     old.commitText("old"); old.setSelectionRange(1,2); assertEquals(2,client.edits);
-    old.close(); InputBinding current = new InputBinding(client);
+    old.close(); var current = new InputBinding(client);
     old.setSelectionRange(0,3); old.commitText("late"); old.setComposingText("late",1);
     old.finishComposing(); old.deleteSurroundingText(1,0); old.replaceRange(0,3,"late");
     old.onKeyCommand(TextInputClient.KEY_UNDO,0); old.onEditorAction(0);

@@ -11,10 +11,10 @@ final class TableSplitting {
       throw new IllegalArgumentException("Cell is outside the table");
     if (count < 1 || count > 100) throw new IllegalArgumentException("Use 1 to 100 columns");
     if (count == 1) return table;
-    Table.Merge selected = table.span(row, column);
+    var selected = table.span(row, column);
     double[] old = new double[table.columns() + 1];
     for (int c = 0; c < table.columns(); c++) old[c + 1] = old[c] + table.format.column(c);
-    List<Double> boundaries = new ArrayList<Double>();
+    var boundaries = new ArrayList<Double>();
     for (double value : old) boundaries.add(value);
     double start = old[selected.column], end = old[selected.column + selected.columns];
     double[] cuts = new double[count + 1];
@@ -42,15 +42,15 @@ final class TableSplitting {
       weights[c] = (float) (boundaries.get(c + 1) - boundaries.get(c));
       if (weights[c] < .000001f) throw new IllegalArgumentException("Cell is too narrow to split");
     }
-    List<List<Sequence<Paragraph>>> cells = new ArrayList<List<Sequence<Paragraph>>>();
+    var cells = new ArrayList<List<Sequence<Paragraph>>>();
     TableFormat.Cell[][] appearance = new TableFormat.Cell[table.rows()][columns];
     TableFormat.Row[] heights = new TableFormat.Row[table.rows()];
-    List<Table.Merge> spans = new ArrayList<Table.Merge>();
+    var spans = new ArrayList<Table.Merge>();
     for (int r = 0; r < table.rows(); r++) {
-      List<Sequence<Paragraph>> line = new ArrayList<Sequence<Paragraph>>();
+      var line = new ArrayList<Sequence<Paragraph>>();
       heights[r] = table.format.row(r);
       for (int c = 0; c < table.columns(); c++) {
-        Table.Merge owner = table.span(r, c);
+        var owner = table.span(r, c);
         for (int j = mapped[c]; j < mapped[c + 1]; j++) {
           line.add(
               j == mapped[c]
@@ -68,11 +68,11 @@ final class TableSplitting {
               new Table.Merge(r, mapped[c], owner.rows, mapped[c + owner.columns] - mapped[c]));
       }
       if (r == selected.row) {
-        Paragraph prototype = table.cell(selected.row, selected.column).get(0);
+        var prototype = table.cell(selected.row, selected.column).get(0);
         for (int n = 1; n < count; n++) {
           int at = parts[n];
           appearance[r][at] = table.format.cell(selected.row, selected.column);
-          Paragraph empty = line.get(at).get(0);
+          var empty = line.get(at).get(0);
           if (Table.cellText(line.get(at)).isEmpty())
             line.set(at, new Sequence<Paragraph>().append(emptyParagraph(prototype, empty.id())));
         }
@@ -102,17 +102,17 @@ final class TableSplitting {
   static Table rows(Table table, int first, int end, String id) {
     if (first < 0 || first >= end || end > table.rows())
       throw new IllegalArgumentException("Invalid table split");
-    List<List<Sequence<Paragraph>>> cells = new ArrayList<List<Sequence<Paragraph>>>();
+    var cells = new ArrayList<List<Sequence<Paragraph>>>();
     TableFormat.Cell[][] appearance = new TableFormat.Cell[end - first][table.columns()];
     float[] weights = new float[table.columns()];
     TableFormat.Row[] heights = new TableFormat.Row[end - first];
     for (int c = 0; c < table.columns(); c++) weights[c] = table.format.column(c);
     for (int r = first; r < end; r++) {
-      List<Sequence<Paragraph>> line = new ArrayList<Sequence<Paragraph>>();
+      var line = new ArrayList<Sequence<Paragraph>>();
       heights[r - first] = table.format.row(r);
       for (int c = 0; c < table.columns(); c++) {
         line.add(table.cell(r, c));
-        Table.Merge owner = table.span(r, c);
+        var owner = table.span(r, c);
         appearance[r - first][c] =
             r == first && owner.row < first && c == owner.column
                 ? table.format.cell(owner.row, owner.column)
@@ -120,7 +120,7 @@ final class TableSplitting {
       }
       cells.add(line);
     }
-    List<Table.Merge> spans = new ArrayList<Table.Merge>();
+    var spans = new ArrayList<Table.Merge>();
     for (Table.Merge span : table.merges) {
       int top = Math.max(first, span.row), bottom = Math.min(end, span.row + span.rows);
       if (top < bottom)

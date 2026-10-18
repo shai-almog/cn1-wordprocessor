@@ -7,12 +7,12 @@ import org.junit.Test;
 public class DocumentTextTest {
   @Test
   public void nativeOffsetsSurviveParagraphSplitsAndQueuedSelections() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("Quarterly report");
     s.replace("\n");
-    DocumentText text = new DocumentText(s.document());
+    var text = new DocumentText(s.document());
     assertEquals("Quarterly report\n", text.text);
-    int[] p = text.position(17);
+    var p = text.position(17);
     assertArrayEquals(new int[] {1, 0}, p);
     s.select(p[0], p[1], p[1]);
     s.replace("The ribbon supports editing.");
@@ -27,9 +27,9 @@ public class DocumentTextTest {
 
   @Test
   public void positionsClampAndDoNotSplitSurrogates() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("a😀b\nend");
-    DocumentText t = new DocumentText(s.document());
+    var t = new DocumentText(s.document());
     assertArrayEquals(new int[] {0, 1}, t.position(2));
     assertArrayEquals(new int[] {0, 0}, t.position(-1));
     assertArrayEquals(new int[] {1, 3}, t.position(999));

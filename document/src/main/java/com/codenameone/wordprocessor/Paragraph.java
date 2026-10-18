@@ -237,7 +237,7 @@ public final class Paragraph implements Block {
     if (formatRevision == null || revisionId != null && !revisionId.equals(formatRevision.id))
       return this;
     if (accept) return formatRevision(null, null);
-    Paragraph p = previousFormat;
+    var p = previousFormat;
     return new Paragraph(
         id,
         text,

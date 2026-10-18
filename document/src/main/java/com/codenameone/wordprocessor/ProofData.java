@@ -11,7 +11,7 @@ final class ProofData {
   private ProofData() {}
 
   static byte[] bytes(String name, boolean deflated) {
-    InputStream in = ProofData.class.getResourceAsStream(name);
+    var in = ProofData.class.getResourceAsStream(name);
     // Native Codename One ports find bundle files only through Display. Android keeps the
     // folder (assets/proof/en-us.dic); the Apple ports flatten it ("/en-us.dic"). Without this
     // the native dictionary was empty: nearly every word was flagged and nothing hyphenated.
@@ -23,7 +23,7 @@ final class ProofData {
     if (in == null) return new byte[0];
     try (var closing = in) {
       if (deflated) in = new InflaterInputStream(in, new Inflater(true));
-      ByteArrayOutputStream out = new ByteArrayOutputStream(deflated ? 1 << 21 : 1 << 17);
+      var out = new ByteArrayOutputStream(deflated ? 1 << 21 : 1 << 17);
       byte[] buffer = new byte[16384];
       for (int n = in.read(buffer); n >= 0; n = in.read(buffer)) out.write(buffer, 0, n);
       return out.toByteArray();

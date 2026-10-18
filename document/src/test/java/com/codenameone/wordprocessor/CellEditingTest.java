@@ -6,7 +6,7 @@ import org.junit.Test;
 
 public class CellEditingTest {
   private Session sample() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("Body");
     s.insertTable(2, 2);
     s.setCell(1, 0, 0, "alpha beta");
@@ -19,8 +19,8 @@ public class CellEditingTest {
 
   @Test
   public void richEditsKeepDocumentIdentityUntilChangedAndShareGlobalUndo() {
-    Session s = sample();
-    Document original = s.document();
+    var s = sample();
+    var original = s.document();
     s.enterCell(1, 0, 0);
     assertSame(original, s.document());
     s.select(0, 6, 10);
@@ -45,7 +45,7 @@ public class CellEditingTest {
 
   @Test
   public void paragraphSplitClipboardAndCompositionPreserveRichCellContent() {
-    Session s = sample();
+    var s = sample();
     s.enterCell(1, 0, 0);
     s.select(0, 6, 6);
     s.enterParagraph();
@@ -53,7 +53,7 @@ public class CellEditingTest {
     assertEquals("beta", cell(s, 0, 0, 1).text.toString());
     s.select(1, 0, 4);
     s.format("italic", "true");
-    Document fragment = s.copySelection();
+    var fragment = s.copySelection();
     s.nextCell(false);
     s.paste(fragment);
     assertTrue(cell(s, 0, 1, 0).text.styleAt(0).italic);
@@ -66,8 +66,8 @@ public class CellEditingTest {
     s.finishComposition();
     s.undo();
     assertEquals("beta", cell(s, 0, 1, 0).text.toString());
-    java.util.Set<String> ids = new java.util.HashSet<String>();
-    Table t = (Table) s.document().blocks.get(1);
+    var ids = new java.util.HashSet<String>();
+    var t = (Table) s.document().blocks.get(1);
     for (int r = 0; r < t.rows(); r++)
       for (int c = 0; c < t.columns(); c++)
         for (Paragraph p : t.cell(r, c)) assertTrue(ids.add(p.id));
@@ -75,7 +75,7 @@ public class CellEditingTest {
 
   @Test
   public void tabSkipsMergedFollowersAndAppendsUndoableRow() {
-    Session s = sample();
+    var s = sample();
     s.mergeCells(1, 0, 0, 1, 2);
     s.enterCell(1, 0, 1);
     assertEquals(0, s.cellColumn());
@@ -94,9 +94,9 @@ public class CellEditingTest {
 
   @Test
   public void failedTransactionAndPreviewRestoreCellScopeAndCanonicalRoot() {
-    Session s = sample();
+    var s = sample();
     s.enterCell(1, 0, 0);
-    Document original = s.document();
+    var original = s.document();
     try {
       s.transact(
           x -> {
@@ -109,7 +109,7 @@ public class CellEditingTest {
     }
     assertTrue(s.inCell());
     assertSame(original, s.document());
-    Session draft = s.fork();
+    var draft = s.fork();
     draft.select(0, 0, 5);
     draft.replace("changed");
     assertSame(original, s.document());

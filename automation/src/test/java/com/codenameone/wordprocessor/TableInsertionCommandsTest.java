@@ -9,12 +9,12 @@ public class TableInsertionCommandsTest {
 
   @Test
   public void splitsStyledParagraphAtCaretAndTypesInFirstCell() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("Before after");
     s.select(0, 0, 12);
     s.format("bold", "true");
     s.select(0, 7, 7);
-    Document before = s.document();
+    var before = s.document();
     commands.execute(s, "table.insert", Json.object("rows", 2, "columns", 3));
     assertEquals("Before ", s.document().paragraph(0).text.toString());
     assertEquals("after", s.document().paragraph(2).text.toString());
@@ -23,7 +23,7 @@ public class TableInsertionCommandsTest {
     assertEquals(1, s.cellBlock());
     assertEquals(0, s.cellRow());
     assertEquals(0, s.cellColumn());
-    Document inserted = s.document();
+    var inserted = s.document();
     commands.execute(s, "text.insert", Json.object("text", "First cell"));
     assertEquals("First cell", Table.cellText(((Table) s.document().blocks.get(1)).cell(0, 0)));
     s.undo();
@@ -38,10 +38,10 @@ public class TableInsertionCommandsTest {
 
   @Test
   public void reversedSelectionAcrossParagraphsKeepsOutsideText() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("Before CUT\nREMOVE after");
     s.selectRange(1, 6, 0, 7);
-    Document before = s.document();
+    var before = s.document();
     commands.execute(s, "table.insert", Json.object("rows", 1, "columns", 1));
     assertEquals(3, s.document().blocks.size());
     assertEquals("Before ", s.document().paragraph(0).text.toString());
@@ -54,11 +54,11 @@ public class TableInsertionCommandsTest {
 
   @Test
   public void suffixCommentsRemainAttachedAfterInsertion() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("Before after");
     s.select(0, 7, 12);
     s.addComment("Ada", "Keep suffix");
-    String id = s.document().comments.get(0).id;
+    var id = s.document().comments.get(0).id;
     s.select(0, 7, 7);
     s.insertTable(2, 2);
     s.selectComment(id);
@@ -68,10 +68,10 @@ public class TableInsertionCommandsTest {
 
   @Test
   public void invalidAndNestedInsertionLeaveDocumentAndCaretUntouched() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("Keep");
     s.select(0, 0, 4);
-    Document before = s.document();
+    var before = s.document();
     try {
       s.insertTable(0, 2);
       fail();
@@ -93,7 +93,7 @@ public class TableInsertionCommandsTest {
   @Test
   public void leavingEitherInsertedTableRestoresTheSuffixParagraphCaret() {
     for (boolean quick : new boolean[] {false, true}) {
-      Session s = new Session(Document.empty());
+      var s = new Session(Document.empty());
       s.replace("Before after");
       s.select(0, 7, 7);
       if (quick) s.insertQuickTable("matrix");

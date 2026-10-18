@@ -19,7 +19,7 @@ public class ProofingLayoutTest {
   }
 
   private static String lines(Document d) {
-    StringBuilder out = new StringBuilder();
+    var out = new StringBuilder();
     for (LayoutEngine.Page page : engine().layout(d, 0).pages)
       for (LayoutEngine.Line line : page.lines) {
         for (LayoutEngine.Span span : line.spans) out.append(span.displayText);
@@ -29,9 +29,9 @@ public class ProofingLayoutTest {
   }
 
   private static Document doc(boolean automatic) {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("an extraordinary documentation typography");
-    Document d = s.document().page(new PageSpec(150, 200, 10, 10, 10, 10));
+    var d = s.document().page(new PageSpec(150, 200, 10, 10, 10, 10));
     return automatic ? d.properties(d.properties.withSetting("hyphenation", "automatic")) : d;
   }
 

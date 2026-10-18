@@ -45,7 +45,7 @@ public final class OutlineView {
 
   /** Collapse (true) or expand (false) a heading's subordinate text. */
   public OutlineView collapse(String paragraphId, boolean value) {
-    Set<String> next = new HashSet<String>(collapsed);
+    var next = new HashSet<String>(collapsed);
     if (value) next.add(paragraphId);
     else next.remove(paragraphId);
     return new OutlineView(showLevel, showFormatting, firstLineOnly, next);
@@ -55,7 +55,7 @@ public final class OutlineView {
   public boolean filters(Document d) {
     if (!showFormatting || firstLineOnly) return true;
     for (Block b : d.blocks)
-      if (b instanceof Paragraph && (hidden(d, (Paragraph) b) || collapsed.contains(b.id()))) return true;
+      if (b instanceof Paragraph paragraph && (hidden(d, paragraph) || collapsed.contains(b.id()))) return true;
     return showLevel < BODY;
   }
 
@@ -68,7 +68,7 @@ public final class OutlineView {
     int own = p.format.outlineLevel;
     if (own >= 1) return own;
     if (own == 0) return BODY;
-    ParagraphStyle style = d.styles.get(p.style);
+    var style = d.styles.get(p.style);
     if (style != null && style.paragraph.format.outlineLevel >= 1) return style.paragraph.format.outlineLevel;
     if (p.style != null && p.style.startsWith("Heading") && p.style.length() == 8) {
       char c = p.style.charAt(7);
@@ -82,16 +82,16 @@ public final class OutlineView {
     if (!(d.blocks.get(block) instanceof Paragraph)) return false;
     int level = level(d, (Paragraph) d.blocks.get(block));
     if (level == BODY || block + 1 >= d.blocks.size()) return false;
-    Block next = d.blocks.get(block + 1);
+    var next = d.blocks.get(block + 1);
     return !(next instanceof Paragraph) || level(d, (Paragraph) next) > level;
   }
 
   public Document apply(Document d) {
-    Sequence<Block> out = new Sequence<Block>();
+    var out = new Sequence<Block>();
     int hideBelow = Integer.MAX_VALUE, heading = 0;
     for (int i = 0; i < d.blocks.size(); i++) {
-      Block b = d.blocks.get(i);
-      int level = b instanceof Paragraph ? level(d, (Paragraph) b) : BODY;
+      var b = d.blocks.get(i);
+      int level = b instanceof Paragraph p ? level(d, p) : BODY;
       if (level <= hideBelow) hideBelow = Integer.MAX_VALUE;
       if (hideBelow != Integer.MAX_VALUE || level > showLevel) continue;
       if (level < BODY && collapsed.contains(b.id())) hideBelow = level;
@@ -99,11 +99,11 @@ public final class OutlineView {
         out = out.append(b);
         continue;
       }
-      Paragraph p = (Paragraph) b;
+      var p = (Paragraph) b;
       if (level < BODY) heading = level;
-      RichText text = p.text;
+      var text = p.text;
       if (firstLineOnly && level == BODY) {
-        String plain = text.plainText();
+        var plain = text.plainText();
         int cut = Math.min(plain.length(), 90);
         if (cut < plain.length()) {
           int space = plain.lastIndexOf(' ', cut);
@@ -124,7 +124,7 @@ public final class OutlineView {
       if (collapsed.contains(p.id) && hasChildren(d, i))
         text = text.mapStyles(s -> s.with("underlineStyle", "wave"));
       float indent = 18 * ((level < BODY ? level : heading + 1) - 1);
-      Paragraph shown =
+      var shown =
           p.text(text)
               .with("indent", String.valueOf(Math.max(0, indent)))
               .with("align", "left")
@@ -137,6 +137,6 @@ public final class OutlineView {
     if (out.size() == 0) out = out.append(new Paragraph("outline-empty", new RichText()));
     // Outline view has no page layout: one section, so removed blocks never own a section break.
     return d.blocks(out, d.nextId)
-        .sections(new java.util.LinkedHashMap<String, Section>(), d.lastSection);
+        .sections(new java.util.LinkedHashMap<>(), d.lastSection);
   }
 }

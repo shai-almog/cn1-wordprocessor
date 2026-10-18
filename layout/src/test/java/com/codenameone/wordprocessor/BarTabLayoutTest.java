@@ -29,12 +29,12 @@ public class BarTabLayoutTest {
 
   @Test
   public void barsDoNotConsumeTabsOrGenerateLeaders() {
-    LayoutEngine.Line line =
+    var line =
         engine.layout(document(paragraph("A\tB")), 0).pages.get(0).lines.get(0);
     assertEquals(120, line.spans.get(2).x, .001);
     assertEquals(44, line.x + line.barTabs.get(0), .001);
     assertEquals("...................", line.spans.get(1).displayText);
-    Paragraph p = paragraph("A\tB").with("tabs", "24,bar,dot");
+    var p = paragraph("A\tB").with("tabs", "24,bar,dot");
     line = engine.layout(document(p), 1).pages.get(0).lines.get(0);
     assertEquals(36, line.spans.get(2).x, .001);
     assertEquals("", line.spans.get(1).displayText);
@@ -43,28 +43,28 @@ public class BarTabLayoutTest {
   @Test
   public void barsStayFixedAcrossWrappingAlignmentAndFirstIndent() {
     for (String align : new String[] {"left", "center", "right", "both", "distribute"}) {
-      Paragraph p =
+      var p =
           paragraph("First line\nSecond line\nThird line")
               .with("align", align)
               .with("indent", "15")
               .with("firstIndent", "18")
               .with("rightIndent", "12");
-      LayoutEngine.Page page = engine.layout(document(p), 0).pages.get(0);
+      var page = engine.layout(document(p), 0).pages.get(0);
       assertEquals(3, page.lines.size());
       for (LayoutEngine.Line line : page.lines)
         assertEquals(59, line.x + line.barTabs.get(0), .001);
     }
-    Paragraph p =
+    var p =
         paragraph("A long paragraph that wraps onto several lines with a vertical rule")
             .with("tabs", "24,bar,none");
-    LayoutEngine.Page page = engine.layout(document(p), 0).pages.get(0);
+    var page = engine.layout(document(p), 0).pages.get(0);
     assertTrue(page.lines.size() > 1);
     for (LayoutEngine.Line line : page.lines) assertEquals(44, line.x + line.barTabs.get(0), .001);
   }
 
   @Test
   public void emptyParagraphAndCachedLayoutRetainBars() {
-    Document d = document(paragraph(""));
+    var d = document(paragraph(""));
     LayoutEngine.Result first = engine.layout(d, 0), second = engine.layout(d, 1);
     assertEquals(0, second.measuredParagraphs);
     assertEquals(first.pages.get(0).lines.get(0).barTabs, second.pages.get(0).lines.get(0).barTabs);
@@ -73,13 +73,13 @@ public class BarTabLayoutTest {
 
   @Test
   public void barsFollowCellPaddingAndMarginStoryOrigins() {
-    Session s = new Session(document(paragraph("Body")));
+    var s = new Session(document(paragraph("Body")));
     s.insertTable(1, 1);
     s.enterCell(1, 0, 0);
     s.paragraph("tabs", "24,bar,none");
     s.paragraph("align", "right");
     s.paragraph("firstIndent", "9");
-    Document d =
+    var d =
         s.document()
             .furniture(
                 PageFurniture.EMPTY.story(
@@ -89,11 +89,11 @@ public class BarTabLayoutTest {
                             paragraph("Header")
                                 .with("align", "center")
                                 .with("firstIndent", "12"))));
-    LayoutEngine.Page page = engine.layout(d, 0).pages.get(0);
+    var page = engine.layout(d, 0).pages.get(0);
     LayoutEngine.Line cell = null;
     for (LayoutEngine.Line line : page.lines) if (line.block == 1) cell = line;
     assertNotNull(cell);
-    Table table = (Table) d.blocks.get(1);
+    var table = (Table) d.blocks.get(1);
     assertEquals(
         44 + table.format.cell(0, 0).horizontalPadding, cell.x + cell.barTabs.get(0), .001);
     assertEquals(44, page.header.get(0).x + page.header.get(0).barTabs.get(0), .001);

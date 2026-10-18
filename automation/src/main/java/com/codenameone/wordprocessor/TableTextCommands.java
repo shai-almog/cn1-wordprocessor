@@ -17,19 +17,19 @@ final class TableTextCommands implements Commands.Extension {
               "comma".equals(kind) ? ',' : "semicolon".equals(kind) ? ';' : "tab".equals(kind) ? '\t' : 0;
           if (sep == 0) throw new IllegalArgumentException("Separator must be tab, comma or semicolon");
           if (s.inCell()) throw new IllegalArgumentException("Nested tables are not supported yet");
-          Document d = s.document();
-          Selection x = s.selection();
+          var d = s.document();
+          var x = s.selection();
           int from = x.startBlock(), to = x.endBlock();
           for (int i = from; i <= to; i++)
             if (!(d.blocks.get(i) instanceof Paragraph))
               throw new IllegalArgumentException("Select paragraphs only");
           long id = d.nextId;
-          List<List<Sequence<Paragraph>>> rows = new ArrayList<List<Sequence<Paragraph>>>();
+          var rows = new ArrayList<List<Sequence<Paragraph>>>();
           int columns = 1;
           for (int i = from; i <= to; i++) {
-            Paragraph p = d.paragraph(i);
-            String text = p.text.plainText();
-            List<Sequence<Paragraph>> row = new ArrayList<Sequence<Paragraph>>();
+            var p = d.paragraph(i);
+            var text = p.text.plainText();
+            var row = new ArrayList<Sequence<Paragraph>>();
             int start = 0;
             for (int k = 0; k <= text.length(); k++)
               if (k == text.length() || text.charAt(k) == sep) {
@@ -67,7 +67,7 @@ final class TableTextCommands implements Commands.Extension {
           int block = s.cellBlock(), row = s.cellRow(), col = s.cellColumn();
           if ("row".equals(shift)) return c.execute(s, "table.deleteRow");
           if ("column".equals(shift)) return c.execute(s, "table.deleteColumn");
-          Table t = (Table) s.document().blocks.get(block);
+          var t = (Table) s.document().blocks.get(block);
           if (!t.merges.isEmpty())
             throw new IllegalArgumentException("Unmerge cells before shifting");
           long id = s.document().nextId;
@@ -91,10 +91,10 @@ final class TableTextCommands implements Commands.Extension {
         (s, a) -> {
           if (!s.inCell()) throw new IllegalArgumentException("Place the caret in a table");
           int block = s.cellBlock(), col = s.cellColumn();
-          Table t = (Table) s.document().blocks.get(block);
+          var t = (Table) s.document().blocks.get(block);
           float total = s.activeSection().resolved.page.contentWidth();
           float fraction = ((Number) a.get("width")).floatValue() / total;
-          TableFormat f = t.format.columnFraction(col, Math.max(.001f, Math.min(.99f, fraction)));
+          var f = t.format.columnFraction(col, Math.max(.001f, Math.min(.99f, fraction)));
           s.formatTable(block, f);
           return Math.round(f.columnFraction(col) * total);
         });

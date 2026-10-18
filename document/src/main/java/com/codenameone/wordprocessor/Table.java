@@ -54,10 +54,10 @@ public final class Table implements Block {
     this.format = format;
     this.id = id;
     int cols = cells.get(0).size();
-    List<List<Sequence<Paragraph>>> c = new ArrayList<List<Sequence<Paragraph>>>();
+    var c = new ArrayList<List<Sequence<Paragraph>>>();
     for (List<Sequence<Paragraph>> row : cells) {
       if (row.size() != cols) throw new IllegalArgumentException("Ragged table");
-      List<Sequence<Paragraph>> copy = new ArrayList<Sequence<Paragraph>>();
+      var copy = new ArrayList<Sequence<Paragraph>>();
       for (Sequence<Paragraph> cell : row) {
         if (cell == null || cell.size() == 0) throw new IllegalArgumentException("Empty cell");
         copy.add(cell);
@@ -65,7 +65,7 @@ public final class Table implements Block {
       c.add(Collections.unmodifiableList(copy));
     }
     this.cells = Collections.unmodifiableList(c);
-    List<Merge> spans = new ArrayList<Merge>();
+    var spans = new ArrayList<Merge>();
     for (Merge m : merges) {
       if (m.row < format.headerRows && m.row + m.rows > format.headerRows)
         throw new IllegalArgumentException(
@@ -84,12 +84,12 @@ public final class Table implements Block {
   }
 
   public Table crop(CellSelection range) {
-    List<List<Sequence<Paragraph>>> picked = new ArrayList<List<Sequence<Paragraph>>>();
-    TableFormat f =
+    var picked = new ArrayList<List<Sequence<Paragraph>>>();
+    var f =
         new TableFormat(
             range.lastRow - range.firstRow + 1, range.lastColumn - range.firstColumn + 1);
     for (int r = range.firstRow; r <= range.lastRow; r++) {
-      List<Sequence<Paragraph>> row = new ArrayList<Sequence<Paragraph>>();
+      var row = new ArrayList<Sequence<Paragraph>>();
       for (int c = range.firstColumn; c <= range.lastColumn; c++) {
         row.add(cell(r, c));
         f = f.cell(r - range.firstRow, c - range.firstColumn, format.cell(r, c));
@@ -100,7 +100,7 @@ public final class Table implements Block {
     for (int c = range.firstColumn; c <= range.lastColumn; c++)
       f = f.column(c - range.firstColumn, format.column(c));
     f = f.headerRows(Math.max(0, Math.min(f.rows(), format.headerRows - range.firstRow)));
-    List<Merge> spans = new ArrayList<Merge>();
+    var spans = new ArrayList<Merge>();
     for (Merge span : merges)
       if (range.contains(range.block, span.row, span.column))
         spans.add(
@@ -114,7 +114,7 @@ public final class Table implements Block {
       fraction += format.columnFraction(c);
     fraction =
         range.firstColumn == 0 && range.lastColumn == columns() - 1 ? 1 : Math.min(1, fraction);
-    TableFormat.Sizing size = format.sizing;
+    var size = format.sizing;
     f =
         f.sizing(
             new TableFormat.Sizing(
@@ -152,8 +152,8 @@ public final class Table implements Block {
 
   public Table setCell(int r, int c, Sequence<Paragraph> value) {
     if (covered(r, c)) throw new IllegalArgumentException("Edit the owning merged cell");
-    List<List<Sequence<Paragraph>>> copy = new ArrayList<List<Sequence<Paragraph>>>(cells);
-    List<Sequence<Paragraph>> row = new ArrayList<Sequence<Paragraph>>(copy.get(r));
+    var copy = new ArrayList<List<Sequence<Paragraph>>>(cells);
+    var row = new ArrayList<Sequence<Paragraph>>(copy.get(r));
     row.set(c, value);
     copy.set(r, row);
     return new Table(id, copy, merges, format);
@@ -162,7 +162,7 @@ public final class Table implements Block {
   public Table insertRow(int at, List<Sequence<Paragraph>> row) {
     if (at < 0 || at > rows() || row.size() != columns())
       throw new IllegalArgumentException("Invalid row insertion");
-    List<List<Sequence<Paragraph>>> copy = new ArrayList<List<Sequence<Paragraph>>>(cells);
+    var copy = new ArrayList<List<Sequence<Paragraph>>>(cells);
     copy.add(at, row);
     return new Table(id, copy, changedSpans(true, at, true), format.change(true, at, true));
   }
@@ -170,15 +170,15 @@ public final class Table implements Block {
   public Table deleteRow(int at) {
     if (rows() == 1)
       throw new IllegalArgumentException("A table must keep at least one row; use Delete table");
-    List<List<Sequence<Paragraph>>> copy = new ArrayList<List<Sequence<Paragraph>>>(cells);
+    var copy = new ArrayList<List<Sequence<Paragraph>>>(cells);
     for (Merge m : merges)
       if (m.row == at && m.rows > 1) {
-        List<Sequence<Paragraph>> next = new ArrayList<Sequence<Paragraph>>(copy.get(at + 1));
+        var next = new ArrayList<Sequence<Paragraph>>(copy.get(at + 1));
         next.set(m.column, cell(m.row, m.column));
         copy.set(at + 1, next);
       }
     copy.remove(at);
-    TableFormat nextFormat = format.change(true, at, false);
+    var nextFormat = format.change(true, at, false);
     for (Merge m : merges)
       if (m.row == at && m.rows > 1)
         nextFormat = nextFormat.cell(at, m.column, format.cell(m.row, m.column));
@@ -188,9 +188,9 @@ public final class Table implements Block {
   public Table insertColumn(int at, List<Sequence<Paragraph>> column) {
     if (at < 0 || at > columns() || column.size() != rows())
       throw new IllegalArgumentException("Invalid column insertion");
-    List<List<Sequence<Paragraph>>> copy = new ArrayList<List<Sequence<Paragraph>>>();
+    var copy = new ArrayList<List<Sequence<Paragraph>>>();
     for (int r = 0; r < rows(); r++) {
-      List<Sequence<Paragraph>> row = new ArrayList<Sequence<Paragraph>>(cells.get(r));
+      var row = new ArrayList<Sequence<Paragraph>>(cells.get(r));
       row.add(at, column.get(r));
       copy.add(row);
     }
@@ -200,16 +200,16 @@ public final class Table implements Block {
   public Table deleteColumn(int at) {
     if (columns() == 1)
       throw new IllegalArgumentException("A table must keep at least one column; use Delete table");
-    List<List<Sequence<Paragraph>>> copy = new ArrayList<List<Sequence<Paragraph>>>();
+    var copy = new ArrayList<List<Sequence<Paragraph>>>();
     for (List<Sequence<Paragraph>> original : cells) {
-      List<Sequence<Paragraph>> row = new ArrayList<Sequence<Paragraph>>(original);
+      var row = new ArrayList<Sequence<Paragraph>>(original);
       for (Merge m : merges)
         if (m.row == copy.size() && m.column == at && m.columns > 1)
           row.set(at + 1, cell(m.row, m.column));
       row.remove(at);
       copy.add(row);
     }
-    TableFormat nextFormat = format.change(false, at, false);
+    var nextFormat = format.change(false, at, false);
     for (Merge m : merges)
       if (m.column == at && m.columns > 1)
         nextFormat = nextFormat.cell(m.row, at, format.cell(m.row, m.column));
@@ -222,7 +222,7 @@ public final class Table implements Block {
       throw new IllegalArgumentException("Split merged cells before sorting a table");
     if (column < 0 || column >= columns())
       throw new IllegalArgumentException("Invalid sort column");
-    List<List<Sequence<Paragraph>>> copy = new ArrayList<List<Sequence<Paragraph>>>(cells);
+    var copy = new ArrayList<List<Sequence<Paragraph>>>(cells);
     Collections.sort(
         copy.subList(header ? 1 : 0, copy.size()),
         new Comparator<List<Sequence<Paragraph>>>() {
@@ -246,12 +246,12 @@ public final class Table implements Block {
   }
 
   public boolean covered(int row, int column) {
-    Merge m = span(row, column);
+    var m = span(row, column);
     return m.row != row || m.column != column;
   }
 
   private List<Merge> changedSpans(boolean vertical, int at, boolean insert) {
-    List<Merge> out = new ArrayList<Merge>();
+    var out = new ArrayList<Merge>();
     for (Merge m : merges) {
       int start = vertical ? m.row : m.column, count = vertical ? m.rows : m.columns;
       if (insert) {
@@ -273,10 +273,10 @@ public final class Table implements Block {
   }
 
   public Table merge(int row, int column, int rowCount, int columnCount, long[] nextId) {
-    Merge area = new Merge(row, column, rowCount, columnCount);
+    var area = new Merge(row, column, rowCount, columnCount);
     if (row + rowCount > rows() || column + columnCount > columns())
       throw new IllegalArgumentException("Merge exceeds table");
-    List<Merge> spans = new ArrayList<Merge>();
+    var spans = new ArrayList<Merge>();
     for (Merge old : merges) {
       boolean overlap =
           row < old.row + old.rows
@@ -291,10 +291,10 @@ public final class Table implements Block {
         throw new IllegalArgumentException(
             "Merge must include each existing merged cell completely");
     }
-    List<List<Sequence<Paragraph>>> copy = new ArrayList<List<Sequence<Paragraph>>>();
+    var copy = new ArrayList<List<Sequence<Paragraph>>>();
     for (List<Sequence<Paragraph>> original : cells)
       copy.add(new ArrayList<Sequence<Paragraph>>(original));
-    Sequence<Paragraph> content = new Sequence<Paragraph>();
+    var content = new Sequence<Paragraph>();
     for (int y = row; y < row + rowCount; y++)
       for (int x = column; x < column + columnCount; x++) {
         if (!covered(y, x)) for (Paragraph p : cell(y, x)) content = content.append(p);
@@ -311,14 +311,14 @@ public final class Table implements Block {
   }
 
   public Table split(int row, int column) {
-    Merge selected = span(row, column);
-    List<Merge> spans = new ArrayList<Merge>();
+    var selected = span(row, column);
+    var spans = new ArrayList<Merge>();
     for (Merge m : merges) if (m != selected) spans.add(m);
     return new Table(id, cells, spans, format);
   }
 
   public static String cellText(Sequence<Paragraph> cell) {
-    StringBuilder b = new StringBuilder();
+    var b = new StringBuilder();
     for (Paragraph p : cell) {
       if (b.length() > 0) b.append('\n');
       b.append(p.text);

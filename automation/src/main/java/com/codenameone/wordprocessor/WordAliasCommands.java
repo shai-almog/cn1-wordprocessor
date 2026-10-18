@@ -18,8 +18,9 @@ final class WordAliasCommands implements Commands.Extension {
     this.c = c;
     c.register(
         "edit.goto",
-        "Go To: what is page, line, section, bookmark, comment, heading, table, picture or"
-            + " equation; target is a 1-based number, +n/-n relative, or a bookmark name",
+        """
+        Go To: what is page, line, section, bookmark, comment, heading, table, picture or\
+         equation; target is a 1-based number, +n/-n relative, or a bookmark name""",
         "what:string,target?:any",
         false,
         (s, a) -> goTo(s, Commands.str(a, "what"), a.get("target")));
@@ -56,8 +57,8 @@ final class WordAliasCommands implements Commands.Extension {
         "",
         false,
         (s, a) -> {
-          Document d = s.document();
-          Map<String, Object> out = wordCount(s);
+          var d = s.document();
+          var out = wordCount(s);
           out.put("title", d.title);
           out.put("trackChanges", d.trackChanges);
           out.put("comments", d.comments.size());
@@ -101,7 +102,7 @@ final class WordAliasCommands implements Commands.Extension {
         (s, a) -> {
           String url = Commands.str(a, "url");
           if (url.trim().isEmpty()) throw new IllegalArgumentException("Enter a link address");
-          Selection x = s.selection();
+          var x = s.selection();
           if (x.start() == x.end() || a.containsKey("text")) {
             String text = a.containsKey("text") ? Commands.str(a, "text") : url;
             int from = x.start();
@@ -161,23 +162,24 @@ final class WordAliasCommands implements Commands.Extension {
         });
     c.register(
         "arrange.position",
-        "Position an object: inline, or with square wrapping at left, center or right (a"
-            + " top/middle/bottom prefix such as topLeft is accepted; objects stay anchored to"
-            + " their paragraph vertically)",
+        """
+        Position an object: inline, or with square wrapping at left, center or right (a\
+         top/middle/bottom prefix such as topLeft is accepted; objects stay anchored to\
+         their paragraph vertically)""",
         "block?:integer,position:string",
         true,
         (s, a) -> {
           int block = a.containsKey("block") ? Commands.integer(a, "block") : s.selection().block;
-          Block b = s.document().blocks.get(block);
+          var b = s.document().blocks.get(block);
           if (!(b instanceof Picture)) throw new IllegalArgumentException("Select a picture or shape");
-          Picture p = (Picture) b;
-          String pos = Commands.str(a, "position").toLowerCase();
+          var p = (Picture) b;
+          var pos = Commands.str(a, "position").toLowerCase();
           String align =
               pos.endsWith("left") ? "left" : pos.endsWith("right") ? "right" : "center";
           boolean inline = "inline".equals(pos);
           if (!inline && !pos.endsWith("left") && !pos.endsWith("right") && !pos.endsWith("center"))
             throw new IllegalArgumentException("Unknown position " + pos);
-          Picture next = p.resize(p.width, p.height, p.alt, inline ? p.align : align);
+          var next = p.resize(p.width, p.height, p.alt, inline ? p.align : align);
           if (p.drawing != null) next = next.drawing(p.drawing.with("wrap", inline ? "inline" : "square"));
           s.replacePicture(block, next);
           return inline ? "inline" : align;
@@ -192,7 +194,7 @@ final class WordAliasCommands implements Commands.Extension {
           if (!(s.document().blocks.get(block) instanceof Picture))
             throw new IllegalArgumentException("Select a drawing or picture");
           // Object commands act on the object just before the caret (see DrawingCommands.block).
-          Document d = s.document();
+          var d = s.document();
           int at = block + 1;
           if (at >= d.blocks.size() || !(d.blocks.get(at) instanceof Paragraph))
             throw new IllegalArgumentException("The object needs a following paragraph");
@@ -202,15 +204,16 @@ final class WordAliasCommands implements Commands.Extension {
         });
     c.register(
         "equation.insertStructure",
-        "Insert an equation structure (fraction, script, radical, integral, sum, bracket,"
-            + " function, accent, limit, operator, matrix), creating an equation when needed",
+        """
+        Insert an equation structure (fraction, script, radical, integral, sum, bracket,\
+         function, accent, limit, operator, matrix), creating an equation when needed""",
         "kind:string",
         true,
         (s, a) -> {
           String kind = Commands.str(a, "kind");
           if ("largeOperator".equals(kind) || "operator".equals(kind)) kind = "sum";
           int block = s.selection().block;
-          Block b = s.document().blocks.get(block);
+          var b = s.document().blocks.get(block);
           if (!equation(b)) {
             int from = block;
             c.execute(s, "insert.equation", Json.object("text", ""));
@@ -223,20 +226,20 @@ final class WordAliasCommands implements Commands.Extension {
   }
 
   private static boolean equation(Block b) {
-    return b instanceof Picture && ((Picture) b).drawing != null && "equation".equals(((Picture) b).drawing.kind);
+    return b instanceof Picture p && p.drawing != null && "equation".equals(p.drawing.kind);
   }
 
   private Object goTo(Session s, String what, Object target) {
-    Document d = s.document();
-    List<Integer> blocks = new ArrayList<Integer>();
+    var d = s.document();
+    var blocks = new ArrayList<Integer>();
     if ("bookmark".equals(what)) {
       if (!(target instanceof String)) throw new IllegalArgumentException("Enter a bookmark name");
       c.execute(s, "bookmark.goto", Json.object("name", target));
       return target;
     }
     if ("page".equals(what) || "line".equals(what)) {
-      LayoutEngine.Result r = c.layoutEngine().layout(d, s.revision());
-      List<LayoutEngine.Line> lines = new ArrayList<LayoutEngine.Line>();
+      var r = c.layoutEngine().layout(d, s.revision());
+      var lines = new ArrayList<LayoutEngine.Line>();
       if ("page".equals(what)) {
         for (LayoutEngine.Page p : r.pages) if (!p.lines.isEmpty()) lines.add(p.lines.get(0));
       } else for (LayoutEngine.Page p : r.pages) for (LayoutEngine.Line l : p.lines) if (l.row < 0) lines.add(l);
@@ -245,19 +248,19 @@ final class WordAliasCommands implements Commands.Extension {
         if (lines.get(i).block < s.selection().block
             || lines.get(i).block == s.selection().block && lines.get(i).start <= s.selection().caret) current = i;
       int i = index(target, current, lines.size());
-      LayoutEngine.Line l = lines.get(i);
+      var l = lines.get(i);
       s.leaveCell();
       s.select(l.block, l.start, l.start);
       return i + 1;
     }
     for (int i = 0; i < d.blocks.size(); i++) {
-      Block b = d.blocks.get(i);
+      var b = d.blocks.get(i);
       boolean match =
           "section".equals(what) ? sectionStarts(d).contains(i)
-              : "heading".equals(what) ? b instanceof Paragraph && ((Paragraph) b).style.startsWith("Heading")
+              : "heading".equals(what) ? b instanceof Paragraph p && p.style.startsWith("Heading")
               : "table".equals(what) ? b instanceof Table
-              : "picture".equals(what) ? b instanceof Picture && (((Picture) b).drawing == null || !"equation".equals(((Picture) b).drawing.kind))
-              : "equation".equals(what) ? b instanceof Picture && ((Picture) b).drawing != null && "equation".equals(((Picture) b).drawing.kind)
+              : "picture".equals(what) ? b instanceof Picture p && (p.drawing == null || !"equation".equals(p.drawing.kind))
+              : "equation".equals(what) ? b instanceof Picture p && p.drawing != null && "equation".equals(p.drawing.kind)
               : "comment".equals(what) && commentBlocks(d).contains(i);
       if (match) blocks.add(i);
     }
@@ -276,9 +279,9 @@ final class WordAliasCommands implements Commands.Extension {
   private static int index(Object target, int current, int size) {
     int i;
     if (target == null) i = current + 1;
-    else if (target instanceof Number) i = ((Number) target).intValue() - 1;
+    else if (target instanceof Number number) i = number.intValue() - 1;
     else {
-      String t = ((String) target).trim();
+      var t = ((String) target).trim();
       if (t.startsWith("+")) i = current + Integer.parseInt(t.substring(1));
       else if (t.startsWith("-")) i = current - Integer.parseInt(t.substring(1));
       else i = Integer.parseInt(t) - 1;
@@ -288,13 +291,13 @@ final class WordAliasCommands implements Commands.Extension {
   }
 
   private static List<Integer> sectionStarts(Document d) {
-    List<Integer> out = new ArrayList<Integer>();
+    var out = new ArrayList<Integer>();
     for (Section.Range r : d.sectionRanges()) out.add(r.first);
     return out;
   }
 
   private static List<Integer> commentBlocks(Document d) {
-    List<Integer> out = new ArrayList<Integer>();
+    var out = new ArrayList<Integer>();
     for (ReviewComment rc : d.comments)
       for (int i = 0; i < d.blocks.size(); i++)
         if (d.blocks.get(i).id().equals(rc.startId) && !out.contains(i)) out.add(i);
@@ -304,9 +307,9 @@ final class WordAliasCommands implements Commands.Extension {
 
   private static String commentId(Session s, Map<String, Object> a) {
     if (a.get("id") instanceof String) return (String) a.get("id");
-    Document d = s.document();
-    Selection x = s.selection();
-    String para = d.blocks.get(x.block).id();
+    var d = s.document();
+    var x = s.selection();
+    var para = d.blocks.get(x.block).id();
     ReviewComment best = null;
     for (ReviewComment rc : d.comments) {
       if (!rc.startId.equals(para) && !rc.endId.equals(para)) continue;
@@ -317,20 +320,20 @@ final class WordAliasCommands implements Commands.Extension {
   }
 
   private Object sort(Session s, boolean descending, final boolean numeric) {
-    Selection x = s.selection();
+    var x = s.selection();
     int from = Math.min(x.anchorBlock, x.block), to = Math.max(x.anchorBlock, x.block);
-    Document d = s.document();
+    var d = s.document();
     if (from == to) {
       from = 0;
       to = d.blocks.size() - 1;
     }
-    List<Paragraph> paras = new ArrayList<Paragraph>();
+    var paras = new ArrayList<Paragraph>();
     for (int i = from; i <= to; i++) {
       if (!(d.blocks.get(i) instanceof Paragraph))
         throw new IllegalArgumentException("Sort applies to paragraphs; use Table Sort for tables");
       paras.add((Paragraph) d.blocks.get(i));
     }
-    List<Paragraph> sorted = new ArrayList<Paragraph>(paras);
+    var sorted = new ArrayList<Paragraph>(paras);
     Collections.sort(
         sorted,
         (p, q) -> {
@@ -359,8 +362,8 @@ final class WordAliasCommands implements Commands.Extension {
   }
 
   private Map<String, Object> wordCount(Session s) {
-    Document d = s.document();
-    String text = d.plainText();
+    var d = s.document();
+    var text = d.plainText();
     int words = new DocumentStats().words(d), chars = 0, noSpaces = 0, paragraphs = 0;
     for (int i = 0; i < text.length(); i++) {
       char ch = text.charAt(i);
@@ -371,7 +374,7 @@ final class WordAliasCommands implements Commands.Extension {
     for (int i = 0; i < d.blocks.size(); i++)
       if (d.blocks.get(i) instanceof Paragraph && !((Paragraph) d.blocks.get(i)).text.plainText().trim().isEmpty())
         paragraphs++;
-    LayoutEngine.Result r = c.layoutEngine().layout(d, s.revision());
+    var r = c.layoutEngine().layout(d, s.revision());
     int lines = 0;
     for (LayoutEngine.Page p : r.pages) lines += p.lines.size();
     return Json.object(

@@ -44,12 +44,12 @@ public final class Bookmark {
   public String text(Document d) {
     validate(d);
     int a = ReviewComment.block(d, startId), b = ReviewComment.block(d, endId);
-    StringBuilder result = new StringBuilder();
+    var result = new StringBuilder();
     for (int i = a; i <= b; i++) {
       if (i > a) result.append('\n');
-      Block block = d.blocks.get(i);
-      if (block instanceof Paragraph) {
-        RichText t = ((Paragraph) block).text;
+      var block = d.blocks.get(i);
+      if (block instanceof Paragraph paragraph) {
+        var t = paragraph.text;
         result.append(t.slice(i == a ? start : 0, i == b ? end : t.length()).plainText());
       }
     }
@@ -75,9 +75,9 @@ public final class Bookmark {
   }
 
   private static Map<String, Bookmark> move(Document before, Document after, RangeMapping mapping) {
-    Map<String, Bookmark> result = new LinkedHashMap<String, Bookmark>();
+    var result = new LinkedHashMap<String, Bookmark>();
     for (Bookmark mark : before.bookmarks.values()) {
-      int[] r = mapping.move(mark.startId, mark.start, mark.endId, mark.end, false);
+      var r = mapping.move(mark.startId, mark.start, mark.endId, mark.end, false);
       if (r != null)
         result.put(
             mark.name,

@@ -35,14 +35,14 @@ final class TableStyleCommands implements Commands.Extension {
         true,
         (s, a) -> {
           Table t = table(s);
-          String look = t.format.prop("look", DEFAULT_LOOK);
-          StringBuilder b = new StringBuilder();
+          var look = t.format.prop("look", DEFAULT_LOOK);
+          var b = new StringBuilder();
           for (String k : TableFormat.LOOK) {
             boolean on = a.containsKey(k) ? Boolean.TRUE.equals(a.get(k)) : ("," + look + ",").contains("," + k + ",");
             if (on) b.append(b.length() == 0 ? "" : ",").append(k);
           }
-          TableFormat f = t.format.withProp("look", b.length() == 0 ? "none" : b.toString());
-          String style = f.prop("style", "");
+          var f = t.format.withProp("look", b.length() == 0 ? "none" : b.toString());
+          var style = f.prop("style", "");
           if (!style.isEmpty()) f = apply(spec(s.document(), style), f);
           s.formatTable(s.cellBlock(), f);
           return lookMap(f);
@@ -83,11 +83,11 @@ final class TableStyleCommands implements Commands.Extension {
           if (!s.document().properties.settings().containsKey(key(name)))
             throw new IllegalArgumentException(
                 Arrays.asList(names(null)).contains(name) ? "Built-in table styles cannot be deleted" : "Unknown table style: " + name);
-          Document d = s.document();
+          var d = s.document();
           Sequence<Block> blocks = d.blocks;
           for (int i = 0; i < blocks.size(); i++)
             if (blocks.get(i) instanceof Table && name.equals(((Table) blocks.get(i)).format.prop("style", ""))) {
-              Table t = (Table) blocks.get(i);
+              var t = (Table) blocks.get(i);
               blocks = blocks.set(i, t.format(t.format.withProp("style", "")));
             }
           s.updateBlocks(blocks);
@@ -111,13 +111,13 @@ final class TableStyleCommands implements Commands.Extension {
           if (width < 0 || width > 12) throw new IllegalArgumentException("Pen width must be 0-12pt");
           String sides = a.containsKey("sides") ? Commands.str(a, "sides") : "all";
           Table t = table(s);
-          CellSelection r = s.cellSelection();
+          var r = s.cellSelection();
           int r0 = r == null ? s.cellRow() : r.firstRow, r1 = r == null ? s.cellRow() : r.lastRow;
           int c0 = r == null ? s.cellColumn() : r.firstColumn, c1 = r == null ? s.cellColumn() : r.lastColumn;
-          TableFormat f = t.format;
+          var f = t.format;
           for (int row = r0; row <= r1; row++)
             for (int col = c0; col <= c1; col++) {
-              TableFormat.Cell cell = f.cell(row, col);
+              var cell = f.cell(row, col);
               int mask = sides(sides);
               if ("outside".equals(sides)) {
                 mask = (row == r0 ? TableFormat.Cell.TOP : 0) | (row == r1 ? TableFormat.Cell.BOTTOM : 0)
@@ -142,7 +142,7 @@ final class TableStyleCommands implements Commands.Extension {
           String o = a.containsKey("orientation") ? Commands.str(a, "orientation") : "vertical";
           int block = s.cellBlock(), row = s.cellRow(), col = s.cellColumn();
           if ("vertical".equals(o)) s.splitCell(block, row, col, 2);
-          else if ("horizontal".equals(o)) c.execute(s, "table.insertRowBelow", new LinkedHashMap<String, Object>());
+          else if ("horizontal".equals(o)) c.execute(s, "table.insertRowBelow", new LinkedHashMap<>());
           else throw new IllegalArgumentException("Orientation is vertical or horizontal");
           return o;
         });
@@ -154,17 +154,17 @@ final class TableStyleCommands implements Commands.Extension {
         (s, a) -> {
           Table t = table(s);
           int block = s.cellBlock();
-          Table.Merge span = t.span(s.cellRow(), s.cellColumn());
+          var span = t.span(s.cellRow(), s.cellColumn());
           String dir = a.containsKey("direction") ? Commands.str(a, "direction") : "right";
           if ("right".equals(dir)) {
             if (span.column + span.columns >= t.columns()) throw new IllegalArgumentException("No cell to the right");
-            Table.Merge next = t.span(span.row, span.column + span.columns);
+            var next = t.span(span.row, span.column + span.columns);
             if (next.row != span.row || next.rows != span.rows)
               throw new IllegalArgumentException("Cells must have the same height to erase the border");
             s.mergeCells(block, span.row, span.column, span.rows, span.columns + next.columns);
           } else if ("down".equals(dir)) {
             if (span.row + span.rows >= t.rows()) throw new IllegalArgumentException("No cell below");
-            Table.Merge next = t.span(span.row + span.rows, span.column);
+            var next = t.span(span.row + span.rows, span.column);
             if (next.column != span.column || next.columns != span.columns)
               throw new IllegalArgumentException("Cells must have the same width to erase the border");
             s.mergeCells(block, span.row, span.column, span.rows + next.rows, span.columns);
@@ -190,10 +190,10 @@ final class TableStyleCommands implements Commands.Extension {
         (s, a) -> {
           Table t = table(s);
           String dir = Commands.str(a, "value");
-          CellSelection r = s.cellSelection();
+          var r = s.cellSelection();
           int r0 = r == null ? s.cellRow() : r.firstRow, r1 = r == null ? s.cellRow() : r.lastRow;
           int c0 = r == null ? s.cellColumn() : r.firstColumn, c1 = r == null ? s.cellColumn() : r.lastColumn;
-          TableFormat f = t.format;
+          var f = t.format;
           for (int row = r0; row <= r1; row++)
             for (int col = c0; col <= c1; col++) f = f.direction(row, col, dir);
           s.formatTable(s.cellBlock(), f);
@@ -209,7 +209,7 @@ final class TableStyleCommands implements Commands.Extension {
 
   /** Materializes a spec into cell formatting according to the table's look options. */
   static TableFormat apply(String[] spec, TableFormat f) {
-    String look = "," + f.prop("look", DEFAULT_LOOK) + ",";
+    var look = "," + f.prop("look", DEFAULT_LOOK) + ",";
     boolean header = look.contains(",headerRow,"), bandRows = look.contains(",bandedRows,"),
         bandCols = look.contains(",bandedColumns,"), first = look.contains(",firstColumn,"),
         last = look.contains(",lastColumn,"), total = look.contains(",lastRow,");
@@ -253,11 +253,11 @@ final class TableStyleCommands implements Commands.Extension {
 
   private static void reapply(Session s, String name) {
     String[] spec = spec(s.document(), name);
-    Document d = s.document();
+    var d = s.document();
     Sequence<Block> blocks = d.blocks;
     for (int i = 0; i < blocks.size(); i++)
       if (blocks.get(i) instanceof Table && name.equals(((Table) blocks.get(i)).format.prop("style", ""))) {
-        Table t = (Table) blocks.get(i);
+        var t = (Table) blocks.get(i);
         blocks = blocks.set(i, t.format(apply(spec, t.format)));
       }
     if (blocks != d.blocks) s.updateBlocks(blocks);
@@ -270,7 +270,7 @@ final class TableStyleCommands implements Commands.Extension {
   }
 
   private static String[] spec(Document d, String name, boolean builtIns) {
-    String custom = d.properties.setting(key(name), "");
+    var custom = d.properties.setting(key(name), "");
     if (!custom.isEmpty()) {
       String[] p = TextUtil.split(custom, ',');
       if (p.length == 5) return new String[] {name, p[0], p[1], p[2], p[3], p[4]};
@@ -280,12 +280,12 @@ final class TableStyleCommands implements Commands.Extension {
   }
 
   static String[] names(Document d) {
-    List<String> out = new ArrayList<String>();
+    var out = new ArrayList<String>();
     for (String[] b : BUILT_IN) out.add(b[0]);
     if (d != null)
       for (String k : d.properties.settings().keySet())
         if (k.startsWith(PREFIX)) {
-          String n = k.substring(PREFIX.length()).replace('_', ' ');
+          var n = k.substring(PREFIX.length()).replace('_', ' ');
           if (!out.contains(n)) out.add(n);
         }
     return out.toArray(new String[0]);
@@ -296,7 +296,7 @@ final class TableStyleCommands implements Commands.Extension {
   }
 
   private static String name(Map<String, Object> a) {
-    String name = Commands.str(a, "name").trim();
+    var name = Commands.str(a, "name").trim();
     if (name.isEmpty() || name.length() > 40) throw new IllegalArgumentException("Style name must be 1-40 characters");
     for (int i = 0; i < name.length(); i++) {
       char ch = name.charAt(i);
@@ -327,12 +327,12 @@ final class TableStyleCommands implements Commands.Extension {
   }
 
   private static void save(Session s, String name, String[] spec) {
-    String value = spec[1] + "," + spec[2] + "," + spec[3] + "," + spec[4] + "," + spec[5];
+    var value = spec[1] + "," + spec[2] + "," + spec[3] + "," + spec[4] + "," + spec[5];
     s.documentProperties(s.document().properties.withSetting(key(name), value));
   }
 
   private static Map<String, Object> describe(String[] spec) {
-    Map<String, Object> out = new LinkedHashMap<String, Object>();
+    var out = new LinkedHashMap<String, Object>();
     out.put("name", spec[0]);
     out.put("header", spec[1]);
     out.put("band", spec[2]);
@@ -343,8 +343,8 @@ final class TableStyleCommands implements Commands.Extension {
   }
 
   private static Map<String, Object> lookMap(TableFormat f) {
-    Map<String, Object> out = new LinkedHashMap<String, Object>();
-    String look = "," + f.prop("look", DEFAULT_LOOK) + ",";
+    var out = new LinkedHashMap<String, Object>();
+    var look = "," + f.prop("look", DEFAULT_LOOK) + ",";
     for (String k : TableFormat.LOOK) out.put(k, look.contains("," + k + ","));
     return out;
   }

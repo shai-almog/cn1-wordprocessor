@@ -122,9 +122,9 @@ public final class LayoutEngine {
    * in-front-of-text drawings painted after text; otherwise everything else.
    */
   public static List<PlacedPicture> byDepth(List<PlacedPicture> pictures, boolean front) {
-    List<PlacedPicture> out = new ArrayList<PlacedPicture>();
+    var out = new ArrayList<PlacedPicture>();
     for (PlacedPicture p : pictures) {
-      Drawing d = p.picture.drawing;
+      var d = p.picture.drawing;
       if (front == (d != null && "front".equals(d.get("wrap", "inline")))) out.add(p);
     }
     java.util.Collections.sort(
@@ -138,7 +138,7 @@ public final class LayoutEngine {
   }
 
   private static float z(PlacedPicture p) {
-    Drawing d = p.picture.drawing;
+    var d = p.picture.drawing;
     if (d == null) return 0;
     return d.num("z", 0) + ("behind".equals(d.get("wrap", "inline")) ? -10000 : 0);
   }
@@ -189,9 +189,9 @@ public final class LayoutEngine {
 
   /** Section vertical alignment: moves a page's body content down by dy points. */
   private static List<Line> shiftLines(List<Line> lines, float dy) {
-    List<Line> out = new ArrayList<Line>();
+    var out = new ArrayList<Line>();
     for (Line line : lines) {
-      RawLine raw = new RawLine();
+      var raw = new RawLine();
       raw.start = line.start;
       raw.end = line.end;
       raw.width = line.width;
@@ -208,14 +208,14 @@ public final class LayoutEngine {
   }
 
   private static List<Box> shiftBoxes(List<Box> boxes, float dy) {
-    List<Box> out = new ArrayList<Box>();
+    var out = new ArrayList<Box>();
     for (Box b : boxes)
       out.add(new Box(b.block, b.row, b.column, b.page, b.x, b.y + dy, b.width, b.height, b.format));
     return out;
   }
 
   private static List<PlacedPicture> shiftPictures(List<PlacedPicture> pictures, float dy) {
-    List<PlacedPicture> out = new ArrayList<PlacedPicture>();
+    var out = new ArrayList<PlacedPicture>();
     for (PlacedPicture p : pictures)
       out.add(new PlacedPicture(p.picture, p.block, p.page, p.x, p.y + dy, p.width, p.height));
     return out;
@@ -236,16 +236,16 @@ public final class LayoutEngine {
     public final List<PlacedPicture> pictures;
 
     /** Column separator lines as {x, top, bottom} in points. */
-    public final List<float[]> columnRules = new ArrayList<float[]>();
+    public final List<float[]> columnRules = new ArrayList<>();
 
     /** Paragraph border/shading boxes, painted under the text. */
-    public final List<Frame> frames = new ArrayList<Frame>();
+    public final List<Frame> frames = new ArrayList<>();
 
     /** Page color, watermark and page borders of this page's section. */
     public PageDecor decor = PageDecor.NONE;
 
     /** Margin line numbers as {y, number} in points, set from the section's line numbering. */
-    public final List<float[]> lineNumbers = new ArrayList<float[]>();
+    public final List<float[]> lineNumbers = new ArrayList<>();
 
     Page(
         PageSpec spec,
@@ -291,7 +291,7 @@ public final class LayoutEngine {
       this.notes = Collections.unmodifiableList(notes);
       if (header.isEmpty() && footer.isEmpty() && notes.isEmpty()) all = this.lines;
       else {
-        List<Line> merged = new ArrayList<Line>(header);
+        var merged = new ArrayList<Line>(header);
         merged.addAll(lines);
         merged.addAll(notes);
         merged.addAll(footer);
@@ -301,7 +301,7 @@ public final class LayoutEngine {
 
     /** First line of each note area on this page, used for shared separator rendering. */
     public List<Line> noteAreas() {
-      List<Line> result = new ArrayList<Line>();
+      var result = new ArrayList<Line>();
       if (!notes.isEmpty()) result.add(notes.get(0));
       boolean inNotes = false;
       for (Line line : lines) {
@@ -351,7 +351,7 @@ public final class LayoutEngine {
   }
 
   private static final class RawLine {
-    final List<Span> spans = new ArrayList<Span>();
+    final List<Span> spans = new ArrayList<>();
     List<Float> barTabs = Collections.emptyList();
     int start, end;
     float width, height, markerOffset;
@@ -379,7 +379,7 @@ public final class LayoutEngine {
   }
 
   private final MeasurementCache metrics;
-  private Map<Paragraph, Cached> cache = new HashMap<Paragraph, Cached>();
+  private Map<Paragraph, Cached> cache = new HashMap<>();
   private Map<Paragraph, Cached> nextCache;
   /** Automatic hyphenation ("hyphenation" document setting) and its capitalized-word option. */
   private boolean hyphenate, hyphenateCaps = true;
@@ -397,7 +397,7 @@ public final class LayoutEngine {
 
   /** Resolve the same column geometry used by painting, hit testing and PDF export. */
   public float[] tableWidths(Table table, float available) {
-    TableFormat f = table.format;
+    var f = table.format;
     float[] widths = new float[table.columns()];
     float target = f.preferredWidth(available);
     if (f.sizing.fixed) {
@@ -405,11 +405,11 @@ public final class LayoutEngine {
       return widths;
     }
     float[] min = new float[widths.length], max = new float[widths.length];
-    List<float[]> spans = new ArrayList<float[]>();
+    var spans = new ArrayList<float[]>();
     for (int r = 0; r < table.rows(); r++)
       for (int c = 0; c < table.columns(); c++) {
         if (table.covered(r, c)) continue;
-        Table.Merge span = table.span(r, c);
+        var span = table.span(r, c);
         float smallest = 1, largest = 1, padding = 2 * f.cell(r, c).horizontalPadding;
         for (Paragraph p : table.cell(r, c)) {
           float indents =
@@ -417,7 +417,7 @@ public final class LayoutEngine {
                   + p.format.rightIndent
                   + Math.max(0, p.format.firstIndent)
                   + (p.list.isEmpty() ? 0 : 18 * (p.listLevel + 1));
-          String text = p.text.toString();
+          var text = p.text.toString();
           float word = 0, line = 0;
           for (int a = 0; a < text.length(); ) {
             int b = Graphemes.next(p.text, a);
@@ -512,7 +512,7 @@ public final class LayoutEngine {
                 - p.indent
                 - p.format.rightIndent
                 - (p.list.isEmpty() ? 0 : 18 * (p.listLevel + 1)));
-    Cached c = nextCache.get(p);
+    var c = nextCache.get(p);
     if (c == null) c = cache.get(p);
     boolean dropped = allowDrop && !p.format.dropCap.isEmpty() && p.text.length() > 0
         && !Character.isWhitespace(p.text.charAt(0)) && !p.text.objectAt(0);
@@ -521,14 +521,14 @@ public final class LayoutEngine {
       return c.lines;
     }
     measured++;
-    List<RawLine> out = new ArrayList<RawLine>();
-    String text = p.text.toString();
+    var out = new ArrayList<RawLine>();
+    var text = p.text.toString();
     int skip = 0, dropLines = 0;
     float dropWidth = 0, letterWidth = 0;
     TextStyle dropStyle = null;
     if (dropped) {
       skip = Graphemes.next(p.text, 0);
-      TextStyle base = p.text.styleAt(0);
+      var base = p.text.styleAt(0);
       dropLines = p.format.dropLines();
       float spacing = "auto".equals(p.format.lineRule) ? p.lineSpacing : 1;
       // Cap height (about 0.7 em) spans from the first line's top to the last dropped baseline.
@@ -540,7 +540,7 @@ public final class LayoutEngine {
     }
     int start = 0;
     do {
-      RawLine line = new RawLine();
+      var line = new RawLine();
       if (out.size() < dropLines) line.lead = dropWidth;
       float available = Math.max(1, width - (start == 0 ? p.format.firstIndent : 0) - line.lead);
       line.start = start;
@@ -581,7 +581,7 @@ public final class LayoutEngine {
       float pos = 0;
       int a = start == 0 ? skip : start;
       while (a < end) {
-        TextStyle s = p.text.styleAt(a);
+        var s = p.text.styleAt(a);
         int b = a + 1;
         while (b < end
             && !p.text.objectAt(a)
@@ -594,20 +594,20 @@ public final class LayoutEngine {
                 || Character.isLowerCase(Character.codePointAt(text, a))
                     == Character.isLowerCase(Character.codePointAt(text, b)))
             && s.equals(p.text.styleAt(b))) b++;
-        String chunk = text.substring(a, b);
+        var chunk = text.substring(a, b);
         float w =
             s.characters.hidden
                 ? 0
                 : "\t".equals(chunk)
                     ? tabWidth(p, text, a, pos, start == 0 ? p.format.firstIndent : 0)
                     : metrics.width(p.text.displayAt(a, chunk), s);
-        String display = p.text.displayAt(a, chunk);
+        var display = p.text.displayAt(a, chunk);
         if (hyphenated && b == end) {
           display += "-";
           w += metrics.width("-", s);
         }
         if ("\t".equals(chunk)) {
-          TabStop stop = nextTab(p, pos + (start == 0 ? p.format.firstIndent : 0));
+          var stop = nextTab(p, pos + (start == 0 ? p.format.firstIndent : 0));
           display = stop == null ? "" : leader(stop.glyph(), s, w);
         }
         line.spans.add(new Span(chunk, s, a, pos, w, 0, display));
@@ -625,7 +625,7 @@ public final class LayoutEngine {
       else if ("right".equals(p.align)) textOffset += available - line.width;
       for (TabStop stop : p.format.tabs)
         if ("bar".equals(stop.alignment)) {
-          if (line.barTabs.isEmpty()) line.barTabs = new ArrayList<Float>();
+          if (line.barTabs.isEmpty()) line.barTabs = new ArrayList<>();
           line.barTabs.add(stop.position - textOffset);
         }
       float baseline = metrics.ascent(TextStyle.DEFAULT);
@@ -636,7 +636,7 @@ public final class LayoutEngine {
                   baseline,
                   metrics.ascent(span.style.renderedStyle()) + span.style.baselineShift());
       for (int i = 0; i < line.spans.size(); i++) {
-        Span span = line.spans.get(i);
+        var span = line.spans.get(i);
         float top = baseline - metrics.ascent(span.glyphStyle) - span.style.baselineShift();
         line.spans.set(
             i,
@@ -657,7 +657,7 @@ public final class LayoutEngine {
         float offset = line.height < natural ? line.height - natural : (line.height - natural) / 2;
         line.markerOffset += offset;
         for (int i = 0; i < line.spans.size(); i++) {
-          Span span = line.spans.get(i);
+          var span = line.spans.get(i);
           line.spans.set(
               i,
               new Span(
@@ -678,13 +678,13 @@ public final class LayoutEngine {
       int n = Math.min(dropLines, out.size());
       float y = 0;
       for (int i = 0; i < n - 1; i++) y += out.get(i).height;
-      RawLine letter = new RawLine();
+      var letter = new RawLine();
       letter.start = 0;
       letter.end = skip;
       letter.width = letterWidth;
       float top = y + out.get(n - 1).baseline - metrics.ascent(dropStyle);
       letter.spans.add(new Span(text.substring(0, skip), dropStyle, 0, 0, letterWidth, top));
-      RawLine first = out.get(0);
+      var first = out.get(0);
       first.drop = letter;
       first.dropX = "margin".equals(p.format.dropMode()) ? -(letterWidth + p.format.dropDistance()) : 0;
       // A paragraph shorter than the drop still clears the letter.
@@ -711,7 +711,7 @@ public final class LayoutEngine {
       if (!Character.isLetter(text.charAt(i)) && text.charAt(i) != '\'') return -1;
       if (p.text.objectAt(i) || p.text.styleAt(i).characters.hidden) return -1;
     }
-    String word = text.substring(ws, we);
+    var word = text.substring(ws, we);
     if (!hyphenateCaps && Character.isUpperCase(word.charAt(0))) return -1;
     int[] points = Hyphenator.points(word);
     for (int k = points.length - 1; k >= 0; k--) {
@@ -742,7 +742,7 @@ public final class LayoutEngine {
     }
     float width = 0;
     for (int at = start; at < end; ) {
-      TextStyle style = p.text.styleAt(at);
+      var style = p.text.styleAt(at);
       int next = at + 1;
       while (next < end
           && !p.text.objectAt(at)
@@ -762,7 +762,7 @@ public final class LayoutEngine {
 
   private float tabWidth(Paragraph p, String text, int offset, float x, float origin) {
     float position = x + origin;
-    TabStop tab = nextTab(p, position);
+    var tab = nextTab(p, position);
     if (tab == null)
       return p.format.tabInterval
           - ((position % p.format.tabInterval + p.format.tabInterval) % p.format.tabInterval);
@@ -772,7 +772,7 @@ public final class LayoutEngine {
           i < text.length() && text.charAt(i) != '\t' && text.charAt(i) != '\n'; ) {
         if ("decimal".equals(tab.alignment) && text.charAt(i) == '.') break;
         int end = i + Character.charCount(Character.codePointAt(text, i));
-        InlineField field = p.text.fieldAt(i);
+        var field = p.text.fieldAt(i);
         String followingText = field == null ? text.substring(i, end) : field.display();
         boolean decimal = "decimal".equals(tab.alignment) && followingText.indexOf('.') >= 0;
         if (decimal) followingText = followingText.substring(0, followingText.indexOf('.'));
@@ -790,7 +790,7 @@ public final class LayoutEngine {
     float unit = metrics.width(glyph, style);
     if (unit <= 0) return "";
     int count = Math.min(4096, (int) (width / unit));
-    StringBuilder out = new StringBuilder(count);
+    var out = new StringBuilder(count);
     for (int i = 0; i < count; i++) out.append(glyph);
     return out.toString();
   }
@@ -798,7 +798,7 @@ public final class LayoutEngine {
   private void justify(RawLine line, float available, boolean distributed, RichText source) {
     for (Span span : line.spans)
       if ("\t".equals(span.text) || InlineField.OBJECT.equals(span.text)) return;
-    List<Span> units = new ArrayList<Span>();
+    var units = new ArrayList<Span>();
     int lastContent = line.start;
     for (Span span : line.spans)
       for (int i = 0; i < span.text.length(); ) {
@@ -809,7 +809,7 @@ public final class LayoutEngine {
           while (i + count < span.text.length()
               && span.text.charAt(i + count) != ' '
               && span.text.charAt(i + count) != '\t') count++;
-        String text = span.text.substring(i, i + count);
+        var text = span.text.substring(i, i + count);
         units.add(
             new Span(
                 text,
@@ -862,22 +862,22 @@ public final class LayoutEngine {
     Result result = null;
     for (int pass = 0; pass < 8; pass++) {
       result = layoutOnce(view, revision);
-      Map<String, List<Line>> byParagraph = new HashMap<String, List<Line>>();
+      var byParagraph = new HashMap<String, List<Line>>();
       for (Page page : result.pages)
         for (Line line : page.lines) {
           if (line.block < 0) continue;
-          List<Line> list = byParagraph.get(line.paragraphId);
+          var list = byParagraph.get(line.paragraphId);
           if (list == null) byParagraph.put(line.paragraphId, list = new ArrayList<Line>());
           list.add(line);
         }
-      Map<String, Integer> pages = new HashMap<String, Integer>();
+      var pages = new HashMap<String, Integer>();
       for (Notes.Reference ref : Notes.references(view)) {
-        Block block = view.blocks.get(ref.block);
+        var block = view.blocks.get(ref.block);
         Paragraph p =
-            block instanceof Paragraph
-                ? (Paragraph) block
+            block instanceof Paragraph p1
+                ? p1
                 : ((Table) block).cell(ref.row, ref.column).get(ref.paragraph);
-        List<Line> lines = byParagraph.get(p.id);
+        var lines = byParagraph.get(p.id);
         if (lines != null)
           for (Line line : lines)
             if (ref.offset >= line.start && ref.offset < line.end) {
@@ -893,25 +893,25 @@ public final class LayoutEngine {
       }
       view = changed;
     }
-    Set<String> warnings = new LinkedHashSet<String>(result.warnings);
+    var warnings = new LinkedHashSet<String>(result.warnings);
     warnings.add("Page-restarted note numbering did not settle after eight pagination passes");
     return new Result(result.document, result.pages, result.measuredParagraphs, revision, warnings);
   }
 
   private Result layoutOnce(Document doc, long revision) {
-    nextCache = new HashMap<Paragraph, Cached>();
+    nextCache = new HashMap<>();
     measured = 0;
     boolean auto = "automatic".equals(doc.properties.setting("hyphenation", ""));
     boolean caps = !"false".equals(doc.properties.setting("hyphenation.caps", ""));
-    if (auto != hyphenate || caps != hyphenateCaps) cache = new HashMap<Paragraph, Cached>();
+    if (auto != hyphenate || caps != hyphenateCaps) cache = new HashMap<>();
     hyphenate = auto;
     hyphenateCaps = caps;
     List<Section.Range> ranges = doc.sectionRanges();
-    List<Document> contexts = new ArrayList<Document>();
+    var contexts = new ArrayList<Document>();
     float[][] heights = new float[ranges.size()][2];
     for (int i = 0; i < ranges.size(); i++) {
-      Section section = ranges.get(i).resolved;
-      Document context = doc.page(section.page).furniture(section.furniture);
+      var section = ranges.get(i).resolved;
+      var context = doc.page(section.page).furniture(section.furniture);
       // Furniture fields read the section's page-number format from the context's last section.
       if (!context.lastSection.decor.equals(section.decor))
         context = context.sections(context.sections, context.lastSection.decor(section.decor));
@@ -929,26 +929,26 @@ public final class LayoutEngine {
     for (int pass = 0; pass < 8; pass++) {
       b = new Builder();
       for (int section = 0; section < ranges.size(); section++) {
-        Section.Range range = ranges.get(section);
+        var range = ranges.get(section);
         bodies[section] = bodySpec(contexts.get(section), heights[section][0], heights[section][1]);
         b.beginSection(section, range.resolved, bodies[section]);
         for (int index = range.first; index <= range.last; index++) {
-          Block block = doc.blocks.get(index);
-          if (block instanceof Paragraph)
+          var block = doc.blocks.get(index);
+          if (block instanceof Paragraph paragraph)
             b.paragraph(
-                (Paragraph) block,
+                paragraph,
                 index,
                 index < range.last && doc.blocks.get(index + 1) instanceof Paragraph
                     ? (Paragraph) doc.blocks.get(index + 1)
                     : null);
-          else if (block instanceof Table) b.table((Table) block, index);
-          else if (block instanceof Picture) b.picture((Picture) block, index);
+          else if (block instanceof Table table) b.table(table, index);
+          else if (block instanceof Picture picture) b.picture(picture, index);
         }
       }
       b.finish();
       boolean grow = false;
       for (Page page : b.pages) {
-        Document context = contexts.get(page.section);
+        var context = contexts.get(page.section);
         for (int side = 0; side < 2; side++) {
           float actual =
               furnitureHeight(
@@ -963,13 +963,13 @@ public final class LayoutEngine {
       }
       if (!grow) break;
     }
-    Set<String> warnings = new LinkedHashSet<String>();
+    var warnings = new LinkedHashSet<String>();
     int lineCount = 0;
     for (int i = 0; i < b.pages.size(); i++) {
-      Page page = b.pages.get(i);
-      Document context = contexts.get(page.section);
-      PageSpec body = bodies[page.section];
-      String vAlign = ranges.get(page.section).resolved.decor.layout("verticalAlign", "top");
+      var page = b.pages.get(i);
+      var context = contexts.get(page.section);
+      var body = bodies[page.section];
+      var vAlign = ranges.get(page.section).resolved.decor.layout("verticalAlign", "top");
       float dy = 0;
       if ("center".equals(vAlign) || "bottom".equals(vAlign)) {
         float bottom = page.spec.top;
@@ -979,7 +979,7 @@ public final class LayoutEngine {
         float free = page.spec.height - page.spec.bottom - bottom;
         if (free > 0) dy = "center".equals(vAlign) ? free / 2 : free;
       }
-      Page rebuilt =
+      var rebuilt =
           new Page(
               page.spec,
               page.section,
@@ -1014,7 +1014,7 @@ public final class LayoutEngine {
                 ? f
                 : new Frame(f.x, f.top + dy, f.width, f.bottom + dy, f.borders, f.shading, f.first, f.last));
       rebuilt.decor = ranges.get(page.section).resolved.decor;
-      PageDecor numbering = rebuilt.decor;
+      var numbering = rebuilt.decor;
       if (numbering.lineCountBy > 0) {
         if ("page".equals(numbering.lineRestart)
             || "section".equals(numbering.lineRestart) && page.sectionPage == 0) lineCount = 0;
@@ -1031,7 +1031,7 @@ public final class LayoutEngine {
   }
 
   private PageSpec bodySpec(Document doc, float header, float footer) {
-    PageSpec original = doc.page;
+    var original = doc.page;
     float top = Math.max(original.top, header == 0 ? 0 : header + doc.furniture.headerDistance);
     float bottom =
         Math.max(original.bottom, footer == 0 ? 0 : footer + doc.furniture.footerDistance);
@@ -1048,9 +1048,9 @@ public final class LayoutEngine {
 
   private Sequence<Paragraph> resolvedFurniture(
       Document doc, boolean footer, int page, int count, int number) {
-    Sequence<Paragraph> result = new Sequence<Paragraph>();
+    var result = new Sequence<Paragraph>();
     for (Paragraph p : doc.furniture.get(doc.furniture.key(footer, page, number))) {
-      RichText resolved =
+      var resolved =
           p.text.mapFields(
               (offset, field) ->
                   DocumentFields.resolve(
@@ -1079,15 +1079,15 @@ public final class LayoutEngine {
       int count,
       float available,
       Set<String> warnings) {
-    Sequence<Paragraph> paragraphs = resolvedFurniture(doc, footer, sectionPage, count, number);
-    List<Line> result = new ArrayList<Line>();
+    var paragraphs = resolvedFurniture(doc, footer, sectionPage, count, number);
+    var result = new ArrayList<Line>();
     float y = 0;
-    ListNumbers numbering = new ListNumbers();
+    var numbering = new ListNumbers();
     boolean overflow = false;
     story:
     for (Paragraph p : paragraphs) {
       y += p.before;
-      String marker = numbering.next(p);
+      var marker = numbering.next(p);
       for (RawLine line : lines(p, doc.page.contentWidth())) {
         if (y + line.height > available + .01f) {
           overflow = true;
@@ -1113,9 +1113,9 @@ public final class LayoutEngine {
               + " edge.");
     float start =
         footer ? doc.page.height - doc.furniture.footerDistance - y : doc.furniture.headerDistance;
-    List<Line> placed = new ArrayList<Line>();
+    var placed = new ArrayList<Line>();
     for (Line line : result) {
-      RawLine raw = new RawLine();
+      var raw = new RawLine();
       raw.start = line.start;
       raw.end = line.end;
       raw.width = line.width;
@@ -1137,20 +1137,20 @@ public final class LayoutEngine {
     Columns columns = Columns.ONE;
     int column;
     float columnTop, regionBottom;
-    final List<float[]> rules = new ArrayList<float[]>();
+    final List<float[]> rules = new ArrayList<>();
     int section, sectionFirstPage, owner, ownerFirstPage, number = 1;
-    final List<Page> pages = new ArrayList<Page>();
-    List<Line> current = new ArrayList<Line>();
-    List<Box> boxes = new ArrayList<Box>();
-    List<PlacedPicture> pictures = new ArrayList<PlacedPicture>();
+    final List<Page> pages = new ArrayList<>();
+    List<Line> current = new ArrayList<>();
+    List<Box> boxes = new ArrayList<>();
+    List<PlacedPicture> pictures = new ArrayList<>();
     float y;
     final ListNumbers numbering = new ListNumbers();
-    final List<Note> endnotes = new ArrayList<Note>();
-    final List<Note> sectionEndnotes = new ArrayList<Note>();
+    final List<Note> endnotes = new ArrayList<>();
+    final List<Note> sectionEndnotes = new ArrayList<>();
     NoteOptions noteOptions = NoteOptions.DEFAULT;
-    final Set<String> seenNotes = new HashSet<String>();
-    final LinkedList<NoteLine> pendingNotes = new LinkedList<NoteLine>();
-    List<NoteLine> footnotes = new ArrayList<NoteLine>();
+    final Set<String> seenNotes = new HashSet<>();
+    final LinkedList<NoteLine> pendingNotes = new LinkedList<>();
+    List<NoteLine> footnotes = new ArrayList<>();
     float noteHeight;
 
     final class NoteLine {
@@ -1182,11 +1182,11 @@ public final class LayoutEngine {
     }
 
     List<NoteLine> noteLines(Note note) {
-      List<NoteLine> result = new ArrayList<NoteLine>();
-      ListNumbers numbers = new ListNumbers();
+      var result = new ArrayList<NoteLine>();
+      var numbers = new ListNumbers();
       for (Paragraph p : note.displayedParagraphs()) {
-        List<RawLine> measured = lines(p, spec.contentWidth());
-        String marker = numbers.next(p);
+        var measured = lines(p, spec.contentWidth());
+        var marker = numbers.next(p);
         for (int i = 0; i < measured.size(); i++)
           result.add(
               new NoteLine(
@@ -1200,7 +1200,7 @@ public final class LayoutEngine {
     }
 
     void collectNotes(Paragraph paragraph, RawLine line) {
-      List<Note> notes = new ArrayList<Note>();
+      var notes = new ArrayList<Note>();
       paragraph
           .text
           .slice(line.start, line.end)
@@ -1213,7 +1213,7 @@ public final class LayoutEngine {
     }
 
     void reserveNotes(List<Note> notes, float anchorHeight) {
-      List<NoteLine> added = new ArrayList<NoteLine>();
+      var added = new ArrayList<NoteLine>();
       for (Note note : notes) {
         if (!seenNotes.add(note.id)) continue;
         if ("endnote".equals(note.kind)) {
@@ -1243,7 +1243,7 @@ public final class LayoutEngine {
     }
 
     List<Line> placedNotes() {
-      List<Line> result = new ArrayList<Line>();
+      var result = new ArrayList<Line>();
       float top = spec.height - spec.bottom - noteHeight + 12;
       boolean beneath = !footnotes.isEmpty();
       for (NoteLine line : footnotes) beneath &= line.beneath;
@@ -1267,10 +1267,10 @@ public final class LayoutEngine {
     }
 
     void continuationNotes() {
-      footnotes = new ArrayList<NoteLine>();
+      footnotes = new ArrayList<>();
       noteHeight = 0;
       while (!pendingNotes.isEmpty()) {
-        NoteLine value = pendingNotes.get(0);
+        var value = pendingNotes.get(0);
         float height = value.height() + (footnotes.isEmpty() ? 12 : 0);
         if (noteHeight + height > spec.height - spec.top - spec.bottom) break;
         footnotes.add(value);
@@ -1283,7 +1283,7 @@ public final class LayoutEngine {
     float gridPitch;
 
     void beginSection(int index, Section value, PageSpec body) {
-      String grid = value.decor.layout("grid", "default");
+      var grid = value.decor.layout("grid", "default");
       gridPitch =
           "default".equals(grid) || "snapToChars".equals(grid)
               ? 0
@@ -1342,7 +1342,7 @@ public final class LayoutEngine {
 
     PageSpec columnSpec(int index) {
       if (columns.count == 1) return body;
-      float[] g = columns.layout(body.contentWidth())[index];
+      var g = columns.layout(body.contentWidth())[index];
       return new PageSpec(
           body.width,
           body.height,
@@ -1368,7 +1368,7 @@ public final class LayoutEngine {
     void closeRegion() {
       regionBottom = Math.max(regionBottom, y);
       if (!columns.separator || columns.count < 2 || regionBottom <= columnTop) return;
-      float[][] g = columns.layout(body.contentWidth());
+      var g = columns.layout(body.contentWidth());
       for (int i = 0; i + 1 < g.length; i++) {
         float x = body.left + (g[i][0] + g[i][1] + g[i + 1][0]) / 2;
         rules.add(new float[] {x, columnTop, regionBottom});
@@ -1383,7 +1383,7 @@ public final class LayoutEngine {
       return value;
     }
 
-    final List<Frame> frames = new ArrayList<Frame>();
+    final List<Frame> frames = new ArrayList<>();
 
     /** Adds a frame to the page it belongs to, which may already be finished. */
     void frame(int page, Frame f) {
@@ -1405,9 +1405,9 @@ public final class LayoutEngine {
               Collections.<Line>emptyList(),
               Collections.<Line>emptyList(),
               placedNotes())));
-      current = new ArrayList<Line>();
-      boxes = new ArrayList<Box>();
-      pictures = new ArrayList<PlacedPicture>();
+      current = new ArrayList<>();
+      boxes = new ArrayList<>();
+      pictures = new ArrayList<>();
       y = spec.top;
       number++;
       owner = section;
@@ -1423,7 +1423,7 @@ public final class LayoutEngine {
     }
 
     void paragraph(Paragraph p, int index, Paragraph following) {
-      String marker = numbering.next(p);
+      var marker = numbering.next(p);
       float indent = p.indent + (p.list.isEmpty() ? 0 : 18 * (p.listLevel + 1));
       if (p.pageBreak && y > spec.top) newPage();
       else if (p.format.columnBreak && index >= 0) nextColumn();
@@ -1436,12 +1436,12 @@ public final class LayoutEngine {
                     spec.width, spec.height, spec.top, spec.right + wrapRight, spec.bottom,
                     spec.left + wrapLeft);
       }
-      List<RawLine> ls = lines(p, spec.contentWidth(), index >= 0);
+      var ls = lines(p, spec.contentWidth(), index >= 0);
       if (gridPitch > 0 && index >= 0) {
         // Snap each line to whole grid pitches; copies keep the measured cache unchanged.
-        List<RawLine> snapped = new ArrayList<RawLine>();
+        var snapped = new ArrayList<RawLine>();
         for (RawLine l : ls) {
-          RawLine c = new RawLine();
+          var c = new RawLine();
           c.spans.addAll(l.spans);
           c.barTabs = l.barTabs;
           c.start = l.start;
@@ -1460,7 +1460,7 @@ public final class LayoutEngine {
       }
       float pageHeight = spec.height - spec.top - spec.bottom;
       if (p.keepNext && following != null && !following.pageBreak) {
-        List<RawLine> next = lines(following, spec.contentWidth());
+        var next = lines(following, spec.contentWidth());
         float group = p.before + p.after + following.before;
         for (RawLine line : ls) group += line.height;
         for (int i = 0; i < Math.min(2, next.size()); i++) group += next.get(i).height;
@@ -1474,7 +1474,7 @@ public final class LayoutEngine {
       float first = p.before + ls.get(0).height;
       if (p.format.widowControl && ls.size() > 1 && first + ls.get(1).height <= pageHeight)
         first += ls.get(1).height;
-      ParagraphBorders bd = p.format.borders;
+      var bd = p.format.borders;
       boolean decor = !bd.isEmpty() || p.format.shading >= 0;
       float topPad = bd.top.extent(), bottomPad = bd.bottom.extent();
       room(first + topPad);
@@ -1539,7 +1539,7 @@ public final class LayoutEngine {
     Frame frame(
         Paragraph p, float indent, float left, float width, float top, float bottom,
         boolean first, boolean last) {
-      ParagraphBorders bd = p.format.borders;
+      var bd = p.format.borders;
       float x = left + indent - bd.left.extent();
       float right = left + width - p.format.rightIndent + bd.right.extent();
       return new Frame(x, top, right - x, bottom, p.format, first, last);
@@ -1600,8 +1600,8 @@ public final class LayoutEngine {
 
     final class CellLayout {
       final Table.Merge span;
-      final List<RawLine> lines = new ArrayList<RawLine>();
-      final List<Paragraph> paragraphs = new ArrayList<Paragraph>();
+      final List<RawLine> lines = new ArrayList<>();
+      final List<Paragraph> paragraphs = new ArrayList<>();
       final List<String> ids = new ArrayList<String>(), markers = new ArrayList<String>();
       final List<Float> xs = new ArrayList<Float>(), ys = new ArrayList<Float>();
       final TableFormat.Cell format;
@@ -1619,9 +1619,9 @@ public final class LayoutEngine {
         this.width = edges[col + span.columns] - edges[col];
         height = format.verticalPadding;
         float width = Math.max(1, this.width - 2 * format.horizontalPadding);
-        ListNumbers numbers = new ListNumbers();
+        var numbers = new ListNumbers();
         for (Paragraph p : t.cell(row, col)) {
-          String marker = numbers.next(p);
+          var marker = numbers.next(p);
           height += p.before;
           for (RawLine line : LayoutEngine.this.lines(p, width)) {
             float indent = p.indent + (p.list.isEmpty() ? 0 : 18 * (p.listLevel + 1));
@@ -1648,12 +1648,12 @@ public final class LayoutEngine {
     void mergedTable(Table t, int index) {
       numbering.reset();
       float[] edges = new float[t.columns() + 1];
-      float[] widths = tableWidths(t, spec.contentWidth());
+      var widths = tableWidths(t, spec.contentWidth());
       float totalWidth = 0;
       for (float width : widths) totalWidth += width;
       edges[0] = t.format.sizing.offset(spec.contentWidth(), totalWidth);
       for (int c = 0; c < t.columns(); c++) edges[c + 1] = edges[c] + widths[c];
-      List<CellLayout> cells = new ArrayList<CellLayout>();
+      var cells = new ArrayList<CellLayout>();
       float[] heights = new float[t.rows()], tops = new float[t.rows() + 1];
       for (int r = 0; r < heights.length; r++)
         heights[r] =
@@ -1663,7 +1663,7 @@ public final class LayoutEngine {
       for (int row = 0; row < t.rows(); row++)
         for (int col = 0; col < t.columns(); col++) {
           if (t.covered(row, col)) continue;
-          CellLayout cell = new CellLayout(t, row, col, edges);
+          var cell = new CellLayout(t, row, col, edges);
           cells.add(cell);
           if (cell.span.rows == 1 && !"exact".equals(t.format.row(row).rule))
             heights[row] = Math.max(heights[row], cell.height);
@@ -1688,7 +1688,7 @@ public final class LayoutEngine {
                 ? extra / 2
                 : "bottom".equals(cell.format.vertical) ? extra : 0;
       }
-      List<CellLayout> headers = new ArrayList<CellLayout>();
+      var headers = new ArrayList<CellLayout>();
       for (CellLayout cell : cells) if (cell.span.row < t.format.headerRows) headers.add(cell);
       float headerHeight = tops[t.format.headerRows];
       // Like desktop word processors, oversized headers are not repeated over the body.
@@ -1696,13 +1696,13 @@ public final class LayoutEngine {
         headers.clear();
         headerHeight = 0;
       }
-      List<List<CellLayout>> byRow = new ArrayList<List<CellLayout>>();
+      var byRow = new ArrayList<List<CellLayout>>();
       for (int i = 0; i < t.rows(); i++) byRow.add(new ArrayList<CellLayout>());
       for (CellLayout cell : cells) byRow.get(cell.span.row).add(cell);
       int row = 0;
       while (row < t.rows()) {
         int endRow = row + 1;
-        List<CellLayout> group = new ArrayList<CellLayout>();
+        var group = new ArrayList<CellLayout>();
         for (int at = row; at < endRow; at++)
           for (CellLayout cell : byRow.get(at)) {
             group.add(cell);
@@ -1732,7 +1732,7 @@ public final class LayoutEngine {
           // space reservation atomic with its anchor, including vertically merged cells.
           for (CellLayout cell : group)
             for (int i = 0; i < cell.lines.size(); i++) {
-              RawLine line = cell.lines.get(i);
+              var line = cell.lines.get(i);
               float top = tops[cell.span.row] + cell.shift + cell.ys.get(i);
               if (top < first - .01f || top >= end || top >= tops[cell.span.row + cell.span.rows])
                 continue;
@@ -1765,14 +1765,14 @@ public final class LayoutEngine {
               }
           } while (changed);
           if (end <= first + .01f) end = Math.min(last, first + Math.max(1, available));
-          List<Note> anchors = new ArrayList<Note>();
+          var anchors = new ArrayList<Note>();
           for (CellLayout cell : group)
             for (int i = 0; i < cell.lines.size(); i++) {
               float top = tops[cell.span.row] + cell.shift + cell.ys.get(i);
               if (top < first - .01f
                   || top >= end - .01f
                   || top >= tops[cell.span.row + cell.span.rows]) continue;
-              RawLine line = cell.lines.get(i);
+              var line = cell.lines.get(i);
               cell.paragraphs
                   .get(i)
                   .text

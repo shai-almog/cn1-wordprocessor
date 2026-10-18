@@ -7,23 +7,23 @@ import java.util.*;
 /** Standard OOXML comment ranges and comments part. */
 final class DocxComments {
   final DocxBookmarks bookmarks;
-  private final Map<String, String[]> definitions = new LinkedHashMap<String, String[]>();
+  private final Map<String, String[]> definitions = new LinkedHashMap<>();
   private final Map<String, String> startIds = new HashMap<String, String>(),
       endIds = new HashMap<String, String>();
   private final Map<String, Integer> starts = new HashMap<String, Integer>(),
       ends = new HashMap<String, Integer>();
   private final List<ReviewComment> comments;
-  private final Set<String> resolved = new HashSet<String>();
-  private final Map<String, String> parents = new LinkedHashMap<String, String>();
+  private final Set<String> resolved = new HashSet<>();
+  private final Map<String, String> parents = new LinkedHashMap<>();
 
   DocxComments(Map<String, byte[]> parts) throws IOException {
     bookmarks = new DocxBookmarks();
     comments = Collections.emptyList();
-    byte[] bytes = parts.get("word/comments.xml");
+    var bytes = parts.get("word/comments.xml");
     if (bytes == null) return;
-    Map<String, String> byParagraph = new HashMap<String, String>();
+    var byParagraph = new HashMap<String, String>();
     for (Element c : Xml.children(Xml.parse(bytes), "comment")) {
-      StringBuilder text = new StringBuilder();
+      var text = new StringBuilder();
       boolean firstParagraph = true;
       for (Element p : Xml.children(c, "p")) {
         if (!firstParagraph) text.append('\n');
@@ -37,10 +37,10 @@ final class DocxComments {
     bytes = parts.get("word/commentsExtended.xml");
     if (bytes != null)
       for (Element e : Xml.children(Xml.parse(bytes), "commentEx")) {
-        String id = byParagraph.get(Xml.attr(e, "paraId", ""));
+        var id = byParagraph.get(Xml.attr(e, "paraId", ""));
         String done = Xml.attr(e, "done", "0");
         if (id != null && ("1".equals(done) || "true".equals(done))) resolved.add(id);
-        String parent = byParagraph.get(Xml.attr(e, "paraIdParent", ""));
+        var parent = byParagraph.get(Xml.attr(e, "paraIdParent", ""));
         if (id != null && parent != null && !Xml.attr(e, "paraIdParent", "").isEmpty())
           parents.put(id, parent);
       }
@@ -105,10 +105,10 @@ final class DocxComments {
   }
 
   List<ReviewComment> read(Document d, Set<String> warnings) {
-    List<ReviewComment> result = new ArrayList<ReviewComment>();
+    var result = new ArrayList<ReviewComment>();
 
     for (Map.Entry<String, String[]> e : definitions.entrySet()) {
-      String id = e.getKey();
+      var id = e.getKey();
       if (parents.containsKey(id)) continue;
       Integer startValue = starts.get(id), endValue = ends.get(id);
       if (startValue == null || endValue == null
@@ -129,15 +129,15 @@ final class DocxComments {
               resolved.contains(id)));
     }
     for (Map.Entry<String, String> reply : parents.entrySet()) {
-      String parent = reply.getValue();
-      Set<String> seen = new HashSet<String>();
+      var parent = reply.getValue();
+      var seen = new HashSet<String>();
       seen.add(reply.getKey());
       while (parents.containsKey(parent) && seen.add(parent)) parent = parents.get(parent);
       if (!seen.add(parent)) {
         warnings.add("Cyclic comment thread");
         continue;
       }
-      String[] definition = definitions.get(reply.getKey());
+      var definition = definitions.get(reply.getKey());
       if (definition == null || definition[0].trim().isEmpty() || definition[1].trim().isEmpty()) {
         warnings.add("Empty or unsupported comment reply");
         continue;
@@ -145,7 +145,7 @@ final class DocxComments {
       boolean found = false;
       for (int i = 0; i < result.size(); i++)
         if (result.get(i).id.equals("comment" + parent)) {
-          ReviewComment root = result.get(i);
+          var root = result.get(i);
           result.set(i, root.reply(definition[0], definition[1]).resolved(root.resolved));
           found = true;
           break;
@@ -179,7 +179,7 @@ final class DocxComments {
           });
       return;
     }
-    final TreeSet<Integer> boundaries = new TreeSet<Integer>();
+    final var boundaries = new TreeSet<Integer>();
     boundaries.add(0);
     boundaries.add(p.text.length());
     for (ReviewComment c : comments) {
@@ -187,7 +187,7 @@ final class DocxComments {
       if (c.endId.equals(p.id)) boundaries.add(c.end);
     }
     bookmarks.boundaries(p.id, boundaries);
-    final Set<Integer> emitted = new HashSet<Integer>();
+    final var emitted = new HashSet<Integer>();
     p.text.visit(
         new RichText.Visitor() {
           public void note(int offset, Note note, TextStyle style) {
@@ -220,12 +220,12 @@ final class DocxComments {
   private void markers(StringBuilder b, String paragraph, int at) {
     bookmarks.markers(b, paragraph, at);
     for (int i = 0; i < comments.size(); i++) {
-      ReviewComment c = comments.get(i);
+      var c = comments.get(i);
       if (c.startId.equals(paragraph) && c.start == at)
         b.append("<w:commentRangeStart w:id=\"").append(i).append("\"/>");
     }
     for (int i = 0; i < comments.size(); i++) {
-      ReviewComment c = comments.get(i);
+      var c = comments.get(i);
       if (c.endId.equals(paragraph) && c.end == at)
         b.append("<w:commentRangeEnd w:id=\"")
             .append(i)
@@ -237,15 +237,16 @@ final class DocxComments {
 
   void packageParts(Map<String, byte[]> parts) throws IOException {
     if (comments.isEmpty() && !parts.containsKey("word/comments.xml")) return;
-    StringBuilder b =
+    var b =
         new StringBuilder(
-            "<w:comments xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\""
-                + " xmlns:w14=\"http://schemas.microsoft.com/office/word/2010/wordml\""
-                + " xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\""
-                + " mc:Ignorable=\"w14\">");
+            """
+            <w:comments xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"\
+             xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml"\
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"\
+             mc:Ignorable="w14">""");
     int replyId = comments.size();
     for (int i = 0; i < comments.size(); i++) {
-      ReviewComment c = comments.get(i);
+      var c = comments.get(i);
       writeComment(b, i, c.author, c.text);
       for (ReviewComment.Reply reply : c.replies)
         writeComment(b, replyId++, reply.author, reply.text);
@@ -260,7 +261,7 @@ final class DocxComments {
             "<w15:commentsEx xmlns:w15=\"http://schemas.microsoft.com/office/word/2012/wordml\">");
     replyId = comments.size();
     for (int i = 0; i < comments.size(); i++) {
-      ReviewComment c = comments.get(i);
+      var c = comments.get(i);
       b.append("<w15:commentEx w15:paraId=\"")
           .append(commentParagraph(i))
           .append("\" w15:done=\"")
@@ -311,14 +312,14 @@ final class DocxComments {
             ? new String(parts.get(path), "UTF-8")
             : "<Relationships xmlns=\"" + ns + "\"></Relationships>";
     boolean found = false;
-    Set<String> ids = new HashSet<String>();
+    var ids = new HashSet<String>();
     for (Element e : Xml.children(Xml.parse(xml), null)) {
       ids.add(Xml.attr(e, "Id", ""));
       if (Xml.attr(e, "Type", "").endsWith("/" + name)
           && Xml.attr(e, "Target", "").equals(name + ".xml")) found = true;
     }
     if (!found) {
-      String id = "cn1" + name;
+      var id = "cn1" + name;
       while (ids.contains(id)) id += "1";
       xml =
           DocxLists.insert(

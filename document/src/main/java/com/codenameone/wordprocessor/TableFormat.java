@@ -132,7 +132,7 @@ public final class TableFormat {
     headerRows = 0;
     title = description = "";
     sizing = Sizing.DEFAULT;
-    props = new java.util.TreeMap<String, String>();
+    props = new java.util.TreeMap<>();
     Arrays.fill(this.columns, 1);
     for (Cell[] row : cells) Arrays.fill(row, Cell.DEFAULT);
   }
@@ -227,7 +227,7 @@ public final class TableFormat {
 
   public TableFormat cell(int row, int column, Cell value) {
     if (value == null) throw new IllegalArgumentException("Missing cell format");
-    Cell[][] copy = cells.clone();
+    var copy = cells.clone();
     copy[row] = cells[row].clone();
     copy[row][column] = value;
     return new TableFormat(copy, columns, heights, headerRows, title, description, sizing, props);
@@ -235,7 +235,7 @@ public final class TableFormat {
 
   public TableFormat column(int column, float weight) {
     if (!valid(weight, .000001f, 10000)) throw new IllegalArgumentException("Invalid column width");
-    float[] copy = columns.clone();
+    var copy = columns.clone();
     copy[column] = weight;
     return new TableFormat(cells, copy, heights, headerRows, title, description, sizing, props);
   }
@@ -259,7 +259,7 @@ public final class TableFormat {
 
   public TableFormat row(int row, Row value) {
     if (value == null) throw new IllegalArgumentException("Missing row formatting");
-    Row[] copy = heights.clone();
+    var copy = heights.clone();
     copy[row] = value;
     return new TableFormat(cells, columns, copy, headerRows, title, description, sizing, props);
   }
@@ -291,7 +291,7 @@ public final class TableFormat {
   TableFormat change(boolean row, int at, boolean insert) {
     int nr = rows() + (row ? (insert ? 1 : -1) : 0),
         nc = columns() + (!row ? (insert ? 1 : -1) : 0);
-    TableFormat out = new TableFormat(nr, nc);
+    var out = new TableFormat(nr, nc);
     for (int r = 0; r < nr; r++) {
       int oldR = row ? original(r, at, insert) : r;
       if (oldR >= 0) out.heights[r] = heights[oldR];
@@ -314,7 +314,7 @@ public final class TableFormat {
   }
 
   public String prop(String key, String fallback) {
-    String v = props.get(key);
+    var v = props.get(key);
     return v == null ? fallback : v;
   }
 
@@ -329,7 +329,7 @@ public final class TableFormat {
       for (String v : TextUtil.split(value, ','))
         if (!v.isEmpty() && !"none".equals(v) && !LOOK.contains(v)) throw new IllegalArgumentException("Unknown table look: " + v);
     if (value != null && value.length() > 4096) throw new IllegalArgumentException("Table option too long");
-    java.util.TreeMap<String, String> next = new java.util.TreeMap<String, String>(props);
+    var next = new java.util.TreeMap<String, String>(props);
     if (value == null || value.isEmpty() || "rtl".equals(key) && "false".equals(value)) next.remove(key);
     else next.put(key, value);
     return props(next);
@@ -337,7 +337,7 @@ public final class TableFormat {
 
   /** Cell text direction (lrTb, tbRl or btLr) from the "directions" option, encoded r:c=dir;... */
   public String direction(int row, int column) {
-    String key = row + ":" + column + "=";
+    var key = row + ":" + column + "=";
     for (String part : TextUtil.split(prop("directions", ""), ';'))
       if (part.startsWith(key)) return part.substring(key.length());
     return "lrTb";
@@ -346,8 +346,8 @@ public final class TableFormat {
   public TableFormat direction(int row, int column, String dir) {
     if (!"lrTb".equals(dir) && !"tbRl".equals(dir) && !"btLr".equals(dir))
       throw new IllegalArgumentException("Text direction is lrTb, tbRl or btLr");
-    StringBuilder b = new StringBuilder();
-    String key = row + ":" + column + "=";
+    var b = new StringBuilder();
+    var key = row + ":" + column + "=";
     for (String part : TextUtil.split(prop("directions", ""), ';'))
       if (!part.isEmpty() && !part.startsWith(key)) b.append(b.length() == 0 ? "" : ";").append(part);
     if (!"lrTb".equals(dir)) b.append(b.length() == 0 ? "" : ";").append(key).append(dir);

@@ -34,9 +34,9 @@ public final class ParagraphStyle {
 
   public Paragraph apply(Paragraph p, ParagraphStyle old, boolean update, Revision change) {
     final TextStyle previous = old == null ? TextStyle.DEFAULT : old.text;
-    final RichText content =
+    final var content =
         p.text.mapStyles(style -> merge(style, previous, text).trackedProperties(style, change));
-    Paragraph result =
+    var result =
         new Paragraph(
                 p.id,
                 content,
@@ -114,7 +114,7 @@ public final class ParagraphStyle {
 
   private static TextStyle merge(TextStyle s, TextStyle a, TextStyle b) {
     boolean inheritedUnderline = s.characters.underlineStyle.equals(a.characters.underlineStyle);
-    CharacterFormat characters = s.characters.merge(a.characters, b.characters);
+    var characters = s.characters.merge(a.characters, b.characters);
     return new TextStyle(
             s.font.equals(a.font) ? b.font : s.font,
             s.size == a.size ? b.size : s.size,
@@ -138,7 +138,7 @@ public final class ParagraphStyle {
   private static final Map<String, ParagraphStyle> DEFAULTS = buildDefaults();
 
   private static Map<String, ParagraphStyle> buildDefaults() {
-    Map<String, ParagraphStyle> result = new LinkedHashMap<String, ParagraphStyle>();
+    var result = new LinkedHashMap<String, ParagraphStyle>();
     String[] names = {
       "Normal",
       "No Spacing",
@@ -153,9 +153,9 @@ public final class ParagraphStyle {
       "Caption"
     };
     for (String name : names) {
-      String id = name.replace(" ", "");
-      Paragraph p = new Paragraph("style", new RichText());
-      TextStyle text = TextStyle.DEFAULT;
+      var id = name.replace(" ", "");
+      var p = new Paragraph("style", new RichText());
+      var text = TextStyle.DEFAULT;
       if (id.startsWith("Heading")) {
         int level = Integer.parseInt(id.substring(7));
         text =

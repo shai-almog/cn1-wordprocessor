@@ -17,13 +17,13 @@ public final class SessionMap<V> {
   }
 
   public V put(Session s, V value) {
-    V old = get(s);
+    var old = get(s);
     s.attachments().put(key, value);
     return old;
   }
 
   public V remove(Session s) {
-    V old = get(s);
+    var old = get(s);
     s.attachments().remove(key);
     return old;
   }

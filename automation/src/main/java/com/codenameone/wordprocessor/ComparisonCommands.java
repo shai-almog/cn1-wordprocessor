@@ -19,14 +19,14 @@ public final class ComparisonCommands implements Commands.Extension {
               original = DocumentXml.read((String) a.get("originalXml"));
             if (a.containsKey("xml")) revised = DocumentXml.read((String) a.get("xml"));
             else {
-              Session text = new Session(Document.empty());
+              var text = new Session(Document.empty());
               text.replace((String) a.get("text"));
               revised = text.document();
             }
           } catch (java.io.IOException ex) {
             throw new IllegalArgumentException(ex.getMessage());
           }
-          DocumentComparison.Options o = new DocumentComparison.Options();
+          var o = new DocumentComparison.Options();
           o.author = a.containsKey("author") ? (String) a.get("author") : s.reviewAuthor();
           String level = a.containsKey("level") ? (String) a.get("level") : "word";
           if (!Arrays.asList("word", "character", "char").contains(level))

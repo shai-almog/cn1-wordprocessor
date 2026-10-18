@@ -21,16 +21,16 @@ public class FieldLayoutTest {
 
   @Test
   public void fieldHasAtomicSourceRangeAndResultWidthIncludingDecimalTab() {
-    RichText text =
+    var text =
         RichText.of("Price\t")
             .concat(
                 RichText.field(
                     new InlineField("MERGEFIELD Price", "123.45", false, false),
                     TextStyle.DEFAULT));
-    Paragraph p = new Paragraph("p1", text).with("tabs", "120,decimal,dot");
-    Document d = new Document(new Sequence<Block>().append(p), PageSpec.A4, "Title", 2);
-    LayoutEngine.Line line = engine().layout(d, 0).pages.get(0).lines.get(0);
-    LayoutEngine.Span field = line.spans.get(2);
+    var p = new Paragraph("p1", text).with("tabs", "120,decimal,dot");
+    var d = new Document(new Sequence<Block>().append(p), PageSpec.A4, "Title", 2);
+    var line = engine().layout(d, 0).pages.get(0).lines.get(0);
+    var field = line.spans.get(2);
     assertEquals(6, field.start);
     assertEquals(7, field.end);
     assertEquals(36, field.width, .001);
@@ -40,7 +40,7 @@ public class FieldLayoutTest {
 
   @Test
   public void pageCountsPropertiesMergeValuesAndLockedFieldsResolve() {
-    RichText text =
+    var text =
         RichText.field(
                 new InlineField("PAGE \\* ROMAN \\* Upper", "?", false, false), TextStyle.DEFAULT)
             .concat(
@@ -52,12 +52,12 @@ public class FieldLayoutTest {
                     TextStyle.DEFAULT))
             .concat(
                 RichText.field(new InlineField("PAGE", "Locked", true, false), TextStyle.DEFAULT));
-    Paragraph p = new Paragraph("p1", text);
-    Paragraph second = new Paragraph("p2", text).with("pageBreak", "true");
-    Session s =
+    var p = new Paragraph("p1", text);
+    var second = new Paragraph("p2", text).with("pageBreak", "true");
+    var s =
         new Session(
             new Document(new Sequence<Block>().append(p).append(second), PageSpec.A4, "Title", 3));
-    Map<String, String> values = new HashMap<String, String>();
+    var values = new HashMap<String, String>();
     values.put("Full name", "Ada Lovelace");
     s.mapFields(DocumentFields.resolver(s.document(), engine().layout(s.document(), 0), values));
     assertEquals("I2TitleAda LovelaceLocked", s.document().paragraph(0).text.plainText());

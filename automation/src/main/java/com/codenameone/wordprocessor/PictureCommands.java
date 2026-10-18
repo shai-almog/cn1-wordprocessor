@@ -24,7 +24,7 @@ final class PictureCommands implements Commands.Extension {
         true,
         (s, a) -> {
           int block = block(s, a);
-          Picture.Look k = picture(s, block).look;
+          var k = picture(s, block).look;
           s.pictureLook(
               block,
               k.crop(
@@ -41,8 +41,8 @@ final class PictureCommands implements Commands.Extension {
         true,
         (s, a) -> {
           int block = block(s, a);
-          Picture.Look k = picture(s, block).look;
-          Object color = a.get("color");
+          var k = picture(s, block).look;
+          var color = a.get("color");
           int rgb =
               "none".equals(color)
                   ? -1
@@ -60,7 +60,7 @@ final class PictureCommands implements Commands.Extension {
         true,
         (s, a) -> {
           int block = block(s, a);
-          Picture.Look k = picture(s, block).look;
+          var k = picture(s, block).look;
           s.pictureLook(
               block,
               k.adjust(
@@ -98,7 +98,7 @@ final class PictureCommands implements Commands.Extension {
         "block?:integer,ppi?:integer,deleteCropped?:boolean",
         true,
         (s, a) -> {
-          Codec k = codec;
+          var k = codec;
           if (k == null)
             throw new IllegalArgumentException("Picture compression needs the native image codec");
           int block = block(s, a);
@@ -106,10 +106,10 @@ final class PictureCommands implements Commands.Extension {
           int ppi = a.containsKey("ppi") ? Commands.integer(a, "ppi") : 150;
           if (ppi < 1) throw new IllegalArgumentException("ppi must be positive");
           boolean del = !a.containsKey("deleteCropped") || (Boolean) a.get("deleteCropped");
-          Picture.Look l = old.look;
+          var l = old.look;
           int maxW = Math.max(1, Math.round(old.width * ppi / 72f));
           int maxH = Math.max(1, Math.round(old.height * ppi / 72f));
-          byte[] out =
+          var out =
               k.resample(
                   old.bytes(),
                   old.mime,
@@ -121,10 +121,10 @@ final class PictureCommands implements Commands.Extension {
                   maxH);
           if (out == null || out.length == 0)
             throw new IllegalArgumentException("Picture compression failed");
-          Picture next =
+          var next =
               new Picture(
                   old.id(), out, old.width, old.height, old.alt, old.align, del ? l.crop(0, 0, 0, 0) : l);
-          Selection keep = s.selection();
+          var keep = s.selection();
           s.replaceDocument(s.document().blocks(s.document().blocks.set(block, next), s.document().nextId));
           s.selectRange(keep.anchorBlock, keep.anchor, keep.block, keep.caret);
           return null;
@@ -136,7 +136,7 @@ final class PictureCommands implements Commands.Extension {
         true,
         (s, a) -> {
           int block = block(s, a);
-          Picture.Look k = picture(s, block).look;
+          var k = picture(s, block).look;
           s.pictureLook(block, k.adjust(k.brightness, k.contrast, k.transparency, Commands.str(a, "mode")));
           return null;
         });
@@ -147,7 +147,7 @@ final class PictureCommands implements Commands.Extension {
         true,
         (s, a) -> {
           int block = block(s, a);
-          Picture.Look k = picture(s, block).look;
+          var k = picture(s, block).look;
           s.pictureLook(block, k.adjust(k.brightness, k.contrast, Commands.integer(a, "percent"), k.colorMode));
           return null;
         });
@@ -158,7 +158,7 @@ final class PictureCommands implements Commands.Extension {
         true,
         (s, a) -> {
           int block = block(s, a);
-          Picture.Look k = picture(s, block).look;
+          var k = picture(s, block).look;
           String name = Commands.str(a, "name");
           Picture.Look next =
               "simpleFrameBlack".equals(name)
@@ -182,7 +182,7 @@ final class PictureCommands implements Commands.Extension {
         (s, a) -> {
           int block = block(s, a);
           Picture old = picture(s, block);
-          Picture next =
+          var next =
               new Picture(
                   old.id(),
                   com.codename1.util.Base64.decode(Commands.str(a, "base64").getBytes()),
@@ -191,7 +191,7 @@ final class PictureCommands implements Commands.Extension {
                   old.alt,
                   old.align,
                   old.look);
-          Selection keep = s.selection();
+          var keep = s.selection();
           s.replaceDocument(s.document().blocks(s.document().blocks.set(block, next), s.document().nextId));
           s.selectRange(keep.anchorBlock, keep.anchor, keep.block, keep.caret);
           return null;
@@ -203,7 +203,7 @@ final class PictureCommands implements Commands.Extension {
         true,
         (s, a) -> {
           int block = block(s, a);
-          Picture.Look k = picture(s, block).look;
+          var k = picture(s, block).look;
           s.pictureLook(
               block,
               k.rotate(
@@ -219,7 +219,7 @@ final class PictureCommands implements Commands.Extension {
         true,
         (s, a) -> {
           int block = block(s, a);
-          Picture.Look k = picture(s, block).look;
+          var k = picture(s, block).look;
           String kind = Commands.str(a, "kind");
           Picture.Look next =
               "right".equals(kind)

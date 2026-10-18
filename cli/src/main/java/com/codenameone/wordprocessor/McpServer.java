@@ -10,7 +10,7 @@ public final class McpServer {
   private final Commands commands = DocumentFiles.commands();
   private Session session = new Session(Document.empty());
   private Docx.Opened source;
-  private final Map<String, Macros.Preview> previews = new LinkedHashMap<String, Macros.Preview>();
+  private final Map<String, Macros.Preview> previews = new LinkedHashMap<>();
   private long nextPreview;
   private boolean initialized, ready;
 
@@ -20,10 +20,10 @@ public final class McpServer {
   }
 
   public void serve(InputStream in, OutputStream out) throws IOException {
-    BufferedReader reader = new BufferedReader(new InputStreamReader(in, "UTF-8"));
-    Writer writer = new OutputStreamWriter(out, "UTF-8");
+    var reader = new BufferedReader(new InputStreamReader(in, "UTF-8"));
+    var writer = new OutputStreamWriter(out, "UTF-8");
     while (true) {
-      String line = readLine(reader);
+      var line = readLine(reader);
       if (line == null) break;
       Map<String, Object> reply;
       try {
@@ -40,7 +40,7 @@ public final class McpServer {
   }
 
   private String readLine(Reader reader) throws IOException {
-    StringBuilder b = new StringBuilder();
+    var b = new StringBuilder();
     int c;
     while ((c = reader.read()) != -1) {
       if (c == '\n') return b.toString();
@@ -51,7 +51,7 @@ public final class McpServer {
   }
 
   public Map<String, Object> handle(Map<String, Object> request) {
-    Object id = request.get("id");
+    var id = request.get("id");
     String method = request.get("method") instanceof String ? (String) request.get("method") : "";
     if (!"2.0".equals(request.get("jsonrpc")) || method.isEmpty())
       return error(id, -32600, "Invalid request");
@@ -83,13 +83,13 @@ public final class McpServer {
     if (!(params.get("name") instanceof String)
         || params.containsKey("arguments") && !(params.get("arguments") instanceof Map))
       return error(id, -32602, "Invalid tool parameters");
-    String tool = (String) params.get("name");
+    var tool = (String) params.get("name");
     Map<String, Object> args =
         params.get("arguments") instanceof Map
             ? (Map<String, Object>) params.get("arguments")
             : Json.object();
     try {
-      Object value = call(tool, args);
+      var value = call(tool, args);
       return result(
           id,
           Json.object(
@@ -115,7 +115,7 @@ public final class McpServer {
 
   private Object call(String name, Map<String, Object> args) throws Exception {
     if ("open_document".equals(name)) {
-      Path path = path(string(args, "path"), true);
+      var path = path(string(args, "path"), true);
       DocumentFiles.Opened opened = DocumentFiles.read(path);
       session = new Session(opened.document);
       source = opened.source;
@@ -123,7 +123,7 @@ public final class McpServer {
       return Json.object("document", Commands.inspect(session), "warnings", opened.warnings);
     }
     if ("save_document".equals(name)) {
-      Path path = path(string(args, "path"), false);
+      var path = path(string(args, "path"), false);
       byte[] bytes =
           DocumentFiles.write(
               session.document(),
@@ -134,9 +134,9 @@ public final class McpServer {
       return Json.object("saved", root.relativize(path).toString());
     }
     if ("preview_macro".equals(name)) {
-      Object macro = args.get("macro");
+      var macro = args.get("macro");
       if (!(macro instanceof Map)) throw new IllegalArgumentException("macro must be an object");
-      Macros.Preview preview =
+      var preview =
           new Macros(commands)
               .preview(
                   session,
@@ -159,8 +159,8 @@ public final class McpServer {
           preview.changes);
     }
     if ("apply_preview".equals(name)) {
-      String key = string(args, "preview");
-      Macros.Preview preview = previews.get(key);
+      var key = string(args, "preview");
+      var preview = previews.get(key);
       if (preview == null) throw new IllegalArgumentException("Unknown preview");
       preview.apply(session);
       previews.remove(key);
@@ -170,19 +170,19 @@ public final class McpServer {
   }
 
   private String string(Map<String, Object> args, String key) {
-    Object v = args.get(key);
+    var v = args.get(key);
     if (!(v instanceof String))
       throw new IllegalArgumentException("Missing string argument: " + key);
     return (String) v;
   }
 
   private Path path(String value, boolean exists) throws IOException {
-    Path p = root.resolve(value).normalize();
+    var p = root.resolve(value).normalize();
     if (!p.startsWith(root)) throw new IOException("Path outside automation root");
     if (exists) p = p.toRealPath();
     else {
       if (Files.exists(p)) throw new IOException("Output already exists");
-      Path parent = p.getParent().toRealPath();
+      var parent = p.getParent().toRealPath();
       p = parent.resolve(p.getFileName());
     }
     if (!p.startsWith(root)) throw new IOException("Symlink escapes automation root");
@@ -190,7 +190,7 @@ public final class McpServer {
   }
 
   private List<Object> tools() {
-    List<Object> tools = new ArrayList<Object>();
+    var tools = new ArrayList<Object>();
     for (Commands.Descriptor d : commands.descriptors())
       tools.add(
           Json.object(

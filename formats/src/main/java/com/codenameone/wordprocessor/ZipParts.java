@@ -34,8 +34,8 @@ public final class ZipParts {
   public static byte[] utf8(CharSequence text) {
     int n = text.length();
     char[] c = new char[n];
-    if (text instanceof String) ((String) text).getChars(0, n, c, 0);
-    else if (text instanceof StringBuilder) ((StringBuilder) text).getChars(0, n, c, 0);
+    if (text instanceof String string) string.getChars(0, n, c, 0);
+    else if (text instanceof StringBuilder builder) builder.getChars(0, n, c, 0);
     else for (int i = 0; i < n; i++) c[i] = text.charAt(i);
     int size = n;
     for (int i = 0; i < n; i++) {

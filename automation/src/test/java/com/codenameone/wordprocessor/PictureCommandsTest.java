@@ -11,22 +11,22 @@ public class PictureCommandsTest {
   private final Commands commands = new Commands();
 
   private Object run(Session s, String id, Object... kv) {
-    Map<String, Object> a = new LinkedHashMap<String, Object>();
+    var a = new LinkedHashMap<String, Object>();
     for (int i = 0; i < kv.length; i += 2) a.put((String) kv[i], kv[i + 1]);
     return commands.execute(s, id, a);
   }
 
   private static byte[] png() throws Exception {
-    java.awt.image.BufferedImage image =
+    var image =
         new java.awt.image.BufferedImage(4, 2, java.awt.image.BufferedImage.TYPE_INT_RGB);
-    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    var out = new ByteArrayOutputStream();
     javax.imageio.ImageIO.write(image, "png", out);
     return out.toByteArray();
   }
 
   @Test
   public void cropBorderRotateSizeAltAndReset() throws Exception {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.insertPicture(png(), 200, 100, "");
     int block = -1;
     for (int i = 0; i < s.document().blocks.size(); i++)
@@ -37,7 +37,7 @@ public class PictureCommandsTest {
     run(s, "arrange.rotate", "block", block, "kind", "flipV");
     run(s, "picture.size", "block", block, "width", 100);
     run(s, "picture.altText", "block", block, "text", "Sales chart");
-    Picture p = (Picture) s.document().blocks.get(block);
+    var p = (Picture) s.document().blocks.get(block);
     assertEquals(.25, p.look.cropLeft, 1e-6);
     assertEquals(.1, p.look.cropBottom, 1e-6);
     assertEquals(0xff0000, p.look.borderColor);
@@ -56,7 +56,7 @@ public class PictureCommandsTest {
 
   @Test
   public void adjustmentsRoundTripThroughDocxAndNativeXml() throws Exception {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.insertPicture(png(), 200, 100, "");
     int block = -1;
     for (int i = 0; i < s.document().blocks.size(); i++)
@@ -65,23 +65,23 @@ public class PictureCommandsTest {
     run(s, "picture.transparency", "block", block, "percent", 35);
     run(s, "picture.color", "block", block, "mode", "grayscale");
     run(s, "picture.style", "block", block, "name", "simpleFrameBlack");
-    Picture.Look k = ((Picture) s.document().blocks.get(block)).look;
+    var k = ((Picture) s.document().blocks.get(block)).look;
     assertEquals(20, k.brightness);
     assertEquals(-40, k.contrast);
     assertEquals(35, k.transparency);
     assertEquals("grayscale", k.colorMode);
     assertEquals(6, k.borderWidth, 0);
 
-    java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+    var out = new java.io.ByteArrayOutputStream();
     Docx.write(s.document(), out);
     Docx.Opened back = Docx.read(new java.io.ByteArrayInputStream(out.toByteArray()));
     assertTrue(back.warnings.toString(), back.warnings.isEmpty());
     Picture.Look docx = null;
-    for (Block b : back.document.blocks) if (b instanceof Picture) docx = ((Picture) b).look;
+    for (Block b : back.document.blocks) if (b instanceof Picture picture) docx = picture.look;
     assertEquals(k, docx);
     Picture.Look xml = null;
     for (Block b : DocumentXml.read(DocumentXml.write(s.document())).blocks)
-      if (b instanceof Picture) xml = ((Picture) b).look;
+      if (b instanceof Picture picture) xml = picture.look;
     assertEquals(k, xml);
 
     run(s, "picture.change", "block", block, "base64",
@@ -99,11 +99,11 @@ public class PictureCommandsTest {
 
   @Test
   public void effectsAndBackgroundRoundTrip() throws Exception {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     int block = insertPicture(s);
     run(s, "picture.effects", "block", block, "effect", "pencilSketch");
     run(s, "picture.removeBackground", "block", block, "tolerance", 30);
-    Picture.Look k = ((Picture) s.document().blocks.get(block)).look;
+    var k = ((Picture) s.document().blocks.get(block)).look;
     assertEquals("pencilSketch", k.effect);
     assertEquals(30, k.backgroundTolerance);
     assertTrue(k.adjusted());
@@ -135,7 +135,7 @@ public class PictureCommandsTest {
 
   @Test
   public void compressUsesCodecAndResetsCrop() throws Exception {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     int block = insertPicture(s);
     run(s, "picture.crop", "block", block, "left", .25);
     try {
@@ -158,7 +158,7 @@ public class PictureCommandsTest {
     } finally {
       PictureCommands.codec(null);
     }
-    Picture p = (Picture) s.document().blocks.get(block);
+    var p = (Picture) s.document().blocks.get(block);
     assertArrayEquals(small, p.bytes());
     assertFalse(p.look.cropped());
     assertEquals(144, seen[0]);

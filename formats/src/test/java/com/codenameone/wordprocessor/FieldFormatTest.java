@@ -9,7 +9,7 @@ import org.junit.Test;
 public class FieldFormatTest {
   @Test
   public void nativeAndDocxRoundTripFieldInstructionResultStyleAndComments() throws Exception {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("Page ");
     s.insertField(new InlineField("PAGE \\* ROMAN", "III", true, false));
     s.select(0, 5, 6);
@@ -17,11 +17,11 @@ public class FieldFormatTest {
     s.addComment("Reviewer", "Keep page number");
     String xml = DocumentXml.write(s.document());
     assertEquals(xml, DocumentXml.write(DocumentXml.read(xml)));
-    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    var out = new ByteArrayOutputStream();
     Docx.write(s.document(), out);
     Docx.Opened opened = Docx.read(new ByteArrayInputStream(out.toByteArray()));
     assertTrue(opened.warnings.toString(), opened.warnings.isEmpty());
-    RichText text = opened.document.paragraph(0).text;
+    var text = opened.document.paragraph(0).text;
     assertEquals(6, text.length());
     assertEquals("PAGE \\* ROMAN", text.fieldAt(5).instruction);
     assertEquals("III", text.fieldAt(5).result);
@@ -34,22 +34,23 @@ public class FieldFormatTest {
 
   @Test
   public void complexFieldsBecomeAtomicWithCachedResultAndUnknownCodePreserved() throws Exception {
-    ByteArrayOutputStream bytes = new ByteArrayOutputStream();
-    ZipOutputStream zip = new ZipOutputStream(bytes);
+    var bytes = new ByteArrayOutputStream();
+    var zip = new ZipOutputStream(bytes);
     zip.putNextEntry(new ZipEntry("word/document.xml"));
     zip.write(
-        ("<w:document"
-             + " xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:body><w:p><w:r><w:t>A</w:t></w:r><w:r><w:fldChar"
-             + " w:fldCharType=\"begin\" w:fldLock=\"true\"/></w:r><w:r><w:instrText> CUSTOM"
-             + " </w:instrText></w:r><w:r><w:instrText>Arg </w:instrText></w:r><w:r><w:fldChar"
-             + " w:fldCharType=\"separate\"/></w:r><w:r><w:rPr><w:b/></w:rPr><w:t>Cached</w:t></w:r><w:r><w:fldChar"
-             + " w:fldCharType=\"end\"/></w:r><w:r><w:t>Z</w:t></w:r></w:p></w:body></w:document>")
+        ("""
+             <w:document\
+              xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>A</w:t></w:r><w:r><w:fldChar\
+              w:fldCharType="begin" w:fldLock="true"/></w:r><w:r><w:instrText> CUSTOM\
+              </w:instrText></w:r><w:r><w:instrText>Arg </w:instrText></w:r><w:r><w:fldChar\
+              w:fldCharType="separate"/></w:r><w:r><w:rPr><w:b/></w:rPr><w:t>Cached</w:t></w:r><w:r><w:fldChar\
+              w:fldCharType="end"/></w:r><w:r><w:t>Z</w:t></w:r></w:p></w:body></w:document>""")
             .getBytes("UTF-8"));
     zip.closeEntry();
     zip.close();
     Docx.Opened opened = Docx.read(new ByteArrayInputStream(bytes.toByteArray()));
     assertTrue(opened.warnings.toString(), opened.warnings.isEmpty());
-    RichText t = opened.document.paragraph(0).text;
+    var t = opened.document.paragraph(0).text;
     assertEquals("A\ufffcZ", t.toString());
     assertEquals("ACachedZ", t.plainText());
     assertEquals("CUSTOM Arg", t.fieldAt(1).instruction);
@@ -59,17 +60,17 @@ public class FieldFormatTest {
 
   @org.junit.Test
   public void captionsRetainNumberingAfterNativeAndDocxReopen() throws Exception {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("Object");
     s.insertCaption("Figure", "First", false, "ROMAN", false, 0, "-");
-    java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+    var out = new java.io.ByteArrayOutputStream();
     Docx.write(s.document(), out);
     for (Document document :
         new Document[] {
           DocumentXml.read(DocumentXml.write(s.document())),
           Docx.read(new java.io.ByteArrayInputStream(out.toByteArray())).document
         }) {
-      Session opened = new Session(document);
+      var opened = new Session(document);
       opened.select(1, 0, 0);
       opened.insertCaption("Figure", "New", true, "ROMAN", false, 0, "-");
       org.junit.Assert.assertEquals(

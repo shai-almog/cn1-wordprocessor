@@ -32,7 +32,7 @@ final class PageRuler extends Component {
     int block = session.selection().block;
     Sequence<Block> blocks = session.editingDocument().blocks;
     Block b = block >= 0 && block < blocks.size() ? blocks.get(block) : null;
-    return b instanceof Paragraph ? (Paragraph) b : null;
+    return b instanceof Paragraph p ? p : null;
   }
 
   private int top() {
@@ -47,8 +47,8 @@ final class PageRuler extends Component {
 
   /** Repaints only when the margins, the caret paragraph's indents or the page moved. */
   void sync() {
-    PageSpec p = session.activeSection().raw.page;
-    Paragraph para = paragraph();
+    var p = session.activeSection().raw.page;
+    var para = paragraph();
     Object[] now = {
       p.width, p.left, p.right, editor.pixelsPerPoint(),
       editor.getAbsoluteX() - getAbsoluteX() + editor.pageLeft(),
@@ -62,7 +62,7 @@ final class PageRuler extends Component {
 
   public void paint(Graphics g) {
     super.paint(g);
-    PageSpec p = session.activeSection().raw.page;
+    var p = session.activeSection().raw.page;
     float scale = editor.pixelsPerPoint();
     // The vertical ruler may sit left of the editor, so measure from the editor itself.
     int x = getX() + editor.getAbsoluteX() - getAbsoluteX() + editor.pageLeft(), y = top(), h = band(), w = Math.round(p.width * scale);
@@ -96,7 +96,7 @@ final class PageRuler extends Component {
         }
       }
     }
-    Paragraph para = paragraph();
+    var para = paragraph();
     float indent = para == null ? 0 : para.indent;
     float first = para == null ? 0 : para.format.firstIndent;
     float rightIndent = para == null ? 0 : para.format.rightIndent;
@@ -127,11 +127,11 @@ final class PageRuler extends Component {
   }
 
   public void pointerPressed(int x, int y) {
-    PageSpec p = session.activeSection().raw.page;
+    var p = session.activeSection().raw.page;
     float s = editor.pixelsPerPoint();
     float value = (x - getAbsoluteX() - (editor.getAbsoluteX() - getAbsoluteX()) - editor.pageLeft()) / s;
     int ry = y - getAbsoluteY() - (top() - getY());
-    Paragraph para = paragraph();
+    var para = paragraph();
     float indent = para == null ? 0 : para.indent, first = para == null ? 0 : para.format.firstIndent;
     float rightIndent = para == null ? 0 : para.format.rightIndent;
     float near = OfficeTheme.px(6) / s;
@@ -152,11 +152,11 @@ final class PageRuler extends Component {
 
   public void pointerReleased(int x, int y) {
     if (handle == 0) return;
-    PageSpec p = session.activeSection().raw.page;
+    var p = session.activeSection().raw.page;
     float value = (x - getAbsoluteX() - (editor.getAbsoluteX() - getAbsoluteX()) - editor.pageLeft()) / editor.pixelsPerPoint();
     // Indents snap to sixteenths of an inch, as Word's ruler does without Alt.
     float snap = 4.5f;
-    Paragraph para = paragraph();
+    var para = paragraph();
     if (handle == MARGIN || handle == RIGHT_MARGIN) {
       float left = p.left, right = p.right;
       if (handle == MARGIN) left = Math.max(12, Math.min(p.width - right - 72, value));

@@ -21,9 +21,9 @@ public final class Note {
     this.mark = mark;
     this.label = label;
     this.paragraphs = paragraphs;
-    Paragraph first = paragraphs.get(0);
-    TextStyle style = first.text.styleAt(0).clean().with("link", "");
-    RichText prefix = RichText.of(label, style.with("script", "superscript"))
+    var first = paragraphs.get(0);
+    var style = first.text.styleAt(0).clean().with("link", "");
+    var prefix = RichText.of(label, style.with("script", "superscript"))
         .concat(RichText.of(" ", style.with("script", "baseline")));
     displayed = paragraphs.set(0, first.text(prefix.concat(first.text)));
   }
@@ -44,7 +44,7 @@ public final class Note {
   }
 
   public String plainText() {
-    StringBuilder out = new StringBuilder();
+    var out = new StringBuilder();
     for (int i = 0; i < paragraphs.size(); i++) {
       if (i > 0) out.append('\n');
       out.append(paragraphs.get(i).text.plainText());

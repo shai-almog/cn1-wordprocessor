@@ -9,8 +9,8 @@ import org.junit.Test;
 
 public class DocxFeaturesTest {
   private byte[] pack(String document, String styles) throws Exception {
-    ByteArrayOutputStream bytes = new ByteArrayOutputStream();
-    ZipOutputStream zip = new ZipOutputStream(bytes);
+    var bytes = new ByteArrayOutputStream();
+    var zip = new ZipOutputStream(bytes);
     for (String[] p :
         new String[][] {
           {
@@ -32,22 +32,22 @@ public class DocxFeaturesTest {
 
   @Test
   public void commentThreadsRoundTripWithoutDuplicatingAnchorsOrRootText() throws Exception {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("alpha beta");
     s.select(0, 0, 5);
     s.addComment("Ada", "Root\nsecond line");
-    String id = s.document().comments.get(0).id;
+    var id = s.document().comments.get(0).id;
     s.replyComment(id, "Grace", "Reply one");
     s.replyComment(id, "Linus", "Reply two\nmore");
     s.updateComment(id, true, false);
-    ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+    var bytes = new ByteArrayOutputStream();
     Docx.write(s.document(), bytes);
     Docx.Opened opened = Docx.read(new ByteArrayInputStream(bytes.toByteArray()));
     assertFalse(opened.warnings.toString(), opened.warnings.toString().contains("Comment"));
     for (Document d :
         new Document[] {DocumentXml.read(DocumentXml.write(s.document())), opened.document}) {
       assertEquals(1, d.comments.size());
-      ReviewComment c = d.comments.get(0);
+      var c = d.comments.get(0);
       assertEquals("Root\nsecond line", c.text);
       assertTrue(c.resolved);
       assertEquals(2, c.replies.size());
@@ -60,16 +60,16 @@ public class DocxFeaturesTest {
 
   @Test
   public void rectangularMergesRoundTripWithoutLosingCellText() throws Exception {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.insertTable(3, 3);
     for (int r = 0; r < 3; r++) for (int c = 0; c < 3; c++) s.setCell(1, r, c, r + ":" + c);
     s.mergeCells(1, 0, 0, 2, 2);
-    ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+    var bytes = new ByteArrayOutputStream();
     Docx.write(s.document(), bytes);
     Document nativeCopy = DocumentXml.read(DocumentXml.write(s.document()));
-    Document wordCopy = Docx.read(new ByteArrayInputStream(bytes.toByteArray())).document;
+    var wordCopy = Docx.read(new ByteArrayInputStream(bytes.toByteArray())).document;
     for (Document doc : new Document[] {nativeCopy, wordCopy}) {
-      Table table = (Table) doc.blocks.get(1);
+      var table = (Table) doc.blocks.get(1);
       assertEquals(3, table.rows());
       assertEquals(3, table.columns());
       assertEquals(2, table.span(0, 0).rows);
@@ -82,13 +82,13 @@ public class DocxFeaturesTest {
 
   @Test
   public void raisedAndLoweredRunsRetainBaseSizeAcrossNativeAndDocx() throws Exception {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("H2O and x2");
     s.select(0, 1, 2);
     s.format("script", "subscript");
     s.select(0, 9, 10);
     s.format("script", "superscript");
-    ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+    var bytes = new ByteArrayOutputStream();
     Docx.write(s.document(), bytes);
     Docx.Opened opened = Docx.read(new ByteArrayInputStream(bytes.toByteArray()));
     assertTrue(opened.warnings.toString(), opened.warnings.isEmpty());
@@ -108,7 +108,7 @@ public class DocxFeaturesTest {
 
   @Test
   public void paragraphLayoutRoundTripsThroughNativeAndDocx() throws Exception {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("Indented and justified text");
     s.paragraph("align", "both");
     s.paragraph("indent", "24");
@@ -117,13 +117,13 @@ public class DocxFeaturesTest {
     s.paragraph("tabInterval", "24");
     s.paragraph("keepLines", "true");
     s.paragraph("widowControl", "false");
-    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    var out = new ByteArrayOutputStream();
     Docx.write(s.document(), out);
     Docx.Opened opened = Docx.read(new ByteArrayInputStream(out.toByteArray()));
     assertTrue(opened.warnings.toString(), opened.warnings.isEmpty());
     for (Document d :
         new Document[] {DocumentXml.read(DocumentXml.write(s.document())), opened.document}) {
-      Paragraph p = d.paragraph(0);
+      var p = d.paragraph(0);
       assertEquals("both", p.align);
       assertEquals(24, p.indent, .01);
       assertEquals(18, p.format.rightIndent, .01);
@@ -136,23 +136,23 @@ public class DocxFeaturesTest {
 
   @Test
   public void commentRangesAndAuthorsRoundTripAcrossParagraphs() throws Exception {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("A quoted phrase\nAnd another paragraph");
     s.selectRange(0, 2, 1, 3);
     s.addComment("Ada & Bob", "Please check <this>\nSecond line");
     Document nativeCopy = DocumentXml.read(DocumentXml.write(s.document()));
     assertEquals(1, nativeCopy.comments.size());
     assertEquals(s.document().comments.get(0).text, nativeCopy.comments.get(0).text);
-    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    var out = new ByteArrayOutputStream();
     Docx.write(s.document(), out);
     Docx.Opened o = Docx.read(new ByteArrayInputStream(out.toByteArray()));
     assertTrue(o.warnings.toString(), o.warnings.isEmpty());
     assertEquals(s.document().plainText(), o.document.plainText());
     assertEquals(1, o.document.comments.size());
-    ReviewComment c = o.document.comments.get(0);
+    var c = o.document.comments.get(0);
     assertEquals("Ada & Bob", c.author);
     assertEquals("Please check <this>\nSecond line", c.text);
-    Session opened = new Session(o.document);
+    var opened = new Session(o.document);
     opened.selectComment(c.id);
     assertEquals("quoted phrase\nAnd", opened.selectedText());
     opened.updateComment(c.id, true, false);
@@ -168,13 +168,13 @@ public class DocxFeaturesTest {
 
   @Test
   public void emptyParagraphFormattingRoundTrips() throws Exception {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.format("size", "26");
     s.format("bold", "true");
     assertEquals(
         s.activeStyle(),
         DocumentXml.read(DocumentXml.write(s.document())).paragraph(0).text.styleAt(0));
-    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    var out = new ByteArrayOutputStream();
     Docx.write(s.document(), out);
     assertEquals(
         s.activeStyle(),
@@ -187,27 +187,29 @@ public class DocxFeaturesTest {
 
   @Test
   public void styleDefaultsInheritanceAndDirectOverrides() throws Exception {
-    String styles =
-        "<w:styles"
-            + " xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:docDefaults><w:rPrDefault><w:rPr><w:sz"
-            + " w:val=\"20\"/><w:rFonts w:ascii=\"Source Sans"
-            + " 3\"/></w:rPr></w:rPrDefault></w:docDefaults><w:style"
-            + " w:styleId=\"Base\"><w:rPr><w:b/></w:rPr><w:pPr><w:spacing"
-            + " w:after=\"240\"/><w:keepNext/></w:pPr></w:style><w:style"
-            + " w:styleId=\"Title\"><w:basedOn w:val=\"Base\"/><w:rPr><w:sz"
-            + " w:val=\"40\"/><w:i/></w:rPr><w:pPr><w:jc"
-            + " w:val=\"center\"/></w:pPr></w:style><w:style w:styleId=\"Accent\"><w:rPr><w:color"
-            + " w:val=\"ff0000\"/></w:rPr></w:style></w:styles>";
+    var styles =
+        """
+        <w:styles\
+         xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:docDefaults><w:rPrDefault><w:rPr><w:sz\
+         w:val="20"/><w:rFonts w:ascii="Source Sans\
+         3"/></w:rPr></w:rPrDefault></w:docDefaults><w:style\
+         w:styleId="Base"><w:rPr><w:b/></w:rPr><w:pPr><w:spacing\
+         w:after="240"/><w:keepNext/></w:pPr></w:style><w:style\
+         w:styleId="Title"><w:basedOn w:val="Base"/><w:rPr><w:sz\
+         w:val="40"/><w:i/></w:rPr><w:pPr><w:jc\
+         w:val="center"/></w:pPr></w:style><w:style w:styleId="Accent"><w:rPr><w:color\
+         w:val="ff0000"/></w:rPr></w:style></w:styles>""";
     Docx.Opened o =
         Docx.read(
             new ByteArrayInputStream(
                 pack(
-                    "<w:p><w:pPr><w:pStyle w:val=\"Title\"/><w:spacing"
-                        + " w:before=\"120\"/></w:pPr><w:r><w:t>A</w:t></w:r><w:r><w:rPr><w:rStyle"
-                        + " w:val=\"Accent\"/><w:b w:val=\"0\"/></w:rPr><w:t>B</w:t></w:r></w:p>",
+                    """
+                    <w:p><w:pPr><w:pStyle w:val="Title"/><w:spacing\
+                     w:before="120"/></w:pPr><w:r><w:t>A</w:t></w:r><w:r><w:rPr><w:rStyle\
+                     w:val="Accent"/><w:b w:val="0"/></w:rPr><w:t>B</w:t></w:r></w:p>""",
                     styles)));
     assertTrue(o.warnings.toString(), o.warnings.isEmpty());
-    Paragraph p = o.document.paragraph(0);
+    var p = o.document.paragraph(0);
     assertEquals(12, p.after, .01);
     assertEquals(6, p.before, .01);
     assertTrue(p.keepNext);
@@ -217,22 +219,22 @@ public class DocxFeaturesTest {
     assertEquals(20, p.text.styleAt(0).size, .01);
     assertFalse(p.text.styleAt(1).bold);
     assertEquals(0xff0000, p.text.styleAt(1).color);
-    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    var out = new ByteArrayOutputStream();
     Docx.write(o.document.title("Changed"), o, out, false);
-    Paragraph round = Docx.read(new ByteArrayInputStream(out.toByteArray())).document.paragraph(0);
+    var round = Docx.read(new ByteArrayInputStream(out.toByteArray())).document.paragraph(0);
     assertEquals(p.text.styleAt(0), round.text.styleAt(0));
     assertEquals(p.text.styleAt(1), round.text.styleAt(1));
   }
 
   @Test
   public void hyperlinkTargetsSurviveEditingAndEscaping() throws Exception {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("Click here then there");
     s.select(0, 6, 10);
     s.format("link", "https://example.com/?a=1&b=2");
     s.select(0, 16, 21);
     s.format("link", "#chapter");
-    ByteArrayOutputStream b = new ByteArrayOutputStream();
+    var b = new ByteArrayOutputStream();
     Docx.write(s.document(), b);
     Docx.Opened o = Docx.read(new ByteArrayInputStream(b.toByteArray()));
     assertTrue(o.warnings.toString(), o.warnings.isEmpty());
@@ -242,15 +244,15 @@ public class DocxFeaturesTest {
   }
 
   private List<String> labels(Document d) {
-    List<String> out = new ArrayList<String>();
-    ListNumbers n = new ListNumbers();
-    for (Block b : d.blocks) if (b instanceof Paragraph) out.add(n.next((Paragraph) b));
+    var out = new ArrayList<String>();
+    var n = new ListNumbers();
+    for (Block b : d.blocks) if (b instanceof Paragraph paragraph) out.add(n.next(paragraph));
     return out;
   }
 
   @Test
   public void nestedListsRestartsAndNumberFormatsRoundTrip() throws Exception {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("Parent\nChild\nChild two\nParent two\nRestart\nChild restart\nLast parent");
     s.selectRange(0, 0, 6, 11);
     s.paragraph("list", "number");
@@ -263,10 +265,10 @@ public class DocxFeaturesTest {
     s.paragraph("listStart", "5");
     s.select(5, 0, 0);
     s.paragraph("listStart", "3");
-    List<String> expected = Arrays.asList("1.", "a.", "b.", "2.", "5.", "c.", "6.");
+    var expected = Arrays.asList("1.", "a.", "b.", "2.", "5.", "c.", "6.");
     assertEquals(expected, labels(s.document()));
     assertEquals(expected, labels(DocumentXml.read(DocumentXml.write(s.document()))));
-    ByteArrayOutputStream b = new ByteArrayOutputStream();
+    var b = new ByteArrayOutputStream();
     Docx.write(s.document(), b);
     Docx.Opened o = Docx.read(new ByteArrayInputStream(b.toByteArray()));
     assertTrue(o.warnings.toString(), o.warnings.isEmpty());
@@ -282,10 +284,11 @@ public class DocxFeaturesTest {
             new ByteArrayInputStream(
                 pack(
                     "<w:p><w:pPr><w:pStyle w:val=\"A\"/></w:pPr><w:r><w:t>x</w:t></w:r></w:p>",
-                    "<w:styles"
-                        + " xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:style"
-                        + " w:styleId=\"A\"><w:basedOn w:val=\"B\"/></w:style><w:style"
-                        + " w:styleId=\"B\"><w:basedOn w:val=\"A\"/></w:style></w:styles>")));
+                    """
+                    <w:styles\
+                     xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:style\
+                     w:styleId="A"><w:basedOn w:val="B"/></w:style><w:style\
+                     w:styleId="B"><w:basedOn w:val="A"/></w:style></w:styles>""")));
     assertTrue(o.warnings.toString(), o.warnings.toString().contains("Cyclic"));
     assertEquals("x", o.document.plainText());
   }

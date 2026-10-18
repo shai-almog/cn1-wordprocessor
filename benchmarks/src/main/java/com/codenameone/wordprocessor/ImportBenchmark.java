@@ -10,8 +10,8 @@ public final class ImportBenchmark {
     byte[] bytes = Files.readAllBytes(Paths.get(args[0]));
     int warmup = Integer.parseInt(args[1]), iterations = Integer.parseInt(args[2]);
     if (warmup < 0 || iterations < 1 || iterations > 10000) throw new IllegalArgumentException();
-    List<Double> samples = new ArrayList<Double>();
-    String text = "";
+    var samples = new ArrayList<Double>();
+    var text = "";
     for (int i = -warmup; i < iterations; i++) {
       long start = System.nanoTime();
       text = Docx.read(new ByteArrayInputStream(bytes)).document.plainText();

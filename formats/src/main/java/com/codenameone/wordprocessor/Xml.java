@@ -59,7 +59,7 @@ public final class Xml {
 
     public Hashtable getAttributes() {
       if (attrCount == 0) return null;
-      Hashtable h = new Hashtable();
+      var h = new Hashtable();
       for (int i = 0; i < attrCount; i += 2) h.put(attrs[i], attrs[i + 1]);
       return h;
     }
@@ -72,8 +72,7 @@ public final class Xml {
       return a.isTextElement() && b.isTextElement() && a.getText().equals(b.getText());
     if (!a.getTagName().equals(b.getTagName()) || a.getNumChildren() != b.getNumChildren())
       return false;
-    if (a instanceof Node && b instanceof Node) {
-      Node x = (Node) a, y = (Node) b;
+    if (a instanceof Node x && b instanceof Node y) {
       if (x.attrCount != y.attrCount) return false;
       for (int i = 0; i < x.attrCount; i += 2) {
         int j = y.index(x.attrs[i]);
@@ -93,8 +92,7 @@ public final class Xml {
   static int shape(Element e) {
     if (e.isTextElement()) return e.getText().hashCode();
     int h = e.getTagName().hashCode();
-    if (e instanceof Node) {
-      Node n = (Node) e;
+    if (e instanceof Node n) {
       for (int i = 0; i < n.attrCount; i += 2) h += n.attrs[i].hashCode() ^ n.attrs[i + 1].hashCode();
     } else if (e.getAttributes() != null) h += e.getAttributes().hashCode();
     for (int i = 0; i < e.getNumChildren(); i++) h = h * 31 + shape(e.getChildAt(i));
@@ -122,7 +120,7 @@ public final class Xml {
   }
 
   static String write(Element element) {
-    StringBuilder out = new StringBuilder();
+    var out = new StringBuilder();
     write(element, out);
     return out.toString();
   }
@@ -133,15 +131,14 @@ public final class Xml {
       return;
     }
     out.append('<').append(element.getTagName());
-    if (element instanceof Node) {
-      Node n = (Node) element;
+    if (element instanceof Node n) {
       for (int i = 0; i < n.attrCount; i += 2)
         out.append(' ').append(n.attrs[i]).append("=\"").append(escape(n.attrs[i + 1])).append('"');
     } else {
-      Hashtable attributes = element.getAttributes();
+      var attributes = element.getAttributes();
       if (attributes != null)
         for (Object key : attributes.keySet()) {
-          String name = (String) key;
+          var name = (String) key;
           out.append(' ')
               .append(name)
               .append("=\"")
@@ -155,7 +152,7 @@ public final class Xml {
   }
 
   public static Element parse(byte[] bytes) throws IOException {
-    String encoding = "UTF-8";
+    var encoding = "UTF-8";
     if (bytes.length > 1
         && ((bytes[0] & 255) == 255 && (bytes[1] & 255) == 254
             || (bytes[0] & 255) == 254 && (bytes[1] & 255) == 255)) encoding = "UTF-16";
@@ -227,10 +224,10 @@ public final class Xml {
       int h = len;
       for (int i = start; i < end; i++) h = 31 * h + c[i];
       int slot = (h ^ (h >>> 16)) & (pool.length - 1);
-      String cached = pool[slot];
+      var cached = pool[slot];
       if (cached != null && cached.length() == len && s.regionMatches(start, cached, 0, len))
         return cached;
-      String v = new String(c, start, len);
+      var v = new String(c, start, len);
       pool[slot] = v;
       return v;
     }
@@ -251,7 +248,7 @@ public final class Xml {
       if (s.startsWith("\ufeff")) pos++;
       whitespace();
       while (skip("<?", "?>") || skip("<!--", "-->")) whitespace();
-      Element root = element(0);
+      var root = element(0);
       whitespace();
       while (skip("<!--", "-->")) whitespace();
       if (pos != s.length()) throw error("Trailing XML content");
@@ -263,9 +260,9 @@ public final class Xml {
       if (s.startsWith("<!", pos)) throw error("DTD and entity declarations are not supported");
       expect('<');
       int nameStart = pos;
-      String tag = name();
+      var tag = name();
       int colon = tag.indexOf(':');
-      Element e = new Node(tag, colon < 0 ? tag : shared(nameStart + colon + 1, pos));
+      var e = new Node(tag, colon < 0 ? tag : shared(nameStart + colon + 1, pos));
       while (true) {
         whitespace();
         if (s.startsWith("/>", pos)) {
@@ -276,7 +273,7 @@ public final class Xml {
           pos++;
           break;
         }
-        String key = name();
+        var key = name();
         if (((Node) e).index(key) >= 0) throw error("Duplicate attribute");
         whitespace();
         expect('=');
@@ -293,7 +290,7 @@ public final class Xml {
       while (pos < s.length()) {
         if (s.startsWith("</", pos)) {
           pos += 2;
-          String close = name();
+          var close = name();
           whitespace();
           expect('>');
           if (!tag.equals(close)) throw error("Mismatched closing tag");
@@ -350,7 +347,7 @@ public final class Xml {
         if (b == null) b = new StringBuilder(raw.length()).append(raw, 0, i);
         int end = raw.indexOf(';', i + 1);
         if (end < 0) throw error("Unterminated entity");
-        String entity = raw.substring(i + 1, end);
+        var entity = raw.substring(i + 1, end);
         if ("amp".equals(entity)) b.append('&');
         else if ("lt".equals(entity)) b.append('<');
         else if ("gt".equals(entity)) b.append('>');
@@ -378,8 +375,8 @@ public final class Xml {
   }
 
   public static String local(Element e) {
-    if (e instanceof Node) return ((Node) e).local;
-    String n = e.getTagName();
+    if (e instanceof Node node) return node.local;
+    var n = e.getTagName();
     int i = n.indexOf(':');
     return i < 0 ? n : n.substring(i + 1);
   }
@@ -387,25 +384,24 @@ public final class Xml {
   public static String attr(Element e, String name, String fallback) {
     // Exact lookups: Element.getAttribute lower-cases the name on every call, which made
     // attribute reads the largest cost of opening a document. OOXML names are case-exact.
-    if (e instanceof Node) {
-      Node n = (Node) e;
+    if (e instanceof Node n) {
       int i = n.index(name);
       if (i < 0) i = n.index("w:" + name);
       for (int j = 0; i < 0 && j < n.attrCount; j += 2) {
-        String k = n.attrs[j];
+        var k = n.attrs[j];
         if (k.length() > name.length()
             && k.endsWith(name)
             && k.charAt(k.length() - name.length() - 1) == ':') i = j;
       }
       return i < 0 ? fallback : n.attrs[i + 1];
     }
-    java.util.Hashtable attributes = e.getAttributes();
+    var attributes = e.getAttributes();
     if (attributes == null) return fallback;
-    String v = (String) attributes.get(name);
+    var v = (String) attributes.get(name);
     if (v == null) v = (String) attributes.get("w:" + name);
     if (v == null)
       for (Object key : attributes.keySet()) {
-        String k = (String) key;
+        var k = (String) key;
         if (k.endsWith(":" + name)) {
           v = (String) attributes.get(k);
           break;
@@ -417,16 +413,16 @@ public final class Xml {
 
   public static Element child(Element e, String name) {
     for (int i = 0; i < e.getNumChildren(); i++) {
-      Element c = e.getChildAt(i);
+      var c = e.getChildAt(i);
       if (!c.isTextElement() && local(c).equals(name)) return c;
     }
     return null;
   }
 
   public static List<Element> children(Element e, String name) {
-    List<Element> a = new ArrayList<Element>();
+    var a = new ArrayList<Element>();
     for (int i = 0; i < e.getNumChildren(); i++) {
-      Element c = e.getChildAt(i);
+      var c = e.getChildAt(i);
       if (!c.isTextElement() && (name == null || local(c).equals(name))) a.add(c);
     }
     return a;
@@ -436,7 +432,7 @@ public final class Xml {
     if (e.isTextElement()) return e.getText();
     if (e.getNumChildren() == 1 && e.getChildAt(0).isTextElement())
       return e.getChildAt(0).getText();
-    StringBuilder b = new StringBuilder();
+    var b = new StringBuilder();
     for (int i = 0; i < e.getNumChildren(); i++) b.append(text(e.getChildAt(i)));
     return b.toString();
   }

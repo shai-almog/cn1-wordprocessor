@@ -41,7 +41,7 @@ public final class Thesaurus {
 
   public static List<String> synonyms(String word) {
     String w = word == null ? "" : word.trim().toLowerCase();
-    List<String> out = new ArrayList<String>();
+    var out = new ArrayList<String>();
     for (String[] row : TABLE)
       if (row[0].equals(w)) for (int i = 1; i < row.length; i++) out.add(row[i]);
     return out;

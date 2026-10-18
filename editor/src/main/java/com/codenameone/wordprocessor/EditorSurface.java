@@ -1,9 +1,14 @@
 package com.codenameone.wordprocessor;
 
 import com.codename1.ui.*;
-import com.codename1.ui.accessibility.*;
+import com.codename1.ui.accessibility.AccessibilityAction;
+import com.codename1.ui.accessibility.AccessibilityGrouping;
+import com.codename1.ui.accessibility.AccessibilityNode;
+import com.codename1.ui.accessibility.AccessibilityRole;
 import com.codename1.ui.editor.EditorHost;
-import com.codename1.ui.geom.*;
+import com.codename1.ui.geom.Dimension;
+import com.codename1.ui.geom.GeneralPath;
+import com.codename1.ui.geom.Rectangle;
 import java.util.*;
 
 /** Paginated CN1 canvas. Only intersecting pages are painted. */
@@ -25,7 +30,7 @@ public final class EditorSurface extends Container
   }
 
   private final Map<Picture, Image> pictures =
-      new LinkedHashMap<Picture, Image>(4, .75f, true) {
+      new LinkedHashMap<>(4, .75f, true) {
         protected boolean removeEldestEntry(Map.Entry<Picture, Image> entry) {
           int pixels = 0;
           for (Image image : values())
@@ -35,10 +40,10 @@ public final class EditorSurface extends Container
       };
 
   private Image picture(Picture p) {
-    Image image = pictures.get(p);
+    var image = pictures.get(p);
     if (!pictures.containsKey(p)) {
       try {
-        byte[] bytes = p.bytes();
+        var bytes = p.bytes();
         image = Image.createImage(bytes, 0, bytes.length);
         int longest = Math.max(image.getWidth(), image.getHeight());
         if (longest > 2048)
@@ -66,7 +71,7 @@ public final class EditorSurface extends Container
       int n = p.points.length / 2;
       if (n < 2) continue;
       int[] xs = new int[n], ys = new int[n];
-      GeneralPath path = new GeneralPath();
+      var path = new GeneralPath();
       for (int i = 0; i < n; i++) {
         float fx = px + p.points[i * 2] * scale, fy = py + p.points[i * 2 + 1] * scale;
         xs[i] = Math.round(fx);
@@ -91,10 +96,10 @@ public final class EditorSurface extends Container
     }
     g.setAlpha(alpha);
     for (DrawingOps.Text t : ops.texts) {
-      TextStyle style = TextStyle.DEFAULT.with("size", String.valueOf(t.size));
+      var style = TextStyle.DEFAULT.with("size", String.valueOf(t.size));
       if (t.bold) style = style.with("bold", "true");
       if (t.italic) style = style.with("italic", "true");
-      Font f = font(style, zoom);
+      var f = font(style, zoom);
       g.setFont(f);
       int width = f.stringWidth(t.text);
       int tx = px + Math.round(t.x * scale), ty = py + Math.round(t.y * scale);
@@ -123,7 +128,7 @@ public final class EditorSurface extends Container
 
   /** Corrections, color and transparency, applied once per picture to the decoded pixels. */
   static Image adjusted(Image image, Picture.Look look) {
-    int[] px = image.getRGB();
+    var px = image.getRGB();
     int bright = look.brightness, contrast = look.contrast;
     if ("washout".equals(look.colorMode)) {
       bright = 70;
@@ -152,7 +157,7 @@ public final class EditorSurface extends Container
   }
 
   private final Map<LayoutEngine.Span, String> tabLeaderPaint =
-      new LinkedHashMap<LayoutEngine.Span, String>(32, .75f, true) {
+      new LinkedHashMap<>(32, .75f, true) {
         protected boolean removeEldestEntry(Map.Entry<LayoutEngine.Span, String> entry) {
           return size() > 128;
         }
@@ -160,7 +165,7 @@ public final class EditorSurface extends Container
 
   private String paintText(LayoutEngine.Span span, Font font, float scale) {
     if (!"\t".equals(span.text) || span.displayText.isEmpty()) return span.displayText;
-    String cached = tabLeaderPaint.get(span);
+    var cached = tabLeaderPaint.get(span);
     if (cached != null) return cached;
     // Native font rounding changes at each zoom. Fit the entire leader at the actual paint size.
     int width = Math.max(0, (int) (span.width * scale) - 1);
@@ -174,7 +179,7 @@ public final class EditorSurface extends Container
           <= width) low = mid;
       else high = mid - 1;
     }
-    String text = new String(chars, 0, low);
+    var text = new String(chars, 0, low);
     tabLeaderPaint.put(span, text);
     return text;
   }
@@ -182,7 +187,7 @@ public final class EditorSurface extends Container
   private final LayoutEngine.Metrics fontMetrics =
       new LayoutEngine.Metrics() {
         public float width(String text, TextStyle style) {
-          Font f = measureFont(style);
+          var f = measureFont(style);
           if (f == null) return font(style, 1).stringWidth(text) / pointsToPixels();
           return f.stringWidth(text) / (MEASURE_SCALE * pointsToPixels());
         }
@@ -213,7 +218,7 @@ public final class EditorSurface extends Container
   private float rowsScale;
 
   private static Map<TextStyle, Font> fontCache() {
-    return new LinkedHashMap<TextStyle, Font>(64, .75f, true) {
+    return new LinkedHashMap<>(64, .75f, true) {
       protected boolean removeEldestEntry(Map.Entry<TextStyle, Font> e) {
         return size() > 64;
       }
@@ -238,8 +243,8 @@ public final class EditorSurface extends Container
   }
 
   private LayoutEngine.Line caretLine() {
-    LayoutEngine.Result result = layout();
-    Selection selection = session.selection();
+    var result = layout();
+    var selection = session.selection();
     if (navigationLine != null && navigationLayout == result && navigationSelection == selection)
       return navigationLine;
     LayoutEngine.Line found = null;
@@ -252,7 +257,7 @@ public final class EditorSurface extends Container
   }
 
   private LayoutEngine.Line verticalLine(LayoutEngine.Line current, boolean down, boolean page) {
-    ArrayList<LayoutEngine.Line> lines = new ArrayList<LayoutEngine.Line>();
+    var lines = new ArrayList<LayoutEngine.Line>();
     for (LayoutEngine.Page p : layout().pages)
       for (LayoutEngine.Line line : p.lines) if (editingBlock(line) >= 0) lines.add(line);
     int index = lines.indexOf(current);
@@ -263,10 +268,10 @@ public final class EditorSurface extends Container
             + current.y * scale()
             + (down ? 1 : -1)
                 * Math.max(current.height * scale(), getHeight() - current.height * scale());
-    LayoutEngine.Line best = current;
+    var best = current;
     float distance = Float.MAX_VALUE;
     for (int i = index; i >= 0 && i < lines.size(); i += down ? 1 : -1) {
-      LayoutEngine.Line line = lines.get(i);
+      var line = lines.get(i);
       float delta = Math.abs(pageY(line.page) + line.y * scale() - target);
       if (delta < distance) {
         best = line;
@@ -293,16 +298,15 @@ public final class EditorSurface extends Container
   }
 
   private boolean selectParagraph(String id) {
-    Document d = session.document();
+    var d = session.document();
     for (int i = 0; i < d.blocks.size(); i++) {
-      Block block = d.blocks.get(i);
+      var block = d.blocks.get(i);
       if (block instanceof Paragraph && block.id().equals(id)) {
         session.leaveCell();
         session.select(i, 0, 0);
         return true;
       }
-      if (block instanceof Table) {
-        Table table = (Table) block;
+      if (block instanceof Table table) {
         for (int row = 0; row < table.rows(); row++)
           for (int col = 0; col < table.columns(); col++) {
             if (table.covered(row, col)) continue;
@@ -322,17 +326,17 @@ public final class EditorSurface extends Container
   }
 
   private java.util.List<AccessibilityNode> accessibleParagraphs() {
-    java.util.List<AccessibilityNode> nodes = new ArrayList<AccessibilityNode>();
-    Set<String> seen = new HashSet<String>();
+    var nodes = new ArrayList<AccessibilityNode>();
+    var seen = new HashSet<String>();
     for (LayoutEngine.Page page : layout().pages)
       for (LayoutEngine.Line line : page.lines) {
         if (!textLine(line)) continue;
         int top = pageY(line.page) + Math.round(line.y * scale()) - getScrollY(),
             height = Math.round(line.height * scale());
         if (top + height < 0 || top > getHeight() || !seen.add(line.paragraphId)) continue;
-        Paragraph p = lineParagraph(line);
-        final String id = p.id;
-        AccessibilityNode node =
+        var p = lineParagraph(line);
+        final var id = p.id;
+        var node =
             new AccessibilityNode(id)
                 .setRole(AccessibilityRole.TEXT_FIELD)
                 .setLabel(
@@ -352,7 +356,7 @@ public final class EditorSurface extends Container
                         Math.max(OfficeTheme.px(60), Math.round(line.width * scale())),
                         height));
         if (line.row >= 0) {
-          TableFormat format = ((Table) session.document().blocks.get(line.block)).format;
+          var format = ((Table) session.document().blocks.get(line.block)).format;
           if (!format.title.isEmpty())
             node.setLabel(
                 format.title + ", row " + (line.row + 1) + ", column " + (line.column + 1));
@@ -392,7 +396,7 @@ public final class EditorSurface extends Container
         if (line.block >= 0) continue;
         int top = pageY(line.page) + Math.round(line.y * scale()) - getScrollY();
         if (top + Math.round(line.height * scale()) < 0 || top > getHeight()) continue;
-        StringBuilder value = new StringBuilder();
+        var value = new StringBuilder();
         for (LayoutEngine.Span span : line.spans) value.append(span.displayText);
         nodes.add(
             new AccessibilityNode("margin-" + line.page + "-" + line.paragraphId + "-" + line.start)
@@ -415,7 +419,7 @@ public final class EditorSurface extends Container
         int top = pageY(pic.page) + Math.round(pic.y * scale()) - getScrollY(),
             height = Math.round(pic.height * scale());
         if (top + height < 0 || top > getHeight()) continue;
-        AccessibilityNode node =
+        var node =
             new AccessibilityNode(pic.picture.id())
                 .setRole(AccessibilityRole.IMAGE)
                 .setLabel(pic.picture.alt.isEmpty() ? "Picture" : pic.picture.alt)
@@ -450,9 +454,9 @@ public final class EditorSurface extends Container
 
   /** Watermark and page borders; page color is filled by the caller. */
   private void paintDecor(Graphics g, LayoutEngine.Page page, int x, int y, float scale) {
-    PageDecor d = page.decor;
+    var d = page.decor;
     if (!d.watermark.isEmpty()) {
-      Font f = font(TextStyle.DEFAULT.with("size", "54"), zoom);
+      var f = font(TextStyle.DEFAULT.with("size", "54"), zoom);
       int w = f.stringWidth(d.watermark), h = f.getHeight();
       int cx = x + Math.round(page.spec.width * scale / 2),
           cy = y + Math.round(page.spec.height * scale / 2);
@@ -466,7 +470,7 @@ public final class EditorSurface extends Container
       g.setAlpha(alpha);
     }
     if (!d.borders.isEmpty()) {
-      ParagraphBorders b = d.borders;
+      var b = d.borders;
       float pw = page.spec.width, ph = page.spec.height;
       paintFrame(
           g,
@@ -484,7 +488,7 @@ public final class EditorSurface extends Container
       g.setColor(f.shading);
       g.fillRect(x, y, w, h);
     }
-    ParagraphBorders b = f.borders;
+    var b = f.borders;
     if (f.first) side(g, b.top, x, y, w, true, scale);
     if (f.last) side(g, b.bottom, x, y + h - stroke(b.bottom, scale), w, true, scale);
     side(g, b.left, x, y, h, false, scale);
@@ -581,10 +585,10 @@ public final class EditorSurface extends Container
   }
 
   private String numeralMode;
-  private Map<Paragraph, Paragraph> numeralViews = new HashMap<Paragraph, Paragraph>();
+  private Map<Paragraph, Paragraph> numeralViews = new HashMap<>();
 
   private Document shown() {
-    Document d = session.document();
+    var d = session.document();
     if (!"all".equals(markup)) {
       boolean accept = !"original".equals(markup);
       for (Revisions.Change c : Revisions.list(d)) d = Revisions.resolve(d, c.revision.id, accept);
@@ -598,23 +602,22 @@ public final class EditorSurface extends Container
       // keep the same object across edits and stay in the layout cache; a mode change drops it.
       if (!numeral.equals(numeralMode)) {
         numeralMode = numeral;
-        numeralViews = new HashMap<Paragraph, Paragraph>();
+        numeralViews = new HashMap<>();
       }
-      Map<Paragraph, Paragraph> views = new HashMap<Paragraph, Paragraph>();
-      Sequence<Block> blocks = new Sequence<Block>();
+      var views = new HashMap<Paragraph, Paragraph>();
+      var blocks = new Sequence<Block>();
       boolean changed = false;
       for (Block b : d.blocks) {
-        if (b instanceof Paragraph) {
-          Paragraph p = (Paragraph) b;
-          Paragraph view = numeralViews.get(p);
+        if (b instanceof Paragraph p) {
+          var view = numeralViews.get(p);
           if (view == null) {
             view = p;
             final boolean rtl = p.format.rtl;
-            String text = p.text.toString();
+            var text = p.text.toString();
             boolean digits = false;
             for (int i = 0; i < text.length() && !digits; i++) digits = text.charAt(i) >= '0' && text.charAt(i) <= '9';
             if (digits) {
-              RichText mapped = p.text.mapText(t -> AppOptions.numerals(t, rtl));
+              var mapped = p.text.mapText(t -> AppOptions.numerals(t, rtl));
               if (!mapped.toString().equals(text)) view = p.text(mapped);
             }
           }
@@ -634,20 +637,20 @@ public final class EditorSurface extends Container
 
   /** Renders one page at widthPx pixels wide, without caret or selection (Export as PNG). */
   public Image renderPage(int page, int widthPx) {
-    LayoutEngine.Result result = layout();
+    var result = layout();
     if (page < 0 || page >= result.pages.size()) throw new IllegalArgumentException("No page " + (page + 1));
     float oldZoom = zoom;
     boolean oldDark = darkPage;
     try {
       exporting = true;
       darkPage = false;
-      LayoutEngine.Page spec = result.pages.get(page);
+      var spec = result.pages.get(page);
       zoom = Math.max(.1f, Math.min(10f, widthPx / (spec.spec.width * pointsToPixels())));
       paintFonts.clear();
       float scale = scale();
       int pw = Math.round(spec.spec.width * scale), ph = Math.round(spec.spec.height * scale);
       Image out = Image.createImage(pw, ph, 0xffffffff);
-      Graphics g = out.getGraphics();
+      var g = out.getGraphics();
       g.translate(-(getX() + pageX(page) + getScrollX()), -(getY() + pageY(page)));
       g.setClip(getX() + pageX(page) + getScrollX(), getY() + pageY(page), pw, ph);
       paint(g);
@@ -753,7 +756,7 @@ public final class EditorSurface extends Container
     for (LayoutEngine.Span span : line.spans) {
       int sx = lx + Math.round(span.x * scale), sy = ly + Math.round(span.top * scale);
       if (span.style.characters.hidden) {
-        Font f = font(span.glyphStyle, zoom);
+        var f = font(span.glyphStyle, zoom);
         for (int x = sx; x < sx + Math.round(span.width * scale); x += 3)
           g.fillRect(x, sy + f.getHeight() - 1, 1, 1);
       }
@@ -767,7 +770,7 @@ public final class EditorSurface extends Container
       }
     }
     if (textLine(line)) {
-      Paragraph paragraph = lineParagraph(line);
+      var paragraph = lineParagraph(line);
       if (paragraph.breakRevision == null && line.end == paragraph.text.length())
         g.drawString(
             "\u00b6",
@@ -859,7 +862,7 @@ public final class EditorSurface extends Container
 
   private Font font(TextStyle s, float zoom) {
     Map<TextStyle, Font> fonts = zoom == 1 ? layoutFonts : paintFonts;
-    Font f = fonts.get(s);
+    var f = fonts.get(s);
     if (f == null) {
       int style = (s.bold ? Font.STYLE_BOLD : 0) | (s.italic ? Font.STYLE_ITALIC : 0);
       try {
@@ -939,7 +942,7 @@ public final class EditorSurface extends Container
   }
 
   public int currentPage() {
-    LayoutEngine.Line line = caretLine();
+    var line = caretLine();
     return line == null ? pageAt(getScrollY()) + 1 : line.page + 1;
   }
 
@@ -971,7 +974,7 @@ public final class EditorSurface extends Container
 
   private int pageY(int page) {
     if (across > 1 && !reflow) {
-      int[] tops = rowTops();
+      var tops = rowTops();
       int n = layout().pages.size();
       return page >= n ? tops[tops.length - 1] : tops[page / across];
     }
@@ -980,7 +983,7 @@ public final class EditorSurface extends Container
 
   /** Top of each row of pages when several pages sit side by side; the last entry is the end. */
   private int[] rowTops() {
-    LayoutEngine.Result r = layout();
+    var r = layout();
     float sc = scale();
     if (rowTops == null || rowsFor != r || rowsScale != sc || rowsAcross != across) {
       int n = r.pages.size(), rows = (n + across - 1) / across, y = 24;
@@ -1016,7 +1019,7 @@ public final class EditorSurface extends Container
   public void fitPages(int count) {
     if (reflow) setReflow(false);
     setPagesAcross(count);
-    LayoutEngine.Page page = layout().pages.get(Math.max(0, currentPage() - 1));
+    var page = layout().pages.get(Math.max(0, currentPage() - 1));
     float ptp = pointsToPixels();
     float byWidth = (getWidth() - 24f * (count + 1)) / (page.spec.width * count * ptp);
     float byHeight = (getHeight() - 48f) / (page.spec.height * ptp);
@@ -1101,7 +1104,7 @@ public final class EditorSurface extends Container
    */
   private void syncInput() {
     if (input == null) return;
-    Selection x = session.selection();
+    var x = session.selection();
     Object[] key = {
       input, session.editingDocument(), x, Integer.valueOf(composingStart), Integer.valueOf(composingEnd),
       Integer.valueOf(getScrollX()), Integer.valueOf(getScrollY()), Float.valueOf(zoom),
@@ -1125,8 +1128,8 @@ public final class EditorSurface extends Container
 
   /** Read-only geometry for the opt-in built-in MCP diagnostics. */
   public Map<String, Object> inspectLayout() {
-    ArrayList<Object> cells = new ArrayList<Object>();
-    CellSelection selection = session.cellSelection();
+    var cells = new ArrayList<Object>();
+    var selection = session.cellSelection();
     for (int page = 0; page < layout().pages.size(); page++)
       for (LayoutEngine.Box box : layout().pages.get(page).boxes) {
         int x = viewportX() + pageX(page) + Math.round(box.x * scale());
@@ -1152,7 +1155,7 @@ public final class EditorSurface extends Container
                 "selected",
                 selection != null && selection.contains(box.block, box.row, box.column)));
       }
-    ArrayList<Object> lines = new ArrayList<Object>();
+    var lines = new ArrayList<Object>();
     for (int page = 0; page < layout().pages.size() && lines.size() < 1000; page++)
       for (LayoutEngine.Line line : layout().pages.get(page).allLines()) {
         int x = viewportX() + pageX(page) + Math.round(line.x * scale());
@@ -1203,8 +1206,8 @@ public final class EditorSurface extends Container
     // Component.internalPaintImpl already translates by the scroll offsets.
     // Paint document coordinates here; hit testing/native geometry use screen coordinates.
     super.paint(g);
-    LayoutEngine.Result result = layout();
-    Document root = session.document();
+    var result = layout();
+    var root = session.document();
     if (commentSource != root) {
       commentSource = root;
       commentAnchors =
@@ -1214,10 +1217,10 @@ public final class EditorSurface extends Container
     }
     float scale = scale();
     int baseY = getY();
-    Selection selection = session.selection();
-    LayoutEngine.Line caretLine = caretLine();
+    var selection = session.selection();
+    var caretLine = caretLine();
     for (int p = 0; p < result.pages.size(); p++) {
-      LayoutEngine.Page page = result.pages.get(p);
+      var page = result.pages.get(p);
       int x = getX() + pageX(p) + getScrollX(),
           y = baseY + pageY(p),
           pw = Math.round(page.spec.width * scale),
@@ -1259,7 +1262,7 @@ public final class EditorSurface extends Container
           paintDrawing(g, pic, x + Math.round(pic.x * scale), y + Math.round(pic.y * scale), scale);
           continue;
         }
-        Image image = picture(pic.picture);
+        var image = picture(pic.picture);
         if (image == null) {
           g.setColor(0x9c2525);
           g.setFont(font(TextStyle.DEFAULT, zoom));
@@ -1289,7 +1292,7 @@ public final class EditorSurface extends Container
             by = y + Math.round(box.y * scale),
             bw = Math.round(box.width * scale),
             bh = Math.round(box.height * scale);
-        CellSelection selectedCells = session.cellSelection();
+        var selectedCells = session.cellSelection();
         g.setColor(
             selectedCells != null && selectedCells.contains(box.block, box.row, box.column)
                 ? 0xc5e9e6
@@ -1316,7 +1319,7 @@ public final class EditorSurface extends Container
       }
       for (LayoutEngine.Frame frame : page.frames) paintFrame(g, frame, x, y, scale);
       if (!page.lineNumbers.isEmpty()) {
-        Font lf = font(TextStyle.DEFAULT.with("size", "9"), zoom);
+        var lf = font(TextStyle.DEFAULT.with("size", "9"), zoom);
         g.setFont(lf);
         g.setColor(ink(0x6b6b6b));
         int right = x + Math.round((page.spec.left - 14) * scale);
@@ -1414,7 +1417,7 @@ public final class EditorSurface extends Container
         for (LayoutEngine.Span span : line.spans)
           revised |= span.style.revision != null || span.style.formatRevision != null;
         if (textLine(line)) {
-          Paragraph paragraph = lineParagraph(line);
+          var paragraph = lineParagraph(line);
           revised |= paragraph.formatRevision != null;
           if (paragraph.breakRevision != null && line.end == paragraph.text.length()) {
             revised = true;
@@ -1433,13 +1436,13 @@ public final class EditorSurface extends Container
         }
         for (LayoutEngine.Span span : line.spans) {
           if (span.style.characters.hidden && !showMarks) continue;
-          Font f = font(span.glyphStyle, zoom);
+          var f = font(span.glyphStyle, zoom);
           g.setFont(f);
           int sx = lx + Math.round(span.x * scale), sy = ly + Math.round(span.top * scale);
           if (session.mergeData().highlight
               && textLine(line)
               && InlineField.OBJECT.equals(span.text)) {
-            InlineField field = lineParagraph(line).text.fieldAt(span.start);
+            var field = lineParagraph(line).text.fieldAt(span.start);
             if (field != null && MailMerge.placeholder(field.instruction) != null) {
               g.setColor(0xe2e8f0);
               g.fillRect(sx, sy, Math.max(2, Math.round(span.width * scale)), f.getHeight());
@@ -1452,7 +1455,7 @@ public final class EditorSurface extends Container
           g.setColor(ink(span.style.color));
           drawCharacters(g, span, f, scale, sx, sy);
           if (span.style.hasUnderline()) {
-            GeneralPath path = new GeneralPath();
+            var path = new GeneralPath();
             TextDecorations.underline(
                 span,
                 fontMetrics,
@@ -1507,7 +1510,7 @@ public final class EditorSurface extends Container
       g.setColor(OfficeTheme.BLUE);
       int radius = OfficeTheme.px(6);
       for (int side = 0; side < 2; side++) {
-        int[] point = handlePoint(side == 0);
+        var point = handlePoint(side == 0);
         if (point != null)
           g.fillArc(
               point[0] - viewportX() + getX() + getScrollX() - radius,
@@ -1542,8 +1545,8 @@ public final class EditorSurface extends Container
       return;
     }
     float stretch = span.style.characters.scale / 100;
-    Transform original = g.getTransform();
-    Transform transform = original.copy();
+    var original = g.getTransform();
+    var transform = original.copy();
     transform.translate(x, y);
     transform.scale(stretch, 1);
     try {
@@ -1556,8 +1559,8 @@ public final class EditorSurface extends Container
         float advance = 0;
         for (int at = 0; at < value.length(); ) {
           int end = Graphemes.next(source, at);
-          String raw = value.substring(at, end);
-          Font glyph = font(span.style.glyphStyle(raw), zoom);
+          var raw = value.substring(at, end);
+          var glyph = font(span.style.glyphStyle(raw), zoom);
           g.setFont(glyph);
           textEffects.draw(
               g,
@@ -1589,14 +1592,14 @@ public final class EditorSurface extends Container
 
   // Caret, selection and the text-input geometry measure every grapheme prefix of the visible
   // lines, several times per edit; unchanged lines hit this cache across edits.
-  private final Map<TextStyle, Map<String, Float>> prefixWidths = new HashMap<TextStyle, Map<String, Float>>();
+  private final Map<TextStyle, Map<String, Float>> prefixWidths = new HashMap<>();
   private int prefixEntries;
 
   private float prefixWidth(String prefix, TextStyle style) {
     if (prefix.isEmpty()) return 0;
-    Map<String, Float> widths = prefixWidths.get(style);
+    var widths = prefixWidths.get(style);
     if (widths == null) prefixWidths.put(style, widths = new HashMap<String, Float>());
-    Float w = widths.get(prefix);
+    var w = widths.get(prefix);
     if (w == null) {
       if (prefixEntries > 50000) {
         prefixWidths.clear();
@@ -1633,7 +1636,7 @@ public final class EditorSurface extends Container
     if (line.block != session.cellBlock()
         || line.row != session.cellRow()
         || line.column != session.cellColumn()) return -1;
-    Document d = session.editingDocument();
+    var d = session.editingDocument();
     for (int i = 0; i < d.blocks.size(); i++)
       if (d.paragraph(i).id.equals(line.paragraphId)) return i;
     return -1;
@@ -1644,7 +1647,7 @@ public final class EditorSurface extends Container
   private Proofing.Options proofOptions;
 
   private final Map<Paragraph, java.util.List<Proofing.Issue>> proofCache =
-      new LinkedHashMap<Paragraph, java.util.List<Proofing.Issue>>(64, .75f, true) {
+      new LinkedHashMap<>(64, .75f, true) {
         protected boolean removeEldestEntry(Map.Entry<Paragraph, java.util.List<Proofing.Issue>> e) {
           return size() > 1024;
         }
@@ -1652,26 +1655,20 @@ public final class EditorSurface extends Container
 
   /** Spelling and grammar issues of a paragraph, checked once per paragraph value. */
   private java.util.List<Proofing.Issue> proofIssues(Paragraph p) {
-    DocumentProperties props = session.document().properties;
+    var props = session.document().properties;
     if (props != proofSource) {
       proofSource = props;
       proofOptions = Proofing.Options.of(props);
       proofCache.clear();
     }
-    java.util.List<Proofing.Issue> issues = proofCache.get(p);
+    var issues = proofCache.get(p);
     if (issues == null) {
       // Paint the page first; marks appear once the word list has loaded in the background.
       if (!Proofing.ready()) {
         Proofing.preload(
-            new Runnable() {
-              public void run() {
-                Display.getInstance().callSerially(new Runnable() {
-                  public void run() {
-                    repaint();
-                  }
-                });
-              }
-            });
+            () ->
+                Display.getInstance().callSerially(() ->
+                    repaint()));
         return java.util.Collections.emptyList();
       }
       issues = Proofing.marks(p.text.plainText(), proofOptions);
@@ -1698,7 +1695,7 @@ public final class EditorSurface extends Container
     float x = (absX - viewportX() - pageX(line.page)) / scale() - line.x;
     int best = line.start;
     float distance = Float.MAX_VALUE;
-    Paragraph p = lineParagraph(line);
+    var p = lineParagraph(line);
     for (int i = line.start; i <= line.end; i++) {
       if (!Graphemes.isBoundary(p.text, i)) continue;
       float d = Math.abs(offsetX(line, i) - x);
@@ -1718,7 +1715,7 @@ public final class EditorSurface extends Container
   private InkSink ink;
   private int inkBlock = -1, inkPage;
   private LayoutEngine.PlacedPicture inkPicture;
-  private final java.util.ArrayList<float[]> inkPoints = new java.util.ArrayList<float[]>();
+  private final java.util.ArrayList<float[]> inkPoints = new java.util.ArrayList<>();
   private int inkColor = 0x000000;
 
   /** Draw mode: pointer drags over an ink object or drawing canvas become pen strokes. */
@@ -1739,7 +1736,7 @@ public final class EditorSurface extends Container
       float py = (y - viewportY() + getScrollY() - pageY(page)) / scale();
       for (LayoutEngine.PlacedPicture pic : layout().pages.get(page).pictures) {
         if (px < pic.x || px > pic.x + pic.width || py < pic.y || py > pic.y + pic.height) continue;
-        Drawing d = pic.picture.drawing;
+        var d = pic.picture.drawing;
         if (d == null || !("ink".equals(d.kind) || "canvas".equals(d.kind))) continue;
         inkBlock = pic.block;
         inkPage = page;
@@ -1759,7 +1756,7 @@ public final class EditorSurface extends Container
     float py = (y - viewportY() + getScrollY() - pageY(inkPage)) / scale() - inkPicture.y;
     px = Math.max(0, Math.min(inkPicture.width, px));
     py = Math.max(0, Math.min(inkPicture.height, py));
-    float[] last = inkPoints.get(inkPoints.size() - 1);
+    var last = inkPoints.get(inkPoints.size() - 1);
     if (Math.abs(last[0] - px) + Math.abs(last[1] - py) < .75f) return;
     if (inkPoints.size() < 5000) inkPoints.add(new float[] {px, py});
     repaint();
@@ -1767,7 +1764,7 @@ public final class EditorSurface extends Container
 
   private void inkRelease() {
     if (inkBlock < 0) return;
-    StringBuilder b = new StringBuilder();
+    var b = new StringBuilder();
     for (float[] pt : inkPoints) {
       if (b.length() > 0) b.append(' ');
       b.append(Math.round(pt[0] * 10) / 10f).append(',').append(Math.round(pt[1] * 10) / 10f);
@@ -1787,9 +1784,9 @@ public final class EditorSurface extends Container
     g.setAntiAliased(true);
     g.setColor(inkColor);
     int w = Math.max(1, Math.round(sc * 1.5f));
-    float[] prev = inkPoints.get(0);
+    var prev = inkPoints.get(0);
     for (int i = 1; i < inkPoints.size(); i++) {
-      float[] pt = inkPoints.get(i);
+      var pt = inkPoints.get(i);
       int x1 = ox + Math.round((inkPicture.x + prev[0]) * sc), y1 = oy + Math.round((inkPicture.y + prev[1]) * sc);
       int x2 = ox + Math.round((inkPicture.x + pt[0]) * sc), y2 = oy + Math.round((inkPicture.y + pt[1]) * sc);
       for (int t = -w / 2; t <= w / 2; t++) {
@@ -1825,7 +1822,7 @@ public final class EditorSurface extends Container
 
   private void placeCaret(int x, int y) {
     finishComposing();
-    LayoutEngine.Line line = lineAt(x, y);
+    var line = lineAt(x, y);
     for (int page = 0; page < layout().pages.size(); page++) {
       float px = (x - viewportX() - pageX(page)) / scale();
       float py = (y - viewportY() + getScrollY() - pageY(page)) / scale();
@@ -1881,9 +1878,9 @@ public final class EditorSurface extends Container
       return;
     }
     if (OfficeTheme.mobile() && dragHandle != 0) {
-      LayoutEngine.Line target = lineAt(x, y);
+      var target = lineAt(x, y);
       if (target != null && editingBlock(target) >= 0) {
-        Selection old = session.selection();
+        var old = session.selection();
         if (dragHandle < 0)
           session.selectRange(editingBlock(target), offsetAt(target, x), old.block, old.caret);
         else
@@ -1893,7 +1890,7 @@ public final class EditorSurface extends Container
       }
       return;
     }
-    LayoutEngine.Line line = lineAt(x, y);
+    var line = lineAt(x, y);
     if (line != null
         && dragBlock >= 0
         && dragTable >= 0
@@ -1941,11 +1938,11 @@ public final class EditorSurface extends Container
       super.longPointerPress(x, y);
       return;
     }
-    LayoutEngine.Line line = lineAt(x, y);
+    var line = lineAt(x, y);
     if (line == null) return;
     if (line.row >= 0) session.enterCell(line.block, line.row, line.column);
     else session.leaveCell();
-    String text = lineParagraph(line).text.toString();
+    var text = lineParagraph(line).text.toString();
     int offset = Math.min(offsetAt(line, x), text.length());
     int a = offset, z = offset;
     while (a > 0 && isWordChar(text.charAt(a - 1))) a--;
@@ -1984,7 +1981,7 @@ public final class EditorSurface extends Container
   }
 
   private int[] handlePoint(boolean anchor) {
-    Selection s = session.selection();
+    var s = session.selection();
     int block = anchor ? s.anchorBlock : s.block, offset = anchor ? s.anchor : s.caret;
     for (int page = 0; page < layout().pages.size(); page++)
       for (LayoutEngine.Line line : layout().pages.get(page).lines)
@@ -1999,7 +1996,7 @@ public final class EditorSurface extends Container
   private int hitHandle(int x, int y) {
     if (session.cellSelection() != null || session.selection().collapsed()) return 0;
     for (int side = -1; side <= 1; side += 2) {
-      int[] point = handlePoint(side < 0);
+      var point = handlePoint(side < 0);
       if (point != null
           && Math.abs(x - point[0]) <= OfficeTheme.px(22)
           && Math.abs(y - point[1]) <= OfficeTheme.px(22)) return side;
@@ -2041,7 +2038,7 @@ public final class EditorSurface extends Container
       inputBinding = null;
     }
     if (input != null) {
-      Object old = input;
+      var old = input;
       input = null;
       host.stopTextInput(old);
     }
@@ -2066,7 +2063,7 @@ public final class EditorSurface extends Container
   }
 
   private void ensureCaretVisible() {
-    int[] rect = getCaretRect();
+    var rect = getCaretRect();
     int top = rect[1] - viewportY() + getScrollY();
     int bottom = top + rect[3] + 12;
     if (top < getScrollY()) setScrollY(Math.max(0, top - 12));
@@ -2102,17 +2099,17 @@ public final class EditorSurface extends Container
   }
 
   private static final int SQUIGGLE = 32;
-  private final Map<Integer, Image> squiggles = new HashMap<Integer, Image>();
+  private final Map<Integer, Image> squiggles = new HashMap<>();
 
   /**
    * Proofing wave from x0 to x1 on base. A per-segment drawLine became thousands of separate
    * Metal draws per frame on a text full of flagged words; a cached tile is one per 32px.
    */
   private void squiggle(Graphics g, int x0, int x1, int base, int color) {
-    Image tile = squiggles.get(color);
+    var tile = squiggles.get(color);
     if (tile == null) {
       tile = Image.createImage(SQUIGGLE, 2, 0);
-      Graphics tg = tile.getGraphics();
+      var tg = tile.getGraphics();
       tg.setColor(color);
       for (int wx = 0; wx < SQUIGGLE; wx += 2)
         tg.drawLine(wx, wx / 2 % 2, wx + 2, (wx / 2 + 1) % 2);
@@ -2133,14 +2130,14 @@ public final class EditorSurface extends Container
         ClipboardContent data =
             "paste".equals(action) ? Display.getInstance().getClipboardContent() : null;
         if (data == null || !importContent(data)) {
-          Object plain = Display.getInstance().getPasteDataFromClipboard();
-          if (plain instanceof String) {
-            session.pasteText((String) plain);
+          var plain = Display.getInstance().getPasteDataFromClipboard();
+          if (plain instanceof String string) {
+            session.pasteText(string);
             didEdit();
           }
         }
       } else {
-        ClipboardContent content = selectionContent();
+        var content = selectionContent();
         if (content == null) return;
         Display.getInstance().copyToClipboard(content);
         if ("cut".equals(action)) {
@@ -2157,9 +2154,9 @@ public final class EditorSurface extends Container
 
   /** The selection in every format other applications read: model XML, HTML, RTF, Markdown, text. */
   private ClipboardContent selectionContent() {
-    Document fragment = session.copySelection();
+    var fragment = session.copySelection();
     if (fragment == null) return null;
-    ClipboardContent content =
+    var content =
         new ClipboardContent()
             .setData(ClipboardContent.MIME_TEXT, session.selectedText())
             .setData(ClipboardContent.MIME_HTML, TextFormats.html(fragment))
@@ -2175,9 +2172,9 @@ public final class EditorSurface extends Container
   }
 
   private static String text(ClipboardContent data, String mime) throws java.io.IOException {
-    Object value = data.getData(mime);
-    if (value instanceof byte[]) return new String((byte[]) value, "UTF-8");
-    return value instanceof String ? (String) value : null;
+    var value = data.getData(mime);
+    if (value instanceof byte[] bytes) return new String(bytes, "UTF-8");
+    return value instanceof String s ? s : null;
   }
 
   /**
@@ -2205,7 +2202,7 @@ public final class EditorSurface extends Container
   private boolean insertImage(ClipboardContent data) {
     for (String mime :
         new String[] {ClipboardContent.MIME_PNG, ClipboardContent.MIME_JPEG, ClipboardContent.MIME_GIF}) {
-      byte[] bytes = data.getBytes(mime);
+      var bytes = data.getBytes(mime);
       if (bytes != null && bytes.length > 0) {
         insertPictureBytes(bytes, "Pasted picture");
         return true;
@@ -2229,7 +2226,7 @@ public final class EditorSurface extends Container
     if (files == null || files.length == 0) return false;
     boolean any = false;
     for (String path : files) {
-      String lower = path.toLowerCase();
+      var lower = path.toLowerCase();
       if (lower.endsWith(".png") || lower.endsWith(".jpg") || lower.endsWith(".jpeg")
           || lower.endsWith(".gif")) {
         insertPictureBytes(readFile(path), path.substring(path.lastIndexOf('/') + 1));
@@ -2244,7 +2241,7 @@ public final class EditorSurface extends Container
                 : lower.endsWith(".txt") ? RichTextFormat.PLAIN_TEXT
                 : null;
         if (format == null) continue;
-        String body = new String(readFile(path), "UTF-8");
+        var body = new String(readFile(path), "UTF-8");
         if (format == RichTextFormat.PLAIN_TEXT) session.pasteText(body);
         else session.paste(TextFormats.read(body, format));
         any = true;
@@ -2254,7 +2251,7 @@ public final class EditorSurface extends Container
   }
 
   private static byte[] readFile(String path) throws java.io.IOException {
-    try (java.io.InputStream in =
+    try (var in =
         com.codename1.io.FileSystemStorage.getInstance().openInputStream(path)) {
       return com.codename1.io.Util.readInputStream(in);
     }
@@ -2287,8 +2284,8 @@ public final class EditorSurface extends Container
       session.breakTypingGroup();
       if (local) {
         // An internal move is one undoable step: remove the source, then insert at the target.
-        Document fragment = session.copySelection();
-        int[] target = hitTest(evt.getX(), evt.getY());
+        var fragment = session.copySelection();
+        var target = hitTest(evt.getX(), evt.getY());
         if (fragment == null || target == null) {
           evt.reject();
           return;
@@ -2313,7 +2310,7 @@ public final class EditorSurface extends Container
   protected NativeDragOperation createNativeDragOperation(int x, int y) {
     // Only a press inside a non-empty selection starts a drag; elsewhere drag extends selection.
     if (session.selection().collapsed() || !insideSelection(x, y)) return null;
-    ClipboardContent content = selectionContent();
+    var content = selectionContent();
     if (content == null) return null;
     return new NativeDragOperation(content)
         .setAllowedActions(NativeDragOperation.ACTION_COPY | NativeDragOperation.ACTION_MOVE)
@@ -2322,15 +2319,15 @@ public final class EditorSurface extends Container
 
   /** Block and offset under an absolute point, without changing the selection. */
   private int[] hitTest(int x, int y) {
-    LayoutEngine.Line line = lineAt(x, y);
+    var line = lineAt(x, y);
     if (line == null || line.row >= 0) return null;
     int block = editingBlock(line);
     return block < 0 ? null : new int[] {block, offsetAt(line, x)};
   }
 
   private boolean insideSelection(int x, int y) {
-    Selection sel = session.selection();
-    int[] at = hitTest(x, y);
+    var sel = session.selection();
+    var at = hitTest(x, y);
     if (at == null || sel.collapsed()) return false;
     int sb = sel.startBlock(), eb = sel.endBlock();
     if (at[0] < sb || at[0] > eb) return false;
@@ -2339,7 +2336,7 @@ public final class EditorSurface extends Container
   }
 
   private void moveCaretTo(int x, int y) {
-    int[] at = hitTest(x, y);
+    var at = hitTest(x, y);
     if (at == null) return;
     session.leaveCell();
     session.select(at[0], at[1], at[1]);
@@ -2351,7 +2348,7 @@ public final class EditorSurface extends Container
    * dropped here so the platform keyboard never sees a failed edit; navigation still works.
    */
   public boolean readOnly() {
-    String mode = session.document().properties.protection;
+    var mode = session.document().properties.protection;
     return viewOnly || !"all".equals(markup) || "readOnly".equals(mode) || "comments".equals(mode)
         || outline != null && outline.filters(session.document());
   }
@@ -2373,11 +2370,11 @@ public final class EditorSurface extends Container
 
   /** AutoCorrect as you type: fix the word before the caret when a word-ending key is typed. */
   private void autoCorrect() {
-    Selection x = session.selection();
+    var x = session.selection();
     if (!x.collapsed() || session.inCell()) return;
-    Document d = session.editingDocument();
+    var d = session.editingDocument();
     if (!(d.blocks.get(x.block) instanceof Paragraph)) return;
-    String before = d.paragraph(x.block).text.plainText().substring(0, x.caret);
+    var before = d.paragraph(x.block).text.plainText().substring(0, x.caret);
     String fixed = AppOptions.correct(before);
     if (fixed == null) return;
     int k = 0;
@@ -2409,13 +2406,13 @@ public final class EditorSurface extends Container
   public void deleteSurroundingText(int before, int after) {
     if (readOnly()) return;
     finishComposing();
-    Selection x = session.selection();
+    var x = session.selection();
     if (session.cellSelection() != null || !x.collapsed()) {
       session.replace("");
       didEdit();
       return;
     }
-    Paragraph p = session.editingDocument().paragraph(x.block);
+    var p = session.editingDocument().paragraph(x.block);
     int a = Math.max(0, x.start() - Math.max(0, before)),
         b = Math.min(p.text.length(), x.end() + Math.max(0, after));
     if (a > 0 && a < p.text.length() && Character.isLowSurrogate(p.text.charAt(a))) a--;
@@ -2431,9 +2428,9 @@ public final class EditorSurface extends Container
             && command != KEY_RIGHT
             && command != KEY_UP
             && command != KEY_DOWN)) return false;
-    CellSelection range = session.cellSelection();
-    Selection text = session.selection();
-    Document story = session.editingDocument();
+    var range = session.cellSelection();
+    var text = session.selection();
+    var story = session.editingDocument();
     if (range == null) {
       if (!extend) return false;
       boolean start = text.block == 0 && text.caret == 0;
@@ -2444,7 +2441,7 @@ public final class EditorSurface extends Container
           || (command == KEY_RIGHT || command == KEY_DOWN) && end)) return false;
     }
     int tableBlock = session.cellBlock();
-    Table table = (Table) session.document().blocks.get(tableBlock);
+    var table = (Table) session.document().blocks.get(tableBlock);
     if (range != null && !extend) {
       boolean end = command == KEY_RIGHT || command == KEY_DOWN;
       session.enterCell(
@@ -2459,7 +2456,7 @@ public final class EditorSurface extends Container
       int ar = range == null ? session.cellRow() : range.anchorRow;
       int ac = range == null ? session.cellColumn() : range.anchorColumn;
       int fr = range == null ? ar : range.focusRow, fc = range == null ? ac : range.focusColumn;
-      Table.Merge span = table.span(fr, fc);
+      var span = table.span(fr, fc);
       if (command == KEY_LEFT) fc = Math.max(0, span.column - 1);
       if (command == KEY_RIGHT) fc = Math.min(table.columns() - 1, span.column + span.columns);
       if (command == KEY_UP) fr = Math.max(0, span.row - 1);
@@ -2477,8 +2474,8 @@ public final class EditorSurface extends Container
   public void onKeyCommand(int command, int modifiers) {
     session.breakTypingGroup();
     finishComposing();
-    Selection x = session.selection();
-    Paragraph p = session.editingDocument().paragraph(x.block);
+    var x = session.selection();
+    var p = session.editingDocument().paragraph(x.block);
     boolean extend = (modifiers & MOD_SHIFT) != 0;
     if (readOnly() && (command == KEY_BACKSPACE || command == KEY_DELETE || command == KEY_TAB))
       return;
@@ -2570,7 +2567,7 @@ public final class EditorSurface extends Container
       case KEY_PAGE_UP:
       case KEY_PAGE_DOWN:
         {
-          LayoutEngine.Line current = caretLine();
+          var current = caretLine();
           if (paragraphMove) {
             int[] target =
                 command == KEY_DOWN && (modifiers & MOD_ALT) != 0
@@ -2635,7 +2632,7 @@ public final class EditorSurface extends Container
 
   @Override
   public TextInputState getEditingState() {
-    Selection s = session.selection();
+    var s = session.selection();
     return new TextInputState(
         textIndex().text,
         textIndex().absolute(s.anchorBlock, s.anchor),
@@ -2652,11 +2649,11 @@ public final class EditorSurface extends Container
 
   @Override
   public int[] rectForOffset(int offset) {
-    int[] position = textIndex().position(offset);
+    var position = textIndex().position(offset);
     int block = position[0];
     offset = position[1];
     LayoutEngine.Line chosen = null;
-    Selection selection = session.selection();
+    var selection = session.selection();
     if (selection.block == block && selection.caret == offset) chosen = caretLine();
     if (chosen == null)
       for (LayoutEngine.Page page : layout().pages)
@@ -2677,7 +2674,7 @@ public final class EditorSurface extends Container
 
   @Override
   public int offsetAtPoint(int x, int y) {
-    LayoutEngine.Line line = lineAt(x, y);
+    var line = lineAt(x, y);
     return line != null && editingBlock(line) >= 0
         ? textIndex().absolute(editingBlock(line), offsetAt(line, x))
         : textIndex().absolute(session.selection().block, session.selection().caret);
@@ -2685,7 +2682,7 @@ public final class EditorSurface extends Container
 
   @Override
   public int[] selectionRects(int a, int b) {
-    ArrayList<Integer> values = new ArrayList<Integer>();
+    var values = new ArrayList<Integer>();
     for (LayoutEngine.Page page : layout().pages)
       for (LayoutEngine.Line l : page.lines)
         if (editingBlock(l) >= 0
@@ -2705,8 +2702,8 @@ public final class EditorSurface extends Container
 
   @Override
   public TextInputGeometry getGeometrySnapshot() {
-    ArrayList<Integer> points = new ArrayList<Integer>();
-    DocumentText index = textIndex();
+    var points = new ArrayList<Integer>();
+    var index = textIndex();
     float scale = scale();
     int top = viewportY() - getScrollY();
     for (LayoutEngine.Page page : layout().pages) {
@@ -2716,7 +2713,7 @@ public final class EditorSurface extends Container
         if (editingBlock(line) < 0 || !textLine(line) || y + height < viewportY() || y > viewportY() + getHeight())
           continue;
         int base = index.absolute(editingBlock(line), 0);
-        Paragraph paragraph = lineParagraph(line);
+        var paragraph = lineParagraph(line);
         for (int offset = line.start; offset <= line.end; offset++) {
           if (!Graphemes.isBoundary(paragraph.text, offset)) continue;
           points.add(base + offset);
@@ -2732,7 +2729,7 @@ public final class EditorSurface extends Container
     }
     int[] geometry = new int[points.size()];
     for (int i = 0; i < geometry.length; i++) geometry[i] = points.get(i);
-    TextInputState state = getEditingState();
+    var state = getEditingState();
     return new TextInputGeometry(
         geometry,
         state.getSelectionStart(),
@@ -2764,7 +2761,7 @@ public final class EditorSurface extends Container
 
   @Override
   public String getTextRange(int a, int b) {
-    String text = textIndex().text;
+    var text = textIndex().text;
     a = Math.max(0, Math.min(text.length(), a));
     b = Math.max(a, Math.min(text.length(), b));
     return text.substring(a, b);
@@ -2772,7 +2769,7 @@ public final class EditorSurface extends Container
 
   private boolean matchesCellSelection(int a, int b) {
     if (session.cellSelection() == null) return false;
-    TextInputState state = getEditingState();
+    var state = getEditingState();
     return Math.min(a, b) == state.getSelectionStart() && Math.max(a, b) == state.getSelectionEnd();
   }
 

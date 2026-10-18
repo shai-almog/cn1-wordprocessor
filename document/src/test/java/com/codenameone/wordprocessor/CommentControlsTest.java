@@ -5,7 +5,7 @@ import org.junit.Test;
 
 public class CommentControlsTest {
   private Session sample() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("before");
     s.select(0, 6, 6); s.insertTable(2, 2); s.leaveCell(); s.select(2, 0, 0); s.replace("after");
     s.setCell(1, 0, 1, "first cell"); s.setCell(1, 1, 0, "last cell");
@@ -17,7 +17,7 @@ public class CommentControlsTest {
     return s;
   }
   @Test public void navigateUsesDocumentOrderAndWrapsAcrossCellStories() {
-    Session s = sample(); Document d = s.document(); long revision = s.revision();
+    var s = sample(); var d = s.document(); long revision = s.revision();
     s.leaveCell(); s.select(0, 0, 0);
     int[] order = {2, 3, 1, 0, 2};
     for (int index : order) {
@@ -30,18 +30,18 @@ public class CommentControlsTest {
     assertSame(d, s.document()); assertEquals(revision, s.revision());
   }
   @Test public void navigationUsesFocusIncludesResolvedAndDoesNotRequireComments() {
-    Session empty = new Session(Document.empty()); assertNull(empty.navigateComment(false));
-    Session s = sample(); String first = s.document().comments.get(2).id;
+    var empty = new Session(Document.empty()); assertNull(empty.navigateComment(false));
+    var s = sample(); var first = s.document().comments.get(2).id;
     s.updateComment(first, true, false); s.select(0, 5, 0);
     assertEquals(first, s.navigateComment(false));
     s.select(2, 4, 1); assertEquals(s.document().comments.get(1).id, s.navigateComment(true));
   }
   @Test public void editPreservesAuthorsRangeAndResolutionAndUndo() {
-    Session s = sample(); ReviewComment original = s.document().comments.get(3);
+    var s = sample(); var original = s.document().comments.get(3);
     s.replyComment(original.id, "Reply author", "Old reply"); s.updateComment(original.id, true, false);
-    Document before = s.document(); s.selectComment(original.id);
+    var before = s.document(); s.selectComment(original.id);
     s.editComment(original.id, -1, "\nUpdated\n\ntext\n");
-    ReviewComment edited = s.document().comments.get(3);
+    var edited = s.document().comments.get(3);
     assertEquals(original.author, edited.author); assertEquals(original.startId, edited.startId);
     assertEquals(original.start, edited.start); assertEquals(original.end, edited.end); assertTrue(edited.resolved);
     assertEquals("\nUpdated\n\ntext\n", edited.text);
@@ -51,8 +51,8 @@ public class CommentControlsTest {
     s.undo(); assertSame(before, s.document()); s.redo(); assertEquals("\nUpdated\n\ntext\n", s.document().comments.get(3).text);
   }
   @Test public void invalidEditsLeaveCellSelectionDocumentAndRevisionAlone() {
-    Session s = sample(); Document before = s.document(); Selection selection = s.selection(); long revision = s.revision();
-    String id = before.comments.get(3).id;
+    var s = sample(); var before = s.document(); var selection = s.selection(); long revision = s.revision();
+    var id = before.comments.get(3).id;
     for (int index : new int[] {-2, 0, 99}) {
       try {s.editComment(id, index, "Text"); fail("invalid reply accepted");} catch (IllegalArgumentException expected) {}
     }

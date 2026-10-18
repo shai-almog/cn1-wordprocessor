@@ -6,11 +6,11 @@ import org.junit.Test;
 
 public class TabLayoutTest {
   private LayoutEngine.Line line(String text, String stops, String indent) {
-    Paragraph p =
+    var p =
         new Paragraph("p1", RichText.of(text, TextStyle.DEFAULT))
             .with("tabs", stops)
             .with("firstIndent", indent);
-    Document d = new Document(new Sequence<Block>().append(p), PageSpec.A4, "Tabs", 2);
+    var d = new Document(new Sequence<Block>().append(p), PageSpec.A4, "Tabs", 2);
     return new LayoutEngine(
             new LayoutEngine.Metrics() {
               public float width(String t, TextStyle s) {
@@ -39,8 +39,8 @@ public class TabLayoutTest {
 
   @Test
   public void leadersKeepSourceOffsetsAndFirstIndentDoesNotShiftStop() {
-    LayoutEngine.Line l = line("A\t12", "120,right,dot", "18");
-    LayoutEngine.Span gap = l.spans.get(1);
+    var l = line("A\t12", "120,right,dot", "18");
+    var gap = l.spans.get(1);
     assertEquals("\t", gap.text);
     assertEquals(1, gap.start);
     assertEquals(2, gap.end);
@@ -52,7 +52,7 @@ public class TabLayoutTest {
 
   @Test
   public void nextStopAndPeriodicFallbackAreDeterministic() {
-    LayoutEngine.Line l = line("A\tB\tC\tD", "60,left,hyphen;120,left,underscore", "0");
+    var l = line("A\tB\tC\tD", "60,left,hyphen;120,left,underscore", "0");
     assertEquals(60, l.spans.get(2).x, .001);
     assertEquals(120, l.spans.get(4).x, .001);
     assertEquals(144, l.spans.get(6).x, .001);

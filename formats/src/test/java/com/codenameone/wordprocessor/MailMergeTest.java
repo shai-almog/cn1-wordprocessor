@@ -8,14 +8,15 @@ import org.junit.Test;
 
 public class MailMergeTest {
   private Session template() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     MailMerge.recipients(
         s,
         MergeData.csv(
-            "First Name,Last Name,City,Score\n"
-                + "Ada,Lovelace,London,9\n"
-                + "Alan,Turing,Wilmslow,10\n"
-                + "Grace,Hopper,New York,11",
+            """
+            First Name,Last Name,City,Score
+            Ada,Lovelace,London,9
+            Alan,Turing,Wilmslow,10
+            Grace,Hopper,New York,11""",
             true));
     MailMerge.insert(s, "GREETINGLINE");
     s.replace("\nSee you in ");
@@ -47,14 +48,14 @@ public class MailMergeTest {
 
   @Test
   public void previewFinishUndoRedoAndTwoPageLayout() throws Exception {
-    Session s = template();
-    Document original = s.document();
-    MergeData data = s.mergeData();
+    var s = template();
+    var original = s.document();
+    var data = s.mergeData();
     MailMerge.preview(s, true, 1);
     assertEquals("Dear Alan Turing,\nSee you in Wilmslow", s.document().plainText());
     assertEquals("GREETINGLINE", s.document().paragraph(0).text.fieldAt(0).instruction);
     assertEquals(1, s.selection().block);
-    Document preview = s.document();
+    var preview = s.document();
     assertEquals(2, MailMerge.finish(s, 1, 2));
     assertEquals(
         "Dear Ada Lovelace,\nSee you in London\nDear Alan Turing,\nSee you in Wilmslow",
@@ -62,7 +63,7 @@ public class MailMergeTest {
     assertEquals(2, new LayoutEngine(new PdfMetrics()).layout(s.document(), 0).pages.size());
     assertNull(s.document().paragraph(0).text.fieldAt(0));
     assertFalse(s.mergeData().preview);
-    Document finished = s.document();
+    var finished = s.document();
     s.undo();
     assertSame(preview, s.document());
     assertTrue(s.mergeData().preview);
@@ -72,7 +73,7 @@ public class MailMergeTest {
     s.redo();
     s.redo();
     assertSame(finished, s.document());
-    ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+    var bytes = new ByteArrayOutputStream();
     Docx.write(finished, bytes);
     assertEquals(
         finished.plainText(),
@@ -81,11 +82,11 @@ public class MailMergeTest {
 
   @Test
   public void recipientChangesRollbackForkAndLoadAreIsolated() {
-    Session s = template();
-    Document doc = s.document();
-    MergeData data = s.mergeData();
+    var s = template();
+    var doc = s.document();
+    var data = s.mergeData();
     long revision = s.revision();
-    Session fork = s.fork();
+    var fork = s.fork();
     try {
       s.transact(
           x -> {
@@ -107,7 +108,7 @@ public class MailMergeTest {
 
   @Test
   public void conditionsNextAndSkipConsumeRecordsAndNumericComparison() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     MailMerge.recipients(s, MergeData.csv("Name,Score\nAda,9\nAlan,10\nGrace,11", true));
     MailMerge.insert(s, MailMerge.rule("SKIPIF", "Name", "=", "Ada", "", ""));
     MailMerge.insert(s, MailMerge.rule("IF", "Score", ">=", "10", "Senior", "Junior"));
@@ -122,7 +123,7 @@ public class MailMergeTest {
 
   @Test
   public void tableCellPreviewKeepsCaretAndFormattingAndFinishClonesTable() {
-    Session s = template();
+    var s = template();
     s.insertTable(1, 2);
     int table = 0;
     while (!(s.document().blocks.get(table) instanceof Table)) table++;
@@ -136,13 +137,12 @@ public class MailMergeTest {
     assertTrue(s.editingDocument().plainText().contains("Wilmslow"));
     assertEquals(2, MailMerge.finish(s, 1, 2));
     int count = 0;
-    Set<String> ids = new HashSet<String>();
+    var ids = new HashSet<String>();
     for (Block b : s.document().blocks) {
       assertTrue(ids.add(b.id()));
-      if (b instanceof Table) {
+      if (b instanceof Table t) {
         count++;
-        Table t = (Table) b;
-        Paragraph p = t.cell(0, 1).get(0);
+        var p = t.cell(0, 1).get(0);
         assertTrue(p.text.styleAt(0).bold);
         assertTrue(ids.add(p.id));
       }
@@ -152,14 +152,14 @@ public class MailMergeTest {
 
   @Test
   public void headersSectionsNotesCommentsBookmarksAndReferencesAreIndependent() throws Exception {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     MailMerge.recipients(s, MergeData.csv("Name\nAda\nAlan", true));
     MailMerge.insert(s, "MERGEFIELD Name");
     s.select(0, 0, 1);
     s.addBookmark("Person");
     s.addComment("Review", "Check name");
-    Document d = s.document();
-    PageFurniture f =
+    var d = s.document();
+    var f =
         d.furniture.story(
             "header",
             new Sequence<Paragraph>()
@@ -187,9 +187,8 @@ public class MailMergeTest {
     assertEquals(3, d.comments.get(0).end);
     assertEquals(4, d.comments.get(1).end);
     for (Block b : d.blocks)
-      if (b instanceof Paragraph) {
-        Paragraph p = (Paragraph) b;
-        InlineField f2 = p.text.fieldAt(p.text.length() - 1);
+      if (b instanceof Paragraph p) {
+        var f2 = p.text.fieldAt(p.text.length() - 1);
         assertNotNull(f2);
         assertTrue(d.bookmarks.containsKey(new FieldCode(f2.instruction).arguments.get(0)));
       }
@@ -198,9 +197,9 @@ public class MailMergeTest {
 
   @Test
   public void missingFieldsAndMalformedRulesCannotPartiallyMerge() {
-    Session s = template();
+    var s = template();
     MailMerge.insert(s, "MERGEFIELD Missing");
-    Document before = s.document();
+    var before = s.document();
     assertEquals(Arrays.asList("Missing"), MailMerge.errors(before, s.mergeData()));
     try {
       MailMerge.finish(s, 1, 2);
@@ -211,7 +210,7 @@ public class MailMergeTest {
     s.undo();
     MailMerge.insert(s, "IF { MERGEFIELD City } INVALID \"x\" \"yes\" \"no\"");
     before = s.document();
-    MergeData data = s.mergeData();
+    var data = s.mergeData();
     try {
       MailMerge.preview(s, true, 0);
       fail();
@@ -223,16 +222,16 @@ public class MailMergeTest {
 
   @Test
   public void lockedFieldsUnrelatedFieldsAndAddressMappingArePreserved() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     MailMerge.recipients(s, MergeData.csv("Who,Street,City\nAda,1 Main Road,London", true));
-    Map<String, String> mapping = new HashMap<String, String>();
+    var mapping = new HashMap<String, String>();
     mapping.put("firstName", "Who");
     s.mergeData(s.mergeData().mapping(mapping));
     MailMerge.insert(s, "ADDRESSBLOCK");
     s.insertField(new InlineField("MERGEFIELD Who", "LOCKED", true, false));
     s.insertField(new InlineField("PAGE", "7", false, false));
     MailMerge.finish(s, 1, 1);
-    Paragraph p = s.document().paragraph(0);
+    var p = s.document().paragraph(0);
     assertTrue(p.text.plainText().startsWith("Ada\n1 Main Road\nLondonLOCKED7"));
     assertTrue(p.text.fieldAt(p.text.length() - 2).locked);
     assertEquals("PAGE", p.text.fieldAt(p.text.length() - 1).instruction);

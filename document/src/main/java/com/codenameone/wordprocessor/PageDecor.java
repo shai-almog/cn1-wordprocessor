@@ -56,7 +56,7 @@ public final class PageDecor {
       int lineCountBy,
       String lineRestart) {
     this(pageColor, watermark, watermarkColor, borders, numberFormat, lineCountBy, lineRestart,
-        new java.util.TreeMap<String, String>());
+        new java.util.TreeMap<>());
   }
 
   private PageDecor(
@@ -111,7 +111,7 @@ public final class PageDecor {
   }
 
   public String layout(String key, String fallback) {
-    String v = layout.get(key);
+    var v = layout.get(key);
     return v == null ? fallback : v;
   }
 
@@ -133,7 +133,7 @@ public final class PageDecor {
         if (!(f >= 1 && f <= 200)) throw new IllegalArgumentException("Invalid " + key);
       }
     }
-    java.util.TreeMap<String, String> next = new java.util.TreeMap<String, String>(layout);
+    var next = new java.util.TreeMap<String, String>(layout);
     if (value == null || value.isEmpty() || "top".equals(value) && "verticalAlign".equals(key)
         || "false".equals(value) || "lrTb".equals(value) || "default".equals(value)) next.remove(key);
     else next.put(key, value);
@@ -143,7 +143,7 @@ public final class PageDecor {
   @Override
   public boolean equals(Object o) {
     if (!(o instanceof PageDecor)) return false;
-    PageDecor d = (PageDecor) o;
+    var d = (PageDecor) o;
     return pageColor == d.pageColor
         && watermark.equals(d.watermark)
         && watermarkColor == d.watermarkColor

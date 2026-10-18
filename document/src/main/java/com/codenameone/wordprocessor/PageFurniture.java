@@ -49,7 +49,7 @@ public final class PageFurniture {
 
   public Sequence<Paragraph> get(String key) {
     check(key);
-    Sequence<Paragraph> result = stories.get(key);
+    var result = stories.get(key);
     return result == null ? new Sequence<Paragraph>() : result;
   }
 
@@ -69,14 +69,14 @@ public final class PageFurniture {
 
   public PageFurniture story(String key, Sequence<Paragraph> paragraphs) {
     check(key);
-    Map<String, Sequence<Paragraph>> copy = new LinkedHashMap<String, Sequence<Paragraph>>(stories);
+    var copy = new LinkedHashMap<String, Sequence<Paragraph>>(stories);
     copy.put(key, paragraphs);
     return new PageFurniture(copy, differentFirst, differentEven, headerDistance, footerDistance);
   }
 
   public PageFurniture inherit(String key) {
     check(key);
-    Map<String, Sequence<Paragraph>> copy = new LinkedHashMap<String, Sequence<Paragraph>>(stories);
+    var copy = new LinkedHashMap<String, Sequence<Paragraph>>(stories);
     copy.remove(key);
     return new PageFurniture(copy, differentFirst, differentEven, headerDistance, footerDistance);
   }

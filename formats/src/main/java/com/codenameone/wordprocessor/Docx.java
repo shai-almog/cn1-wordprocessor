@@ -27,20 +27,20 @@ public final class Docx {
   private Docx() {}
 
   public static Opened read(InputStream input) throws IOException {
-    Map<String, byte[]> parts = new LinkedHashMap<String, byte[]>();
-    ZipInputStream zip = new ZipInputStream(input);
+    var parts = new LinkedHashMap<String, byte[]>();
+    var zip = new ZipInputStream(input);
     ZipEntry entry;
     int total = 0, count = 0;
     while ((entry = zip.getNextEntry()) != null) {
       if (++count > MAX_ENTRIES) throw new IOException("Too many package entries");
-      String name = entry.getName();
+      var name = entry.getName();
       if (name.startsWith("/")
           || name.contains("..")
           || name.contains("\\")
           || parts.containsKey(name)) throw new IOException("Invalid or duplicate package path");
       if (entry.isDirectory()) continue;
       long size = entry.getSize();
-      ByteArrayOutputStream out =
+      var out =
           new ByteArrayOutputStream(size > 0 && size <= MAX_ENTRY ? (int) size : 8192);
       byte[] buf = new byte[8192];
       int n;
@@ -52,28 +52,28 @@ public final class Docx {
       }
       parts.put(name, out.toByteArray());
     }
-    byte[] main = parts.get("word/document.xml");
+    var main = parts.get("word/document.xml");
     if (main == null) throw new IOException("Missing word/document.xml");
     Element root = Xml.parse(main);
     Element body = Xml.child(root, "body");
     if (body == null) throw new IOException("Missing document body");
-    Set<String> warnings = new LinkedHashSet<String>();
+    var warnings = new LinkedHashSet<String>();
     DocxLists.Read lists = DocxLists.read(parts.get("word/numbering.xml"), warnings);
-    DocxStyles styles =
+    var styles =
         new DocxStyles(parts.get("word/styles.xml"), parts.get("word/settings.xml"), warnings);
-    DocxLinks links = new DocxLinks(parts);
-    DocxComments comments = new DocxComments(parts);
-    DocxPictures pictures = new DocxPictures(parts);
+    var links = new DocxLinks(parts);
+    var comments = new DocxComments(parts);
+    var pictures = new DocxPictures(parts);
     long[] id = {1};
     links.notes = new DocxNotes(parts, id, warnings, styles);
-    Sequence<Block> blocks = new Sequence<Block>();
-    Map<String, Element> sectionElements = new LinkedHashMap<String, Element>();
+    var blocks = new Sequence<Block>();
+    var sectionElements = new LinkedHashMap<String, Element>();
     Paragraph dropLetter = null;
     String dropSpec = null;
     for (Element c : DocxToc.body(body, warnings)) {
       String kind = Xml.local(c);
       if ("p".equals(kind)) {
-        Set<String> paragraphWarnings = new LinkedHashSet<String>();
+        var paragraphWarnings = new LinkedHashSet<String>();
         Paragraph p = paragraph(c, id, paragraphWarnings, lists, styles, links, comments);
         Element frame = Xml.child(c, "pPr") == null ? null : Xml.child(Xml.child(c, "pPr"), "framePr");
         String dropMode = frame == null ? "" : Xml.attr(frame, "dropCap", "");
@@ -91,8 +91,8 @@ public final class Docx {
           continue;
         }
         if (dropLetter != null) {
-          RichText letter = dropLetter.text;
-          String font = letter.styleAt(0).font;
+          var letter = dropLetter.text;
+          var font = letter.styleAt(0).font;
           if (p.text.length() > 0) {
             letter = letter.format(0, letter.length(), "size", String.valueOf(p.text.styleAt(0).size));
             if (!font.equals(p.text.styleAt(0).font)) dropSpec += font.replace(",", "");
@@ -110,7 +110,7 @@ public final class Docx {
         Element section = paragraphProps == null ? null : Xml.child(paragraphProps, "sectPr");
         if (section != null) sectionElements.put(p.id, section);
         warnings.addAll(paragraphWarnings);
-        List<Picture> images = pictures.read(c, id, warnings);
+        var images = pictures.read(c, id, warnings);
         if (images.isEmpty() || p.text.length() > 0 || section != null) blocks = blocks.append(p);
         if (!images.isEmpty() && p.text.length() > 0)
           warnings.add("Pictures embedded in text moved after their paragraph");
@@ -128,7 +128,7 @@ public final class Docx {
         || !(blocks.get(blocks.size() - 1) instanceof Paragraph)
         || sectionElements.containsKey(blocks.get(blocks.size() - 1).id()))
       blocks = blocks.append(new Paragraph("p" + id[0]++, new RichText()));
-    Map<String, Section> sections = new LinkedHashMap<String, Section>();
+    var sections = new LinkedHashMap<String, Section>();
     for (Map.Entry<String, Element> sectionEntry : sectionElements.entrySet())
       sections.put(
           sectionEntry.getKey(), readSection(parts, sectionEntry.getValue(), id, warnings, styles));
@@ -146,7 +146,7 @@ public final class Docx {
       if (Xml.children(background, null).size() > 0)
         warnings.add("Page background fill effects shown as a solid color");
     }
-    Document document =
+    var document =
         new Document(blocks, last.page, "Imported document", id[0]).sections(sections, last);
     document = document.comments(comments.read(document, warnings));
     document = document.bookmarks(comments.bookmarks.read(document, warnings));
@@ -160,7 +160,7 @@ public final class Docx {
     Element tracking = settings == null ? null : Xml.child(settings, "trackRevisions");
     document =
         RevisionFormats.reserveIds(document.trackChanges(tracking != null && enabled(tracking)));
-    Map<String, ParagraphStyle> definitions =
+    var definitions =
         new LinkedHashMap<String, ParagraphStyle>(ParagraphStyle.defaults());
     for (Map.Entry<String, String> styleEntry : styles.paragraphNames().entrySet()) {
       Element p =
@@ -199,10 +199,10 @@ public final class Docx {
       DocxStyles styles,
       DocxLinks links,
       DocxComments comments) {
-    List<List<Sequence<Paragraph>>> rows = new ArrayList<List<Sequence<Paragraph>>>();
-    List<int[]> spans = new ArrayList<int[]>();
+    var rows = new ArrayList<List<Sequence<Paragraph>>>();
+    var spans = new ArrayList<int[]>();
     for (Element row : Xml.children(table, "tr")) {
-      List<Sequence<Paragraph>> cells = new ArrayList<Sequence<Paragraph>>();
+      var cells = new ArrayList<Sequence<Paragraph>>();
       for (Element cell : Xml.children(row, "tc")) {
         Element props = Xml.child(cell, "tcPr"),
             grid = props == null ? null : Xml.child(props, "gridSpan"),
@@ -215,7 +215,7 @@ public final class Docx {
           throw new IllegalArgumentException("Table size limit exceeded");
         boolean continuation =
             vertical != null && !"restart".equals(Xml.attr(vertical, "val", "continue"));
-        Sequence<Paragraph> content = new Sequence<Paragraph>();
+        var content = new Sequence<Paragraph>();
         for (Element p : Xml.children(cell, "p"))
           content = content.append(paragraph(p, id, warnings, lists, styles, links, comments));
         if (content.size() == 0)
@@ -258,7 +258,7 @@ public final class Docx {
     for (List<Sequence<Paragraph>> row : rows)
       while (row.size() < columns)
         row.add(new Sequence<Paragraph>().append(new Paragraph("p" + id[0]++, new RichText())));
-    List<Table.Merge> merges = new ArrayList<Table.Merge>();
+    var merges = new ArrayList<Table.Merge>();
     for (int[] span : spans)
       if (span[2] > 1 || span[3] > 1)
         merges.add(new Table.Merge(span[0], span[1], span[2], span[3]));
@@ -294,17 +294,17 @@ static final char COLUMN_BREAK = '\u000B';
       DocxLinks links,
       DocxComments comments,
       boolean styleTemplate) {
-    RichText text = new RichText();
+    var text = new RichText();
     String style = styles.defaultParagraph(), align = "left", list = "";
     float before = 0, after = 6, indent = 0, line = 1.2f;
     boolean pageBreak = false, keep = false;
     int listLevel = 0, listStart = 0;
     String listFormat = "decimal", listId = "";
-    ParagraphFormat layout = styles.baseFormat();
+    var layout = styles.baseFormat();
     Element props = Xml.child(e, "pPr");
     if (props != null && Xml.child(props, "pStyle") != null)
       style = Xml.attr(Xml.child(props, "pStyle"), "val", style);
-    List<Element> properties = styles.paragraphProperties(style);
+    var properties = styles.paragraphProperties(style);
     if (!styleTemplate)
       for (int i = properties.size() - 1; i >= 0; i--)
         if ("outlineLvl".equals(Xml.local(properties.get(i)))) properties.remove(i);
@@ -342,7 +342,7 @@ static final char COLUMN_BREAK = '\u000B';
         layout = layout.with("widowControl", String.valueOf(enabled(p)));
       else if ("bidi".equals(kind)) layout = layout.with("rtl", String.valueOf(enabled(p)));
       else if (ParagraphFormat.ASIAN.contains(kind)) {
-        String off = layout.asianOff;
+        var off = layout.asianOff;
         if (!enabled(p)) off = off.isEmpty() ? kind : off + "," + kind;
         layout = layout.with("asianOff", off);
       }
@@ -352,7 +352,7 @@ static final char COLUMN_BREAK = '\u000B';
           throw new IllegalArgumentException("Invalid DOCX outline level");
         layout = layout.with("outlineLevel", "" + (level == 9 ? 0 : level + 1));
       } else if ("tabs".equals(kind)) {
-        List<TabStop> stops = new ArrayList<TabStop>(layout.tabs);
+        var stops = new ArrayList<TabStop>(layout.tabs);
         for (Element tab : Xml.children(p, "tab")) {
           float position = twips(tab, "pos", 0);
           String alignment = Xml.attr(tab, "val", "left"), leader = Xml.attr(tab, "leader", "none");
@@ -382,7 +382,7 @@ static final char COLUMN_BREAK = '\u000B';
     boolean periodic = stops.size() == 64;
     float interval = stops.isEmpty() ? 36 : stops.get(0).position;
     for (int i = 0; i < stops.size(); i++) {
-      TabStop stop = stops.get(i);
+      var stop = stops.get(i);
       periodic &=
           "left".equals(stop.alignment)
               && "none".equals(stop.leader)
@@ -390,7 +390,7 @@ static final char COLUMN_BREAK = '\u000B';
     }
     if (periodic && interval > 0 && interval <= 1000)
       layout = layout.with("tabInterval", String.valueOf(interval)).with("tabs", "");
-    final String paragraphStyle = style;
+    final var paragraphStyle = style;
     text =
         DocxFields.read(
             e, (run, link) -> run(run, warnings, styles, paragraphStyle, link), links, warnings);
@@ -401,7 +401,7 @@ static final char COLUMN_BREAK = '\u000B';
       layout = layout.with("columnBreak", "true");
     }
     if (!listId.isEmpty() && !"0".equals(listId)) {
-      DocxLists.Definition definition = lists.take(listId, listLevel);
+      var definition = lists.take(listId, listLevel);
       if (definition == null) warnings.add("Unresolved list numbering");
       else {
         list = definition.kind;
@@ -410,7 +410,7 @@ static final char COLUMN_BREAK = '\u000B';
       }
     } else lists.body();
     if (!list.isEmpty()) indent = Math.max(0, indent - 18 * (listLevel + 1));
-    Paragraph paragraph =
+    var paragraph =
         new Paragraph(
             "p" + id[0]++,
             text,
@@ -436,11 +436,11 @@ static final char COLUMN_BREAK = '\u000B';
     }
     Element prior = props == null ? null : Xml.child(props, "pPrChange");
     if (prior != null && Xml.child(prior, "pPr") != null) {
-      Element container = new Element("w:p");
+      var container = new Element("w:p");
       Element previous = Xml.child(prior, "pPr");
       prior.removeChildAt(prior.getChildIndex(previous));
       container.addChild(previous);
-      DocxLists.Read priorLists = new DocxLists.Read();
+      var priorLists = new DocxLists.Read();
       priorLists.definitions.putAll(lists.definitions);
       Paragraph previousParagraph =
           paragraph(container, new long[] {0}, warnings, priorLists, styles, links, comments);
@@ -455,15 +455,15 @@ static final char COLUMN_BREAK = '\u000B';
                   Xml.attr(prior, "date", "")),
               previousParagraph);
       if (!previousParagraph.style.equals(paragraphStyle)) {
-        final String previousStyle = previousParagraph.style;
-        final Revision styleChange = paragraph.formatRevision;
+        final var previousStyle = previousParagraph.style;
+        final var styleChange = paragraph.formatRevision;
         paragraph =
             paragraph.text(
                 DocxFields.read(
                     e,
                     (element, link) -> {
                       RichText current = run(element, warnings, styles, paragraphStyle, link);
-                      TextStyle old =
+                      var old =
                           run(element, warnings, styles, previousStyle, link).styleAt(0);
                       return current.mapStyles(
                           value ->
@@ -486,9 +486,9 @@ static final char COLUMN_BREAK = '\u000B';
 
   private static RichText run(
       Element e, Set<String> warnings, DocxStyles styles, String paragraphStyle, String link) {
-    TextStyle style = styles.text(paragraphStyle, Xml.child(e, "rPr"));
+    var style = styles.text(paragraphStyle, Xml.child(e, "rPr"));
     if (!link.isEmpty()) style = style.with("link", link);
-    StringBuilder b = new StringBuilder();
+    var b = new StringBuilder();
     for (Element c : Xml.children(e, null)) {
       String k = Xml.local(c);
       if ("t".equals(k) || "delText".equals(k)) b.append(Xml.text(c));
@@ -514,14 +514,14 @@ static final char COLUMN_BREAK = '\u000B';
   }
 
   public static List<String> conversionWarnings(Document d, Opened source) {
-    LinkedHashSet<String> warnings = new LinkedHashSet<String>();
-    if (source != null && source.document == d) return new ArrayList<String>();
+    var warnings = new LinkedHashSet<String>();
+    if (source != null && source.document == d) return new ArrayList<>();
     if (source != null) warnings.addAll(source.warnings);
 
-    DocxTabs tabs = new DocxTabs(d);
+    var tabs = new DocxTabs(d);
     for (Paragraph paragraph : DocxTabs.paragraphs(d))
       exportWarnings(paragraph, warnings, tabs.interval);
-    return new ArrayList<String>(warnings);
+    return new ArrayList<>(warnings);
   }
 
   private static void exportWarnings(Paragraph p, Set<String> warnings, float interval) {
@@ -529,7 +529,9 @@ static final char COLUMN_BREAK = '\u000B';
       for (TabStop stop : p.format.tabs)
         if ("bar".equals(stop.alignment)) {
           warnings.add(
-              "Bar tabs with paragraph-specific default intervals require DOCX" + " conversion");
+              """
+              Bar tabs with paragraph-specific default intervals require DOCX\
+               conversion""");
           break;
         }
     if (!p.list.isEmpty() && !"bullet".equals(p.list) && !"number".equals(p.list))
@@ -543,24 +545,24 @@ static final char COLUMN_BREAK = '\u000B';
   public static void write(Document d, Opened source, OutputStream out, boolean allowLoss)
       throws IOException {
     boolean original = source != null && source.document == d;
-    List<String> losses = conversionWarnings(d, source);
+    var losses = conversionWarnings(d, source);
     if (!losses.isEmpty() && !allowLoss)
       throw new IOException("Save As with explicit conversion required: " + losses);
-    final Map<String, byte[]> parts = new LinkedHashMap<String, byte[]>();
+    final var parts = new LinkedHashMap<String, byte[]>();
     if (source != null) parts.putAll(source.parts);
     if (!original) {
-      DocxLists lists = new DocxLists(d);
-      DocxTabs tabs = new DocxTabs(d);
-      DocxLinks links = new DocxLinks(parts);
+      var lists = new DocxLists(d);
+      var tabs = new DocxTabs(d);
+      var links = new DocxLinks(parts);
       links.notes = new DocxNotes(d);
-      DocxComments comments = new DocxComments(d);
-      DocxPictures pictures = new DocxPictures(parts);
-      List<DocxFurniture> furniture = new ArrayList<DocxFurniture>();
+      var comments = new DocxComments(d);
+      var pictures = new DocxPictures(parts);
+      var furniture = new ArrayList<DocxFurniture>();
       boolean even = false;
       for (Section.Range section : d.sectionRanges()) even |= section.raw.furniture.differentEven;
       int sectionIndex = 0;
       for (Section.Range section : d.sectionRanges()) {
-        PageFurniture f = section.raw.furniture;
+        var f = section.raw.furniture;
         furniture.add(
             new DocxFurniture(
                 d.page(section.raw.page)
@@ -575,21 +577,23 @@ static final char COLUMN_BREAK = '\u000B';
       if (source == null) {
         parts.put(
             "[Content_Types].xml",
-            ("<?xml version=\"1.0\"?><Types"
-                 + " xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\"><Default"
-                 + " Extension=\"rels\""
-                 + " ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/><Default"
-                 + " Extension=\"xml\" ContentType=\"application/xml\"/><Override"
-                 + " PartName=\"/word/document.xml\""
-                 + " ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml\"/></Types>")
+            ("""
+                 <?xml version="1.0"?><Types\
+                  xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default\
+                  Extension="rels"\
+                  ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default\
+                  Extension="xml" ContentType="application/xml"/><Override\
+                  PartName="/word/document.xml"\
+                  ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>""")
                 .getBytes("UTF-8"));
         parts.put(
             "_rels/.rels",
-            ("<?xml version=\"1.0\"?><Relationships"
-                 + " xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship"
-                 + " Id=\"rId1\""
-                 + " Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument\""
-                 + " Target=\"word/document.xml\"/></Relationships>")
+            ("""
+                 <?xml version="1.0"?><Relationships\
+                  xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship\
+                  Id="rId1"\
+                  Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument"\
+                  Target="word/document.xml"/></Relationships>""")
                 .getBytes("UTF-8"));
       }
       lists.packageParts(parts);
@@ -608,20 +612,20 @@ static final char COLUMN_BREAK = '\u000B';
   private static void writeStyles(
       Document d, Map<String, byte[]> parts, DocxLists lists, DocxTabs tabs, DocxLinks links)
       throws IOException {
-    StringBuilder xml = new StringBuilder("<w:styles xmlns:w=\"").append(W).append("\">");
-    DocxComments comments = new DocxComments(Document.empty());
+    var xml = new StringBuilder("<w:styles xmlns:w=\"").append(W).append("\">");
+    var comments = new DocxComments(Document.empty());
     for (ParagraphStyle style : d.styles.values()) {
-      StringBuilder paragraph = new StringBuilder();
+      var paragraph = new StringBuilder();
       writeParagraph(paragraph, style.paragraph, lists, tabs.withoutStyles(), links, comments);
-      String content = paragraph.toString();
+      var content = paragraph.toString();
       int first = content.indexOf("<w:pPr>"), last = content.indexOf("</w:pPr>") + 8;
-      String props = content.substring(first, last);
+      var props = content.substring(first, last);
       int ps = props.indexOf("<w:pStyle");
       if (ps >= 0) props = props.substring(0, ps) + props.substring(props.indexOf("/>", ps) + 2);
-      StringBuilder run = new StringBuilder();
+      var run = new StringBuilder();
       writeRun(run, " ", style.text, links);
-      String r = run.toString();
-      String rpr = r.substring(r.indexOf("<w:rPr>"), r.indexOf("</w:rPr>") + 8);
+      var r = run.toString();
+      var rpr = r.substring(r.indexOf("<w:rPr>"), r.indexOf("</w:rPr>") + 8);
       xml.append("<w:style w:type=\"paragraph\" w:styleId=\"")
           .append(Xml.escape(style.id))
           .append("\"");
@@ -638,16 +642,17 @@ static final char COLUMN_BREAK = '\u000B';
         rels =
             parts.containsKey(path)
                 ? new String(parts.get(path), "UTF-8")
-                : "<Relationships"
-                      + " xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"></Relationships>";
+                : """
+                      <Relationships\
+                       xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>""";
     boolean found = false;
-    Set<String> ids = new HashSet<String>();
+    var ids = new HashSet<String>();
     for (Element e : Xml.children(Xml.parse(rels), null)) {
       ids.add(Xml.attr(e, "Id", ""));
       if (Xml.attr(e, "Type", "").endsWith("/styles")) found = true;
     }
     if (!found) {
-      String id = "cn1Styles";
+      var id = "cn1Styles";
       while (ids.contains(id)) id += "x";
       rels =
           DocxLists.insert(
@@ -662,7 +667,7 @@ static final char COLUMN_BREAK = '\u000B';
     }
     path = "[Content_Types].xml";
     if (parts.containsKey(path)) {
-      String types = new String(parts.get(path), "UTF-8");
+      var types = new String(parts.get(path), "UTF-8");
       found = false;
       for (Element e : Xml.children(Xml.parse(types), null))
         if ("/word/styles.xml".equals(Xml.attr(e, "PartName", ""))) found = true;
@@ -671,10 +676,11 @@ static final char COLUMN_BREAK = '\u000B';
             path,
             DocxLists.insert(
                     types,
-                    "<Override"
-                        + " xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\""
-                        + " PartName=\"/word/styles.xml\""
-                        + " ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml\"/>")
+                    """
+                    <Override\
+                     xmlns="http://schemas.openxmlformats.org/package/2006/content-types"\
+                     PartName="/word/styles.xml"\
+                     ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>""")
                 .getBytes("UTF-8"));
     }
   }
@@ -692,7 +698,7 @@ static final char COLUMN_BREAK = '\u000B';
       List<DocxFurniture> furniture) {
     // The part is encoded straight from this builder: a large document's XML is copied as
     // few times as possible, since each copy is allocation the ParparVM collector pays for.
-    StringBuilder b =
+    var b =
         new StringBuilder(lastDocumentChars + lastDocumentChars / 8)
             .append("<?xml version=\"1.0\" encoding=\"UTF-8\"?><w:document xmlns:w=\"")
             .append(W)
@@ -705,7 +711,7 @@ static final char COLUMN_BREAK = '\u000B';
     b.append("<w:body>");
     int sectionIndex = 0;
     List<Section.Range> sections = d.sectionRanges();
-    List<int[]> contentsRanges = TableContents.ranges(d);
+    var contentsRanges = TableContents.ranges(d);
     int[] indexRange = DocumentIndex.range(d);
     if (indexRange != null) contentsRanges.add(indexRange);
     int[] authorities = TableAuthorities.range(d);
@@ -729,11 +735,10 @@ static final char COLUMN_BREAK = '\u000B';
                         : new FieldCode(contentsField.instruction).switches.containsKey("c")
                             ? DocxToc.START.replace("Table of Contents", "Table of Figures")
                             : DocxToc.START);
-      PageSpec sectionPage = sections.get(sectionIndex).raw.page;
-      if (block instanceof Paragraph) {
-        Section end = d.sections.get(block.id());
+      var sectionPage = sections.get(sectionIndex).raw.page;
+      if (block instanceof Paragraph paragraph) {
+        var end = d.sections.get(block.id());
         String sectionXml = end == null ? "" : sectionXml(end, furniture.get(sectionIndex++));
-        Paragraph paragraph = (Paragraph) block;
         String prefix = "", suffix = "";
         if (contents != null && contents[1] > contents[0] + 1) {
           if (blockIndex == contents[0])
@@ -752,9 +757,8 @@ static final char COLUMN_BREAK = '\u000B';
           if (blockIndex == contents[1] - 1) suffix = DocxToc.END_FIELD;
         }
         writeParagraph(b, paragraph, lists, tabs, links, comments, sectionXml, prefix, suffix);
-      } else if (block instanceof Picture) pictures.write(b, (Picture) block);
-      else if (block instanceof Table) {
-        Table t = (Table) block;
+      } else if (block instanceof Picture picture) pictures.write(b, picture);
+      else if (block instanceof Table t) {
         b.append("<w:tbl><w:tblPr>");
         TableFormats.sizingXml(b, t.format);
         float tableWidth = t.format.preferredWidth(sectionPage.contentWidth());
@@ -769,14 +773,14 @@ static final char COLUMN_BREAK = '\u000B';
           b.append("<w:tr>");
           TableFormats.rowXml(b, t.format, r);
           for (int c = 0; c < t.columns(); c++) {
-            Table.Merge span = t.span(r, c);
+            var span = t.span(r, c);
             if (span.column != c) continue;
             b.append("<w:tc><w:tcPr>");
             float cellWidth = 0;
             for (int column = c; column < c + span.columns; column++)
               cellWidth += tableWidth * t.format.columnFraction(column);
             TableFormats.cellXml(b, t.format.cell(span.row, span.column), cellWidth);
-            String flow = t.format.direction(span.row, span.column);
+            var flow = t.format.direction(span.row, span.column);
             if (!"lrTb".equals(flow)) b.append("<w:textDirection w:val=\"").append(flow).append("\"/>");
             if (span.columns > 1)
               b.append("<w:gridSpan w:val=\"").append(span.columns).append("\"/>");
@@ -806,10 +810,10 @@ static final char COLUMN_BREAK = '\u000B';
   }
 
   private static String sectionXml(Section section, DocxFurniture furniture) {
-    StringBuilder b = new StringBuilder("<w:sectPr>");
+    var b = new StringBuilder("<w:sectPr>");
     furniture.references(b);
     NoteFormats.write(b, section.notes, "w:");
-    PageSpec p = section.page;
+    var p = section.page;
     b.append("<w:type w:val=\"").append(section.start).append("\"/>");
     b.append("<w:pgSz w:w=\"")
         .append(Math.round(p.width * 20))
@@ -831,7 +835,7 @@ static final char COLUMN_BREAK = '\u000B';
         .append(Math.round(section.furniture.footerDistance * 20))
         .append("\"/>");
     DocxBorders.page(b, section.decor.borders);
-    PageDecor decor = section.decor;
+    var decor = section.decor;
     if (decor.lineCountBy > 0)
       b.append("<w:lnNumType w:countBy=\"").append(decor.lineCountBy).append("\" w:restart=\"")
           .append("page".equals(decor.lineRestart) ? "newPage" : "section".equals(decor.lineRestart) ? "newSection" : "continuous")
@@ -842,12 +846,12 @@ static final char COLUMN_BREAK = '\u000B';
       if (section.pageStart > 0) b.append(" w:start=\"").append(section.pageStart).append('"');
       b.append("/>");
     }
-    Columns c = section.columns;
+    var c = section.columns;
     if (!c.equals(Columns.ONE)) {
       b.append("<w:cols w:num=\"").append(c.count).append("\" w:space=\"")
           .append(Math.round(c.space * 20)).append("\" w:sep=\"").append(c.separator ? 1 : 0)
           .append("\" w:equalWidth=\"").append(c.equalWidth() ? 1 : 0).append("\"");
-      float[] w = c.widths();
+      var w = c.widths();
       if (w.length == 0) b.append("/>");
       else {
         b.append(">");
@@ -857,17 +861,17 @@ static final char COLUMN_BREAK = '\u000B';
         b.append("</w:cols>");
       }
     }
-    String vAlign = decor.layout("verticalAlign", "top");
+    var vAlign = decor.layout("verticalAlign", "top");
     if (!"top".equals(vAlign)) b.append("<w:vAlign w:val=\"").append(vAlign).append("\"/>");
-    String flow = decor.layout("textDirection", "lrTb");
+    var flow = decor.layout("textDirection", "lrTb");
     if (!"lrTb".equals(flow)) b.append("<w:textDirection w:val=\"").append(flow).append("\"/>");
     if ("true".equals(decor.layout("rtl", ""))) b.append("<w:bidi/>");
-    String grid = decor.layout("grid", "default");
+    var grid = decor.layout("grid", "default");
     if (!"default".equals(grid)) {
       b.append("<w:docGrid w:type=\"").append(grid).append('"');
-      String pitch = decor.layout("gridPitch", "");
+      var pitch = decor.layout("gridPitch", "");
       if (!pitch.isEmpty()) b.append(" w:linePitch=\"").append(Math.round(Float.parseFloat(pitch) * 20)).append('"');
-      String chars = decor.layout("charPitch", "");
+      var chars = decor.layout("charPitch", "");
       if (!chars.isEmpty())
         b.append(" w:charSpace=\"").append(Math.round(Float.parseFloat(chars) * 4096)).append('"');
       b.append("/>");
@@ -878,16 +882,16 @@ static final char COLUMN_BREAK = '\u000B';
   private static Section readSection(
       Map<String, byte[]> parts, Element e, long[] id, Set<String> warnings, DocxStyles styles)
       throws IOException {
-    PageSpec page = PageSpec.A4;
-    String start = "nextPage";
+    var page = PageSpec.A4;
+    var start = "nextPage";
     int pageStart = 0;
-    String numberFormat = "decimal";
-    Columns columns = Columns.ONE;
+    var numberFormat = "decimal";
+    var columns = Columns.ONE;
     if (e != null) {
       Element cols = Xml.child(e, "cols");
       if (cols != null) {
         try {
-          List<Element> each = Xml.children(cols, "col");
+          var each = Xml.children(cols, "col");
           boolean equal = !"0".equals(Xml.attr(cols, "equalWidth", "1"))
               && !"false".equals(Xml.attr(cols, "equalWidth", "1"));
           int count = Integer.parseInt(Xml.attr(cols, "num", equal || each.isEmpty() ? "1" : "" + each.size()));
@@ -965,7 +969,7 @@ static final char COLUMN_BREAK = '\u000B';
             warnings,
             DocxLists.read(parts.get("word/numbering.xml"), warnings),
             styles);
-    PageDecor decor = PageDecor.NONE;
+    var decor = PageDecor.NONE;
     Element pageBorders = e == null ? null : Xml.child(e, "pgBorders");
     if (pageBorders != null) {
       try {
@@ -1051,9 +1055,9 @@ static final char COLUMN_BREAK = '\u000B';
         && !Character.isWhitespace(p.text.charAt(0))) {
       // Word keeps a drop cap as its own framed paragraph holding the letter.
       int skip = Graphemes.next(p.text, 0);
-      TextStyle base = p.text.styleAt(0);
+      var base = p.text.styleAt(0);
       float size = base.size * ((p.format.dropLines() - 1) * 1.2f + .9f) / .7f;
-      RichText letter = p.text.slice(0, skip).format(0, skip, "size", String.valueOf(Math.round(size)));
+      var letter = p.text.slice(0, skip).format(0, skip, "size", String.valueOf(Math.round(size)));
       if (!p.format.dropFont().isEmpty()) letter = letter.format(0, skip, "font", p.format.dropFont());
       writeParagraph(b, new Paragraph(p.id + "-dropcap", letter).with("dropCap", p.format.dropCap)
           .with("before", "0").with("after", "0"), lists, tabs, links, comments, "", "", "");
@@ -1103,14 +1107,14 @@ static final char COLUMN_BREAK = '\u000B';
     tabs.write(b, p);
     if (p.breakRevision != null) {
       b.append("<w:rPr>");
-      for (Revision r = p.breakRevision; r != null; r = r.previous) {
+      for (var r = p.breakRevision; r != null; r = r.previous) {
         RevisionFormats.start(b, r.previous(null));
         RevisionFormats.end(b, r.previous(null));
       }
       b.append("</w:rPr>");
     }
     if (p.formatRevision != null) {
-      Revision change = p.formatRevision;
+      var change = p.formatRevision;
       b.append("<w:pPrChange w:id=\"")
           .append(Xml.escape(change.id))
           .append("\" w:author=\"")
@@ -1118,10 +1122,10 @@ static final char COLUMN_BREAK = '\u000B';
           .append("\" w:date=\"")
           .append(Xml.escape(change.date))
           .append("\">");
-      StringBuilder previous = new StringBuilder();
+      var previous = new StringBuilder();
       writeParagraph(
           previous, p.previousFormat, lists, tabs, links, new DocxComments(Document.empty()));
-      String content = previous.toString();
+      var content = previous.toString();
       b.append(content.substring(content.indexOf("<w:pPr>"), content.lastIndexOf("</w:pPr>") + 8));
       b.append("</w:pPrChange>");
     }
@@ -1136,7 +1140,7 @@ static final char COLUMN_BREAK = '\u000B';
    * Run properties are written in full on every run, and a document has few distinct styles:
    * reuse the markup per style. TextStyle is immutable with a cached hash.
    */
-  private static final Map<TextStyle, String> RUN_PROPERTIES = new HashMap<TextStyle, String>();
+  private static final Map<TextStyle, String> RUN_PROPERTIES = new HashMap<>();
 
   static void writeRunProperties(StringBuilder b, TextStyle s) {
     String cached;
@@ -1144,7 +1148,7 @@ static final char COLUMN_BREAK = '\u000B';
       cached = RUN_PROPERTIES.get(s);
     }
     if (cached == null) {
-      StringBuilder x = new StringBuilder(640);
+      var x = new StringBuilder(640);
       buildRunProperties(x, s);
       cached = x.toString();
       synchronized (RUN_PROPERTIES) {

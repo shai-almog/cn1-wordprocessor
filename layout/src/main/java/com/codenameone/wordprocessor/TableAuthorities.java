@@ -15,9 +15,9 @@ public final class TableAuthorities {
       throw new IllegalArgumentException("Enter a citation of 1 to 2000 characters");
     for (int i = 0; i < entry.length(); i++) if (entry.charAt(i) < 32 || entry.charAt(i) >= 127 && entry.charAt(i) <= 159)
       throw new IllegalArgumentException("A citation cannot contain control characters");
-    String instruction = "TA \\l \"" + entry.trim().replace("\\", "\\\\").replace("\"", "\\\"") + "\"";
+    var instruction = "TA \\l \"" + entry.trim().replace("\\", "\\\\").replace("\"", "\\\"") + "\"";
     session.transact(s -> {
-      Selection selected = s.selection(); s.select(selected.endBlock(), selected.end(), selected.end());
+      var selected = s.selection(); s.select(selected.endBlock(), selected.end(), selected.end());
       s.insertField(new InlineField(instruction, "", false, false));
     });
   }

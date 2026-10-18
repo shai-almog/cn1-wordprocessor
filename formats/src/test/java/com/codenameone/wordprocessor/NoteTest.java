@@ -8,7 +8,7 @@ import org.junit.Test;
 
 public class NoteTest {
   private Session sample() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("Body "); s.insertNote("footnote", "Footnote text", "");
     s.replace(" more "); s.insertNote("endnote", "Endnote text", "");
     s.replace(" custom "); s.insertNote("footnote", "Custom text", "*");
@@ -16,13 +16,13 @@ public class NoteTest {
   }
 
   @Test public void nativeAndDocxPreserveAtomicStoriesAndCustomMarks() throws Exception {
-    Session s = sample();
+    var s = sample();
     String nativeXml = DocumentXml.write(s.document());
     assertEquals(nativeXml, DocumentXml.write(DocumentXml.read(nativeXml)));
-    ByteArrayOutputStream out = new ByteArrayOutputStream(); Docx.write(s.document(), out);
+    var out = new ByteArrayOutputStream(); Docx.write(s.document(), out);
     Docx.Opened opened = Docx.read(new ByteArrayInputStream(out.toByteArray()));
     assertEquals(Collections.emptyList(), opened.warnings);
-    List<Note> notes = Notes.all(opened.document);
+    var notes = Notes.all(opened.document);
     assertEquals(3, notes.size());
     assertEquals("Footnote text", notes.get(0).plainText());
     assertEquals("endnote", notes.get(1).kind);
@@ -33,7 +33,7 @@ public class NoteTest {
   }
 
   @Test public void formattingDeletionCopyAndUndoRetainNoteIdentity() {
-    Session s = sample(); Document original = s.document();
+    var s = sample(); var original = s.document();
     s.select(0, 0, s.document().paragraph(0).text.length());
     s.format("bold", "true"); s.changeCase("upper");
     assertEquals(3, Notes.all(s.document()).size());
@@ -43,15 +43,15 @@ public class NoteTest {
     s.undo(); s.undo(); assertSame(original, s.document());
     s.select(0, s.document().paragraph(0).text.length(), s.document().paragraph(0).text.length());
     s.paste(original);
-    List<Note> copies = Notes.all(s.document());
+    var copies = Notes.all(s.document());
     assertEquals(6, copies.size());
-    Set<String> ids = new HashSet<String>();
+    var ids = new HashSet<String>();
     for (Note n : copies) assertTrue(ids.add(n.id));
     assertEquals("2", copies.get(3).label);
   }
 
   @Test public void textExportsIncludeNoteStoriesAndHtmlLinks() {
-    Session s = sample();
+    var s = sample();
     String html = TextFormats.html(s.document());
     assertTrue(html.contains("href=\"#note-"));
     assertTrue(html.contains("Footnote text")); assertTrue(html.contains("Endnote text"));
@@ -61,22 +61,22 @@ public class NoteTest {
   }
 
   @Test public void fieldsInsideNotesResolveAndRepeatedLayoutsReuseMeasurements() {
-    Session s = sample();
-    Note note = Notes.all(s.document()).get(0); Paragraph p = note.paragraphs.get(0);
+    var s = sample();
+    var note = Notes.all(s.document()).get(0); var p = note.paragraphs.get(0);
     s.updateNote(note.id, note.paragraphs(note.paragraphs.set(0,
         p.text(RichText.field(new InlineField("PAGE", "?", false, false), TextStyle.DEFAULT)))));
-    LayoutEngine engine = new LayoutEngine(new PdfMetrics());
-    LayoutEngine.Result first = engine.layout(s.document(), 0);
+    var engine = new LayoutEngine(new PdfMetrics());
+    var first = engine.layout(s.document(), 0);
     s.mapFields(DocumentFields.resolver(s.document(), first, Collections.<String,String>emptyMap()));
     assertEquals("1", Notes.all(s.document()).get(0).plainText());
     engine.layout(s.document(), 1);
-    LayoutEngine.Result again = engine.layout(s.document(), 2);
+    var again = engine.layout(s.document(), 2);
     assertEquals(0, again.measuredParagraphs);
   }
 
   @Test public void referenceSuperscriptDoesNotLeakIntoTypingOrNewParagraphs() {
     for (boolean tracked : new boolean[] {false, true}) {
-      Session s = new Session(Document.empty().trackChanges(tracked));
+      var s = new Session(Document.empty().trackChanges(tracked));
       s.replace("Before "); s.insertNote("footnote", "Note", "");
       s.replace(" after\nNext paragraph");
       assertEquals("baseline", s.document().paragraph(0).text.styleAt(8).script);
@@ -84,13 +84,13 @@ public class NoteTest {
       s.select(0, 8, 8); s.replace("X");
       assertEquals("baseline", s.document().paragraph(0).text.styleAt(8).script);
     }
-    Session cell = new Session(Document.empty()); cell.insertTable(1, 1); cell.enterCell(1, 0, 0);
+    var cell = new Session(Document.empty()); cell.insertTable(1, 1); cell.enterCell(1, 0, 0);
     cell.format("bold", "true"); cell.replace("Bold");
     assertTrue(cell.editingDocument().paragraph(0).text.styleAt(0).bold);
   }
 
   @Test public void cellNotesPersistAndDoNotOverlapTables() throws Exception {
-    Session s = new Session(Document.empty().page(new PageSpec(300, 220, 20, 20, 20, 20)));
+    var s = new Session(Document.empty().page(new PageSpec(300, 220, 20, 20, 20, 20)));
     s.insertTable(4, 2);
     int table = -1;
     for (int i = 0; i < s.document().blocks.size(); i++) if (s.document().blocks.get(i) instanceof Table) table = i;
@@ -100,7 +100,7 @@ public class NoteTest {
     }
     s.leaveCell();
     assertEquals(4, Notes.all(s.document()).size());
-    LayoutEngine.Result result = new LayoutEngine(new PdfMetrics()).layout(s.document(), 0);
+    var result = new LayoutEngine(new PdfMetrics()).layout(s.document(), 0);
     int lines = 0;
     for (LayoutEngine.Page page : result.pages) {
       lines += page.notes.size();
@@ -110,56 +110,56 @@ public class NoteTest {
       for (LayoutEngine.Line line : page.lines) assertTrue(line.y + line.height <= top);
     }
     assertEquals(8, lines);
-    ByteArrayOutputStream out = new ByteArrayOutputStream(); Docx.write(s.document(), out);
+    var out = new ByteArrayOutputStream(); Docx.write(s.document(), out);
     assertEquals(4, Notes.all(Docx.read(new ByteArrayInputStream(out.toByteArray())).document).size());
-    String id = Notes.all(s.document()).get(2).id;
+    var id = Notes.all(s.document()).get(2).id;
     s.selectNote(id); assertTrue(s.inCell());
     s.deleteNote(id); assertEquals(3, Notes.all(s.document()).size());
     s.undo(); assertEquals(4, Notes.all(s.document()).size());
   }
 
   @Test public void trackedDeletionAndNoteStoryEditsCanBeRejected() throws Exception {
-    Session s = sample(); String id = Notes.all(s.document()).get(0).id;
+    var s = sample(); var id = Notes.all(s.document()).get(0).id;
     s.trackChanges(true); s.deleteNote(id);
     assertEquals(3, Notes.all(s.document()).size());
     s.resolveRevision(null, false); assertEquals(3, Notes.all(s.document()).size());
     s.deleteNote(id); s.resolveRevision(null, true); assertEquals(2, Notes.all(s.document()).size());
-    Note note = Notes.all(s.document()).get(0);
-    Paragraph p = note.paragraphs.get(0);
-    Revision change = new Revision("9000", "insert", "Reviewer", "2026-10-15T00:00:00Z");
+    var note = Notes.all(s.document()).get(0);
+    var p = note.paragraphs.get(0);
+    var change = new Revision("9000", "insert", "Reviewer", "2026-10-15T00:00:00Z");
     s.updateNote(note.id, note.paragraphs(note.paragraphs.set(0,
         p.text(p.text.concat(RichText.of(" Added", TextStyle.DEFAULT.revision(change)))))));
     assertTrue(Revisions.list(s.document()).stream().anyMatch(c -> c.story.startsWith("note:")));
     assertTrue(Revisions.nextId(s.document()) > 9000);
-    ByteArrayOutputStream out = new ByteArrayOutputStream(); Docx.write(s.document(), out);
-    Document reopened = Docx.read(new ByteArrayInputStream(out.toByteArray())).document;
+    var out = new ByteArrayOutputStream(); Docx.write(s.document(), out);
+    var reopened = Docx.read(new ByteArrayInputStream(out.toByteArray())).document;
     assertTrue(Notes.all(reopened).get(0).plainText().endsWith(" Added"));
     s.resolveRevision("9000", false);
     assertEquals(note.plainText(), Notes.all(s.document()).get(0).plainText());
   }
 
   @Test public void longNoteStartsInAvailableSpaceInsteadOfBlankingThePage() {
-    Session s = new Session(Document.empty().page(new PageSpec(220, 200, 20, 20, 20, 20)));
+    var s = new Session(Document.empty().page(new PageSpec(220, 200, 20, 20, 20, 20)));
     s.replace("First paragraph.\nAnchor ");
-    StringBuilder text = new StringBuilder();
+    var text = new StringBuilder();
     for (int i = 0; i < 40; i++) text.append("Continued ").append(i).append('\n');
     s.insertNote("footnote", text.toString(), "");
-    LayoutEngine.Result layout = new LayoutEngine(new PdfMetrics()).layout(s.document(), 0);
+    var layout = new LayoutEngine(new PdfMetrics()).layout(s.document(), 0);
     assertEquals(2, layout.pages.get(0).lines.size());
     assertTrue(layout.pages.get(0).notes.size() > 5);
   }
 
   @Test public void noteTextRendersAtPageBottomAndLongNotesContinue() throws Exception {
-    Session s = new Session(Document.empty().page(new PageSpec(220, 200, 20, 20, 20, 20)));
+    var s = new Session(Document.empty().page(new PageSpec(220, 200, 20, 20, 20, 20)));
     s.replace("Anchor");
-    StringBuilder text = new StringBuilder();
+    var text = new StringBuilder();
     for (int i = 0; i < 25; i++) text.append("Line ").append(i).append('\n');
     s.insertNote("footnote", text.toString(), "");
     LayoutEngine engine = PdfExporter.layoutEngine(BundledFonts.provider(path -> getClass().getResourceAsStream(path)));
-    LayoutEngine.Result result = engine.layout(s.document(), 0);
+    var result = engine.layout(s.document(), 0);
     assertTrue(result.pages.size() > 1);
     assertFalse(result.pages.get(0).notes.isEmpty());
-    StringBuilder all = new StringBuilder();
+    var all = new StringBuilder();
     for (LayoutEngine.Page p : result.pages) {
       float bodyEnd = p.spec.top;
       for (LayoutEngine.Line line : p.lines) bodyEnd = Math.max(bodyEnd, line.y + line.height);

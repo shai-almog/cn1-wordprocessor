@@ -7,7 +7,7 @@ public final class CrossReferences {
   private CrossReferences() {}
 
   public static Map<String, String> targets(Document d, String kind) {
-    Map<String, String> result = new LinkedHashMap<String, String>();
+    var result = new LinkedHashMap<String, String>();
     if ("bookmark".equals(kind)) {
       for (Bookmark mark : d.bookmarks.values()) result.put(mark.name, mark.startId);
       return result;
@@ -15,16 +15,15 @@ public final class CrossReferences {
     if (!Arrays.asList("heading", "figure", "table", "equation").contains(kind))
       throw new IllegalArgumentException("Unknown reference type");
     for (Block block : d.blocks)
-      if (block instanceof Paragraph) {
-        Paragraph p = (Paragraph) block;
-        String text = p.text.plainText().trim();
+      if (block instanceof Paragraph p) {
+        var text = p.text.plainText().trim();
         boolean match =
             "heading".equals(kind)
                 ? SequenceFields.headingLevel(p.style) > 0
                 : "Caption".equals(p.style)
                     && text.startsWith(Character.toUpperCase(kind.charAt(0)) + kind.substring(1));
         if (match && !text.isEmpty()) {
-          String label = text;
+          var label = text;
           for (int count = 2; result.containsKey(label); count++) label = text + " [" + count + "]";
           result.put(label, p.id);
         }
@@ -38,16 +37,16 @@ public final class CrossReferences {
       throw new IllegalArgumentException("Insert cross-references in body text");
     if (!Arrays.asList("text", "page", "number", "aboveBelow").contains(show))
       throw new IllegalArgumentException("Unknown reference display");
-    String paragraphId = targets(session.document(), kind).get(target);
+    var paragraphId = targets(session.document(), kind).get(target);
     if (paragraphId == null)
       throw new IllegalArgumentException("Unknown reference target: " + target);
     session.transact(
         s -> {
-          String name = target;
+          var name = target;
           if (!"bookmark".equals(kind)) {
-            Document d = s.document();
+            var d = s.document();
             int block = ReviewComment.block(d, paragraphId);
-            Paragraph p = d.paragraph(block);
+            var p = d.paragraph(block);
             int end = p.text.length();
             if ("number".equals(show)) {
               int colon = p.text.toString().indexOf(':');
@@ -68,13 +67,13 @@ public final class CrossReferences {
               do {
                 name = "_Ref" + next++;
               } while (d.bookmarks.containsKey(name));
-              Selection at = s.selection();
+              var at = s.selection();
               s.select(block, 0, end);
               s.addBookmark(name);
               s.selectRange(at.anchorBlock, at.anchor, at.block, at.caret);
             }
           }
-          String instruction =
+          var instruction =
               ("page".equals(show) ? "PAGEREF " : "REF ")
                   + name
                   + " \\h"
@@ -83,7 +82,7 @@ public final class CrossReferences {
           if (!s.document().bookmarks.containsKey(name))
             throw new IllegalArgumentException("The selection removed the reference target");
           for (int pass = 0; pass < 4; pass++) {
-            Document before = s.document();
+            var before = s.document();
             s.mapFields(
                 DocumentFields.resolver(
                     before,
@@ -98,7 +97,7 @@ public final class CrossReferences {
       Document d, LayoutEngine.Result layout, Map<String, List<LayoutEngine.Line>> lines,
       String paragraph, int offset, InlineField field) {
     try {
-      return resolve(d, layout, lines, paragraph, offset, field, new HashSet<String>());
+      return resolve(d, layout, lines, paragraph, offset, field, new HashSet<>());
     } catch (ReferenceError error) {
       return field.result(error.getMessage());
     }
@@ -119,10 +118,10 @@ public final class CrossReferences {
       InlineField field,
       Set<String> visiting) {
     if (field.locked) return field;
-    FieldCode code = new FieldCode(field.instruction);
+    var code = new FieldCode(field.instruction);
     if (!("REF".equals(code.name) || "PAGEREF".equals(code.name)) || code.arguments.isEmpty())
       return field;
-    Bookmark mark = d.bookmarks.get(code.arguments.get(0));
+    var mark = d.bookmarks.get(code.arguments.get(0));
     if (mark == null) return field.result("Error! Reference source not found.");
     String result;
     if ("PAGEREF".equals(code.name)) {
@@ -144,11 +143,10 @@ public final class CrossReferences {
       if (code.switches.containsKey("n")
           || code.switches.containsKey("r")
           || code.switches.containsKey("w")) {
-        ListNumbers numbers = new ListNumbers();
+        var numbers = new ListNumbers();
         for (Block block : d.blocks)
-          if (block instanceof Paragraph) {
-            Paragraph p = (Paragraph) block;
-            String label = numbers.next(p);
+          if (block instanceof Paragraph p) {
+            var label = numbers.next(p);
             if (p.id.equals(mark.startId)) {
               result = label.isEmpty() ? "0" : label.substring(0, label.length() - 1);
               break;
@@ -163,7 +161,7 @@ public final class CrossReferences {
           visiting.remove(mark.name);
         }
       }
-      String format = code.switches.get("*");
+      var format = code.switches.get("*");
       if ("Upper".equalsIgnoreCase(format)) result = result.toUpperCase();
       if ("Lower".equalsIgnoreCase(format)) result = result.toLowerCase();
     }
@@ -174,11 +172,11 @@ public final class CrossReferences {
       Document d, LayoutEngine.Result layout, Map<String, List<LayoutEngine.Line>> lines,
       Bookmark mark, Set<String> visiting) {
     int first = ReviewComment.block(d, mark.startId), last = ReviewComment.block(d, mark.endId);
-    final StringBuilder out = new StringBuilder();
+    final var out = new StringBuilder();
     for (int i = first; i <= last; i++) {
       if (i > first) out.append('\n');
       if (!(d.blocks.get(i) instanceof Paragraph)) continue;
-      final Paragraph p = d.paragraph(i);
+      final var p = d.paragraph(i);
       final int start = i == first ? mark.start : 0;
       int end = i == last ? mark.end : p.text.length();
       p.text

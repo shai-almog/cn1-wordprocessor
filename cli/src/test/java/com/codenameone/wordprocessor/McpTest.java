@@ -9,7 +9,7 @@ import org.junit.Test;
 
 public class McpTest {
   private McpServer server(Path root) throws Exception {
-    McpServer s = new McpServer(root);
+    var s = new McpServer(root);
     s.handle(
         Json.object(
             "jsonrpc",
@@ -42,7 +42,7 @@ public class McpTest {
   @Test
   public void protocolLifecycleAndDocumentRoundTrip() throws Exception {
     Path dir = Files.createTempDirectory("wp-mcp-");
-    McpServer s = server(dir);
+    var s = server(dir);
     assertEquals(
         false, call(s, "text_insert", Json.object("text", "Hello from MCP")).get("isError"));
     assertEquals(false, call(s, "save_document", Json.object("path", "out.docx")).get("isError"));
@@ -56,7 +56,7 @@ public class McpTest {
     Path dir = Files.createTempDirectory("wp-root-"),
         outside = Files.createTempDirectory("wp-outside-");
     Files.createSymbolicLink(dir.resolve("link"), outside);
-    McpServer s = server(dir);
+    var s = server(dir);
     assertEquals(
         true, call(s, "save_document", Json.object("path", "../escape.txt")).get("isError"));
     assertEquals(
@@ -67,16 +67,18 @@ public class McpTest {
   @Test
   public void stdioHasOnlyJsonResponses() throws Exception {
     Path dir = Files.createTempDirectory("wp-stdio-");
-    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    var out = new ByteArrayOutputStream();
     new McpServer(dir)
         .serve(
             new ByteArrayInputStream(
-                ("{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\",\"params\":{}}\n"
-                        + "{\"jsonrpc\":\"2.0\",\"method\":\"notifications/initialized\"}\n"
-                        + "{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"tools/list\"}\n")
+                ("""
+                        {"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}
+                        {"jsonrpc":"2.0","method":"notifications/initialized"}
+                        {"jsonrpc":"2.0","id":2,"method":"tools/list"}
+                        """)
                     .getBytes("UTF-8")),
             out);
-    String[] replies = out.toString("UTF-8").split("\n");
+    var replies = out.toString("UTF-8").split("\n");
     assertEquals(2, replies.length);
     assertEquals("2.0", Json.parse(replies[0]).get("jsonrpc"));
     assertTrue(replies[1].contains("preview_macro"));

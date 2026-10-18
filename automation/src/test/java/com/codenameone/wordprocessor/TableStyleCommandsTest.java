@@ -13,19 +13,19 @@ public class TableStyleCommandsTest {
   private final Commands commands = new Commands();
 
   private Object run(Session s, String id, Object... kv) {
-    Map<String, Object> a = new LinkedHashMap<String, Object>();
+    var a = new LinkedHashMap<String, Object>();
     for (int i = 0; i < kv.length; i += 2) a.put((String) kv[i], kv[i + 1]);
     return commands.execute(s, id, a);
   }
 
   private static Table table(Session s) {
-    for (Block b : s.document().blocks) if (b instanceof Table) return (Table) b;
+    for (Block b : s.document().blocks) if (b instanceof Table table) return table;
     throw new AssertionError("no table");
   }
 
   @Test
   public void customStylesLookAndRoundTrip() throws Exception {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     run(s, "table.insert", "rows", 4, "columns", 3);
     s.enterCell(s.document().blocks.size() - 1 > 0 ? indexOfTable(s) : 0, 1, 1);
     run(s, "table.newStyle", "name", "Ocean", "header", "003366", "band", "cce0ff", "border", "336699", "width", 1, "sides", "horizontal");
@@ -43,16 +43,16 @@ public class TableStyleCommandsTest {
     assertTrue(((List<?>) run(s, "table.styles")).contains("Ocean"));
     run(s, "table.rtl", "value", true);
     run(s, "table.textDirection", "value", "btLr");
-    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    var out = new ByteArrayOutputStream();
     Docx.write(s.document(), out);
-    Document back = Docx.read(new ByteArrayInputStream(out.toByteArray())).document;
+    var back = Docx.read(new ByteArrayInputStream(out.toByteArray())).document;
     Table bt = null;
-    for (Block b : back.blocks) if (b instanceof Table) bt = (Table) b;
+    for (Block b : back.blocks) if (b instanceof Table table) bt = table;
     assertEquals("true", bt.format.prop("rtl", ""));
     assertEquals("btLr", bt.format.direction(1, 1));
     assertEquals("bandedRows", bt.format.prop("look", ""));
     Table nt = null;
-    for (Block b : DocumentXml.read(DocumentXml.write(s.document())).blocks) if (b instanceof Table) nt = (Table) b;
+    for (Block b : DocumentXml.read(DocumentXml.write(s.document())).blocks) if (b instanceof Table table) nt = table;
     assertEquals(table(s).format.props(), nt.format.props());
     run(s, "table.deleteStyle", "name", "Ocean");
     assertEquals("", table(s).format.prop("style", ""));
@@ -70,7 +70,7 @@ public class TableStyleCommandsTest {
 
   @Test
   public void painterDrawAndEraser() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     run(s, "table.insert", "rows", 2, "columns", 2);
     int block = indexOfTable(s);
     s.enterCell(block, 0, 0);

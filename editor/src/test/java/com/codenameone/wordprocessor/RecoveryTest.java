@@ -9,8 +9,8 @@ import org.junit.Test;
 public class RecoveryTest {
   @Test
   public void tornWriteRecoversPreviousGeneration() throws Exception {
-    final Map<String, byte[]> data = new HashMap<String, byte[]>();
-    RecoveryStore.Backend b =
+    final var data = new HashMap<String, byte[]>();
+    var b =
         new RecoveryStore.Backend() {
           public byte[] read(String k) {
             return data.get(k);
@@ -20,8 +20,8 @@ public class RecoveryTest {
             data.put(k, bytes);
           }
         };
-    RecoveryStore store = new RecoveryStore(b);
-    Session s = new Session(Document.empty());
+    var store = new RecoveryStore(b);
+    var s = new Session(Document.empty());
     s.replace("first");
     store.save(s.document());
     s.replace(" second");
@@ -32,8 +32,8 @@ public class RecoveryTest {
 
   @Test
   public void checksumDetectsCorruption() throws Exception {
-    final Map<String, byte[]> data = new HashMap<String, byte[]>();
-    RecoveryStore store =
+    final var data = new HashMap<String, byte[]>();
+    var store =
         new RecoveryStore(
             new RecoveryStore.Backend() {
               public byte[] read(String k) {
@@ -45,15 +45,15 @@ public class RecoveryTest {
               }
             });
     store.save(Document.empty());
-    byte[] bytes = data.get("wordprocessor-recovery-1");
+    var bytes = data.get("wordprocessor-recovery-1");
     bytes[bytes.length - 10] ^= 1;
     assertNull(store.recover());
   }
 
   @Test
   public void delayedAutosaveCannotOverwriteNewerSave() throws Exception {
-    final Map<String, byte[]> data = new HashMap<String, byte[]>();
-    RecoveryStore store =
+    final var data = new HashMap<String, byte[]>();
+    var store =
         new RecoveryStore(
             new RecoveryStore.Backend() {
               public byte[] read(String k) {
@@ -64,9 +64,9 @@ public class RecoveryTest {
                 data.put(k, bytes);
               }
             });
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("old");
-    Document old = s.document();
+    var old = s.document();
     s.replace(" latest");
     store.save(s.document(), null, 2);
     store.save(old, null, 1);

@@ -9,7 +9,7 @@ import org.junit.Test;
 
 public class LineSpacingFormatTest {
   private Document fixture(String rule, String value) {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("first\nsecond");
     s.selectRange(0, 0, 1, 6);
     s.paragraph("lineRule", rule);
@@ -18,7 +18,7 @@ public class LineSpacingFormatTest {
   }
 
   private byte[] docx(Document d) throws Exception {
-    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    var out = new ByteArrayOutputStream();
     Docx.write(d, out);
     return out.toByteArray();
   }
@@ -28,18 +28,18 @@ public class LineSpacingFormatTest {
   }
 
   private byte[] replace(byte[] data, String path, String from, String to) throws Exception {
-    ZipInputStream in = new ZipInputStream(new ByteArrayInputStream(data));
-    ByteArrayOutputStream bytes = new ByteArrayOutputStream();
-    ZipOutputStream out = new ZipOutputStream(bytes);
+    var in = new ZipInputStream(new ByteArrayInputStream(data));
+    var bytes = new ByteArrayOutputStream();
+    var out = new ZipOutputStream(bytes);
     ZipEntry e;
     while ((e = in.getNextEntry()) != null) {
-      ByteArrayOutputStream value = new ByteArrayOutputStream();
+      var value = new ByteArrayOutputStream();
       byte[] b = new byte[4096];
       int n;
       while ((n = in.read(b)) != -1) value.write(b, 0, n);
-      byte[] v = value.toByteArray();
+      var v = value.toByteArray();
       if (e.getName().equals(path)) {
-        String text = new String(v, "UTF-8");
+        var text = new String(v, "UTF-8");
         assertTrue(text.contains(from));
         v = text.replace(from, to).getBytes("UTF-8");
       }
@@ -55,10 +55,10 @@ public class LineSpacingFormatTest {
   @Test
   public void allRulesRoundTripWithoutConversionWarnings() throws Exception {
     for (String rule : new String[] {"auto", "atLeast", "exact"}) {
-      Document d = fixture(rule, rule.equals("auto") ? "1.5" : "18.5");
+      var d = fixture(rule, rule.equals("auto") ? "1.5" : "18.5");
       String xml = DocumentXml.write(d);
       assertEquals(xml, DocumentXml.write(DocumentXml.read(xml)));
-      Docx.Opened opened = read(docx(d));
+      var opened = read(docx(d));
       assertTrue(opened.warnings.toString(), opened.warnings.isEmpty());
       for (int i = 0; i < 2; i++) {
         assertEquals(rule, opened.document.paragraph(i).format.lineRule);
@@ -69,40 +69,40 @@ public class LineSpacingFormatTest {
 
   @Test
   public void legacyNativeFilesRetainMultiples() throws Exception {
-    String xml = DocumentXml.write(fixture("auto", "1.5")).replace(" lineRule=\"auto\"", "");
-    Paragraph p = DocumentXml.read(xml).paragraph(0);
+    var xml = DocumentXml.write(fixture("auto", "1.5")).replace(" lineRule=\"auto\"", "");
+    var p = DocumentXml.read(xml).paragraph(0);
     assertEquals("auto", p.format.lineRule);
     assertEquals(1.5f, p.lineSpacing, 0);
   }
 
   @Test
   public void beforeAfterOverridesDoNotDiscardInheritedLineRuleOrAmount() throws Exception {
-    Session s = new Session(fixture("exact", "24"));
+    var s = new Session(fixture("exact", "24"));
     s.defineStyle(
         new ParagraphStyle("Normal", "Normal", s.document().paragraph(0), TextStyle.DEFAULT));
-    byte[] data =
+    var data =
         replace(docx(s.document()), "word/document.xml", "w:line=\"480\" w:lineRule=\"exact\"", "");
-    Paragraph p = read(data).document.paragraph(0);
+    var p = read(data).document.paragraph(0);
     assertEquals("exact", p.format.lineRule);
     assertEquals(24, p.lineSpacing, 0);
   }
 
   @Test
   public void explicitRuleAndLineOverrideStyleIndependently() throws Exception {
-    byte[] data =
+    var data =
         replace(
             docx(fixture("exact", "24")),
             "word/document.xml",
             "w:lineRule=\"exact\"",
             "w:lineRule=\"atLeast\"");
-    Paragraph p = read(data).document.paragraph(0);
+    var p = read(data).document.paragraph(0);
     assertEquals("atLeast", p.format.lineRule);
     assertEquals(24, p.lineSpacing, 0);
   }
 
   @Test
   public void trackedSpacingRetainsPreviousRuleInBothFormats() throws Exception {
-    Session s = new Session(fixture("auto", "1.5"));
+    var s = new Session(fixture("auto", "1.5"));
     s.trackChanges(true);
     s.selectRange(0, 0, 1, 6);
     s.transact(
@@ -114,7 +114,7 @@ public class LineSpacingFormatTest {
         new Document[] {
           DocumentXml.read(DocumentXml.write(s.document())), read(docx(s.document())).document
         }) {
-      Session review = new Session(d);
+      var review = new Session(d);
       review.resolveRevision(null, false);
       for (int i = 0; i < 2; i++) {
         assertEquals("auto", review.document().paragraph(i).format.lineRule);
@@ -125,8 +125,8 @@ public class LineSpacingFormatTest {
 
   @Test
   public void pdfUsesExactClippingAndKeepsStoredText() throws Exception {
-    Document d = fixture("exact", "6");
-    String pdf = new String(PdfExporter.write(d), "ISO-8859-1");
+    var d = fixture("exact", "6");
+    var pdf = new String(PdfExporter.write(d), "ISO-8859-1");
     assertTrue(pdf.contains(" re W n\n"));
     assertTrue(pdf.contains("first"));
     assertTrue(pdf.contains("second"));

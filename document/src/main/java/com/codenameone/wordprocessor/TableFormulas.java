@@ -9,25 +9,24 @@ public final class TableFormulas {
   public static String calculate(Table table, int row, int column, String instruction) {
     if (row < 0 || row >= table.rows() || column < 0 || column >= table.columns())
       throw new IllegalArgumentException("Formula cell is outside the table");
-    Table.Merge owner = table.span(row, column);
+    var owner = table.span(row, column);
     return new Evaluation(table).formula(owner.row, owner.column, instruction);
   }
 
   public static Session.FieldResolver resolver(Document document) {
-    final Map<String, Location> paragraphs = new HashMap<String, Location>();
+    final var paragraphs = new HashMap<String, Location>();
     for (Block block : document.blocks)
-      if (block instanceof Table) {
-        Table table = (Table) block;
-        Evaluation evaluation = new Evaluation(table);
+      if (block instanceof Table table) {
+        var evaluation = new Evaluation(table);
         for (int r = 0; r < table.rows(); r++)
           for (int c = 0; c < table.columns(); c++) {
             if (table.covered(r, c)) continue;
-            Location location = new Location(evaluation, r, c);
+            var location = new Location(evaluation, r, c);
             for (Paragraph p : table.cell(r, c)) paragraphs.put(p.id, location);
           }
       }
     return (paragraph, offset, field) -> {
-      Location at = paragraphs.get(paragraph);
+      var at = paragraphs.get(paragraph);
       if (at == null || field.locked || !supported(field.instruction)) return field;
       try {
         return field.result(at.evaluation.formula(at.row, at.column, field.instruction));
@@ -53,7 +52,7 @@ public final class TableFormulas {
     if (!s.startsWith("=")) return false;
     int open = s.indexOf('('), close = s.lastIndexOf(')');
     if (close > open) {
-      String tail = s.substring(close + 1).trim();
+      var tail = s.substring(close + 1).trim();
       if (!tail.isEmpty() && !tail.equals("\\* MERGEFORMAT")) return false;
     }
     return open > 1 && operation(s.substring(1, open).trim());
@@ -70,7 +69,7 @@ public final class TableFormulas {
 
   // Formula keywords are ASCII identifiers regardless of the user's system language.
   private static String upperAscii(String value) {
-    StringBuilder result = new StringBuilder(value.length());
+    var result = new StringBuilder(value.length());
     for (int i = 0; i < value.length(); i++) {
       char c = value.charAt(i);
       result.append(c >= 'a' && c <= 'z' ? (char) (c - 'a' + 'A') : c);
@@ -80,8 +79,8 @@ public final class TableFormulas {
 
   private static final class Evaluation {
     final Table table;
-    final Map<Integer, Double> numbers = new HashMap<Integer, Double>();
-    final Set<Integer> active = new HashSet<Integer>();
+    final Map<Integer, Double> numbers = new HashMap<>();
+    final Set<Integer> active = new HashSet<>();
 
     Evaluation(Table value) {
       table = value;
@@ -97,11 +96,11 @@ public final class TableFormulas {
         throw new IllegalArgumentException("Unsupported formula or number format");
       String[] args = TextUtil.split(text.substring(open + 1, close), ',');
       if (args.length > 100) throw new IllegalArgumentException("Too many formula arguments");
-      List<Double> values = new ArrayList<Double>();
+      var values = new ArrayList<Double>();
       for (String argument : args) {
         // A merge occupies one value within a range; separate arguments may repeat a cell.
-        Set<Integer> seen = new HashSet<Integer>();
-        String a = argument.trim();
+        var seen = new HashSet<Integer>();
+        var a = argument.trim();
         if (a.isEmpty()) throw new IllegalArgumentException("Formula syntax error");
         if ("ABOVE".equals(a) || "BELOW".equals(a)) {
           for (int r = "ABOVE".equals(a) ? 0 : row + 1;
@@ -119,7 +118,7 @@ public final class TableFormulas {
               for (int c = Math.min(first[1], last[1]); c <= Math.max(first[1], last[1]); c++)
                 add(values, seen, r, c, row, column, false);
           } else if (a.charAt(0) >= 'A' && a.charAt(0) <= 'Z') {
-            int[] cell = address(a);
+            var cell = address(a);
             add(values, seen, cell[0], cell[1], row, column, false);
           } else {
             Double number = number(a);
@@ -144,7 +143,7 @@ public final class TableFormulas {
     }
 
     int[] address(String text) {
-      String s = text.trim();
+      var s = text.trim();
       int at = 0, col = 0;
       while (at < s.length() && s.charAt(at) >= 'A' && s.charAt(at) <= 'Z') {
         col = col * 26 + s.charAt(at++) - 'A' + 1;
@@ -172,7 +171,7 @@ public final class TableFormulas {
         int targetRow,
         int targetCol,
         boolean direction) {
-      Table.Merge owner = table.span(row, col);
+      var owner = table.span(row, col);
       row = owner.row;
       col = owner.column;
       if (row == targetRow && col == targetCol) {
@@ -181,7 +180,7 @@ public final class TableFormulas {
       }
       int key = row * table.columns() + col;
       if (!seen.add(key)) return;
-      Double value = cell(row, col);
+      var value = cell(row, col);
       if (value != null) values.add(value);
     }
 
@@ -191,7 +190,7 @@ public final class TableFormulas {
       if (!active.add(key)) throw new IllegalArgumentException("Circular reference");
       try {
         if (active.size() > 128) throw new IllegalArgumentException("Formula dependency limit");
-        final StringBuilder text = new StringBuilder();
+        final var text = new StringBuilder();
         for (Paragraph p : table.cell(row, col)) {
           if (text.length() > 0) text.append('\n');
           p.text.visit(
@@ -224,11 +223,11 @@ public final class TableFormulas {
 
   /** English-style decimal points and correctly grouped currency/percent numbers. */
   static Double number(String value) {
-    String s = value.trim();
+    var s = value.trim();
     if (s.length() > 400) return null;
     if (s.endsWith("%")) s = s.substring(0, s.length() - 1).trim();
     s = currency(s);
-    String sign = "";
+    var sign = "";
     if (!s.isEmpty() && "+-\u2212\u2013".indexOf(s.charAt(0)) >= 0) {
       sign = s.charAt(0) == '+' ? "" : "-";
       s = currency(s.substring(1));
@@ -237,7 +236,7 @@ public final class TableFormulas {
     String integer = dot < 0 ? s : s.substring(0, dot),
         fraction = dot < 0 ? "" : s.substring(dot + 1);
     if (!fraction.isEmpty() && !TextUtil.digits(fraction, 0)) return null;
-    StringBuilder digits = new StringBuilder();
+    var digits = new StringBuilder();
     int group = 0, groups = 0;
     for (int i = 0; i < integer.length(); i++) {
       char c = integer.charAt(i);
@@ -261,8 +260,8 @@ public final class TableFormulas {
   }
 
   private static String currency(String text) {
-    String s = text.trim();
-    String symbols = "$€£¥¢₽₴₺₹₩₪₫฿₱₸₼₾";
+    var s = text.trim();
+    var symbols = "$€£¥¢₽₴₺₹₩₪₫฿₱₸₼₾";
     while (!s.isEmpty() && symbols.indexOf(s.charAt(0)) >= 0) s = s.substring(1).trim();
     while (!s.isEmpty() && symbols.indexOf(s.charAt(s.length() - 1)) >= 0)
       s = s.substring(0, s.length() - 1).trim();

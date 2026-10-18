@@ -10,14 +10,14 @@ public class TableTextCommandsTest {
   private final Commands commands = new Commands();
 
   private Object run(Session s, String id, Object... kv) {
-    Map<String, Object> a = new LinkedHashMap<String, Object>();
+    var a = new LinkedHashMap<String, Object>();
     for (int i = 0; i < kv.length; i += 2) a.put((String) kv[i], kv[i + 1]);
     return commands.execute(s, id, a);
   }
 
   @Test
   public void textToTableDeleteCellsAndWidth() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("a,b,c");
     s.enterParagraph();
     s.replace("d,e");
@@ -25,7 +25,7 @@ public class TableTextCommandsTest {
     Map<?, ?> r = (Map<?, ?>) run(s, "table.fromText", "separator", "comma");
     assertEquals(2, r.get("rows"));
     assertEquals(3, r.get("columns"));
-    Table t = (Table) s.document().blocks.get(0);
+    var t = (Table) s.document().blocks.get(0);
     assertEquals("e", Table.cellText(t.cell(1, 1)));
     assertEquals("", Table.cellText(t.cell(1, 2)));
     assertTrue(s.document().blocks.get(1) instanceof Paragraph);
@@ -39,7 +39,7 @@ public class TableTextCommandsTest {
     t = (Table) s.document().blocks.get(0);
     assertEquals("d", Table.cellText(t.cell(0, 0)));
 
-    Number w = (Number) run(s, "table.columnWidth", "width", 200);
+    var w = (Number) run(s, "table.columnWidth", "width", 200);
     assertEquals(200, w.intValue(), 1);
     for (int i = 0; i < 4; i++) s.undo();
     assertEquals("a,b,c\nd,e", s.document().plainText());

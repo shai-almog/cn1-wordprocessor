@@ -14,10 +14,10 @@ final class DocxControls {
     b.append("<w:sdt><w:sdtPr>");
     if (!c.get("title", "").isEmpty()) b.append("<w:alias w:val=\"").append(Xml.attribute(c.get("title", ""))).append("\"/>");
     if (!c.get("tag", "").isEmpty()) b.append("<w:tag w:val=\"").append(Xml.attribute(c.get("tag", ""))).append("\"/>");
-    String lock = c.get("lock", "none");
+    var lock = c.get("lock", "none");
     if (!"none".equals(lock)) b.append("<w:lock w:val=\"").append(lock).append("\"/>");
     if (field.result.equals(c.placeholder())) b.append("<w:showingPlcHdr/>");
-    String t = c.type;
+    var t = c.type;
     if ("plainText".equals(t)) b.append("<w:text/>");
     else if ("picture".equals(t)) b.append("<w:picture/>");
     else if ("buildingBlock".equals(t))
@@ -50,7 +50,7 @@ final class DocxControls {
 
   /** The control described by {@code sdtPr}, or null for unsupported kinds (their content is kept). */
   static ContentControl read(Element pr) {
-    String type = "richText";
+    var type = "richText";
     ContentControl c = null;
     for (Element e : Xml.children(pr, null)) {
       String k = Xml.local(e);
@@ -75,7 +75,7 @@ final class DocxControls {
         String v = checked == null ? "0" : Xml.attr(checked, "val", "0");
         c = c.with("checked", String.valueOf("1".equals(v) || "true".equals(v)));
       } else if ("comboBox".equals(k) || "dropDownList".equals(k)) {
-        StringBuilder items = new StringBuilder();
+        var items = new StringBuilder();
         for (Element item : Xml.children(e, null))
           if ("listItem".equals(Xml.local(item))) {
             if (items.length() > 0) items.append('|');

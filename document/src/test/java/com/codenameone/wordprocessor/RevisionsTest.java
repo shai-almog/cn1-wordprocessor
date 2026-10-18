@@ -6,7 +6,7 @@ import org.junit.Test;
 
 public class RevisionsTest {
   private Session tracked(String text) {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace(text);
     s.trackChanges(true);
     s.reviewAuthor("Ada");
@@ -15,7 +15,7 @@ public class RevisionsTest {
 
   @Test
   public void replaceRetainsOriginalAndCanAcceptRejectAndUndo() {
-    Session s = tracked("red green blue");
+    var s = tracked("red green blue");
     s.select(0, 4, 9);
     s.replace("gold");
     assertEquals("red goldgreen blue", s.document().plainText());
@@ -32,7 +32,7 @@ public class RevisionsTest {
 
   @Test
   public void insertedParagraphBreaksAndTrackedJoinsResolveCorrectly() {
-    Session s = tracked("First last");
+    var s = tracked("First last");
     s.select(0, 6, 6);
     s.replace("new\nline\n");
     assertEquals("First new\nline\nlast", Revisions.resolve(s.document(), null, true).plainText());
@@ -46,7 +46,7 @@ public class RevisionsTest {
 
   @Test
   public void deletingOwnInsertionCancelsTextAndParagraphBreak() {
-    Session s = tracked("AB");
+    var s = tracked("AB");
     s.select(0, 1, 1);
     s.replace("new\n");
     s.deleteBackward();
@@ -59,9 +59,9 @@ public class RevisionsTest {
 
   @Test
   public void typingCoalescesAndDisablingTrackingDoesNotExtendOldRevision() {
-    Session s = tracked("a");
+    var s = tracked("a");
     s.replace("b");
-    String id = Revisions.list(s.document()).get(0).revision.id;
+    var id = Revisions.list(s.document()).get(0).revision.id;
     s.replace("c");
     assertEquals(id, Revisions.list(s.document()).get(0).revision.id);
     s.trackChanges(false);
@@ -71,9 +71,9 @@ public class RevisionsTest {
 
   @Test
   public void richPasteAndFieldsAreAtomicTrackedInsertions() {
-    Session s = tracked("AB");
+    var s = tracked("AB");
     s.select(0, 1, 1);
-    Session fragment = new Session(Document.empty());
+    var fragment = new Session(Document.empty());
     fragment.replace("bold\nplain");
     fragment.select(0, 0, 4);
     fragment.format("bold", "true");
@@ -88,7 +88,7 @@ public class RevisionsTest {
 
   @Test
   public void cellEditingAndCompositionParticipateInRevisionHistory() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.insertTable(1, 1);
     s.trackChanges(true);
     s.reviewAuthor("Ada");
@@ -111,7 +111,7 @@ public class RevisionsTest {
 
   @Test
   public void forwardDeleteSkipsRetainedDeletionsAndMarkedBreaks() {
-    Session s = tracked("A😀B\nCD");
+    var s = tracked("A😀B\nCD");
     s.select(0, 1, 1);
     s.deleteForward();
     s.deleteForward();
@@ -123,7 +123,7 @@ public class RevisionsTest {
 
   @Test
   public void untrackedSplitDoesNotDuplicateTrackedParagraphMark() {
-    Session s = tracked("AB");
+    var s = tracked("AB");
     s.select(0, 1, 1);
     s.replace("\n");
     s.trackChanges(false);
@@ -136,14 +136,14 @@ public class RevisionsTest {
 
   @Test
   public void resolvingTextKeepsAnEmptyParagraphsFormatting() {
-    Session s = tracked("");
+    var s = tracked("");
     s.format("bold", "true");
     assertTrue(Revisions.resolve(s.document(), null, true).paragraph(0).text.styleAt(0).bold);
   }
 
   @Test
   public void characterFormattingRestoresOriginalStyleAndTracksOneBaseline() {
-    Session s = tracked("plain bold");
+    var s = tracked("plain bold");
     s.select(0, 6, 10);
     s.format("bold", "true");
     s.format("color", "ff0000");
@@ -164,10 +164,10 @@ public class RevisionsTest {
 
   @Test
   public void deletionAndFormattingCanBeReviewedIndependently() {
-    Session s = tracked("word");
+    var s = tracked("word");
     s.select(0, 0, 4);
     s.format("italic", "true");
-    String formatId = Revisions.list(s.document()).get(0).revision.id;
+    var formatId = Revisions.list(s.document()).get(0).revision.id;
     s.replace("");
     Document rejectedFormat = Revisions.resolve(s.document(), formatId, false);
     assertFalse(rejectedFormat.paragraph(0).text.styleAt(0).italic);
@@ -178,7 +178,7 @@ public class RevisionsTest {
 
   @Test
   public void selectedReviewResolvesOnlySelectedCharactersEvenWithinOneRevision() {
-    Session s = tracked("before ");
+    var s = tracked("before ");
     s.replace("abcdef");
     s.select(0, 9, 11);
     s.resolveSelectedRevisions(false);
@@ -193,7 +193,7 @@ public class RevisionsTest {
 
   @Test
   public void selectedReviewIncludesBreaksAndBothSidesOfReplacement() {
-    Session s = tracked("one two\nthree four");
+    var s = tracked("one two\nthree four");
     s.selectRange(0, 4, 1, 5);
     s.replace("new");
     s.selectRange(0, 4, 1, 5);
@@ -209,7 +209,7 @@ public class RevisionsTest {
 
   @Test
   public void cellSelectionReviewDoesNotAffectOtherCells() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.insertTable(1, 2);
     int block = 0;
     while (!(s.document().blocks.get(block) instanceof Table)) block++;
@@ -221,7 +221,7 @@ public class RevisionsTest {
     s.select(0, 0, 6);
     s.resolveSelectedRevisions(false);
     assertTrue(s.inCell());
-    Table table = (Table) s.document().blocks.get(block);
+    var table = (Table) s.document().blocks.get(block);
     assertEquals("first", table.cell(0, 0).get(0).text.toString());
     assertEquals("", table.cell(0, 1).get(0).text.toString());
     assertEquals(1, Revisions.list(s.document()).size());
@@ -229,13 +229,13 @@ public class RevisionsTest {
 
   @Test
   public void trackedStyleApplicationRestoresParagraphAndCharacterDefaults() {
-    Session s = tracked("Heading");
+    var s = tracked("Heading");
     s.applyStyle("Heading1");
     assertEquals("Heading1", s.document().paragraph(0).style);
     assertTrue(s.document().paragraph(0).text.styleAt(0).bold);
     assertEquals(2, Revisions.list(s.document()).size());
     s.resolveRevision(null, false);
-    Paragraph p = s.document().paragraph(0);
+    var p = s.document().paragraph(0);
     assertEquals("Normal", p.style);
     assertEquals(TextStyle.DEFAULT, p.text.styleAt(0));
     s.undo();
@@ -247,7 +247,7 @@ public class RevisionsTest {
 
   @Test
   public void UnchangedParagraphAndStyleDoNotCreateRevisions() {
-    Session s = tracked("unchanged");
+    var s = tracked("unchanged");
     s.paragraph("align", "left");
     s.applyStyle("Normal");
     assertTrue(Revisions.list(s.document()).isEmpty());
@@ -255,7 +255,7 @@ public class RevisionsTest {
 
   @Test
   public void caseConversionTracksRichTextWithoutRewritingFieldsOrExistingDeletions() {
-    Session s = tracked("Straße");
+    var s = tracked("Straße");
     s.select(0, 0, 6);
     s.changeCase(true);
     assertEquals("STRASSEStraße", s.document().plainText());
@@ -277,7 +277,7 @@ public class RevisionsTest {
 
   @Test
   public void backwardDeleteSkipsExistingDeletedTextAndBreaks() {
-    Session s = tracked("AB\nC😀D");
+    var s = tracked("AB\nC😀D");
     s.select(1, 0, 1);
     s.replace("");
     s.select(1, 3, 3);
@@ -290,7 +290,7 @@ public class RevisionsTest {
 
   @Test
   public void formattingPreferenceDoesNotDisableTextTracking() {
-    Session s = tracked("text");
+    var s = tracked("text");
     s.trackFormatting(false);
     s.select(0, 0, 4);
     s.format("italic", "true");

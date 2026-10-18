@@ -137,15 +137,15 @@ public final class RichText {
 
   private static Node balance(Node n) {
     if (h(n.l) > h(n.r) + 1) {
-      Node l = n.l;
+      var l = n.l;
       if (h(l.l) >= h(l.r)) return new Node(l.l, new Node(l.r, n.r));
-      Node m = l.r;
+      var m = l.r;
       return new Node(new Node(l.l, m.l), new Node(m.r, n.r));
     }
     if (h(n.r) > h(n.l) + 1) {
-      Node r = n.r;
+      var r = n.r;
       if (h(r.r) >= h(r.l)) return new Node(new Node(n.l, r.l), r.r);
-      Node m = r.l;
+      var m = r.l;
       return new Node(new Node(n.l, m.l), new Node(m.r, r.r));
     }
     return n;
@@ -181,17 +181,17 @@ public final class RichText {
   public boolean hasNotes() { return root != null && root.hasNotes; }
 
   public Note noteAt(int offset) {
-    Node n = leafAt(offset);
+    var n = leafAt(offset);
     return n == null ? null : n.note;
   }
 
   public boolean objectAt(int offset) {
-    Node n = leafAt(offset);
+    var n = leafAt(offset);
     return n != null && (n.field != null || n.note != null);
   }
 
   public String displayAt(int offset, String ordinary) {
-    Node n = leafAt(offset);
+    var n = leafAt(offset);
     return n == null ? ordinary : n.field != null ? n.field.display() : n.note != null ? n.note.label : ordinary;
   }
 
@@ -204,7 +204,7 @@ public final class RichText {
     if (n == null || !n.hasNotes) return n;
     if (n.text != null) {
       if (n.note == null) return n;
-      Note value = mapper.map(offset, n.note);
+      var value = mapper.map(offset, n.note);
       if (value == null) throw new IllegalArgumentException("Missing note");
       return value == n.note ? n : new Node(n.text, n.style, null, value);
     }
@@ -214,7 +214,7 @@ public final class RichText {
 
   private Node leafAt(int offset) {
     if (offset < 0 || offset >= length()) return null;
-    Node n = root;
+    var n = root;
     while (n.text == null) {
       int k = len(n.l);
       if (offset < k) n = n.l;
@@ -225,7 +225,7 @@ public final class RichText {
 
   /** Fields in text order (one entry per field run), skipping subtrees that hold none. */
   public List<InlineField> fields() {
-    List<InlineField> out = new ArrayList<InlineField>();
+    var out = new ArrayList<InlineField>();
     if (root != null) fields(root, out);
     return out;
   }
@@ -241,7 +241,7 @@ public final class RichText {
 
   public InlineField fieldAt(int offset) {
     if (offset < 0 || offset >= length()) return null;
-    Node n = root;
+    var n = root;
     while (n.text == null) {
       int k = len(n.l);
       if (offset < k) n = n.l;
@@ -321,9 +321,9 @@ public final class RichText {
     visit(
         new Visitor() {
           private TextStyle style(TextStyle s) {
-            Revision r = s.revision;
+            var r = s.revision;
             if (r != null) {
-              Revision.Resolution result = r.resolve(id, accept);
+              var result = r.resolve(id, accept);
               if (result.removed) return null;
               s = s.revision(result.remaining);
             }
@@ -331,17 +331,17 @@ public final class RichText {
           }
 
           public void run(int offset, String text, TextStyle s) {
-            TextStyle next = style(s);
+            var next = style(s);
             if (next != null) result[0] = result[0].concat(of(text, next));
           }
 
           public void field(int offset, InlineField field, TextStyle s) {
-            TextStyle next = style(s);
+            var next = style(s);
             if (next != null) result[0] = result[0].concat(RichText.field(field, next));
           }
 
           public void note(int offset, Note note, TextStyle s) {
-            TextStyle next = style(s);
+            var next = style(s);
             if (next != null) result[0] = result[0].concat(RichText.note(note, next));
           }
         });
@@ -354,23 +354,23 @@ public final class RichText {
     visit(
         new Visitor() {
           private TextStyle style(TextStyle s) {
-            Revision r = s.revision;
+            var r = s.revision;
             if (r != null && r.inserted() && r.author.equals(deletion.author)) return null;
             return r != null && !r.inserted() ? s : s.revision(deletion.previous(r));
           }
 
           public void run(int offset, String text, TextStyle s) {
-            TextStyle next = style(s);
+            var next = style(s);
             if (next != null) result[0] = result[0].concat(of(text, next));
           }
 
           public void field(int offset, InlineField field, TextStyle s) {
-            TextStyle next = style(s);
+            var next = style(s);
             if (next != null) result[0] = result[0].concat(RichText.field(field, next));
           }
 
           public void note(int offset, Note note, TextStyle s) {
-            TextStyle next = style(s);
+            var next = style(s);
             if (next != null) result[0] = result[0].concat(RichText.note(note, next));
           }
         });
@@ -378,7 +378,7 @@ public final class RichText {
   }
 
   public String plainText() {
-    final StringBuilder out = new StringBuilder();
+    final var out = new StringBuilder();
     visit((offset, text, style) -> out.append(text));
     return out.toString();
   }
@@ -407,7 +407,7 @@ public final class RichText {
 
   public char charAt(int i) {
     if (i < 0 || i >= length()) throw new IndexOutOfBoundsException();
-    Node n = root;
+    var n = root;
     while (n.text == null) {
       int k = len(n.l);
       if (i < k) n = n.l;
@@ -422,7 +422,7 @@ public final class RichText {
   public TextStyle styleAt(int i) {
     if (length() == 0) return emptyStyle;
     i = Math.max(0, Math.min(length() - 1, i));
-    Node n = root;
+    var n = root;
     while (n.text == null) {
       int k = len(n.l);
       if (i < k) n = n.l;
@@ -484,7 +484,7 @@ public final class RichText {
   }
 
   public String toString() {
-    final StringBuilder b = new StringBuilder(length());
+    final var b = new StringBuilder(length());
     visit(
         new Visitor() {
           public void run(int o, String s, TextStyle t) {

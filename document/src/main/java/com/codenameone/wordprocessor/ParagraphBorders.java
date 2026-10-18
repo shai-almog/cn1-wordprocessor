@@ -38,7 +38,7 @@ public final class ParagraphBorders {
 
     @Override
     public boolean equals(Object o) {
-      return o instanceof Side && encode().equals(((Side) o).encode());
+      return o instanceof Side s && encode().equals(s.encode());
     }
 
     @Override
@@ -67,7 +67,7 @@ public final class ParagraphBorders {
 
   /** Word's Borders gallery kinds: none, all/box, outside, top, bottom, left, right. */
   public static ParagraphBorders preset(String kind, Side side, ParagraphBorders current) {
-    Side n = Side.NONE;
+    var n = Side.NONE;
     if ("none".equals(kind)) return NONE;
     if ("all".equals(kind) || "box".equals(kind) || "outside".equals(kind))
       return new ParagraphBorders(side, side, side, side);
@@ -84,7 +84,7 @@ public final class ParagraphBorders {
 
   /** "top=w,RRGGBB,space,style;left=...", omitting absent sides; "" when empty. */
   public String encode() {
-    StringBuilder b = new StringBuilder();
+    var b = new StringBuilder();
     String[] names = {"top", "left", "bottom", "right"};
     Side[] sides = {top, left, bottom, right};
     for (int i = 0; i < 4; i++)
@@ -111,7 +111,7 @@ public final class ParagraphBorders {
 
   @Override
   public boolean equals(Object o) {
-    return o instanceof ParagraphBorders && encode().equals(((ParagraphBorders) o).encode());
+    return o instanceof ParagraphBorders pb && encode().equals(pb.encode());
   }
 
   @Override

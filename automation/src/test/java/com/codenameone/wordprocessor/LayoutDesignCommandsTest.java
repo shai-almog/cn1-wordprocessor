@@ -22,24 +22,24 @@ public class LayoutDesignCommandsTest {
       };
 
   private Object run(Session s, String id, Object... kv) {
-    Map<String, Object> a = new LinkedHashMap<String, Object>();
+    var a = new LinkedHashMap<String, Object>();
     for (int i = 0; i < kv.length; i += 2) a.put((String) kv[i], kv[i + 1]);
     return commands.execute(s, id, a);
   }
 
   private static Document roundTrip(Document d) throws Exception {
-    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    var out = new ByteArrayOutputStream();
     Docx.write(d, out);
     return Docx.read(new ByteArrayInputStream(out.toByteArray())).document;
   }
 
   @Test
   public void paragraphDirectionMirrorsAndRoundTrips() throws Exception {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("shalom");
     run(s, "para.dialog", "left", 36, "right", 0, "align", "left", "after", 4);
     run(s, "para.rtl");
-    Paragraph p = s.document().paragraph(0);
+    var p = s.document().paragraph(0);
     assertTrue(p.format.rtl);
     assertEquals("right", p.align);
     assertEquals(0, p.indent, 0);
@@ -60,20 +60,20 @@ public class LayoutDesignCommandsTest {
 
   @Test
   public void sectionLayoutAffectsPaginationAndRoundTrips() throws Exception {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("one line");
     float top = new LayoutEngine(METRICS).layout(s.document(), 0).pages.get(0).lines.get(0).y;
     run(s, "layout.verticalAlign", "value", "center");
-    LayoutEngine.Page page = new LayoutEngine(METRICS).layout(s.document(), 0).pages.get(0);
+    var page = new LayoutEngine(METRICS).layout(s.document(), 0).pages.get(0);
     assertTrue(page.lines.get(0).y > top + 200);
     run(s, "layout.sectionRtl", "value", true);
     run(s, "layout.textDirection", "value", "tbRl");
     run(s, "layout.documentGrid", "type", "lines", "linePitch", 30);
     run(s, "layout.verticalAlign", "value", "top");
-    LayoutEngine.Page grid = new LayoutEngine(METRICS).layout(s.document(), 0).pages.get(0);
+    var grid = new LayoutEngine(METRICS).layout(s.document(), 0).pages.get(0);
     assertEquals(30, grid.lines.get(0).height, .01);
     for (Document back : new Document[] {DocumentXml.read(DocumentXml.write(s.document())), roundTrip(s.document())}) {
-      PageDecor d = back.sectionRanges().get(0).raw.decor;
+      var d = back.sectionRanges().get(0).raw.decor;
       assertEquals("true", d.layout("rtl", ""));
       assertEquals("tbRl", d.layout("textDirection", ""));
       assertEquals("lines", d.layout("grid", ""));
@@ -89,7 +89,7 @@ public class LayoutDesignCommandsTest {
 
   @Test
   public void designRestylesHeadingsAndRecordsSettings() throws Exception {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("Head");
     s.applyStyle("Heading1");
     run(s, "design.theme", "name", "Facet");
@@ -108,7 +108,7 @@ public class LayoutDesignCommandsTest {
     assertEquals("Lines (Simple)", s.document().properties.setting("design.styleSet", ""));
     assertEquals("Georgia", roundTrip(s.document()).properties.setting("design.fonts", ""));
     run(s, "design.setDefault");
-    Session fresh = new Session(Document.empty());
+    var fresh = new Session(Document.empty());
     LayoutDesignCommands.applyDefaults(commands, fresh);
     assertEquals("Georgia", fresh.document().styles.get("Normal").text.font);
     try {

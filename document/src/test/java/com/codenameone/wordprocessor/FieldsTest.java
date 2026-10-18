@@ -7,9 +7,9 @@ import org.junit.Test;
 public class FieldsTest {
   @Test
   public void atomicFieldSurvivesFormattingClipboardCaseAndUndo() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("a");
-    InlineField field = new InlineField("TITLE", "Quarterly report", false, false);
+    var field = new InlineField("TITLE", "Quarterly report", false, false);
     s.insertField(field);
     s.replace("z");
     assertEquals("a\ufffcz", s.document().paragraph(0).text.toString());
@@ -19,7 +19,7 @@ public class FieldsTest {
     assertSame(field, s.document().paragraph(0).text.fieldAt(1));
     assertTrue(s.document().paragraph(0).text.styleAt(1).bold);
     assertEquals("Quarterly report", s.selectedText());
-    Document clipboard = s.copySelection();
+    var clipboard = s.copySelection();
     s.select(0, 3, 3);
     s.paste(clipboard);
     assertSame(field, s.document().paragraph(0).text.fieldAt(3));
@@ -35,14 +35,14 @@ public class FieldsTest {
 
   @Test
   public void updatesPreserveCommentsCellSelectionAndOneUndo() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("AB");
     s.select(0, 1, 2);
     s.addComment("A", "B");
     s.select(0, 1, 1);
     s.insertField(new InlineField("PAGE", "1", false, false));
     assertEquals(2, s.document().comments.get(0).start);
-    Document before = s.document();
+    var before = s.document();
     s.mapFields((id, at, f) -> f.result("1000"));
     assertEquals(2, s.document().comments.get(0).start);
     assertEquals(2, s.selection().caret);

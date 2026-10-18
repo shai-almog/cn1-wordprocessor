@@ -12,7 +12,7 @@ final class TableFormats {
       b.append(" description=\"").append(Xml.attribute(f.description)).append("\"");
     for (Map.Entry<String, String> e : f.props().entrySet())
       b.append(" opt-").append(e.getKey()).append("=\"").append(Xml.attribute(e.getValue())).append('"');
-    TableFormat.Sizing size = f.sizing;
+    var size = f.sizing;
     if (!"percent".equals(size.unit)
         || size.width != 100
         || !"left".equals(size.align)
@@ -38,7 +38,7 @@ final class TableFormats {
       if (!f.row(r).allowBreak) b.append(" allowBreak=\"false\"");
       b.append(">");
       for (int c = 0; c < f.columns(); c++) {
-        TableFormat.Cell v = f.cell(r, c);
+        var v = f.cell(r, c);
         b.append("<cell background=\"")
             .append(hex(v.background))
             .append("\" borderColor=\"")
@@ -60,7 +60,7 @@ final class TableFormats {
   }
 
   static TableFormat nativeRead(Element table, int rows, int columns) {
-    TableFormat f = new TableFormat(rows, columns);
+    var f = new TableFormat(rows, columns);
     Element props = Xml.child(table, "tableFormat");
     if (props == null) return f;
     if (Xml.children(props, "column").size() > columns || Xml.children(props, "row").size() > rows)
@@ -110,7 +110,7 @@ final class TableFormats {
 
   static void sizingXml(StringBuilder b, TableFormat f) {
     if ("true".equals(f.prop("rtl", ""))) b.append("<w:bidiVisual/>");
-    TableFormat.Sizing size = f.sizing;
+    var size = f.sizing;
     b.append("<w:tblW w:type=\"")
         .append("points".equals(size.unit) ? "dxa" : "percent".equals(size.unit) ? "pct" : "auto")
         .append("\" w:w=\"")
@@ -125,7 +125,7 @@ final class TableFormats {
   }
 
   static String css(TableFormat f) {
-    TableFormat.Sizing size = f.sizing;
+    var size = f.sizing;
     String width =
         "auto".equals(size.unit) ? "auto" : size.width + ("points".equals(size.unit) ? "pt" : "%");
     return "border-collapse:collapse;width:"
@@ -140,7 +140,7 @@ final class TableFormats {
 
   static void alternativeXml(StringBuilder b, TableFormat format) {
     if (format.props().containsKey("look")) {
-      String look = "," + format.prop("look", "") + ",";
+      var look = "," + format.prop("look", "") + ",";
       String[][] attrs = {
         {"headerRow", "firstRow"}, {"lastRow", "lastRow"}, {"firstColumn", "firstColumn"},
         {"lastColumn", "lastColumn"}, {"bandedRows", "noHBand"}, {"bandedColumns", "noVBand"}
@@ -212,7 +212,7 @@ final class TableFormats {
   }
 
   static Table readDocx(Element element, Table table, Set<String> warnings) {
-    TableFormat f = table.format;
+    var f = table.format;
     Element grid = Xml.child(element, "tblGrid"), props = Xml.child(element, "tblPr");
     int c = 0;
     if (grid != null)
@@ -223,7 +223,7 @@ final class TableFormats {
         }
         c++;
       }
-    TableFormat.Cell base = new TableFormat.Cell(0xffffff, 0xa6a6a6, 0, 6, 4, "top");
+    var base = new TableFormat.Cell(0xffffff, 0xa6a6a6, 0, 6, 4, "top");
     if (props != null) {
       Element title = Xml.child(props, "tblCaption"),
           description = Xml.child(props, "tblDescription");
@@ -246,7 +246,7 @@ final class TableFormats {
           {"firstColumn", "firstColumn", "0080"}, {"lastColumn", "lastColumn", "0100"},
           {"bandedRows", "noHBand", "0200"}, {"bandedColumns", "noVBand", "0400"}
         };
-        StringBuilder on = new StringBuilder();
+        var on = new StringBuilder();
         for (String[] a : attrs) {
           String v = Xml.attr(look, a[1], "");
           boolean set =
@@ -426,7 +426,7 @@ final class TableFormats {
           if (width == 0) continue;
           sides |= mask;
         } else if (width == 0) continue;
-        String signature = width + ":" + color;
+        var signature = width + ":" + color;
         if (first == null) {
           first = signature;
           stroke = width;

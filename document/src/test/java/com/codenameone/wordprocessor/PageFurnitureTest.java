@@ -7,8 +7,8 @@ import org.junit.Test;
 public class PageFurnitureTest {
   @Test
   public void styleUpdatesReachHeadersAndFieldWordsAreCounted() {
-    Session s = new Session(Document.empty());
-    ParagraphStyle style =
+    var s = new Session(Document.empty());
+    var style =
         new ParagraphStyle(
             "Report", "Report", new Paragraph("template", new RichText()), TextStyle.DEFAULT);
     s.defineStyle(style);
@@ -29,7 +29,7 @@ public class PageFurnitureTest {
 
   @Test
   public void variantsUseFirstThenEvenAndChangesAreUndoableWithFreshIds() {
-    PageFurniture f =
+    var f =
         PageFurniture.EMPTY
             .options(true, true, 18, 20)
             .story(
@@ -38,8 +38,8 @@ public class PageFurnitureTest {
     assertEquals("firstHeader", f.key(false, 0));
     assertEquals("evenFooter", f.key(true, 1));
     assertEquals("header", f.key(false, 2));
-    Session s = new Session(Document.empty());
-    Document before = s.document();
+    var s = new Session(Document.empty());
+    var before = s.document();
     s.furniture(f);
     assertNotEquals("p1", s.document().furniture.get("header").get(0).id);
     assertEquals(3, s.document().nextId);
@@ -58,7 +58,7 @@ public class PageFurnitureTest {
     } catch (IllegalArgumentException expected) {
     }
     try {
-      PageFurniture.EMPTY.story("unknown", new Sequence<Paragraph>());
+      PageFurniture.EMPTY.story("unknown", new Sequence<>());
       fail();
     } catch (IllegalArgumentException expected) {
     }

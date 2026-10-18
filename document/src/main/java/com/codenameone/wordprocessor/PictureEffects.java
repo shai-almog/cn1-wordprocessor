@@ -6,9 +6,9 @@ public final class PictureEffects {
 
   /** Returns a new pixel array; the input is not modified. */
   public static int[] apply(int[] argb, int w, int h, Picture.Look look) {
-    int[] px = argb.clone();
+    var px = argb.clone();
     if (w <= 0 || h <= 0 || px.length < w * h) return px;
-    String e = look.effect;
+    var e = look.effect;
     if ("negative".equals(e)) {
       for (int i = 0; i < px.length; i++) px[i] = (px[i] & 0xff000000) | (~px[i] & 0xffffff);
     } else if ("posterize".equals(e)) {

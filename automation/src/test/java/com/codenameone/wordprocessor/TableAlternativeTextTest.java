@@ -8,7 +8,7 @@ public class TableAlternativeTextTest {
   private final Commands commands = new Commands();
 
   private Session fixture() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.insertTable(3, 2);
     s.enterCell(1, 1, 0);
     return s;
@@ -20,8 +20,8 @@ public class TableAlternativeTextTest {
 
   @Test
   public void titleAndDescriptionCanBeEditedIndependentlyClearedAndUndone() {
-    Session s = fixture();
-    Document before = s.document();
+    var s = fixture();
+    var before = s.document();
     commands.execute(
         s, "table.altText", Json.object("title", "Quarterly sales", "text", "Revenue by region"));
     assertEquals("Quarterly sales", f(s, 1).title);
@@ -40,7 +40,7 @@ public class TableAlternativeTextTest {
 
   @Test
   public void structureFormattingClipboardAndSplittingKeepAlternativeText() {
-    Session s = fixture();
+    var s = fixture();
     commands.execute(s, "table.altText", Json.object("title", "Sales", "text", "Numbers"));
     commands.execute(s, "table.insertRowAbove");
     commands.execute(s, "table.insertColumnRight");
@@ -55,14 +55,14 @@ public class TableAlternativeTextTest {
     assertEquals("Numbers", f(s, 3).description);
     s.enterCell(3, 0, 0);
     commands.execute(s, "table.selectTable");
-    Document copy = s.copySelection();
+    var copy = s.copySelection();
     assertEquals("Sales", ((Table) copy.blocks.get(0)).format.title);
   }
 
   @Test
   public void invalidContextAndMissingValuesLeaveDocumentUnchanged() {
-    Session s = fixture();
-    Document before = s.document();
+    var s = fixture();
+    var before = s.document();
     try {
       commands.execute(s, "table.altText");
       fail();
@@ -80,9 +80,9 @@ public class TableAlternativeTextTest {
 
   @Test
   public void unicodeLimitDoesNotSplitSurrogatePairsAndWhitespaceClears() {
-    StringBuilder b = new StringBuilder();
+    var b = new StringBuilder();
     for (int i = 0; i < 10002; i++) b.append("\ud83d\ude00");
-    TableFormat f = new TableFormat(1, 1).altText(b.toString(), " \n\t ");
+    var f = new TableFormat(1, 1).altText(b.toString(), " \n\t ");
     assertEquals(20000, f.title.length());
     assertTrue(Character.isLowSurrogate(f.title.charAt(19999)));
     assertEquals("", f.description);

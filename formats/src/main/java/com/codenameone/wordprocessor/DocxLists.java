@@ -13,7 +13,7 @@ final class DocxLists {
     int start = 1;
 
     Definition copy() {
-      Definition d = new Definition();
+      var d = new Definition();
       d.kind = kind;
       d.format = format;
       d.start = start;
@@ -22,19 +22,19 @@ final class DocxLists {
   }
 
   static final class Read {
-    final Map<String, Definition[]> definitions = new HashMap<String, Definition[]>();
-    final Map<String, int[]> counters = new HashMap<String, int[]>();
+    final Map<String, Definition[]> definitions = new HashMap<>();
+    final Map<String, int[]> counters = new HashMap<>();
     String previous = "";
 
     Definition take(String id, int level) {
-      Definition[] ds = definitions.get(id);
+      var ds = definitions.get(id);
       if (ds == null || level < 0 || level > 8 || ds[level] == null) return null;
-      int[] counts = counters.get(id);
+      var counts = counters.get(id);
       if (counts == null) {
         counts = new int[9];
         counters.put(id, counts);
       }
-      Definition d = ds[level].copy();
+      var d = ds[level].copy();
       counts[level] = counts[level] == 0 ? d.start : counts[level] + 1;
       d.start = counts[level];
       for (int i = level + 1; i < 9; i++) counts[i] = 0;
@@ -51,10 +51,10 @@ final class DocxLists {
   }
 
   static Read read(byte[] bytes, Set<String> warnings) throws IOException {
-    Read result = new Read();
+    var result = new Read();
     if (bytes == null) return result;
     Element root = Xml.parse(bytes);
-    Map<String, Definition[]> abstracts = new HashMap<String, Definition[]>();
+    var abstracts = new HashMap<String, Definition[]>();
     for (Element a : Xml.children(root, "abstractNum")) {
       Definition[] ds = new Definition[9];
       for (Element l : Xml.children(a, "lvl")) {
@@ -66,7 +66,7 @@ final class DocxLists {
     for (Element n : Xml.children(root, "num")) {
       Element a = Xml.child(n, "abstractNumId");
       if (a == null) continue;
-      Definition[] base = abstracts.get(Xml.attr(a, "val", ""));
+      var base = abstracts.get(Xml.attr(a, "val", ""));
       if (base == null) continue;
       Definition[] ds = new Definition[9];
       for (int i = 0; i < 9; i++) if (base[i] != null) ds[i] = base[i].copy();
@@ -84,7 +84,7 @@ final class DocxLists {
   }
 
   private static Definition definition(Element l, int level, Set<String> warnings) {
-    Definition d = new Definition();
+    var d = new Definition();
     Element fmt = Xml.child(l, "numFmt"),
         start = Xml.child(l, "start"),
         label = Xml.child(l, "lvlText");
@@ -98,7 +98,7 @@ final class DocxLists {
     boolean bullet = "bullet".equals(d.kind);
     if (text != null
         && !text.equals(bullet ? ListNumbers.BULLETS[level % 3] : "%" + (level + 1) + ".")) {
-      String custom = (bullet ? "bullet" : d.format) + "|" + text;
+      var custom = (bullet ? "bullet" : d.format) + "|" + text;
       if (!text.isEmpty() && ListNumbers.valid(custom)) d.format = custom;
       else warnings.add("Custom list label is approximated");
     }
@@ -115,18 +115,17 @@ final class DocxLists {
     }
   }
 
-  final Map<Paragraph, Integer> ids = new IdentityHashMap<Paragraph, Integer>();
-  private final List<Paragraph> historical = new ArrayList<Paragraph>();
-  final List<Group> groups = new ArrayList<Group>();
+  final Map<Paragraph, Integer> ids = new IdentityHashMap<>();
+  private final List<Paragraph> historical = new ArrayList<>();
+  final List<Group> groups = new ArrayList<>();
   private final int[] counts = new int[9];
   private Group current;
   private String previous = "";
 
   DocxLists(Document d) {
     for (Block b : d.blocks) {
-      if (b instanceof Paragraph) add((Paragraph) b);
-      else if (b instanceof Table) {
-        Table t = (Table) b;
+      if (b instanceof Paragraph paragraph) add(paragraph);
+      else if (b instanceof Table t) {
         reset();
         for (int r = 0; r < t.rows(); r++)
           for (int c = 0; c < t.columns(); c++) {
@@ -179,17 +178,17 @@ final class DocxLists {
   }
 
   String xml() {
-    StringBuilder b = new StringBuilder("<w:numbering xmlns:w=\"").append(W).append("\">");
+    var b = new StringBuilder("<w:numbering xmlns:w=\"").append(W).append("\">");
     for (int i = 0; i < groups.size(); i++) {
       int id = i + 1;
-      Group g = groups.get(i);
+      var g = groups.get(i);
       b.append("<w:abstractNum w:abstractNumId=\"")
           .append(id)
           .append("\"><w:multiLevelType w:val=\"multilevel\"/>");
       Paragraph sample = null;
       for (Paragraph p : g.levels) if (p != null && sample == null) sample = p;
       for (int level = 0; level < 9; level++) {
-        Paragraph p = g.levels[level];
+        var p = g.levels[level];
         // Unused levels follow the group's multilevel preset (outline/legal) when there is one.
         String fmt =
             p != null ? p.listFormat : sample != null ? ListNumbers.base(sample.listFormat) : "decimal";
@@ -220,21 +219,22 @@ final class DocxLists {
   void packageParts(Map<String, byte[]> parts) throws IOException {
     if (groups.isEmpty()) return;
     parts.put("word/numbering.xml", xml().getBytes("UTF-8"));
-    String path = "word/_rels/document.xml.rels";
+    var path = "word/_rels/document.xml.rels";
     String rels =
         parts.containsKey(path)
             ? new String(parts.get(path), "UTF-8")
-            : "<Relationships"
-                  + " xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"></Relationships>";
+            : """
+                  <Relationships\
+                   xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>""";
     boolean found = false;
-    Set<String> ids = new HashSet<String>();
+    var ids = new HashSet<String>();
     for (Element rel : Xml.children(Xml.parse(rels), null)) {
       ids.add(Xml.attr(rel, "Id", ""));
       if ("numbering.xml".equals(Xml.attr(rel, "Target", ""))
           && Xml.attr(rel, "Type", "").endsWith("/numbering")) found = true;
     }
     if (!found) {
-      String id = "cn1Numbering";
+      var id = "cn1Numbering";
       while (ids.contains(id)) id += "1";
       rels =
           insert(
@@ -248,7 +248,7 @@ final class DocxLists {
     }
     path = "[Content_Types].xml";
     if (parts.containsKey(path)) {
-      String types = new String(parts.get(path), "UTF-8");
+      var types = new String(parts.get(path), "UTF-8");
       boolean has = false;
       for (Element e : Xml.children(Xml.parse(types), null))
         if ("/word/numbering.xml".equals(Xml.attr(e, "PartName", ""))) has = true;
@@ -257,10 +257,11 @@ final class DocxLists {
             path,
             insert(
                     types,
-                    "<Override"
-                        + " xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\""
-                        + " PartName=\"/word/numbering.xml\""
-                        + " ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml\"/>")
+                    """
+                    <Override\
+                     xmlns="http://schemas.openxmlformats.org/package/2006/content-types"\
+                     PartName="/word/numbering.xml"\
+                     ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml"/>""")
                 .getBytes("UTF-8"));
     }
   }

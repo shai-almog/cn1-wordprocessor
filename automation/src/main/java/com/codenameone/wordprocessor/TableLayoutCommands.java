@@ -35,8 +35,8 @@ public final class TableLayoutCommands implements Commands.Extension {
         true,
         (s, a) -> {
           Table t = table(s);
-          TableFormat.Sizing size = t.format.sizing;
-          String unit = size.unit;
+          var size = t.format.sizing;
+          var unit = size.unit;
           float width = size.width;
           if (a.containsKey("width")) {
             unit = "points";
@@ -46,14 +46,14 @@ public final class TableLayoutCommands implements Commands.Extension {
             unit = "percent";
             width = ((Number) a.get("widthPct")).floatValue();
           }
-          TableFormat.Row row = t.format.row(s.cellRow());
+          var row = t.format.row(s.cellRow());
           float height =
               a.containsKey("rowHeight") ? ((Number) a.get("rowHeight")).floatValue() : row.height;
           String rule =
               a.containsKey("rowHeightRule")
                   ? Commands.str(a, "rowHeightRule")
                   : a.containsKey("rowHeight") ? (height == 0 ? "auto" : "atLeast") : row.rule;
-          TableFormat format =
+          var format =
               t.format.row(
                   s.cellRow(),
                   new TableFormat.Row(
@@ -82,8 +82,8 @@ public final class TableLayoutCommands implements Commands.Extension {
         true,
         (s, a) -> {
           Table t = table(s);
-          TableFormat f = t.format;
-          TableFormat.Sizing size = f.sizing;
+          var f = t.format;
+          var size = f.sizing;
           String mode = a.containsKey("mode") ? Commands.str(a, "mode") : "window";
           if ("window".equals(mode)) {
             f =
@@ -92,7 +92,7 @@ public final class TableLayoutCommands implements Commands.Extension {
           } else if ("contents".equals(mode) || "fixed".equals(mode)) {
             if ("contents".equals(mode))
               f = f.sizing(new TableFormat.Sizing("auto", 0, size.align, size.indent, false));
-            float[] widths =
+            var widths =
                 commands
                     .layoutEngine()
                     .tableWidths(t.format(f), s.activeSection().resolved.page.contentWidth());
@@ -169,10 +169,10 @@ public final class TableLayoutCommands implements Commands.Extension {
           (s, a) -> {
             Table original = table(s);
             int block = s.cellBlock(), row = s.cellRow(), col = s.cellColumn();
-            CellSelection range = s.cellSelection();
+            var range = s.cellSelection();
             boolean rows = direction.startsWith("Row"),
                 after = direction.endsWith("Below") || direction.endsWith("Right");
-            Table.Merge span = original.span(row, col);
+            var span = original.span(row, col);
             int first = rows ? (range == null ? row : range.firstRow) : span.column;
             int last =
                 rows
@@ -185,7 +185,7 @@ public final class TableLayoutCommands implements Commands.Extension {
             for (int i = 0; i < count; i++)
               s.tableStructure(block, rows ? "insertRow" : "insertColumn", at + i);
             if (rows) {
-              TableFormat format = ((Table) s.document().blocks.get(block)).format;
+              var format = ((Table) s.document().blocks.get(block)).format;
               for (int i = 0; i < count; i++) {
                 format = format.row(at + i, original.format.row(row));
                 for (int c = 0; c < original.columns(); c++)
@@ -240,17 +240,17 @@ public final class TableLayoutCommands implements Commands.Extension {
                 value.endsWith("Left") ? "left" : value.endsWith("Right") ? "right" : "center";
           }
           int block = s.cellBlock(), row = s.cellRow(), column = s.cellColumn();
-          Selection caret = s.selection();
-          CellSelection range = s.cellSelection();
+          var caret = s.selection();
+          var range = s.cellSelection();
           boolean textSelection = range == null;
           if (range == null) {
             s.selectCells(block, row, column, row, column);
             range = s.cellSelection();
           }
-          TableFormat format = table.format;
+          var format = table.format;
           for (int r = range.firstRow; r <= range.lastRow; r++)
             for (int c = range.firstColumn; c <= range.lastColumn; c++) {
-              TableFormat.Cell cell = format.cell(r, c);
+              var cell = format.cell(r, c);
               format =
                   format.cell(
                       r,

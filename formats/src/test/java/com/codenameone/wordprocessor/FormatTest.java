@@ -8,7 +8,7 @@ import org.junit.Test;
 
 public class FormatTest {
   private Session sample() {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace(" Hello & <world> 😀 שלום \nSecond paragraph");
     s.select(0, 1, 6);
     s.format("bold", "true");
@@ -21,7 +21,7 @@ public class FormatTest {
 
   @Test
   public void simpleListsRoundTripWithIndentAndNumberingRelationships() throws Exception {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("One\nTwo\nBody\nRestart\nBullet");
     s.selectRange(0, 0, 1, 3);
     s.paragraph("list", "number");
@@ -30,7 +30,7 @@ public class FormatTest {
     s.paragraph("list", "number");
     s.select(4, 0, 0);
     s.paragraph("list", "bullet");
-    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    var out = new ByteArrayOutputStream();
     Docx.write(s.document(), out);
     Docx.Opened opened = Docx.read(new ByteArrayInputStream(out.toByteArray()));
     assertTrue(opened.warnings.toString(), opened.warnings.isEmpty());
@@ -39,11 +39,11 @@ public class FormatTest {
       assertEquals(s.document().paragraph(i).list, opened.document.paragraph(i).list);
       assertEquals(s.document().paragraph(i).indent, opened.document.paragraph(i).indent, 0.01);
     }
-    java.util.Map<String, String> parts = new java.util.HashMap<String, String>();
-    ZipInputStream zin = new ZipInputStream(new ByteArrayInputStream(out.toByteArray()));
+    var parts = new java.util.HashMap<String, String>();
+    var zin = new ZipInputStream(new ByteArrayInputStream(out.toByteArray()));
     ZipEntry entry;
     while ((entry = zin.getNextEntry()) != null) {
-      ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+      var bytes = new ByteArrayOutputStream();
       int c;
       while ((c = zin.read()) != -1) bytes.write(c);
       parts.put(entry.getName(), bytes.toString("UTF-8"));
@@ -51,7 +51,7 @@ public class FormatTest {
     assertTrue(parts.get("word/_rels/document.xml.rels").contains("Target=\"numbering.xml\""));
     assertTrue(parts.get("[Content_Types].xml").contains("/word/numbering.xml"));
     assertEquals(3, Xml.children(Xml.parse(parts.get("word/numbering.xml")), "num").size());
-    Session edited = new Session(opened.document);
+    var edited = new Session(opened.document);
     edited.replace("Edited ");
     out.reset();
     Docx.write(edited.document(), opened, out, false);
@@ -63,7 +63,7 @@ public class FormatTest {
   @Test
   public void xmlFastPathsPreserveEntitiesWhitespaceAndValidation() throws Exception {
     assertEquals("text", Xml.text(Xml.parse("<étiquette_2 属性=\"ok\">text</étiquette_2>")));
-    String text = "plain\ttext\nwith whitespace";
+    var text = "plain\ttext\nwith whitespace";
     assertEquals(text, Xml.text(Xml.parse("<a>" + text + "</a>")));
     assertEquals(
         "before & middle < after 😀",
@@ -87,7 +87,7 @@ public class FormatTest {
 
   @Test
   public void nativeRoundTripIsLossless() throws Exception {
-    Document d = sample().document();
+    var d = sample().document();
     String xml = DocumentXml.write(d);
     Document next = DocumentXml.read(xml);
     assertEquals(xml, DocumentXml.write(next));
@@ -97,7 +97,7 @@ public class FormatTest {
 
   @Test
   public void docxRoundTripPreservesTextAndFormatting() throws Exception {
-    Session session = sample();
+    var session = sample();
     session.select(0, 1, 6);
     for (String[] property :
         new String[][] {
@@ -109,8 +109,8 @@ public class FormatTest {
           {"underline", "true"},
           {"strike", "true"}
         }) session.format(property[0], property[1]);
-    Document d = session.document();
-    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    var d = session.document();
+    var out = new ByteArrayOutputStream();
     Docx.write(d, out);
     Docx.Opened next = Docx.read(new ByteArrayInputStream(out.toByteArray()));
     assertEquals(d.plainText(), next.document.plainText());
@@ -122,22 +122,23 @@ public class FormatTest {
 
   @Test
   public void unknownPartsPreservedAndEditingRequiresAcknowledgement() throws Exception {
-    ByteArrayOutputStream bytes = new ByteArrayOutputStream();
-    ZipOutputStream z = new ZipOutputStream(bytes);
+    var bytes = new ByteArrayOutputStream();
+    var z = new ZipOutputStream(bytes);
     entry(
         z,
         "word/document.xml",
-        "<w:document"
-            + " xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:body><w:p><w:r><w:t>Hello</w:t><w:drawing/></w:r></w:p></w:body></w:document>");
+        """
+        <w:document\
+         xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>Hello</w:t><w:drawing/></w:r></w:p></w:body></w:document>""");
     entry(z, "word/media/example.bin", "opaque data");
     z.finish();
     Docx.Opened source = Docx.read(new ByteArrayInputStream(bytes.toByteArray()));
     assertFalse(source.warnings.isEmpty());
-    ByteArrayOutputStream unchanged = new ByteArrayOutputStream();
+    var unchanged = new ByteArrayOutputStream();
     Docx.write(source.document, source, unchanged, false);
     assertTrue(
         new String(unchanged.toByteArray(), "ISO-8859-1").contains("word/media/example.bin"));
-    Session s = new Session(source.document);
+    var s = new Session(source.document);
     s.replace("Changed");
     try {
       Docx.write(s.document(), source, new ByteArrayOutputStream(), false);
@@ -175,17 +176,18 @@ public class FormatTest {
 
   @Test
   public void nativeProjectRetainsOriginalPackageAndWarnings() throws Exception {
-    ByteArrayOutputStream bytes = new ByteArrayOutputStream();
-    ZipOutputStream z = new ZipOutputStream(bytes);
+    var bytes = new ByteArrayOutputStream();
+    var z = new ZipOutputStream(bytes);
     entry(
         z,
         "word/document.xml",
-        "<w:document"
-            + " xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:body><w:p><w:r><w:t>Hello</w:t><w:drawing/></w:r></w:p></w:body></w:document>");
+        """
+        <w:document\
+         xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>Hello</w:t><w:drawing/></w:r></w:p></w:body></w:document>""");
     entry(z, "word/media/keep.bin", "retained bytes");
     z.finish();
     Docx.Opened original = Docx.read(new ByteArrayInputStream(bytes.toByteArray()));
-    Session s = new Session(original.document);
+    var s = new Session(original.document);
     s.replace("Edited");
     ProjectFile.Opened restored = ProjectFile.read(ProjectFile.write(s.document(), original));
     assertEquals(s.document().plainText(), restored.document.plainText());
@@ -197,14 +199,14 @@ public class FormatTest {
       fail();
     } catch (IOException expected) {
     }
-    ByteArrayOutputStream preserved = new ByteArrayOutputStream();
+    var preserved = new ByteArrayOutputStream();
     Docx.write(restored.source.document, restored.source, preserved, false);
-    ZipInputStream zin = new ZipInputStream(new ByteArrayInputStream(preserved.toByteArray()));
+    var zin = new ZipInputStream(new ByteArrayInputStream(preserved.toByteArray()));
     boolean found = false;
     ZipEntry ze;
     while ((ze = zin.getNextEntry()) != null)
       if (ze.getName().equals("word/media/keep.bin")) {
-        ByteArrayOutputStream data = new ByteArrayOutputStream();
+        var data = new ByteArrayOutputStream();
         int c;
         while ((c = zin.read()) != -1) data.write(c);
         assertEquals("retained bytes", data.toString("UTF-8"));
@@ -215,7 +217,7 @@ public class FormatTest {
 
   @Test
   public void newUnsupportedFeaturesRequireExplicitConversion() throws Exception {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("link");
     s.select(0, 0, 4);
     s.paragraph("list", "unsupported-custom-list");

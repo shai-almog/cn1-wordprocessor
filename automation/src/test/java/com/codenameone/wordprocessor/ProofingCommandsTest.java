@@ -11,7 +11,7 @@ public class ProofingCommandsTest {
   private final Commands commands = new Commands();
 
   private Object run(Session s, String id, Object... kv) {
-    Map<String, Object> a = new LinkedHashMap<String, Object>();
+    var a = new LinkedHashMap<String, Object>();
     for (int i = 0; i < kv.length; i += 2) a.put((String) kv[i], kv[i + 1]);
     return commands.execute(s, id, a);
   }
@@ -22,7 +22,7 @@ public class ProofingCommandsTest {
   }
 
   private static Session session(String text) {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace(text);
     s.select(0, 0, 0);
     return s;
@@ -31,7 +31,7 @@ public class ProofingCommandsTest {
   @Test
   public void checkReportsMisspellingsWithSuggestionsAndNextSelects() {
     Session s = session("Hello wrold and recieve");
-    List<Map<String, Object>> found = issues(run(s, "review.spelling"));
+    var found = issues(run(s, "review.spelling"));
     assertEquals(2, found.size());
     assertEquals("wrold", found.get(0).get("word"));
     assertEquals(6, found.get(0).get("start"));
@@ -62,7 +62,7 @@ public class ProofingCommandsTest {
   @Test
   public void grammarIssuesAreReported() {
     Session s = session("This is a apple and the the end.");
-    String all = issues(run(s, "review.spelling")).toString();
+    var all = issues(run(s, "review.spelling")).toString();
     assertTrue(all, all.contains("kind=grammar"));
     assertTrue(all, all.contains("Repeated word"));
     assertTrue(all, all.contains("Use \"an\""));

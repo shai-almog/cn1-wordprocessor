@@ -5,8 +5,9 @@ import java.util.*;
 
 /** Converts Word's multi-paragraph TOC field to the editable contents story and back. */
 final class DocxToc {
-  static final String START = "<w:sdt><w:sdtPr><w:docPartObj><w:docPartGallery w:val=\"Table of Contents\"/>"
-      + "<w:docPartUnique/></w:docPartObj></w:sdtPr><w:sdtContent>";
+  static final String START = """
+      <w:sdt><w:sdtPr><w:docPartObj><w:docPartGallery w:val="Table of Contents"/>\
+      <w:docPartUnique/></w:docPartObj></w:sdtPr><w:sdtContent>""";
   static final String END_FIELD = "<w:r><w:fldChar w:fldCharType=\"end\"/></w:r>";
 
   static InlineField marker(Paragraph p) {
@@ -17,7 +18,7 @@ final class DocxToc {
   static Paragraph withoutMarker(Paragraph p) {
     if (marker(p) == null) return p;
     for (int i = p.text.length() - 1; i >= 0; i--) {
-      InlineField f = p.text.fieldAt(i);
+      var f = p.text.fieldAt(i);
       if (f != null && contents(f.instruction)) p = p.text(p.text.replace(i, i + 1, new RichText()));
     }
     return p;
@@ -30,12 +31,12 @@ final class DocxToc {
   }
 
   private static boolean contents(String instruction) {
-    FieldCode code = new FieldCode(instruction);
+    var code = new FieldCode(instruction);
     return "TOC".equals(code.name) || "INDEX".equals(code.name) || "TOA".equals(code.name) || "BIBLIOGRAPHY".equals(code.name);
   }
 
   static List<Element> body(Element body, Set<String> warnings) {
-    List<Element> blocks = new ArrayList<Element>();
+    var blocks = new ArrayList<Element>();
     for (Element child : Xml.children(body, null)) {
       Element properties = Xml.child(child, "sdtPr");
       Element object = properties == null ? null : Xml.child(properties, "docPartObj");
@@ -53,21 +54,21 @@ final class DocxToc {
     }
     // Only remove a complete TOC field after verifying its result paragraphs. Other fields,
     // including nested PAGEREFs, remain in the ordinary inline field reader.
-    List<Pending> stack = new ArrayList<Pending>();
-    List<Pending> complete = new ArrayList<Pending>();
+    var stack = new ArrayList<Pending>();
+    var complete = new ArrayList<Pending>();
     for (int index = 0; index < blocks.size(); index++) {
-      Element p = blocks.get(index);
+      var p = blocks.get(index);
       if (!"p".equals(Xml.local(p))) { stack.clear(); continue; }
-      List<Element> tokens = new ArrayList<Element>();
+      var tokens = new ArrayList<Element>();
       tokens(p, tokens);
       for (Element token : tokens) {
         String kind = Xml.local(token), action = Xml.attr(token, "fldCharType", "");
         if ("fldChar".equals(kind) && "begin".equals(action)) {
           if (stack.size() >= 64) throw new IllegalArgumentException("Field nesting exceeds 64");
-          Pending f = new Pending(index, token);
+          var f = new Pending(index, token);
           stack.add(f);
         } else if (!stack.isEmpty()) {
-          Pending f = stack.get(stack.size() - 1);
+          var f = stack.get(stack.size() - 1);
           if ("instrText".equals(kind) && !f.separated) {
             f.instruction.append(Xml.text(token)); f.nodes.add(token);
           } else if ("fldChar".equals(kind) && "separate".equals(action)) {
@@ -81,7 +82,7 @@ final class DocxToc {
     }
     // Reverse order so inserting a missing title doesn't shift the remaining ranges.
     for (int index = complete.size() - 1; index >= 0; index--) {
-      Pending f = complete.get(index);
+      var f = complete.get(index);
       boolean bibliography = "BIBLIOGRAPHY".equals(new FieldCode(f.instruction.toString()).name);
       boolean authorities = "TOA".equals(new FieldCode(f.instruction.toString()).name);
       boolean indexField = "INDEX".equals(new FieldCode(f.instruction.toString()).name);
@@ -107,11 +108,11 @@ final class DocxToc {
         blocks.add(f.first, header);
       }
       for (Element node : f.nodes) {
-        Element parent = node.getParent();
+        var parent = node.getParent();
         for (int i = parent.getNumChildren() - 1; i >= 0; i--)
           if (parent.getChildAt(i) == node) parent.removeChildAt(i);
       }
-      Element marker = new Element("w:fldSimple");
+      var marker = new Element("w:fldSimple");
       marker.setAttribute("w:instr", f.instruction.toString().trim());
       marker.setAttribute("w:fldLock", f.locked ? "1" : "0");
       header.addChild(marker);
@@ -138,7 +139,7 @@ final class DocxToc {
     final boolean locked;
     boolean separated;
     final StringBuilder instruction = new StringBuilder();
-    final List<Element> nodes = new ArrayList<Element>();
+    final List<Element> nodes = new ArrayList<>();
     Pending(int first, Element begin) {
       this.first = first;
       String lock = Xml.attr(begin, "fldLock", "0");

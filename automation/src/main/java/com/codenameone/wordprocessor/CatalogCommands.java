@@ -164,7 +164,7 @@ final class CatalogCommands implements Commands.Extension {
         "",
         true,
         (s, a) -> {
-          TextStyle d = TextStyle.DEFAULT;
+          var d = TextStyle.DEFAULT;
           s.format("font", d.font);
           s.format("size", trim(d.size));
           s.format("color", Integer.toHexString(d.color));
@@ -310,8 +310,8 @@ final class CatalogCommands implements Commands.Extension {
         "color?:any",
         true,
         (s, a) -> {
-          Object v = a.get("color");
-          Section sec = s.activeSection().raw;
+          var v = a.get("color");
+          var sec = s.activeSection().raw;
           s.section(
               sec.decor(
                   sec.decor.pageColor(
@@ -326,7 +326,7 @@ final class CatalogCommands implements Commands.Extension {
         "text?:string,color?:string",
         true,
         (s, a) -> {
-          Section sec = s.activeSection().raw;
+          var sec = s.activeSection().raw;
           String text = a.containsKey("text") ? Commands.str(a, "text") : "CONFIDENTIAL";
           int rgb =
               a.containsKey("color") ? Integer.parseInt(color(Commands.str(a, "color"), "c0c0c0"), 16) : 0xc0c0c0;
@@ -339,8 +339,8 @@ final class CatalogCommands implements Commands.Extension {
         "kind:string,style?:string,width?:number,color?:string,space?:number",
         true,
         (s, a) -> {
-          Section sec = s.activeSection().raw;
-          ParagraphBorders.Side side =
+          var sec = s.activeSection().raw;
+          var side =
               new ParagraphBorders.Side(
                   a.containsKey("width") ? ((Number) a.get("width")).floatValue() : .5f,
                   a.containsKey("color") ? Integer.parseInt(color(Commands.str(a, "color"), "000000"), 16) : 0,
@@ -359,7 +359,7 @@ final class CatalogCommands implements Commands.Extension {
         "format:string,start?:integer",
         true,
         (s, a) -> {
-          Section sec = s.activeSection().raw;
+          var sec = s.activeSection().raw;
           sec = sec.decor(sec.decor.numberFormat(Commands.str(a, "format")));
           if (a.containsKey("start")) sec = sec.numbering(Commands.integer(a, "start"));
           s.section(sec);
@@ -371,7 +371,7 @@ final class CatalogCommands implements Commands.Extension {
         "countBy:integer,restart?:string",
         true,
         (s, a) -> {
-          Section sec = s.activeSection().raw;
+          var sec = s.activeSection().raw;
           s.section(
               sec.decor(
                   sec.decor.lineNumbers(
@@ -388,7 +388,7 @@ final class CatalogCommands implements Commands.Extension {
         true,
         (s, a) -> {
           Paragraph p = current(s);
-          ParagraphBorders.Side side =
+          var side =
               new ParagraphBorders.Side(
                   a.containsKey("width") ? ((Number) a.get("width")).floatValue() : .5f,
                   a.containsKey("color") ? Integer.parseInt(color(Commands.str(a, "color"), "000000"), 16) : 0,
@@ -405,7 +405,7 @@ final class CatalogCommands implements Commands.Extension {
         "color?:any",
         true,
         (s, a) -> {
-          Object v = a.get("color");
+          var v = a.get("color");
           s.paragraph(
               "shading", v == null || "none".equals(v) ? "" : color(String.valueOf(v), "ffffff"));
           return null;
@@ -495,7 +495,7 @@ final class CatalogCommands implements Commands.Extension {
         "symbol:string",
         true,
         (s, a) -> {
-          String v = "bullet|" + Commands.str(a, "symbol");
+          var v = "bullet|" + Commands.str(a, "symbol");
           if (!ListNumbers.valid(v)) throw new IllegalArgumentException("Invalid bullet symbol");
           s.paragraph("list", "bullet");
           s.paragraph("listFormat", v);
@@ -578,7 +578,7 @@ final class CatalogCommands implements Commands.Extension {
         "",
         true,
         (s, a) -> {
-          String text = s.selectedText();
+          var text = s.selectedText();
           WorkflowCommands.record(s);
           if (!s.selection().collapsed()) s.replace("");
           return text;
@@ -598,10 +598,10 @@ final class CatalogCommands implements Commands.Extension {
         "",
         false,
         (s, a) -> {
-          Document d = s.document();
+          var d = s.document();
           int last = d.blocks.size() - 1;
-          Block b = d.blocks.get(last);
-          s.selectRange(0, 0, last, b instanceof Paragraph ? ((Paragraph) b).text.length() : 0);
+          var b = d.blocks.get(last);
+          s.selectRange(0, 0, last, b instanceof Paragraph p ? p.text.length() : 0);
           return null;
         });
     c.register(
@@ -612,7 +612,7 @@ final class CatalogCommands implements Commands.Extension {
         (s, a) -> {
           String needle = Commands.str(a, "text");
           if (needle.isEmpty()) throw new IllegalArgumentException("Text is empty");
-          Document d = s.document();
+          var d = s.document();
           for (int i = 0; i < d.blocks.size(); i++)
             if (d.blocks.get(i) instanceof Paragraph) {
               int at = ((Paragraph) d.blocks.get(i)).text.plainText().indexOf(needle);
@@ -703,7 +703,7 @@ final class CatalogCommands implements Commands.Extension {
   }
 
   private static boolean flag(TextStyle t, String key) {
-    CharacterFormat f = t.characters;
+    var f = t.characters;
     if ("bold".equals(key)) return t.bold;
     if ("italic".equals(key)) return t.italic;
     if ("strike".equals(key)) return t.strike;
@@ -818,7 +818,7 @@ final class CatalogCommands implements Commands.Extension {
   }
 
   private static Paragraph current(Session s) {
-    Block b = s.document().blocks.get(s.selection().block);
+    var b = s.document().blocks.get(s.selection().block);
     if (!(b instanceof Paragraph)) throw new IllegalArgumentException("Not in a paragraph");
     return (Paragraph) b;
   }

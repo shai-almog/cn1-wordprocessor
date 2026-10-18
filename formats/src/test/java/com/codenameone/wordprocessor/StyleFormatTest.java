@@ -8,9 +8,9 @@ import org.junit.Test;
 public class StyleFormatTest {
   @Test
   public void customDefinitionAndDirectOverridesRoundTripAndRemainEditable() throws Exception {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("Styled words");
-    ParagraphStyle custom =
+    var custom =
         new ParagraphStyle(
             "Custom",
             "Custom & readable",
@@ -22,18 +22,18 @@ public class StyleFormatTest {
     s.format("italic", "true");
     Document nativeCopy = DocumentXml.read(DocumentXml.write(s.document()));
     assertEquals(DocumentXml.write(s.document()), DocumentXml.write(nativeCopy));
-    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    var out = new ByteArrayOutputStream();
     Docx.write(s.document(), out);
     Docx.Opened opened = Docx.read(new ByteArrayInputStream(out.toByteArray()));
     assertTrue(opened.warnings.toString(), opened.warnings.isEmpty());
-    ParagraphStyle read = opened.document.styles.get("Custom");
+    var read = opened.document.styles.get("Custom");
     assertNotNull(read);
     assertEquals(custom.name, read.name);
     assertEquals(custom.text, read.text);
     assertEquals(15, read.paragraph.before, .001);
     assertEquals(12, read.paragraph.format.firstIndent, .001);
     assertTrue(opened.document.paragraph(0).text.styleAt(8).italic);
-    Session edited = new Session(opened.document);
+    var edited = new Session(opened.document);
     edited.defineStyle(
         new ParagraphStyle(read.id, read.name, read.paragraph, read.text.with("size", "28")));
     assertEquals(28, edited.document().paragraph(0).text.styleAt(0).size, 0);

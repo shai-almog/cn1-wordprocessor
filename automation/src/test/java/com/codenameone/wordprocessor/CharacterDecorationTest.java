@@ -12,14 +12,14 @@ public class CharacterDecorationTest {
   private final Commands commands = new Commands();
 
   private Object run(Session s, String id, Object... kv) {
-    Map<String, Object> a = new LinkedHashMap<String, Object>();
+    var a = new LinkedHashMap<String, Object>();
     for (int i = 0; i < kv.length; i += 2) a.put((String) kv[i], kv[i + 1]);
     return commands.execute(s, id, a);
   }
 
   @Test
   public void decorationsApplyUndoAndRoundTrip() throws Exception {
-    Session s = new Session(Document.empty());
+    var s = new Session(Document.empty());
     s.replace("hello world");
     s.select(0, 0, 5);
     run(s, "format.shading", "color", "#ffcc00");
@@ -28,7 +28,7 @@ public class CharacterDecorationTest {
     run(s, "format.enclose", "shape", "circle");
     run(s, "review.language", "lang", "fr-FR");
     run(s, "format.textEffects", "shadow", true, "outline", true);
-    CharacterFormat c = s.document().paragraph(0).text.styleAt(0).characters;
+    var c = s.document().paragraph(0).text.styleAt(0).characters;
     assertEquals(0xffcc00, c.shading);
     assertEquals(0x112233, c.border);
     assertEquals("ha", c.ruby);
@@ -37,9 +37,9 @@ public class CharacterDecorationTest {
     assertTrue(c.shadow && c.outline && !c.emboss);
     assertEquals(CharacterFormat.DEFAULT, s.document().paragraph(0).text.styleAt(8).characters);
     assertEquals(c, DocumentXml.read(DocumentXml.write(s.document())).paragraph(0).text.styleAt(0).characters);
-    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    var out = new ByteArrayOutputStream();
     Docx.write(s.document(), out);
-    CharacterFormat back =
+    var back =
         Docx.read(new ByteArrayInputStream(out.toByteArray())).document.paragraph(0).text.styleAt(0).characters;
     assertEquals(0x112233, back.border);
     assertEquals("fr-FR", back.lang);

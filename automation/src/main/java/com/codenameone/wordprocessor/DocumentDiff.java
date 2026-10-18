@@ -7,7 +7,7 @@ public final class DocumentDiff {
   private DocumentDiff() {}
 
   public static List<String> describe(Document before, Document after) {
-    List<String> changes = new ArrayList<String>();
+    var changes = new ArrayList<String>();
     if (!before.title.equals(after.title)) changes.add("Title changed to " + after.title);
     PageSpec a = before.page, b = after.page;
     if (a.width != b.width
@@ -16,17 +16,16 @@ public final class DocumentDiff {
         || a.left != b.left
         || a.right != b.right
         || a.bottom != b.bottom) changes.add("Page geometry changed");
-    Map<String, Block> old = new LinkedHashMap<String, Block>();
+    var old = new LinkedHashMap<String, Block>();
     for (Block block : before.blocks) old.put(block.id(), block);
     for (Block block : after.blocks) {
-      Block previous = old.remove(block.id());
+      var previous = old.remove(block.id());
       if (previous == null) {
         changes.add("Added " + block.id());
         continue;
       }
       if (block == previous) continue;
-      if (block instanceof Paragraph && previous instanceof Paragraph) {
-        Paragraph p = (Paragraph) previous, q = (Paragraph) block;
+      if (block instanceof Paragraph q && previous instanceof Paragraph p) {
         boolean text = !p.text.toString().equals(q.text.toString());
         boolean format =
             !p.style.equals(q.style)
