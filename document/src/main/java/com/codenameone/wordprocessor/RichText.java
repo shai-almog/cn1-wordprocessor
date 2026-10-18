@@ -324,8 +324,8 @@ public final class RichText {
             var r = s.revision;
             if (r != null) {
               var result = r.resolve(id, accept);
-              if (result.removed) return null;
-              s = s.revision(result.remaining);
+              if (result.removed()) return null;
+              s = s.revision(result.remaining());
             }
             return s.reviewFormat(id, accept);
           }

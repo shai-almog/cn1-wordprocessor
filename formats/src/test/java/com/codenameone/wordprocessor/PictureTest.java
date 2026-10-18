@@ -107,9 +107,9 @@ public class PictureTest {
     var layout = new LayoutEngine(new PdfMetrics()).layout(d, 0);
     assertTrue(layout.pages.size() >= 2);
     var placed = layout.pages.get(1).pictures.get(0);
-    assertEquals(200, placed.width, .001);
-    assertEquals(100, placed.height, .001);
-    assertEquals(10, placed.y, .001);
+    assertEquals(200, placed.width(), .001);
+    assertEquals(100, placed.height(), .001);
+    assertEquals(10, placed.y(), .001);
     var pdf = new String(PdfExporter.write(d), "ISO-8859-1");
     assertTrue(pdf.contains("/Subtype /Image"));
     assertTrue(pdf.contains("/SMask"));

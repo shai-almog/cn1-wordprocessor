@@ -83,7 +83,7 @@ public class DrawingCommandsTest {
     assertEquals("pie", c.get("chartType", ""));
     assertTrue(c.flag("dataLabels"));
     boolean titled = false;
-    for (DrawingOps.Text t : DrawingOps.build(c, 360, 216).texts) titled |= "Revenue".equals(t.text);
+    for (DrawingOps.Text t : DrawingOps.build(c, 360, 216).texts) titled |= "Revenue".equals(t.text());
     assertTrue(titled);
 
     int art = block(run(s, "insert.smartArt", "layout", "process", "nodes", "Plan\nBuild"));
@@ -183,11 +183,11 @@ public class DrawingCommandsTest {
     run(s, "arrange.wrap", "block", shape, "wrap", "square");
     var page = engine.layout(s.document(), 2).pages.get(0);
     var pic = page.pictures.get(0);
-    assertTrue(page.lines.get(0).x >= pic.x + pic.width);
+    assertTrue(page.lines.get(0).x >= pic.x() + pic.width());
     assertTrue(page.lines.get(0).y < inlineY);
     run(s, "arrange.wrap", "block", shape, "wrap", "front");
     page = engine.layout(s.document(), 3).pages.get(0);
-    assertEquals(pic.y, page.lines.get(0).y, .01f);
+    assertEquals(pic.y(), page.lines.get(0).y, .01f);
     assertEquals(1, LayoutEngine.byDepth(page.pictures, true).size());
   }
 }

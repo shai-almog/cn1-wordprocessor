@@ -41,45 +41,13 @@ public final class DrawingOps {
   };
 
   /** A filled and/or stroked polygon or polyline. */
-  public static final class Path {
-    public final float[] points;
-    public final boolean closed;
-    public final int fill, stroke, alpha;
-    public final float width;
-
-    Path(float[] points, boolean closed, int fill, int stroke, float width, int alpha) {
-      this.points = points;
-      this.closed = closed;
-      this.fill = fill;
-      this.stroke = stroke;
-      this.width = width;
-      this.alpha = alpha;
-    }
-  }
+  public record Path(
+      float[] points, boolean closed, int fill, int stroke, float width, int alpha) {}
 
   /** One line of text placed in a box; renderers align it with real font metrics. */
-  public static final class Text {
-    public final String text, align;
-    public final float x, y, width, size;
-    public final int color, outline, rotation;
-    public final boolean bold, italic;
-
-    Text(
-        String text, float x, float y, float width, float size, int color, boolean bold,
-        boolean italic, String align, int outline, int rotation) {
-      this.text = text;
-      this.x = x;
-      this.y = y;
-      this.width = width;
-      this.size = size;
-      this.color = color;
-      this.bold = bold;
-      this.italic = italic;
-      this.align = align;
-      this.outline = outline;
-      this.rotation = rotation;
-    }
-  }
+  public record Text(
+      String text, float x, float y, float width, float size, int color, boolean bold,
+      boolean italic, String align, int outline, int rotation) {}
 
   public static final class Ops {
     public final List<Path> paths = new ArrayList<>();

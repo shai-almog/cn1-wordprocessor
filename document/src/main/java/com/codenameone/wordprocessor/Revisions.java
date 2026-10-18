@@ -165,14 +165,14 @@ public final class Revisions {
         p = p.reviewFormat(null, accept);
       if ((b < selection.endBlock() || caretMark) && p.breakRevision != null) {
         var resolution = p.breakRevision.resolve(null, accept);
-        if (resolution.removed && b + 1 < blocks.size() && blocks.get(b + 1) instanceof Paragraph) {
+        if (resolution.removed() && b + 1 < blocks.size() && blocks.get(b + 1) instanceof Paragraph) {
           var following = (Paragraph) blocks.get(b + 1);
           var boundary = sections.remove(following.id);
           sections.remove(p.id);
           if (boundary != null) sections.put(p.id, boundary);
           p = p.text(p.text.concat(following.text)).breakRevision(following.breakRevision);
           blocks = blocks.remove(b + 1);
-        } else p = p.breakRevision(resolution.remaining);
+        } else p = p.breakRevision(resolution.remaining());
       }
       blocks = blocks.set(b, p);
     }
@@ -227,7 +227,7 @@ public final class Revisions {
         var r = p.breakRevision;
         if (r == null) continue;
         var resolution = r.resolve(id, accept);
-        if (resolution.removed && i + 1 < blocks.size() && blocks.get(i + 1) instanceof Paragraph) {
+        if (resolution.removed() && i + 1 < blocks.size() && blocks.get(i + 1) instanceof Paragraph) {
           var following = (Paragraph) blocks.get(i + 1);
           var boundary = sections.remove(following.id);
           sections.remove(p.id);
@@ -239,7 +239,7 @@ public final class Revisions {
                       p.text(p.text.concat(following.text)).breakRevision(following.breakRevision))
                   .remove(i + 1);
           i--;
-        } else blocks = blocks.set(i, p.breakRevision(resolution.remaining));
+        } else blocks = blocks.set(i, p.breakRevision(resolution.remaining()));
       }
     return blocks;
   }

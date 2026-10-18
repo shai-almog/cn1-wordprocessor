@@ -33,14 +33,14 @@ public final class ComparisonCommands implements Commands.Extension {
           o.ignoreWhiteSpace = Boolean.FALSE.equals(a.get("whiteSpace"));
           o.formatting = !Boolean.FALSE.equals(a.get("formatting"));
           DocumentComparison.Result result = DocumentComparison.compare(original, revised, o);
-          s.replaceDocument(result.document);
+          s.replaceDocument(result.document());
           return Json.object(
               "changes",
-              result.changes,
+              result.changes(),
               "author",
               o.author.trim(),
               "coarse",
-              result.coarse,
+              result.coarse(),
               "notHonoured",
               Arrays.asList(
                   "headersFooters",

@@ -27,15 +27,7 @@ public final class Revision {
     return new Revision(id, kind, author, date, value);
   }
 
-  public static final class Resolution {
-    public final boolean removed;
-    public final Revision remaining;
-
-    Resolution(boolean removed, Revision remaining) {
-      this.removed = removed;
-      this.remaining = remaining;
-    }
-  }
+  public record Resolution(boolean removed, Revision remaining) {}
 
   public Resolution resolve(String selectedId, boolean accept) {
     Resolution prior =

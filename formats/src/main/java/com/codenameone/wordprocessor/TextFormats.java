@@ -280,26 +280,26 @@ public final class TextFormats {
         .append(pic.height).append("pt\" viewBox=\"0 0 ").append(pic.width).append(' ').append(pic.height)
         .append("\">");
     for (DrawingOps.Path p : ops.paths) {
-      b.append(p.closed ? "<polygon" : "<polyline").append(" points=\"");
-      for (int i = 0; i < p.points.length; i += 2)
-        b.append(i == 0 ? "" : " ").append(p.points[i]).append(',').append(p.points[i + 1]);
-      b.append("\" fill=\"").append(p.closed && p.fill >= 0 ? css(p.fill) : "none").append("\" stroke=\"")
-          .append(p.stroke >= 0 ? css(p.stroke) : "none").append("\" stroke-width=\"").append(p.width)
+      b.append(p.closed() ? "<polygon" : "<polyline").append(" points=\"");
+      for (int i = 0; i < p.points().length; i += 2)
+        b.append(i == 0 ? "" : " ").append(p.points()[i]).append(',').append(p.points()[i + 1]);
+      b.append("\" fill=\"").append(p.closed() && p.fill() >= 0 ? css(p.fill()) : "none").append("\" stroke=\"")
+          .append(p.stroke() >= 0 ? css(p.stroke()) : "none").append("\" stroke-width=\"").append(p.width())
           .append("\" stroke-linejoin=\"round\" stroke-linecap=\"round\"");
-      if (p.alpha < 255) b.append(" opacity=\"").append(p.alpha / 255f).append('"');
+      if (p.alpha() < 255) b.append(" opacity=\"").append(p.alpha() / 255f).append('"');
       b.append("/>");
     }
     for (DrawingOps.Text t : ops.texts) {
-      String anchor = "center".equals(t.align) ? "middle" : "right".equals(t.align) ? "end" : "start";
-      float x = "center".equals(t.align) ? t.x + t.width / 2 : "right".equals(t.align) ? t.x + t.width : t.x;
-      b.append("<text x=\"").append(x).append("\" y=\"").append(t.y + t.size).append("\" font-size=\"")
-          .append(t.size).append("\" text-anchor=\"").append(anchor).append("\" fill=\"").append(css(t.color)).append('"');
-      if (t.bold) b.append(" font-weight=\"bold\"");
-      if (t.italic) b.append(" font-style=\"italic\"");
-      if (t.outline >= 0) b.append(" stroke=\"").append(css(t.outline)).append("\" stroke-width=\"0.75\"");
-      if (t.rotation != 0)
-        b.append(" transform=\"rotate(").append(t.rotation).append(' ').append(t.x).append(' ').append(t.y).append(")\"");
-      b.append('>').append(Xml.escape(t.text)).append("</text>");
+      String anchor = "center".equals(t.align()) ? "middle" : "right".equals(t.align()) ? "end" : "start";
+      float x = "center".equals(t.align()) ? t.x() + t.width() / 2 : "right".equals(t.align()) ? t.x() + t.width() : t.x();
+      b.append("<text x=\"").append(x).append("\" y=\"").append(t.y() + t.size()).append("\" font-size=\"")
+          .append(t.size()).append("\" text-anchor=\"").append(anchor).append("\" fill=\"").append(css(t.color())).append('"');
+      if (t.bold()) b.append(" font-weight=\"bold\"");
+      if (t.italic()) b.append(" font-style=\"italic\"");
+      if (t.outline() >= 0) b.append(" stroke=\"").append(css(t.outline())).append("\" stroke-width=\"0.75\"");
+      if (t.rotation() != 0)
+        b.append(" transform=\"rotate(").append(t.rotation()).append(' ').append(t.x()).append(' ').append(t.y()).append(")\"");
+      b.append('>').append(Xml.escape(t.text())).append("</text>");
     }
     b.append("</svg>");
   }

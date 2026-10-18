@@ -102,16 +102,16 @@ public final class PdfExporter {
    */
   private static void picture(
       StringBuilder content, LayoutEngine.PlacedPicture pic, float pageHeight, String name) {
-    var k = pic.picture.look;
-    float w = pic.width, h = pic.height;
+    var k = pic.picture().look;
+    float w = pic.width(), h = pic.height();
     double a = Math.toRadians(k.rotation);
     float cos = (float) Math.cos(a), sin = (float) Math.sin(a);
     float fx = k.flipH ? -1 : 1, fy = k.flipV ? -1 : 1;
     content
         .append("q 1 0 0 1 ")
-        .append(n(pic.x + w / 2))
+        .append(n(pic.x() + w / 2))
         .append(' ')
-        .append(n(pageHeight - pic.y - h / 2))
+        .append(n(pageHeight - pic.y() - h / 2))
         .append(" cm ")
         .append(n(cos))
         .append(' ')
@@ -326,8 +326,8 @@ public final class PdfExporter {
     var imageIds = new HashMap<Picture, Integer>();
     for (LayoutEngine.Page page : layout.pages)
       for (LayoutEngine.PlacedPicture pic : page.pictures)
-        if (pic.picture.drawing == null && !imageIds.containsKey(pic.picture))
-          imageIds.put(pic.picture, PdfPictures.add(objects, pic.picture));
+        if (pic.picture().drawing == null && !imageIds.containsKey(pic.picture()))
+          imageIds.put(pic.picture(), PdfPictures.add(objects, pic.picture()));
     int pageIndex = 0;
     for (LayoutEngine.Page page : layout.pages) {
       var spec = page.spec;
@@ -353,7 +353,7 @@ public final class PdfExporter {
       }
       for (LayoutEngine.Frame frame : page.frames) frame(content, frame, spec.height);
       for (LayoutEngine.PlacedPicture pic : LayoutEngine.byDepth(page.pictures, false)) {
-        if (pic.picture.drawing != null) {
+        if (pic.picture().drawing != null) {
           PdfDrawings.paint(content, pic, spec.height);
           continue;
         }
@@ -362,7 +362,7 @@ public final class PdfExporter {
             .append('/')
             .append(name)
             .append(' ')
-            .append(imageIds.get(pic.picture))
+            .append(imageIds.get(pic.picture()))
             .append(" 0 R ");
         picture(content, pic, spec.height, name);
       }

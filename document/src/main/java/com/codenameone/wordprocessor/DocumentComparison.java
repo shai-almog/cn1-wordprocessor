@@ -12,17 +12,7 @@ public final class DocumentComparison {
     public String author = "Reviewer";
   }
 
-  public static final class Result {
-    public final Document document;
-    public final int changes;
-    public final boolean coarse;
-
-    Result(Document document, int changes, boolean coarse) {
-      this.document = document;
-      this.changes = changes;
-      this.coarse = coarse;
-    }
-  }
+  public record Result(Document document, int changes, boolean coarse) {}
 
   private static void supported(Document d) {
     if (!d.sections.isEmpty())

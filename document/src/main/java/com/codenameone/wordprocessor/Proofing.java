@@ -25,19 +25,7 @@ public final class Proofing {
   private Proofing() {}
 
   /** A spelling or grammar finding in one paragraph's text (char offsets, end exclusive). */
-  public static final class Issue {
-    public final int start, end;
-    public final String kind, message;
-    public final List<String> suggestions;
-
-    Issue(int start, int end, String kind, String message, List<String> suggestions) {
-      this.start = start;
-      this.end = end;
-      this.kind = kind;
-      this.message = message;
-      this.suggestions = suggestions;
-    }
-  }
+  public record Issue(int start, int end, String kind, String message, List<String> suggestions) {}
 
   /** User dictionary and ignore list (lowercase). */
   public static final class Options {

@@ -10,35 +10,35 @@ final class PdfDrawings {
   private PdfDrawings() {}
 
   static void paint(StringBuilder c, LayoutEngine.PlacedPicture pic, float pageHeight) {
-    DrawingOps.Ops ops = DrawingOps.build(pic.picture.drawing, pic.width, pic.height);
-    float ox = pic.x, oy = pageHeight - pic.y;
+    DrawingOps.Ops ops = DrawingOps.build(pic.picture().drawing, pic.width(), pic.height());
+    float ox = pic.x(), oy = pageHeight - pic.y();
     c.append("q 1 j 1 J\n");
     for (DrawingOps.Path p : ops.paths) {
-      if (p.points.length < 4) continue;
-      for (int i = 0; i < p.points.length; i += 2)
-        c.append(n(ox + p.points[i])).append(' ').append(n(oy - p.points[i + 1])).append(i == 0 ? " m " : " l ");
-      boolean fill = p.closed && p.fill >= 0, stroke = p.stroke >= 0 && p.width > 0;
-      if (p.closed) c.append("h ");
-      if (fill) c.append(rgb(blend(p.fill, p.alpha))).append(" rg ");
-      if (stroke) c.append(rgb(blend(p.stroke, p.alpha))).append(" RG ").append(n(p.width)).append(" w ");
+      if (p.points().length < 4) continue;
+      for (int i = 0; i < p.points().length; i += 2)
+        c.append(n(ox + p.points()[i])).append(' ').append(n(oy - p.points()[i + 1])).append(i == 0 ? " m " : " l ");
+      boolean fill = p.closed() && p.fill() >= 0, stroke = p.stroke() >= 0 && p.width() > 0;
+      if (p.closed()) c.append("h ");
+      if (fill) c.append(rgb(blend(p.fill(), p.alpha()))).append(" rg ");
+      if (stroke) c.append(rgb(blend(p.stroke(), p.alpha()))).append(" RG ").append(n(p.width())).append(" w ");
       c.append(fill && stroke ? "B" : fill ? "f" : stroke ? "S" : "n").append('\n');
     }
     for (DrawingOps.Text t : ops.texts) {
-      String s = literal(t.text);
-      float width = t.text.length() * t.size * (t.bold ? .56f : .5f);
-      float x = ox + t.x, base = oy - t.y - t.size;
-      if ("center".equals(t.align)) x += (t.width - width) / 2;
-      else if ("right".equals(t.align)) x += t.width - width;
-      c.append("BT ").append(rgb(t.color)).append(" rg ");
-      if (t.outline >= 0) c.append(rgb(t.outline)).append(" RG 0.75 w 2 Tr ");
-      c.append("/F0 ").append(n(t.size)).append(" Tf ");
-      if (t.rotation != 0) {
-        double a = Math.toRadians(-t.rotation);
+      String s = literal(t.text());
+      float width = t.text().length() * t.size() * (t.bold() ? .56f : .5f);
+      float x = ox + t.x(), base = oy - t.y() - t.size();
+      if ("center".equals(t.align())) x += (t.width() - width) / 2;
+      else if ("right".equals(t.align())) x += t.width() - width;
+      c.append("BT ").append(rgb(t.color())).append(" rg ");
+      if (t.outline() >= 0) c.append(rgb(t.outline())).append(" RG 0.75 w 2 Tr ");
+      c.append("/F0 ").append(n(t.size())).append(" Tf ");
+      if (t.rotation() != 0) {
+        double a = Math.toRadians(-t.rotation());
         float cos = (float) Math.cos(a), sin = (float) Math.sin(a);
-        float rx = ox + t.x + (t.rotation == 90 ? t.size : 0), ry = oy - t.y - (t.rotation == 90 ? 0 : t.width);
+        float rx = ox + t.x() + (t.rotation() == 90 ? t.size() : 0), ry = oy - t.y() - (t.rotation() == 90 ? 0 : t.width());
         c.append(n(cos)).append(' ').append(n(sin)).append(' ').append(n(-sin)).append(' ').append(n(cos))
             .append(' ').append(n(rx)).append(' ').append(n(ry));
-      } else c.append(t.italic ? "1 0 0.2 1 " : "1 0 0 1 ").append(n(x)).append(' ').append(n(base));
+      } else c.append(t.italic() ? "1 0 0.2 1 " : "1 0 0 1 ").append(n(x)).append(' ').append(n(base));
       c.append(" Tm (").append(s).append(") Tj ET\n");
     }
     c.append("Q\n");

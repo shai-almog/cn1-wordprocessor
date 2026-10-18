@@ -31,12 +31,12 @@ final class ProofingCommands implements Commands.Extension {
     Map<String, Object> map() {
       var m = new LinkedHashMap<String, Object>();
       m.put("block", Integer.valueOf(block));
-      m.put("start", Integer.valueOf(issue.start));
-      m.put("end", Integer.valueOf(issue.end));
-      m.put("kind", issue.kind);
-      m.put("message", issue.message);
+      m.put("start", Integer.valueOf(issue.start()));
+      m.put("end", Integer.valueOf(issue.end()));
+      m.put("kind", issue.kind());
+      m.put("message", issue.message());
       m.put("word", word);
-      m.put("suggestions", issue.suggestions);
+      m.put("suggestions", issue.suggestions());
       return m;
     }
   }
@@ -67,9 +67,9 @@ final class ProofingCommands implements Commands.Extension {
       var t = d.paragraph(b).text;
       var text = t.plainText();
       for (Proofing.Issue i : Proofing.check(text, o)) {
-        if (!english(t.styleAt(i.start).characters.lang)) continue;
-        var word = text.substring(i.start, i.end);
-        if (once != null && once.contains(b + ":" + i.start + ":" + word)) continue;
+        if (!english(t.styleAt(i.start()).characters.lang)) continue;
+        var word = text.substring(i.start(), i.end());
+        if (once != null && once.contains(b + ":" + i.start() + ":" + word)) continue;
         out.add(new Found(b, i, word));
       }
     }
@@ -85,13 +85,13 @@ final class ProofingCommands implements Commands.Extension {
       int eb = sel.endBlock(), eo = sel.end();
       Found hit = null;
       for (Found f : all)
-        if (f.block > eb || f.block == eb && f.issue.start >= eo) {
+        if (f.block > eb || f.block == eb && f.issue.start() >= eo) {
           hit = f;
           break;
         }
       if (hit == null && !all.isEmpty()) hit = all.get(0);
       if (hit == null) return report(all);
-      s.select(hit.block, hit.issue.start, hit.issue.end);
+      s.select(hit.block, hit.issue.start(), hit.issue.end());
       Map<String, Object> m = hit.map();
       m.put("remaining", Integer.valueOf(all.size()));
       return m;
@@ -116,7 +116,7 @@ final class ProofingCommands implements Commands.Extension {
       synchronized (ONCE) {
         var once = ONCE.get(s);
         if (once == null) ONCE.put(s, once = new HashSet<String>());
-        once.add(f.block + ":" + f.issue.start + ":" + f.word);
+        once.add(f.block + ":" + f.issue.start() + ":" + f.word);
       }
       return report(issues(s));
     }
@@ -125,7 +125,7 @@ final class ProofingCommands implements Commands.Extension {
       if ("change".equals(action)) {
         Found f = target(s, word);
         if (f == null) throw new IllegalArgumentException("No issue to change");
-        s.select(f.block, f.issue.start, f.issue.end);
+        s.select(f.block, f.issue.start(), f.issue.end());
         s.replace(replacement);
       } else {
         if (word == null) word = current(s);
@@ -134,7 +134,7 @@ final class ProofingCommands implements Commands.Extension {
         for (int i = all.size() - 1; i >= 0; i--) {
           var f = all.get(i);
           if (!f.word.equals(word)) continue;
-          s.select(f.block, f.issue.start, f.issue.end);
+          s.select(f.block, f.issue.start(), f.issue.end());
           s.replace(replacement);
         }
       }
@@ -168,7 +168,7 @@ final class ProofingCommands implements Commands.Extension {
     var all = issues(s);
     var x = s.selection();
     for (Found f : all)
-      if (word != null ? f.word.equals(word) : f.block == x.block && x.caret >= f.issue.start && x.caret <= f.issue.end)
+      if (word != null ? f.word.equals(word) : f.block == x.block && x.caret >= f.issue.start() && x.caret <= f.issue.end())
         return f;
     return null;
   }

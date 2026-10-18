@@ -17,9 +17,9 @@ public class DocumentComparisonTest {
     var opts = new DocumentComparison.Options();
     opts.author = "Reviewer";
     DocumentComparison.Result result = DocumentComparison.compare(original, revised, opts);
-    assertEquals(b, Revisions.resolve(result.document, null, true).plainText());
-    assertEquals(a, Revisions.resolve(result.document, null, false).plainText());
-    for (Revisions.Change change : Revisions.list(result.document))
+    assertEquals(b, Revisions.resolve(result.document(), null, true).plainText());
+    assertEquals(a, Revisions.resolve(result.document(), null, false).plainText());
+    for (Revisions.Change change : Revisions.list(result.document()))
       assertEquals("Reviewer", change.revision.author);
     assertEquals(a, original.plainText());
     assertEquals(b, revised.plainText());
@@ -59,9 +59,9 @@ public class DocumentComparisonTest {
     o.ignoreWhiteSpace = true;
     DocumentComparison.Result r =
         DocumentComparison.compare(doc("HELLO   World"), doc("hello world"), o);
-    assertEquals(0, r.changes);
-    assertEquals("hello world", r.document.plainText());
-    assertTrue(Revisions.list(r.document).isEmpty());
+    assertEquals(0, r.changes());
+    assertEquals("hello world", r.document().plainText());
+    assertTrue(Revisions.list(r.document()).isEmpty());
   }
 
   @Test
@@ -98,9 +98,9 @@ public class DocumentComparisonTest {
     var b = edit.document();
     DocumentComparison.Result result =
         DocumentComparison.compare(a, b, new DocumentComparison.Options());
-    assertEquals(1, result.changes);
-    Document accepted = Revisions.resolve(result.document, null, true),
-        rejected = Revisions.resolve(result.document, null, false);
+    assertEquals(1, result.changes());
+    Document accepted = Revisions.resolve(result.document(), null, true),
+        rejected = Revisions.resolve(result.document(), null, false);
     assertTrue(accepted.paragraph(0).text.styleAt(0).bold);
     assertEquals("center", accepted.paragraph(0).align);
     assertFalse(rejected.paragraph(0).text.styleAt(0).bold);
@@ -108,9 +108,9 @@ public class DocumentComparisonTest {
     var o = new DocumentComparison.Options();
     o.formatting = false;
     result = DocumentComparison.compare(a, b, o);
-    assertEquals(0, result.changes);
-    assertTrue(Revisions.list(result.document).isEmpty());
-    assertTrue(result.document.paragraph(0).text.styleAt(0).bold);
+    assertEquals(0, result.changes());
+    assertTrue(Revisions.list(result.document()).isEmpty());
+    assertTrue(result.document().paragraph(0).text.styleAt(0).bold);
   }
 
   @Test
@@ -119,9 +119,9 @@ public class DocumentComparisonTest {
     var b = a.blocks(a.blocks.set(0, a.paragraph(0).with("align", "right")), a.nextId);
     DocumentComparison.Result result =
         DocumentComparison.compare(a, b, new DocumentComparison.Options());
-    assertEquals(1, result.changes);
-    assertEquals("right", Revisions.resolve(result.document, null, true).paragraph(0).align);
-    assertEquals("left", Revisions.resolve(result.document, null, false).paragraph(0).align);
+    assertEquals(1, result.changes());
+    assertEquals("right", Revisions.resolve(result.document(), null, true).paragraph(0).align);
+    assertEquals("left", Revisions.resolve(result.document(), null, false).paragraph(0).align);
   }
 
   @Test

@@ -17,7 +17,7 @@ public class ProofingTest {
     assertTrue(Proofing.suggest("Wrold", 3).contains("World"));
     var issues = Proofing.checkSpelling("Hello wrold", NONE);
     assertEquals(1, issues.size());
-    assertEquals(6, issues.get(0).start);
+    assertEquals(6, issues.get(0).start());
   }
 
   @Test
@@ -41,7 +41,7 @@ public class ProofingTest {
   public void grammar() {
     var g = Proofing.checkGrammar("This is a apple. the the cat  sat , here");
     var all = new StringBuilder();
-    for (Proofing.Issue i : g) all.append(i.message).append('|');
+    for (Proofing.Issue i : g) all.append(i.message()).append('|');
     var s = all.toString();
     assertTrue(s, s.indexOf("Use \"an\"") >= 0);
     assertTrue(s, s.indexOf("Repeated word") >= 0);

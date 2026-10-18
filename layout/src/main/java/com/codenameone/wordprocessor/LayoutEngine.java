@@ -143,22 +143,8 @@ public final class LayoutEngine {
     return d.num("z", 0) + ("behind".equals(d.get("wrap", "inline")) ? -10000 : 0);
   }
 
-  public static final class PlacedPicture {
-    public final Picture picture;
-    public final int block, page;
-    public final float x, y, width, height;
-
-    PlacedPicture(
-        Picture picture, int block, int page, float x, float y, float width, float height) {
-      this.picture = picture;
-      this.block = block;
-      this.page = page;
-      this.x = x;
-      this.y = y;
-      this.width = width;
-      this.height = height;
-    }
-  }
+  public record PlacedPicture(
+      Picture picture, int block, int page, float x, float y, float width, float height) {}
 
   /** One page's share of a bordered or shaded paragraph, in points. */
   public static final class Frame {

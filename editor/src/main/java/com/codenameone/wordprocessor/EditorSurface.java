@@ -62,66 +62,66 @@ public final class EditorSurface extends Container
 
   /** Paints a vector drawing from the primitives shared with PDF and HTML export. */
   private void paintDrawing(Graphics g, LayoutEngine.PlacedPicture pic, int px, int py, float scale) {
-    DrawingOps.Ops ops = DrawingOps.build(pic.picture.drawing, pic.width, pic.height);
+    DrawingOps.Ops ops = DrawingOps.build(pic.picture().drawing, pic.width(), pic.height());
     boolean shapes = g.isShapeSupported();
     boolean aa = g.isAntiAliased();
     g.setAntiAliased(true);
     int alpha = g.getAlpha();
     for (DrawingOps.Path p : ops.paths) {
-      int n = p.points.length / 2;
+      int n = p.points().length / 2;
       if (n < 2) continue;
       int[] xs = new int[n], ys = new int[n];
       var path = new GeneralPath();
       for (int i = 0; i < n; i++) {
-        float fx = px + p.points[i * 2] * scale, fy = py + p.points[i * 2 + 1] * scale;
+        float fx = px + p.points()[i * 2] * scale, fy = py + p.points()[i * 2 + 1] * scale;
         xs[i] = Math.round(fx);
         ys[i] = Math.round(fy);
         if (i == 0) path.moveTo(fx, fy);
         else path.lineTo(fx, fy);
       }
-      if (p.closed) path.closePath();
-      g.setAlpha(p.alpha * alpha / 255);
-      if (p.closed && p.fill >= 0) {
-        g.setColor(p.fill);
+      if (p.closed()) path.closePath();
+      g.setAlpha(p.alpha() * alpha / 255);
+      if (p.closed() && p.fill() >= 0) {
+        g.setColor(p.fill());
         if (shapes) g.fillShape(path);
         else g.fillPolygon(xs, ys, n);
       }
-      if (p.stroke >= 0 && p.width > 0) {
-        g.setColor(p.stroke);
-        float w = Math.max(1, p.width * scale);
+      if (p.stroke() >= 0 && p.width() > 0) {
+        g.setColor(p.stroke());
+        float w = Math.max(1, p.width() * scale);
         if (shapes) g.drawShape(path, new Stroke(w, Stroke.CAP_ROUND, Stroke.JOIN_ROUND, 4));
-        else if (p.closed) g.drawPolygon(xs, ys, n);
+        else if (p.closed()) g.drawPolygon(xs, ys, n);
         else for (int i = 1; i < n; i++) g.drawLine(xs[i - 1], ys[i - 1], xs[i], ys[i]);
       }
     }
     g.setAlpha(alpha);
     for (DrawingOps.Text t : ops.texts) {
-      var style = TextStyle.DEFAULT.with("size", String.valueOf(t.size));
-      if (t.bold) style = style.with("bold", "true");
-      if (t.italic) style = style.with("italic", "true");
+      var style = TextStyle.DEFAULT.with("size", String.valueOf(t.size()));
+      if (t.bold()) style = style.with("bold", "true");
+      if (t.italic()) style = style.with("italic", "true");
       var f = font(style, zoom);
       g.setFont(f);
-      int width = f.stringWidth(t.text);
-      int tx = px + Math.round(t.x * scale), ty = py + Math.round(t.y * scale);
-      int box = Math.round(t.width * scale);
-      if (t.rotation != 0) {
-        float cx = px + t.x * scale, cy = py + t.y * scale;
-        g.rotate((float) Math.toRadians(t.rotation), Math.round(cx), Math.round(cy));
-        int sx = Math.round(cx), sy = Math.round(cy) - Math.round(t.size * 1.2f * scale);
-        if (t.rotation == 270) sy = Math.round(cy);
-        g.setColor(t.color);
-        g.drawString(t.text, t.rotation == 90 ? sx : sx - box, sy);
-        g.rotate((float) -Math.toRadians(t.rotation), Math.round(cx), Math.round(cy));
+      int width = f.stringWidth(t.text());
+      int tx = px + Math.round(t.x() * scale), ty = py + Math.round(t.y() * scale);
+      int box = Math.round(t.width() * scale);
+      if (t.rotation() != 0) {
+        float cx = px + t.x() * scale, cy = py + t.y() * scale;
+        g.rotate((float) Math.toRadians(t.rotation()), Math.round(cx), Math.round(cy));
+        int sx = Math.round(cx), sy = Math.round(cy) - Math.round(t.size() * 1.2f * scale);
+        if (t.rotation() == 270) sy = Math.round(cy);
+        g.setColor(t.color());
+        g.drawString(t.text(), t.rotation() == 90 ? sx : sx - box, sy);
+        g.rotate((float) -Math.toRadians(t.rotation()), Math.round(cx), Math.round(cy));
         continue;
       }
-      if ("center".equals(t.align)) tx += (box - width) / 2;
-      else if ("right".equals(t.align)) tx += box - width;
-      if (t.outline >= 0) {
-        g.setColor(t.outline);
-        for (int d = 0; d < 4; d++) g.drawString(t.text, tx + (d % 2 == 0 ? -1 : 1), ty + (d < 2 ? -1 : 1));
+      if ("center".equals(t.align())) tx += (box - width) / 2;
+      else if ("right".equals(t.align())) tx += box - width;
+      if (t.outline() >= 0) {
+        g.setColor(t.outline());
+        for (int d = 0; d < 4; d++) g.drawString(t.text(), tx + (d % 2 == 0 ? -1 : 1), ty + (d < 2 ? -1 : 1));
       }
-      g.setColor(t.color);
-      g.drawString(t.text, tx, ty);
+      g.setColor(t.color());
+      g.drawString(t.text(), tx, ty);
     }
     g.setAntiAliased(aa);
   }
@@ -416,18 +416,18 @@ public final class EditorSurface extends Container
       }
     for (LayoutEngine.Page page : layout().pages)
       for (LayoutEngine.PlacedPicture pic : page.pictures) {
-        int top = pageY(pic.page) + Math.round(pic.y * scale()) - getScrollY(),
-            height = Math.round(pic.height * scale());
+        int top = pageY(pic.page()) + Math.round(pic.y() * scale()) - getScrollY(),
+            height = Math.round(pic.height() * scale());
         if (top + height < 0 || top > getHeight()) continue;
         var node =
-            new AccessibilityNode(pic.picture.id())
+            new AccessibilityNode(pic.picture().id())
                 .setRole(AccessibilityRole.IMAGE)
-                .setLabel(pic.picture.alt.isEmpty() ? "Picture" : pic.picture.alt)
+                .setLabel(pic.picture().alt.isEmpty() ? "Picture" : pic.picture().alt)
                 .setBounds(
                     new Rectangle(
-                        pageX(pic.page) + Math.round(pic.x * scale()),
+                        pageX(pic.page()) + Math.round(pic.x() * scale()),
                         top,
-                        Math.round(pic.width * scale()),
+                        Math.round(pic.width() * scale()),
                         height));
         node.addAction(
             new AccessibilityAction(
@@ -435,7 +435,7 @@ public final class EditorSurface extends Container
                 "Edit picture",
                 (component, argument) -> {
                   stopInput();
-                  if (pictureEditor != null) pictureEditor.edit(pic.block);
+                  if (pictureEditor != null) pictureEditor.edit(pic.block());
                   return true;
                 }));
         nodes.add(node);
@@ -1258,33 +1258,33 @@ public final class EditorSurface extends Container
             x + Math.round(rule[0] * scale),
             y + Math.round(rule[2] * scale));
       for (LayoutEngine.PlacedPicture pic : LayoutEngine.byDepth(page.pictures, false)) {
-        if (pic.picture.drawing != null) {
-          paintDrawing(g, pic, x + Math.round(pic.x * scale), y + Math.round(pic.y * scale), scale);
+        if (pic.picture().drawing != null) {
+          paintDrawing(g, pic, x + Math.round(pic.x() * scale), y + Math.round(pic.y() * scale), scale);
           continue;
         }
-        var image = picture(pic.picture);
+        var image = picture(pic.picture());
         if (image == null) {
           g.setColor(0x9c2525);
           g.setFont(font(TextStyle.DEFAULT, zoom));
           g.drawRect(
-              x + Math.round(pic.x * scale),
-              y + Math.round(pic.y * scale),
-              Math.round(pic.width * scale),
-              Math.round(pic.height * scale));
+              x + Math.round(pic.x() * scale),
+              y + Math.round(pic.y() * scale),
+              Math.round(pic.width() * scale),
+              Math.round(pic.height() * scale));
           g.drawString(
               "Picture unavailable",
-              x + Math.round(pic.x * scale) + 4,
-              y + Math.round(pic.y * scale) + 4);
+              x + Math.round(pic.x() * scale) + 4,
+              y + Math.round(pic.y() * scale) + 4);
           continue;
         }
         drawPicture(
             g,
             image,
-            pic.picture.look,
-            x + Math.round(pic.x * scale),
-            y + Math.round(pic.y * scale),
-            Math.round(pic.width * scale),
-            Math.round(pic.height * scale),
+            pic.picture().look,
+            x + Math.round(pic.x() * scale),
+            y + Math.round(pic.y() * scale),
+            Math.round(pic.width() * scale),
+            Math.round(pic.height() * scale),
             scale);
       }
       for (LayoutEngine.Box box : page.boxes) {
@@ -1406,11 +1406,11 @@ public final class EditorSurface extends Container
           // Proofing marks: red wavy for spelling, blue for grammar.
           int base = ly + Math.round(line.height * scale) - 2;
           for (Proofing.Issue issue : proofIssues(lineParagraph(line))) {
-            if ("grammar".equals(issue.kind) && !AppOptions.flag("checkGrammar")) continue;
-            int a = Math.max(issue.start, line.start), b = Math.min(issue.end, line.end);
+            if ("grammar".equals(issue.kind()) && !AppOptions.flag("checkGrammar")) continue;
+            int a = Math.max(issue.start(), line.start), b = Math.min(issue.end(), line.end);
             if (a >= b) continue;
             int x0 = lx + Math.round(offsetX(line, a) * scale), x1 = lx + Math.round(offsetX(line, b) * scale);
-            squiggle(g, x0, x1, base, "spelling".equals(issue.kind) ? 0xd13438 : 0x2b579a);
+            squiggle(g, x0, x1, base, "spelling".equals(issue.kind()) ? 0xd13438 : 0x2b579a);
           }
         }
         boolean revised = false;
@@ -1504,7 +1504,7 @@ public final class EditorSurface extends Container
         if (line.clipped) g.setClip(clipX, clipY, clipW, clipH);
       }
       for (LayoutEngine.PlacedPicture pic : LayoutEngine.byDepth(page.pictures, true))
-        paintDrawing(g, pic, x + Math.round(pic.x * scale), y + Math.round(pic.y * scale), scale);
+        paintDrawing(g, pic, x + Math.round(pic.x() * scale), y + Math.round(pic.y() * scale), scale);
     }
     if (OfficeTheme.mobile() && !exporting && session.cellSelection() == null && !selection.collapsed()) {
       g.setColor(OfficeTheme.BLUE);
@@ -1735,14 +1735,14 @@ public final class EditorSurface extends Container
       float px = (x - viewportX() - pageX(page)) / scale();
       float py = (y - viewportY() + getScrollY() - pageY(page)) / scale();
       for (LayoutEngine.PlacedPicture pic : layout().pages.get(page).pictures) {
-        if (px < pic.x || px > pic.x + pic.width || py < pic.y || py > pic.y + pic.height) continue;
-        var d = pic.picture.drawing;
+        if (px < pic.x() || px > pic.x() + pic.width() || py < pic.y() || py > pic.y() + pic.height()) continue;
+        var d = pic.picture().drawing;
         if (d == null || !("ink".equals(d.kind) || "canvas".equals(d.kind))) continue;
-        inkBlock = pic.block;
+        inkBlock = pic.block();
         inkPage = page;
         inkPicture = pic;
         inkPoints.clear();
-        inkPoints.add(new float[] {px - pic.x, py - pic.y});
+        inkPoints.add(new float[] {px - pic.x(), py - pic.y()});
         repaint();
         return true;
       }
@@ -1752,10 +1752,10 @@ public final class EditorSurface extends Container
 
   private void inkDrag(int x, int y) {
     if (inkBlock < 0) return;
-    float px = (x - viewportX() - pageX(inkPage)) / scale() - inkPicture.x;
-    float py = (y - viewportY() + getScrollY() - pageY(inkPage)) / scale() - inkPicture.y;
-    px = Math.max(0, Math.min(inkPicture.width, px));
-    py = Math.max(0, Math.min(inkPicture.height, py));
+    float px = (x - viewportX() - pageX(inkPage)) / scale() - inkPicture.x();
+    float py = (y - viewportY() + getScrollY() - pageY(inkPage)) / scale() - inkPicture.y();
+    px = Math.max(0, Math.min(inkPicture.width(), px));
+    py = Math.max(0, Math.min(inkPicture.height(), py));
     var last = inkPoints.get(inkPoints.size() - 1);
     if (Math.abs(last[0] - px) + Math.abs(last[1] - py) < .75f) return;
     if (inkPoints.size() < 5000) inkPoints.add(new float[] {px, py});
@@ -1787,8 +1787,8 @@ public final class EditorSurface extends Container
     var prev = inkPoints.get(0);
     for (int i = 1; i < inkPoints.size(); i++) {
       var pt = inkPoints.get(i);
-      int x1 = ox + Math.round((inkPicture.x + prev[0]) * sc), y1 = oy + Math.round((inkPicture.y + prev[1]) * sc);
-      int x2 = ox + Math.round((inkPicture.x + pt[0]) * sc), y2 = oy + Math.round((inkPicture.y + pt[1]) * sc);
+      int x1 = ox + Math.round((inkPicture.x() + prev[0]) * sc), y1 = oy + Math.round((inkPicture.y() + prev[1]) * sc);
+      int x2 = ox + Math.round((inkPicture.x() + pt[0]) * sc), y2 = oy + Math.round((inkPicture.y() + pt[1]) * sc);
       for (int t = -w / 2; t <= w / 2; t++) {
         g.drawLine(x1 + t, y1, x2 + t, y2);
         g.drawLine(x1, y1 + t, x2, y2 + t);
@@ -1827,9 +1827,9 @@ public final class EditorSurface extends Container
       float px = (x - viewportX() - pageX(page)) / scale();
       float py = (y - viewportY() + getScrollY() - pageY(page)) / scale();
       for (LayoutEngine.PlacedPicture pic : layout().pages.get(page).pictures) {
-        if (px >= pic.x && px <= pic.x + pic.width && py >= pic.y && py <= pic.y + pic.height) {
+        if (px >= pic.x() && px <= pic.x() + pic.width() && py >= pic.y() && py <= pic.y() + pic.height()) {
           stopInput();
-          if (pictureEditor != null) pictureEditor.edit(pic.block);
+          if (pictureEditor != null) pictureEditor.edit(pic.block());
           return;
         }
       }

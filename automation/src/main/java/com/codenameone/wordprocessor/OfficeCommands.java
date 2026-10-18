@@ -477,10 +477,10 @@ final class OfficeCommands implements Commands.Extension {
           o.author = author == null || author.trim().isEmpty() ? "Reviewer" : author;
           o.formatting = true;
           DocumentComparison.Result r = DocumentComparison.compare(base, revised, o);
-          var comments = new ArrayList<ReviewComment>(r.document.comments);
+          var comments = new ArrayList<ReviewComment>(r.document().comments);
           for (ReviewComment rc : revised.comments) comments.add(rc);
-          s.replaceDocument(r.document.comments(comments));
-          return Json.object("changes", r.changes, "author", o.author, "acceptedOwnRevisions", pending, "comments", revised.comments.size());
+          s.replaceDocument(r.document().comments(comments));
+          return Json.object("changes", r.changes(), "author", o.author, "acceptedOwnRevisions", pending, "comments", revised.comments.size());
         });
     c.edit("view.altTextPane", "block?:integer,text?:string",
         "Alt Text pane: list every picture and object with its alt text, or set one (marks decorative with an empty text)",

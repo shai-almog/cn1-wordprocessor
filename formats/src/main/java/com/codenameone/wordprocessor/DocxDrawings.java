@@ -141,45 +141,45 @@ final class DocxDrawings {
 
   private static void path(StringBuilder b, DrawingOps.Path p) {
     float minX = Float.MAX_VALUE, minY = Float.MAX_VALUE, maxX = -Float.MAX_VALUE, maxY = -Float.MAX_VALUE;
-    for (int i = 0; i < p.points.length; i += 2) {
-      minX = Math.min(minX, p.points[i]);
-      maxX = Math.max(maxX, p.points[i]);
-      minY = Math.min(minY, p.points[i + 1]);
-      maxY = Math.max(maxY, p.points[i + 1]);
+    for (int i = 0; i < p.points().length; i += 2) {
+      minX = Math.min(minX, p.points()[i]);
+      maxX = Math.max(maxX, p.points()[i]);
+      minY = Math.min(minY, p.points()[i + 1]);
+      maxY = Math.max(maxY, p.points()[i + 1]);
     }
     long w = emu(maxX - minX), h = emu(maxY - minY);
     b.append("<wps:wsp xmlns:wps=\"").append(WPS).append("\"><wps:cNvSpPr/><wps:spPr><a:xfrm><a:off x=\"")
         .append(Math.round(Math.max(0, minX) * 12700)).append("\" y=\"").append(Math.round(Math.max(0, minY) * 12700))
         .append("\"/><a:ext cx=\"").append(w).append("\" cy=\"").append(h)
         .append("\"/></a:xfrm><a:custGeom><a:avLst/><a:gdLst/><a:ahLst/><a:cxnLst/><a:rect l=\"0\" t=\"0\" r=\"r\" b=\"b\"/><a:pathLst><a:path w=\"")
-        .append(w).append("\" h=\"").append(h).append('"').append(p.fill < 0 ? " fill=\"none\"" : "").append('>');
-    for (int i = 0; i < p.points.length; i += 2) {
-      b.append(i == 0 ? "<a:moveTo>" : "<a:lnTo>").append("<a:pt x=\"").append(Math.round((p.points[i] - minX) * 12700))
-          .append("\" y=\"").append(Math.round((p.points[i + 1] - minY) * 12700)).append("\"/>")
+        .append(w).append("\" h=\"").append(h).append('"').append(p.fill() < 0 ? " fill=\"none\"" : "").append('>');
+    for (int i = 0; i < p.points().length; i += 2) {
+      b.append(i == 0 ? "<a:moveTo>" : "<a:lnTo>").append("<a:pt x=\"").append(Math.round((p.points()[i] - minX) * 12700))
+          .append("\" y=\"").append(Math.round((p.points()[i + 1] - minY) * 12700)).append("\"/>")
           .append(i == 0 ? "</a:moveTo>" : "</a:lnTo>");
     }
-    if (p.closed) b.append("<a:close/>");
+    if (p.closed()) b.append("<a:close/>");
     b.append("</a:path></a:pathLst></a:custGeom>");
-    fill(b, p.fill, p.alpha);
-    line(b, p.stroke, p.width, p.alpha);
+    fill(b, p.fill(), p.alpha());
+    line(b, p.stroke(), p.width(), p.alpha());
     b.append("</wps:spPr><wps:bodyPr/></wps:wsp>");
   }
 
   private static void text(StringBuilder b, DrawingOps.Text t) {
     b.append("<wps:wsp xmlns:wps=\"").append(WPS).append("\"><wps:cNvSpPr txBox=\"1\"/><wps:spPr><a:xfrm");
-    if (t.rotation != 0) b.append(" rot=\"").append(t.rotation * 60000L).append('"');
-    b.append("><a:off x=\"").append(Math.round(Math.max(0, t.x) * 12700)).append("\" y=\"")
-        .append(Math.round(Math.max(0, t.y) * 12700)).append("\"/><a:ext cx=\"").append(emu(t.width))
-        .append("\" cy=\"").append(emu(t.size * 1.3f))
+    if (t.rotation() != 0) b.append(" rot=\"").append(t.rotation() * 60000L).append('"');
+    b.append("><a:off x=\"").append(Math.round(Math.max(0, t.x()) * 12700)).append("\" y=\"")
+        .append(Math.round(Math.max(0, t.y()) * 12700)).append("\"/><a:ext cx=\"").append(emu(t.width()))
+        .append("\" cy=\"").append(emu(t.size() * 1.3f))
         .append("\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom><a:noFill/><a:ln><a:noFill/></a:ln></wps:spPr>")
         .append("<wps:txbx><w:txbxContent><w:p><w:pPr><w:spacing w:before=\"0\" w:after=\"0\"/><w:jc w:val=\"")
-        .append("right".equals(t.align) ? "right" : "center".equals(t.align) ? "center" : "left")
+        .append("right".equals(t.align()) ? "right" : "center".equals(t.align()) ? "center" : "left")
         .append("\"/></w:pPr><w:r><w:rPr>");
-    if (t.bold) b.append("<w:b/>");
-    if (t.italic) b.append("<w:i/>");
-    b.append("<w:color w:val=\"").append(hex(t.color)).append("\"/><w:sz w:val=\"")
-        .append(Math.max(2, Math.round(t.size * 2))).append("\"/></w:rPr><w:t xml:space=\"preserve\">")
-        .append(Xml.escape(t.text))
+    if (t.bold()) b.append("<w:b/>");
+    if (t.italic()) b.append("<w:i/>");
+    b.append("<w:color w:val=\"").append(hex(t.color())).append("\"/><w:sz w:val=\"")
+        .append(Math.max(2, Math.round(t.size() * 2))).append("\"/></w:rPr><w:t xml:space=\"preserve\">")
+        .append(Xml.escape(t.text()))
         .append("</w:t></w:r></w:p></w:txbxContent></wps:txbx><wps:bodyPr lIns=\"0\" tIns=\"0\" rIns=\"0\" bIns=\"0\" wrap=\"none\"/></wps:wsp>");
   }
 
