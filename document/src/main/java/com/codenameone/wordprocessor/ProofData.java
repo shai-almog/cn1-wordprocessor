@@ -12,11 +12,14 @@ final class ProofData {
 
   static byte[] bytes(String name, boolean deflated) {
     InputStream in = ProofData.class.getResourceAsStream(name);
-    // Native Codename One builds flatten resource folders ("/proof/en-us.dic" ships as
-    // "/en-us.dic") and only find bundle files through Display. Without this the native
-    // dictionary was empty: nearly every word was flagged and nothing was hyphenated.
-    if (in == null && Display.isInitialized())
-      in = Display.getInstance().getResourceAsStream(ProofData.class, name.substring(name.lastIndexOf('/')));
+    // Native Codename One ports find bundle files only through Display. Android keeps the
+    // folder (assets/proof/en-us.dic); the Apple ports flatten it ("/en-us.dic"). Without this
+    // the native dictionary was empty: nearly every word was flagged and nothing hyphenated.
+    if (in == null && Display.isInitialized()) {
+      in = Display.getInstance().getResourceAsStream(ProofData.class, name);
+      if (in == null)
+        in = Display.getInstance().getResourceAsStream(ProofData.class, name.substring(name.lastIndexOf('/')));
+    }
     if (in == null) return new byte[0];
     try {
       if (deflated) in = new InflaterInputStream(in, new Inflater(true));

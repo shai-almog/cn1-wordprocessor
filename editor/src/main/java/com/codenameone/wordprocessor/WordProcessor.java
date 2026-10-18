@@ -241,7 +241,11 @@ public class WordProcessor {
     OfficeTheme.framed(editingButton);
     OfficeTheme.primary(share);
     // Word's tab-row actions: 28pt tall, inset from the strip and 6pt apart.
+    commentsButton.setAccessibilityText("Comments");
+    share.setAccessibilityText("Share");
     for (Button b : new Button[] {commentsButton, editingButton, share}) {
+      // A phone's tab row has no room for labels; the icons carry the meaning there.
+      if (OfficeTheme.mobile()) b.setText("");
       OfficeTheme.space(b, 4, 4, 10, 10);
       b.getAllStyles().setMarginUnit(Style.UNIT_TYPE_PIXELS);
       b.getAllStyles().setMargin(OfficeTheme.px(4), OfficeTheme.px(4), OfficeTheme.px(3), OfficeTheme.px(3));
@@ -355,6 +359,8 @@ public class WordProcessor {
             button("\u2212", () -> zoom(-.1f)), zoomSlider, button("+", () -> zoom(.1f)), zoomValue));
     if (OfficeTheme.mobile()) {
       footer.removeAll();
+      // The desktop status bar nests status beside the language button; detach it from that row.
+      status.remove();
       footer.add(BorderLayout.NORTH, status);
       quickUndo =
           iconButton("", FontImage.MATERIAL_UNDO, () -> run("edit.undo", Json.object()), false);
@@ -4140,7 +4146,7 @@ public class WordProcessor {
     editor.finishComposing();
     if (session.document().trackChanges != (m == 1)) session.trackChanges(m == 1);
     editor.setViewOnly(m == 2);
-    editingButton.setText(mode.getSelectedItem() + " \u25be");
+    if (!OfficeTheme.mobile()) editingButton.setText(mode.getSelectedItem() + " \u25be");
     edited();
   }
 
