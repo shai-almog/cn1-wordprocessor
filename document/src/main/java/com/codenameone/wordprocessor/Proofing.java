@@ -70,6 +70,32 @@ public final class Proofing {
     return b.toString();
   }
 
+  private static boolean preloading;
+
+  /** Is the word list in memory, so checking will not block on loading it? */
+  public static boolean ready() {
+    return WordList.loaded() && extra != null;
+  }
+
+  /**
+   * Loads the word list on a background thread (once), then runs done there. Loading
+   * inflates and parses about 2 MB; doing it on first paint delayed startup.
+   */
+  public static synchronized void preload(final Runnable done) {
+    if (preloading) return;
+    preloading = true;
+    new Thread(
+            new Runnable() {
+              public void run() {
+                WordList.get();
+                extra();
+                done.run();
+              }
+            },
+            "proofing-load")
+        .start();
+  }
+
   private static synchronized Set<String> extra() {
     if (extra == null) {
       extra = new HashSet<String>();

@@ -16,6 +16,10 @@ final class WordList {
     masks = m;
   }
 
+  static synchronized boolean loaded() {
+    return instance != null;
+  }
+
   static synchronized WordList get() {
     if (instance == null) instance = load();
     return instance;

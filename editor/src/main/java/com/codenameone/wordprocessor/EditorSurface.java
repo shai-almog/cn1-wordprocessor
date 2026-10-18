@@ -1660,6 +1660,20 @@ public final class EditorSurface extends Container
     }
     java.util.List<Proofing.Issue> issues = proofCache.get(p);
     if (issues == null) {
+      // Paint the page first; marks appear once the word list has loaded in the background.
+      if (!Proofing.ready()) {
+        Proofing.preload(
+            new Runnable() {
+              public void run() {
+                Display.getInstance().callSerially(new Runnable() {
+                  public void run() {
+                    repaint();
+                  }
+                });
+              }
+            });
+        return java.util.Collections.emptyList();
+      }
       issues = Proofing.marks(p.text.plainText(), proofOptions);
       proofCache.put(p, issues);
     }
