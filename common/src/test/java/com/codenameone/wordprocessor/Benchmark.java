@@ -8,7 +8,8 @@ public final class Benchmark {
   public static void main(String[] args) throws Exception {
     int paragraphs = args.length > 0 ? Integer.parseInt(args[0]) : 1000;
     int iterations = args.length > 1 ? Integer.parseInt(args[1]) : 100;
-    if (paragraphs < 1 || paragraphs > 100000 || iterations < 10 || iterations > 10000)
+    // One iteration is allowed: CI uses it only to write the startup fixtures (third argument).
+    if (paragraphs < 1 || paragraphs > 100000 || iterations < 1 || iterations > 10000)
       throw new IllegalArgumentException("Invalid benchmark size");
     var blocks = new Sequence<Block>();
     for (int i = 0; i < paragraphs; i++)
