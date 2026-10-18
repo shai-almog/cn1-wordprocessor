@@ -7,8 +7,7 @@
   <packaging>pom</packaging>
  <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <maven.compiler.source>8</maven.compiler.source>
-    <maven.compiler.target>8</maven.compiler.target>
+    <maven.compiler.release>17</maven.compiler.release>
     <cn1.version>7.0.278</cn1.version>
   </properties>
  <modules>

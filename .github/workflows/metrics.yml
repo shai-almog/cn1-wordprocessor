@@ -24,7 +24,7 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '8'
+          java-version: '17'
       - name: Build and test (timed, cold Maven repository)
         run: |
           export WORDPROCESSOR_MAVEN_REPO="$PWD/.local/maven-repository"
@@ -98,7 +98,7 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '8'
+          java-version: '17'
       - uses: dtolnay/rust-toolchain@stable
       - name: Production builds (Java app and Wordcraft)
         run: |
@@ -180,7 +180,7 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '8'
+          java-version: '17'
       - name: Build for the iPhone simulator
         run: |
           repo="$PWD/.local/maven-repository"
@@ -264,7 +264,7 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '8'
+          java-version: '17'
       - uses: actions/setup-node@v4
         with:
           node-version: '22'

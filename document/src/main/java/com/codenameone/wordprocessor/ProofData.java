@@ -21,7 +21,7 @@ final class ProofData {
         in = Display.getInstance().getResourceAsStream(ProofData.class, name.substring(name.lastIndexOf('/')));
     }
     if (in == null) return new byte[0];
-    try {
+    try (var closing = in) {
       if (deflated) in = new InflaterInputStream(in, new Inflater(true));
       ByteArrayOutputStream out = new ByteArrayOutputStream(deflated ? 1 << 21 : 1 << 17);
       byte[] buffer = new byte[16384];
@@ -29,19 +29,10 @@ final class ProofData {
       return out.toByteArray();
     } catch (Exception e) {
       return new byte[0];
-    } finally {
-      try {
-        in.close();
-      } catch (Exception ignored) {
-      }
     }
   }
 
   static String text(String name) {
-    try {
-      return new String(bytes(name, false), "UTF-8");
-    } catch (Exception e) {
-      return "";
-    }
+    return new String(bytes(name, false), java.nio.charset.StandardCharsets.UTF_8);
   }
 }
