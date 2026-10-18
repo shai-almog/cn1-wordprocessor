@@ -16,13 +16,8 @@ final class WordAliasCommands implements Commands.Extension {
 
   public void register(final Commands c) {
     this.c = c;
-    c.register(
-        "edit.goto",
-        """
-        Go To: what is page, line, section, bookmark, comment, heading, table, picture or\
-         equation; target is a 1-based number, +n/-n relative, or a bookmark name""",
-        "what:string,target?:any",
-        false,
+    c.query("edit.goto", "what:string,target?:any",
+        "Go To: what is page, line, section, bookmark, comment, heading, table, picture or equation; target is a 1-based number, +n/-n relative, or a bookmark name",
         (s, a) -> goTo(s, Commands.str(a, "what"), a.get("target")));
     c.edit("para.sort", "descending?:boolean,numeric?:boolean",
         "Sort the selected paragraphs (or all body paragraphs) as text or numbers",
@@ -114,14 +109,8 @@ final class WordAliasCommands implements Commands.Extension {
             throw new IllegalArgumentException("Orientation is portrait or landscape");
           return c.execute(s, "layout.pageSetup", Json.object("orientation", v));
         });
-    c.register(
-        "arrange.position",
-        """
-        Position an object: inline, or with square wrapping at left, center or right (a\
-         top/middle/bottom prefix such as topLeft is accepted; objects stay anchored to\
-         their paragraph vertically)""",
-        "block?:integer,position:string",
-        true,
+    c.edit("arrange.position", "block?:integer,position:string",
+        "Position an object: inline, or with square wrapping at left, center or right (a top/middle/bottom prefix such as topLeft is accepted; objects stay anchored to their paragraph vertically)",
         (s, a) -> {
           int block = a.containsKey("block") ? Commands.integer(a, "block") : s.selection().block;
           var b = s.document().blocks.get(block);
@@ -153,13 +142,8 @@ final class WordAliasCommands implements Commands.Extension {
           s.select(at, 0, 0);
           return block;
         });
-    c.register(
-        "equation.insertStructure",
-        """
-        Insert an equation structure (fraction, script, radical, integral, sum, bracket,\
-         function, accent, limit, operator, matrix), creating an equation when needed""",
-        "kind:string",
-        true,
+    c.edit("equation.insertStructure", "kind:string",
+        "Insert an equation structure (fraction, script, radical, integral, sum, bracket, function, accent, limit, operator, matrix), creating an equation when needed",
         (s, a) -> {
           String kind = Commands.str(a, "kind");
           if ("largeOperator".equals(kind) || "operator".equals(kind)) kind = "sum";

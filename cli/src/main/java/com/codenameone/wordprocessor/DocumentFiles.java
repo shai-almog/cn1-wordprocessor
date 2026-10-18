@@ -50,9 +50,7 @@ public final class DocumentFiles {
         d.title(path.getFileName().toString()),
         null,
         Collections.singletonList(
-            """
-            Text format import supports a documented rich-text subset; use native project files\
-             for lossless editing"""));
+            "Text format import supports a documented rich-text subset; use native project files for lossless editing"));
   }
 
   public static byte[] write(

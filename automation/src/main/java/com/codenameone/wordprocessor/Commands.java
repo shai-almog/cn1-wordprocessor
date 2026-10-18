@@ -252,32 +252,20 @@ public final class Commands {
   }
 
   private void builtins() {
-    register(
-        "document.inspect",
-        "Inspect document structure and selection",
-        "",
-        false,
-        (s, a) -> inspect(s));
-    register(
-        "document.text", "Return document text", "", false, (s, a) -> s.document().plainText());
-    register(
-        "document.title",
-        "Set document title",
-        "title:string",
-        true,
-        (s, a) -> {
+    query("document.inspect", "",
+        "Inspect document structure and selection", (s, a) -> inspect(s));
+    query("document.text", "",
+        "Return document text", (s, a) -> s.document().plainText());
+    edit("document.title", "title:string",
+        "Set document title", (s, a) -> {
           s.leaveCell();
           var x = s.selection();
           s.replaceDocument(s.document().title(str(a, "title")));
           s.selectRange(x.anchorBlock, x.anchor, x.block, x.caret);
           return null;
         });
-    register(
-        "selection.set",
-        "Select a UTF-16 range across paragraphs",
-        "block:integer,start:integer,end:integer,endBlock?:integer",
-        false,
-        (s, a) -> {
+    query("selection.set", "block:integer,start:integer,end:integer,endBlock?:integer",
+        "Select a UTF-16 range across paragraphs", (s, a) -> {
           s.leaveCell();
           s.selectRange(
               integer(a, "block"),
@@ -286,51 +274,32 @@ public final class Commands {
               integer(a, "end"));
           return null;
         });
-    register(
-        "selection.cell",
-        "Select rich text in a table cell",
-        "block:integer,row:integer,column:integer,paragraph:integer,start:integer,end:integer",
-        false,
-        (s, a) -> {
+    query(
+        "selection.cell", "block:integer,row:integer,column:integer,paragraph:integer,start:integer,end:integer",
+        "Select rich text in a table cell", (s, a) -> {
           s.enterCell(integer(a, "block"), integer(a, "row"), integer(a, "column"));
           s.select(integer(a, "paragraph"), integer(a, "start"), integer(a, "end"));
           return null;
         });
-    register(
-        "text.insert",
-        "Replace selection with text",
-        "text:string",
-        true,
-        (s, a) -> {
+    edit("text.insert", "text:string",
+        "Replace selection with text", (s, a) -> {
           String text = str(a, "text");
           if (text.length() > 1024 * 1024) throw new IllegalArgumentException("Text exceeds 1 MiB");
           s.replace(text);
           return null;
         });
-    register(
-        "text.backspace",
-        "Delete selection or previous grapheme cluster",
-        "",
-        true,
-        (s, a) -> {
+    edit("text.backspace", "",
+        "Delete selection or previous grapheme cluster", (s, a) -> {
           s.deleteBackward();
           return null;
         });
-    register(
-        "format.changeCase",
-        "Change selected text case or the word around the caret",
-        "mode?:string",
-        true,
-        (s, a) -> {
+    edit("format.changeCase", "mode?:string",
+        "Change selected text case or the word around the caret", (s, a) -> {
           s.changeCase(a.containsKey("mode") ? str(a, "mode") : null);
           return null;
         });
-    register(
-        "format.set",
-        "Apply character formatting to selection",
-        "property:string,value:string",
-        true,
-        (s, a) -> {
+    edit("format.set", "property:string,value:string",
+        "Apply character formatting to selection", (s, a) -> {
           String k = str(a, "property");
           if (!Arrays.asList(
                   "bold",
@@ -366,12 +335,8 @@ public final class Commands {
           s.format(k, str(a, "value"));
           return null;
         });
-    register(
-        "styles.list",
-        "List document paragraph styles",
-        "",
-        false,
-        (s, a) -> {
+    query("styles.list", "",
+        "List document paragraph styles", (s, a) -> {
           var result = new ArrayList<Object>();
           for (ParagraphStyle style : s.document().styles.values())
             result.add(
@@ -386,21 +351,13 @@ public final class Commands {
                     style.text.size));
           return result;
         });
-    register(
-        "styles.apply",
-        "Apply a named style",
-        "id:string",
-        true,
-        (s, a) -> {
+    edit("styles.apply", "id:string",
+        "Apply a named style", (s, a) -> {
           s.applyStyle(str(a, "id"));
           return null;
         });
-    register(
-        "styles.create",
-        "Create a style from the selection",
-        "id:string,name:string",
-        true,
-        (s, a) -> {
+    edit("styles.create", "id:string,name:string",
+        "Create a style from the selection", (s, a) -> {
           String id = str(a, "id");
           if (s.document().styles.containsKey(id))
             throw new IllegalArgumentException("Style already exists");
@@ -412,12 +369,8 @@ public final class Commands {
                   s.activeStyle()));
           return null;
         });
-    register(
-        "styles.updateToMatch",
-        "Update a named style from the selection",
-        "id:string",
-        true,
-        (s, a) -> {
+    edit("styles.updateToMatch", "id:string",
+        "Update a named style from the selection", (s, a) -> {
           var old = s.document().styles.get(str(a, "id"));
           if (old == null) throw new IllegalArgumentException("Unknown style");
           s.defineStyle(
@@ -428,12 +381,8 @@ public final class Commands {
                   s.activeStyle()));
           return null;
         });
-    register(
-        "styles.modify",
-        "Modify a style definition and update its paragraphs",
-        "id:string,property:string,value:string",
-        true,
-        (s, a) -> {
+    edit("styles.modify", "id:string,property:string,value:string",
+        "Modify a style definition and update its paragraphs", (s, a) -> {
           var old = s.document().styles.get(str(a, "id"));
           if (old == null) throw new IllegalArgumentException("Unknown style");
           String key = str(a, "property"), value = str(a, "value");
@@ -486,13 +435,9 @@ public final class Commands {
           else throw new IllegalArgumentException("Unknown style property");
           return null;
         });
-    register(
-        "layout.columns",
-        """
-        Set newspaper columns: count 1-12 or preset one/two/three/left/right, optional\
-         space (pt), separator, and apply section/document/forward""",
-        "count?:number,preset?:string,space?:number,separator?:boolean,apply?:string",
-        true,
+    edit(
+        "layout.columns", "count?:number,preset?:string,space?:number,separator?:boolean,apply?:string",
+        "Set newspaper columns: count 1-12 or preset one/two/three/left/right, optional space (pt), separator, and apply section/document/forward",
         (s, a) -> {
           float space = a.containsKey("space") ? ((Number) a.get("space")).floatValue() : 36;
           boolean separator = a.containsKey("separator") && Boolean.TRUE.equals(a.get("separator"));
@@ -505,30 +450,18 @@ public final class Commands {
           s.columns(c, a.containsKey("apply") ? str(a, "apply") : "section");
           return null;
         });
-    register(
-        "layout.columnBreak",
-        "Split at the caret and continue in the next newspaper column",
-        "",
-        true,
-        (s, a) -> {
+    edit("layout.columnBreak", "",
+        "Split at the caret and continue in the next newspaper column", (s, a) -> {
           s.columnBreak();
           return null;
         });
-    register(
-        "layout.break",
-        "Insert a section break before the selection",
-        "kind:string",
-        true,
-        (s, a) -> {
+    edit("layout.break", "kind:string",
+        "Insert a section break before the selection", (s, a) -> {
           s.sectionBreak(str(a, "kind"));
           return null;
         });
-    register(
-        "headerFooter.set",
-        "Replace a header/footer variant with styled paragraphs",
-        "story:string,text:string,align?:string",
-        true,
-        (s, a) -> {
+    edit("headerFooter.set", "story:string,text:string,align?:string",
+        "Replace a header/footer variant with styled paragraphs", (s, a) -> {
           String key = str(a, "story");
           PageFurniture.check(key);
           var paragraphs = new Sequence<Paragraph>();
@@ -588,21 +521,13 @@ public final class Commands {
             TableContents.insert(s, options, d -> engine.layout(d, s.revision()));
             return null;
           });
-    register(
-        "references.addText",
-        "Set the selected paragraphs' outline level",
-        "level?:integer",
-        true,
-        (s, a) -> {
+    edit("references.addText", "level?:integer",
+        "Set the selected paragraphs' outline level", (s, a) -> {
           s.paragraph("outlineLevel", "" + (a.containsKey("level") ? integer(a, "level") : 0));
           return null;
         });
-    register(
-        "references.sources",
-        "Add, edit, delete or list document sources",
-        "add?:object,remove?:string",
-        true,
-        (s, a) -> {
+    edit("references.sources", "add?:object,remove?:string",
+        "Add, edit, delete or list document sources", (s, a) -> {
           if (a.containsKey("add")) Citations.source(s, citationSource((Map<?, ?>) a.get("add")));
           if (a.containsKey("remove")) Citations.removeSource(s, str(a, "remove"));
           var result = new ArrayList<Object>();
@@ -610,12 +535,8 @@ public final class Commands {
             result.add(source.values);
           return result;
         });
-    register(
-        "references.citation",
-        "Insert a source citation",
-        "tag?:string,source?:object,pages?:string",
-        true,
-        (s, a) ->
+    edit("references.citation", "tag?:string,source?:object,pages?:string",
+        "Insert a source citation", (s, a) ->
             Json.object(
                 "tag",
                 Citations.insert(
@@ -623,58 +544,34 @@ public final class Commands {
                     a.containsKey("tag") ? str(a, "tag") : null,
                     a.containsKey("source") ? citationSource((Map<?, ?>) a.get("source")) : null,
                     a.containsKey("pages") ? str(a, "pages") : "")));
-    register(
-        "references.citationStyle",
-        "Change citation style and refresh results",
-        "style:string",
-        true,
-        (s, a) -> {
+    edit("references.citationStyle", "style:string",
+        "Change citation style and refresh results", (s, a) -> {
           Citations.style(s, str(a, "style"));
           return Json.object("style", s.document().bibliography.style);
         });
-    register(
-        "references.bibliography",
-        "Insert or replace the bibliography",
-        "title?:string",
-        true,
-        (s, a) -> {
+    edit("references.bibliography", "title?:string",
+        "Insert or replace the bibliography", (s, a) -> {
           Citations.bibliography(s, a.containsKey("title") ? str(a, "title") : null);
           return null;
         });
-    register(
-        "references.updateBibliography",
-        "Refresh citations and bibliography",
-        "",
-        true,
-        (s, a) -> {
+    edit("references.updateBibliography", "",
+        "Refresh citations and bibliography", (s, a) -> {
           Citations.update(s);
           return null;
         });
-    register(
-        "references.removeBibliography",
-        "Remove bibliography, keeping sources and citations",
-        "",
-        true,
-        (s, a) -> {
+    edit("references.removeBibliography", "",
+        "Remove bibliography, keeping sources and citations", (s, a) -> {
           Citations.remove(s);
           return null;
         });
-    register(
-        "references.markCitation",
-        "Mark an authority citation after the selection",
-        "entry?:string",
-        true,
-        (s, a) -> {
+    edit("references.markCitation", "entry?:string",
+        "Mark an authority citation after the selection", (s, a) -> {
           String entry = a.containsKey("entry") ? str(a, "entry") : s.selectedText();
           TableAuthorities.mark(s, entry);
           return Json.object("entry", entry);
         });
-    register(
-        "references.tableOfAuthorities",
-        "Insert or configure a table of authorities",
-        "title?:string,tabLeader?:string",
-        true,
-        (s, a) -> {
+    edit("references.tableOfAuthorities", "title?:string,tabLeader?:string",
+        "Insert or configure a table of authorities", (s, a) -> {
           DocumentIndex.Options old = TableAuthorities.options(s.document());
           TableAuthorities.insert(
               s,
@@ -683,30 +580,19 @@ public final class Commands {
               d -> layoutEngine.layout(d, s.revision()));
           return null;
         });
-    register(
-        "references.updateAuthorities",
-        "Update the table of authorities",
-        "",
-        true,
-        (s, a) -> {
+    edit("references.updateAuthorities", "",
+        "Update the table of authorities", (s, a) -> {
           TableAuthorities.update(s, d -> layoutEngine.layout(d, s.revision()));
           return null;
         });
-    register(
-        "references.removeAuthorities",
-        "Remove the table and retain source citations",
-        "",
-        true,
-        (s, a) -> {
+    edit("references.removeAuthorities", "",
+        "Remove the table and retain source citations", (s, a) -> {
           TableAuthorities.remove(s);
           return null;
         });
-    register(
-        "references.markEntry",
-        "Mark an index entry without removing the selection",
-        "entry?:string,subentry?:string,crossReference?:string,bookmark?:string,bold?:boolean,italic?:boolean,all?:boolean,text?:string",
-        true,
-        (s, a) -> {
+    edit(
+        "references.markEntry", "entry?:string,subentry?:string,crossReference?:string,bookmark?:string,bold?:boolean,italic?:boolean,all?:boolean,text?:string",
+        "Mark an index entry without removing the selection", (s, a) -> {
           String entry = a.containsKey("entry") ? str(a, "entry") : s.selectedText();
           var selected = s.selectedText().trim();
           int marked =
@@ -722,12 +608,9 @@ public final class Commands {
                   a.containsKey("text") ? str(a, "text") : selected.isEmpty() ? entry : selected);
           return Json.object("entry", entry, "marked", marked);
         });
-    register(
-        "references.index",
-        "Insert or configure the index",
-        "title?:string,type?:string,columns?:integer,headings?:boolean,rightAlign?:boolean,tabLeader?:string",
-        true,
-        (s, a) -> {
+    edit(
+        "references.index", "title?:string,type?:string,columns?:integer,headings?:boolean,rightAlign?:boolean,tabLeader?:string",
+        "Insert or configure the index", (s, a) -> {
           if (a.containsKey("columns") && integer(a, "columns") != 1)
             throw new IllegalArgumentException("Multiple index columns are not implemented yet");
           if (a.containsKey("type") && !Arrays.asList("indented", "runIn").contains(str(a, "type")))
@@ -746,30 +629,18 @@ public final class Commands {
               d -> layoutEngine.layout(d, s.revision()));
           return null;
         });
-    register(
-        "references.updateIndex",
-        "Update index entries and page references",
-        "",
-        true,
-        (s, a) -> {
+    edit("references.updateIndex", "",
+        "Update index entries and page references", (s, a) -> {
           DocumentIndex.update(s, d -> layoutEngine.layout(d, s.revision()));
           return null;
         });
-    register(
-        "references.removeIndex",
-        "Remove the index and retain its source marks",
-        "",
-        true,
-        (s, a) -> {
+    edit("references.removeIndex", "",
+        "Remove the index and retain its source marks", (s, a) -> {
           DocumentIndex.remove(s);
           return null;
         });
-    register(
-        "references.markToc",
-        "Mark selected text as a contents entry without removing it",
-        "text?:string,level?:integer,identifier?:string",
-        true,
-        (s, a) -> {
+    edit("references.markToc", "text?:string,level?:integer,identifier?:string",
+        "Mark selected text as a contents entry without removing it", (s, a) -> {
           TableContents.markEntry(
               s,
               a.containsKey("text") ? str(a, "text") : s.selectedText(),
@@ -777,50 +648,31 @@ public final class Commands {
               a.containsKey("identifier") ? str(a, "identifier") : "C");
           return null;
         });
-    register(
-        "references.updateToc",
-        "Update the table of contents",
-        "",
-        true,
-        (s, a) -> {
+    edit("references.updateToc", "",
+        "Update the table of contents", (s, a) -> {
           var engine = layoutEngine;
           TableContents.update(s, d -> engine.layout(d, s.revision()));
           return null;
         });
-    register(
-        "references.removeToc",
-        "Remove the table of contents",
-        "",
-        true,
-        (s, a) -> {
+    edit("references.removeToc", "",
+        "Remove the table of contents", (s, a) -> {
           TableContents.remove(s);
           return null;
         });
-    register(
-        "references.updateFigures",
-        "Update tables of figures",
-        "",
-        true,
-        (s, a) -> {
+    edit("references.updateFigures", "",
+        "Update tables of figures", (s, a) -> {
           var engine = layoutEngine;
           TableContents.updateFigures(s, d -> engine.layout(d, s.revision()));
           return null;
         });
-    register(
-        "references.removeFigures",
-        "Remove a table of figures",
-        "label?:string",
-        true,
-        (s, a) -> {
+    edit("references.removeFigures", "label?:string",
+        "Remove a table of figures", (s, a) -> {
           TableContents.remove(s, a.containsKey("label") ? str(a, "label") : "Figure");
           return null;
         });
-    register(
-        "references.noteOptions",
-        "Set note numbering, placement and section overrides",
-        "kind?:string,scope?:string,numFmt?:string,numStart?:integer,numRestart?:string,pos?:string,footnoteFormat?:string,endnoteFormat?:string",
-        true,
-        (s, a) -> {
+    edit(
+        "references.noteOptions", "kind?:string,scope?:string,numFmt?:string,numStart?:integer,numRestart?:string,pos?:string,footnoteFormat?:string,endnoteFormat?:string",
+        "Set note numbering, placement and section overrides", (s, a) -> {
           String kind = a.containsKey("kind") ? str(a, "kind") : "footnote";
           String scope = a.containsKey("scope") ? str(a, "scope") : "document";
           if (!Arrays.asList("document", "section").contains(scope))
@@ -864,21 +716,13 @@ public final class Commands {
                 a.containsKey("mark") ? str(a, "mark") : "");
             return null;
           });
-    register(
-        "references.nextFootnote",
-        "Select the next note reference",
-        "",
-        false,
-        (s, a) -> {
+    query("references.nextFootnote", "",
+        "Select the next note reference", (s, a) -> {
           s.nextNote(false);
           return null;
         });
-    register(
-        "references.convertNotes",
-        "Convert footnotes/endnotes together",
-        "to:string",
-        true,
-        (s, a) -> {
+    edit("references.convertNotes", "to:string",
+        "Convert footnotes/endnotes together", (s, a) -> {
           String to = str(a, "to");
           if (!Arrays.asList("footnote", "endnote", "swap").contains(to))
             throw new IllegalArgumentException("Invalid note conversion");
@@ -893,21 +737,13 @@ public final class Commands {
           }
           return Json.object("converted", count);
         });
-    register(
-        "references.insertNote",
-        "Insert a footnote or endnote at the selection",
-        "kind:string,text:string,mark?:string",
-        true,
-        (s, a) -> {
+    edit("references.insertNote", "kind:string,text:string,mark?:string",
+        "Insert a footnote or endnote at the selection", (s, a) -> {
           s.insertNote(str(a, "kind"), str(a, "text"), a.containsKey("mark") ? str(a, "mark") : "");
           return null;
         });
-    register(
-        "references.notes",
-        "List editable footnotes and endnotes",
-        "",
-        false,
-        (s, a) -> {
+    query("references.notes", "",
+        "List editable footnotes and endnotes", (s, a) -> {
           var result = new ArrayList<Object>();
           for (Note note : Notes.all(layoutEngine.layout(s.document(), s.revision()).document))
             result.add(
@@ -924,30 +760,18 @@ public final class Commands {
                     note.plainText()));
           return result;
         });
-    register(
-        "references.selectNote",
-        "Select a note reference",
-        "id:string",
-        false,
-        (s, a) -> {
+    query("references.selectNote", "id:string",
+        "Select a note reference", (s, a) -> {
           s.selectNote(str(a, "id"));
           return null;
         });
-    register(
-        "references.deleteNote",
-        "Delete a note and its reference",
-        "id:string",
-        true,
-        (s, a) -> {
+    edit("references.deleteNote", "id:string",
+        "Delete a note and its reference", (s, a) -> {
           s.deleteNote(str(a, "id"));
           return null;
         });
-    register(
-        "references.updateNote",
-        "Edit or convert a note",
-        "id:string,text?:string,kind?:string,mark?:string",
-        true,
-        (s, a) -> {
+    edit("references.updateNote", "id:string,text?:string,kind?:string,mark?:string",
+        "Edit or convert a note", (s, a) -> {
           Note found = null;
           for (Note note : Notes.all(s.document())) if (note.id.equals(str(a, "id"))) found = note;
           if (found == null) throw new IllegalArgumentException("Unknown note");
@@ -977,12 +801,9 @@ public final class Commands {
                   story));
           return null;
         });
-    register(
-        "references.caption",
-        "Insert an automatically numbered caption",
-        "label?:string,text?:string,position?:string,format?:string,excludeLabel?:boolean,chapter?:integer,separator?:string",
-        true,
-        (s, a) -> {
+    edit(
+        "references.caption", "label?:string,text?:string,position?:string,format?:string,excludeLabel?:boolean,chapter?:integer,separator?:string",
+        "Insert an automatically numbered caption", (s, a) -> {
           String position = a.containsKey("position") ? str(a, "position") : "below";
           if (!"above".equals(position) && !"below".equals(position))
             throw new IllegalArgumentException("Caption position must be above or below");
@@ -996,12 +817,8 @@ public final class Commands {
               a.containsKey("separator") ? str(a, "separator") : "-");
           return null;
         });
-    register(
-        "references.updateFields",
-        "Update sequence and pagination fields",
-        "",
-        true,
-        (s, a) -> {
+    edit("references.updateFields", "",
+        "Update sequence and pagination fields", (s, a) -> {
           var engine = layoutEngine;
           Citations.update(s);
           TableContents.update(s, d -> engine.layout(d, s.revision()));
@@ -1019,39 +836,23 @@ public final class Commands {
           }
           return null;
         });
-    register(
-        "bookmark.add",
-        "Name the selected body range",
-        "name:string",
-        true,
-        (s, a) -> {
+    edit("bookmark.add", "name:string",
+        "Name the selected body range", (s, a) -> {
           s.addBookmark(str(a, "name"));
           return null;
         });
-    register(
-        "bookmark.delete",
-        "Remove a bookmark without deleting its text",
-        "name:string",
-        true,
-        (s, a) -> {
+    edit("bookmark.delete", "name:string",
+        "Remove a bookmark without deleting its text", (s, a) -> {
           s.deleteBookmark(str(a, "name"));
           return null;
         });
-    register(
-        "bookmark.goto",
-        "Select a named bookmark range",
-        "name:string",
-        false,
-        (s, a) -> {
+    query("bookmark.goto", "name:string",
+        "Select a named bookmark range", (s, a) -> {
           s.goToBookmark(str(a, "name"));
           return null;
         });
-    register(
-        "bookmark.list",
-        "List names and current bookmark text",
-        "",
-        false,
-        (s, a) -> {
+    query("bookmark.list", "",
+        "List names and current bookmark text", (s, a) -> {
           var marks = new ArrayList<Object>();
           for (Bookmark mark : s.document().bookmarks.values())
             marks.add(
@@ -1070,19 +871,11 @@ public final class Commands {
                     mark.end));
           return marks;
         });
-    register(
-        "reference.targets",
-        "List heading, caption or bookmark targets",
-        "kind:string",
-        false,
-        (s, a) ->
+    query("reference.targets", "kind:string",
+        "List heading, caption or bookmark targets", (s, a) ->
             new ArrayList<String>(CrossReferences.targets(s.document(), str(a, "kind")).keySet()));
-    register(
-        "reference.insert",
-        "Insert a bookmark-backed cross-reference",
-        "kind:string,target:string,show?:string",
-        true,
-        (s, a) -> {
+    edit("reference.insert", "kind:string,target:string,show?:string",
+        "Insert a bookmark-backed cross-reference", (s, a) -> {
           CrossReferences.insert(
               s,
               str(a, "kind"),
@@ -1091,12 +884,8 @@ public final class Commands {
               layoutEngine);
           return null;
         });
-    register(
-        "field.insert",
-        "Insert a document field",
-        "instruction:string,result?:string",
-        true,
-        (s, a) -> {
+    edit("field.insert", "instruction:string,result?:string",
+        "Insert a document field", (s, a) -> {
           s.insertField(
               new InlineField(
                   str(a, "instruction"),
@@ -1105,12 +894,8 @@ public final class Commands {
                   false));
           return null;
         });
-    register(
-        "picture.insert",
-        "Insert embedded PNG or JPEG data at the selection",
-        "base64:string,width:number,height:number,alt:string",
-        true,
-        (s, a) -> {
+    edit("picture.insert", "base64:string,width:number,height:number,alt:string",
+        "Insert embedded PNG or JPEG data at the selection", (s, a) -> {
           s.insertPicture(
               com.codename1.util.Base64.decode(str(a, "base64").getBytes()),
               ((Number) a.get("width")).floatValue(),
@@ -1118,12 +903,8 @@ public final class Commands {
               str(a, "alt"));
           return null;
         });
-    register(
-        "picture.update",
-        "Set picture size, alternative text and alignment",
-        "block:integer,width:number,height:number,alt:string,align:string",
-        true,
-        (s, a) -> {
+    edit("picture.update", "block:integer,width:number,height:number,alt:string,align:string",
+        "Set picture size, alternative text and alignment", (s, a) -> {
           s.updatePicture(
               integer(a, "block"),
               ((Number) a.get("width")).floatValue(),
@@ -1133,42 +914,26 @@ public final class Commands {
               false);
           return null;
         });
-    register(
-        "picture.delete",
-        "Delete an embedded picture",
-        "block:integer",
-        true,
-        (s, a) -> {
+    edit("picture.delete", "block:integer",
+        "Delete an embedded picture", (s, a) -> {
           int block = integer(a, "block");
           var pic = (Picture) s.document().blocks.get(block);
           s.updatePicture(block, pic.width, pic.height, pic.alt, pic.align, true);
           return null;
         });
-    register(
-        "styles.delete",
-        "Delete a custom style, retaining paragraph formatting",
-        "id:string",
-        true,
-        (s, a) -> {
+    edit("styles.delete", "id:string",
+        "Delete a custom style, retaining paragraph formatting", (s, a) -> {
           s.deleteStyle(str(a, "id"));
           return null;
         });
-    register(
-        "paragraph.spacing",
-        "Set line spacing as a multiple, exact points or minimum points",
-        "rule:string,value:number",
-        true,
-        (s, a) -> {
+    edit("paragraph.spacing", "rule:string,value:number",
+        "Set line spacing as a multiple, exact points or minimum points", (s, a) -> {
           s.paragraph("lineRule", str(a, "rule"));
           s.paragraph("spacing", String.valueOf(a.get("value")));
           return null;
         });
-    register(
-        "paragraph.set",
-        "Set paragraph properties",
-        "property:string,value:string",
-        true,
-        (s, a) -> {
+    edit("paragraph.set", "property:string,value:string",
+        "Set paragraph properties", (s, a) -> {
           String k = str(a, "property");
           if (!Arrays.asList(
                   "style",
@@ -1195,12 +960,9 @@ public final class Commands {
           s.paragraph(k, str(a, "value"));
           return null;
         });
-    register(
-        "table.selectCells",
-        "Select a rectangular range of whole table cells",
-        "block:integer,row:integer,column:integer,endRow:integer,endColumn:integer",
-        false,
-        (s, a) -> {
+    query(
+        "table.selectCells", "block:integer,row:integer,column:integer,endRow:integer,endColumn:integer",
+        "Select a rectangular range of whole table cells", (s, a) -> {
           s.selectCells(
               integer(a, "block"),
               integer(a, "row"),
@@ -1255,22 +1017,14 @@ public final class Commands {
             }
             return null;
           });
-    register(
-        "table.clearCells",
-        "Clear selected cell contents without deleting the grid",
-        "",
-        true,
-        (s, a) -> {
+    edit("table.clearCells", "",
+        "Clear selected cell contents without deleting the grid", (s, a) -> {
           if (s.cellSelection() == null) throw new IllegalArgumentException("Select cells first");
           s.replace("");
           return null;
         });
-    register(
-        "table.mergeSelected",
-        "Merge the selected rectangle",
-        "",
-        true,
-        (s, a) -> {
+    edit("table.mergeSelected", "",
+        "Merge the selected rectangle", (s, a) -> {
           var x = s.cellSelection();
           if (x == null) throw new IllegalArgumentException("Select cells first");
           s.mergeCells(
@@ -1282,40 +1036,25 @@ public final class Commands {
           s.enterCell(x.block, x.firstRow, x.firstColumn);
           return null;
         });
-    register(
-        "edit.pasteText",
-        "Paste text or a rectangular TSV grid into table cells",
-        "text:string",
-        true,
-        (s, a) -> {
+    edit("edit.pasteText", "text:string",
+        "Paste text or a rectangular TSV grid into table cells", (s, a) -> {
           s.pasteText(str(a, "text"));
           return null;
         });
-    register(
-        "table.insert",
-        "Insert a rectangular table after selection",
-        "rows:integer,columns:integer",
-        true,
-        (s, a) -> {
+    edit("table.insert", "rows:integer,columns:integer",
+        "Insert a rectangular table after selection", (s, a) -> {
           s.insertTable(integer(a, "rows"), integer(a, "columns"));
           return null;
         });
-    register(
-        "table.setCell",
-        "Replace a table cell with plain text",
-        "block:integer,row:integer,column:integer,text:string",
-        true,
-        (s, a) -> {
+    edit("table.setCell", "block:integer,row:integer,column:integer,text:string",
+        "Replace a table cell with plain text", (s, a) -> {
           s.setCell(integer(a, "block"), integer(a, "row"), integer(a, "column"), str(a, "text"));
           return null;
         });
 
-    register(
-        "table.format",
-        "Set table geometry and cell appearance",
-        "block:integer,row:integer,column:integer,background?:string,borderColor?:string,borderWidth?:number,horizontalPadding?:number,verticalPadding?:number,vertical?:string,columnPercent?:number,minHeight?:number,headerRows?:integer",
-        true,
-        (s, a) -> {
+    edit(
+        "table.format", "block:integer,row:integer,column:integer,background?:string,borderColor?:string,borderWidth?:number,horizontalPadding?:number,verticalPadding?:number,vertical?:string,columnPercent?:number,minHeight?:number,headerRows?:integer",
+        "Set table geometry and cell appearance", (s, a) -> {
           int block = integer(a, "block"), row = integer(a, "row"), column = integer(a, "column");
           var table = (Table) s.document().blocks.get(block);
           var f = table.format;
@@ -1350,21 +1089,13 @@ public final class Commands {
           s.formatTable(block, f);
           return null;
         });
-    register(
-        "table.structure",
-        "Insert or delete a table row/column",
-        "block:integer,action:string,index:integer",
-        true,
-        (s, a) -> {
+    edit("table.structure", "block:integer,action:string,index:integer",
+        "Insert or delete a table row/column", (s, a) -> {
           s.tableStructure(integer(a, "block"), str(a, "action"), integer(a, "index"));
           return null;
         });
-    register(
-        "table.merge",
-        "Merge a rectangular cell range",
-        "block:integer,row:integer,column:integer,rows:integer,columns:integer",
-        true,
-        (s, a) -> {
+    edit("table.merge", "block:integer,row:integer,column:integer,rows:integer,columns:integer",
+        "Merge a rectangular cell range", (s, a) -> {
           s.mergeCells(
               integer(a, "block"),
               integer(a, "row"),
@@ -1373,11 +1104,8 @@ public final class Commands {
               integer(a, "columns"));
           return null;
         });
-    register(
-        "table.split",
+    edit("table.split", "block?:integer,row?:integer,column?:integer,columns?:integer",
         "Split a cell into columns; explicit coordinates without columns unmerge for compatibility",
-        "block?:integer,row?:integer,column?:integer,columns?:integer",
-        true,
         (s, a) -> {
           boolean explicit =
               a.containsKey("block") || a.containsKey("row") || a.containsKey("column");
@@ -1393,12 +1121,9 @@ public final class Commands {
           else s.splitCell(block, row, col, a.containsKey("columns") ? integer(a, "columns") : 2);
           return null;
         });
-    register(
-        "table.sort",
-        "Stable text or numeric table sort",
-        "block:integer,column:integer,descending:boolean,header:boolean,numeric:boolean",
-        true,
-        (s, a) -> {
+    edit(
+        "table.sort", "block:integer,column:integer,descending:boolean,header:boolean,numeric:boolean",
+        "Stable text or numeric table sort", (s, a) -> {
           s.sortTable(
               integer(a, "block"),
               integer(a, "column"),
@@ -1407,103 +1132,59 @@ public final class Commands {
               (Boolean) a.get("numeric"));
           return null;
         });
-    register(
-        "table.toText",
-        "Convert table rows to styled paragraphs",
-        "block:integer,separator:string",
-        true,
-        (s, a) -> {
+    edit("table.toText", "block:integer,separator:string",
+        "Convert table rows to styled paragraphs", (s, a) -> {
           s.tableToText(integer(a, "block"), str(a, "separator"));
           return null;
         });
-    register(
-        "table.delete",
-        "Delete a table",
-        "block:integer",
-        true,
-        (s, a) -> {
+    edit("table.delete", "block:integer",
+        "Delete a table", (s, a) -> {
           s.deleteTable(integer(a, "block"));
           return null;
         });
 
-    register(
-        "review.trackingOptions",
-        "Read or change review preferences",
-        "trackFormatting?:boolean,author?:string",
-        false,
-        (s, a) -> {
+    query("review.trackingOptions", "trackFormatting?:boolean,author?:string",
+        "Read or change review preferences", (s, a) -> {
           if (a.containsKey("author")) s.reviewAuthor(str(a, "author"));
           if (a.containsKey("trackFormatting"))
             s.trackFormatting((Boolean) a.get("trackFormatting"));
           return Json.object("trackFormatting", s.trackFormatting(), "author", s.reviewAuthor());
         });
-    register(
-        "review.trackChanges",
-        "Enable or disable tracking",
-        "value?:boolean,author?:string",
-        true,
-        (s, a) -> {
+    edit("review.trackChanges", "value?:boolean,author?:string",
+        "Enable or disable tracking", (s, a) -> {
           if (a.containsKey("author")) s.reviewAuthor(str(a, "author"));
           s.trackChanges(
               a.containsKey("value") ? (Boolean) a.get("value") : !s.document().trackChanges);
           return s.document().trackChanges;
         });
-    register(
-        "review.acceptAll",
-        "Accept all revisions",
-        "",
-        true,
-        (s, a) -> {
+    edit("review.acceptAll", "",
+        "Accept all revisions", (s, a) -> {
           s.resolveRevision(null, true);
           return null;
         });
-    register(
-        "review.rejectAll",
-        "Reject all revisions",
-        "",
-        true,
-        (s, a) -> {
+    edit("review.rejectAll", "",
+        "Reject all revisions", (s, a) -> {
           s.resolveRevision(null, false);
           return null;
         });
-    register(
-        "review.accept",
-        "Accept selected revision",
-        "id?:string",
-        true,
-        (s, a) -> {
+    edit("review.accept", "id?:string",
+        "Accept selected revision", (s, a) -> {
           if (a.containsKey("id")) s.resolveRevision(str(a, "id"), true);
           else s.resolveSelectedRevisions(true);
           return null;
         });
-    register(
-        "review.reject",
-        "Reject selected revision",
-        "id?:string",
-        true,
-        (s, a) -> {
+    edit("review.reject", "id?:string",
+        "Reject selected revision", (s, a) -> {
           if (a.containsKey("id")) s.resolveRevision(str(a, "id"), false);
           else s.resolveSelectedRevisions(false);
           return null;
         });
-    register(
-        "review.nextChange",
-        "Select next revision",
-        "",
-        false,
-        (s, a) -> s.nextRevision(false).revision.id);
-    register(
-        "review.previousChange",
-        "Select previous revision",
-        "",
-        false,
-        (s, a) -> s.nextRevision(true).revision.id);
-    register(
-        "review.changes",
-        "List document revisions",
-        "",
-        false,
-        (s, a) -> {
+    query("review.nextChange", "",
+        "Select next revision", (s, a) -> s.nextRevision(false).revision.id);
+    query("review.previousChange", "",
+        "Select previous revision", (s, a) -> s.nextRevision(true).revision.id);
+    query("review.changes", "",
+        "List document revisions", (s, a) -> {
           var out = new ArrayList<Object>();
           for (Revisions.Change c : Revisions.list(s.document()))
             out.add(
@@ -1529,70 +1210,38 @@ public final class Commands {
           return out;
         });
 
-    register(
-        "comment.add",
-        "Comment on the selected range",
-        "author:string,text:string",
-        true,
-        (s, a) -> {
+    edit("comment.add", "author:string,text:string",
+        "Comment on the selected range", (s, a) -> {
           s.addComment(str(a, "author"), str(a, "text"));
           return null;
         });
-    register(
-        "comment.resolve",
-        "Resolve or reopen a comment",
-        "id:string,resolved:boolean",
-        true,
-        (s, a) -> {
+    edit("comment.resolve", "id:string,resolved:boolean",
+        "Resolve or reopen a comment", (s, a) -> {
           s.updateComment(str(a, "id"), (Boolean) a.get("resolved"), false);
           return null;
         });
-    register(
-        "comment.delete",
-        "Delete a comment",
-        "id:string",
-        true,
-        (s, a) -> {
+    edit("comment.delete", "id:string",
+        "Delete a comment", (s, a) -> {
           s.updateComment(str(a, "id"), false, true);
           return null;
         });
-    register(
-        "comment.select",
-        "Select a comment's anchored text",
-        "id:string",
-        false,
-        (s, a) -> {
+    query("comment.select", "id:string",
+        "Select a comment's anchored text", (s, a) -> {
           s.selectComment(str(a, "id"));
           return null;
         });
-    register(
-        "comment.edit",
-        "Edit comment or reply text",
-        "id:string,text:string,reply?:integer",
-        true,
-        (s, a) -> {
+    edit("comment.edit", "id:string,text:string,reply?:integer",
+        "Edit comment or reply text", (s, a) -> {
           s.editComment(
               str(a, "id"), a.containsKey("reply") ? integer(a, "reply") : -1, str(a, "text"));
           return null;
         });
-    register(
-        "comment.next",
-        "Move to the next comment, wrapping at the end",
-        "",
-        false,
-        (s, a) -> s.navigateComment(false));
-    register(
-        "comment.previous",
-        "Move to the previous comment, wrapping at the start",
-        "",
-        false,
-        (s, a) -> s.navigateComment(true));
-    register(
-        "comment.list",
-        "List document comments",
-        "",
-        false,
-        (s, a) -> {
+    query("comment.next", "",
+        "Move to the next comment, wrapping at the end", (s, a) -> s.navigateComment(false));
+    query("comment.previous", "",
+        "Move to the previous comment, wrapping at the start", (s, a) -> s.navigateComment(true));
+    query("comment.list", "",
+        "List document comments", (s, a) -> {
           var out = new ArrayList<Object>();
           for (ReviewComment c : s.document().comments)
             out.add(
@@ -1617,45 +1266,26 @@ public final class Commands {
                     c.end));
           return out;
         });
-    register(
-        "comment.reply",
-        "Reply to a comment thread",
-        "id:string,author:string,text:string",
-        true,
-        (s, a) -> {
+    edit("comment.reply", "id:string,author:string,text:string",
+        "Reply to a comment thread", (s, a) -> {
           s.replyComment(str(a, "id"), str(a, "author"), str(a, "text"));
           return null;
         });
-    register(
-        "edit.undo",
-        "Undo the last transaction",
-        "",
-        false,
-        (s, a) -> {
+    query("edit.undo", "",
+        "Undo the last transaction", (s, a) -> {
           s.undo();
           return null;
         });
-    register(
-        "edit.redo",
-        "Redo the last transaction",
-        "",
-        false,
-        (s, a) -> {
+    query("edit.redo", "",
+        "Redo the last transaction", (s, a) -> {
           s.redo();
           return null;
         });
-    register(
-        "find.all",
+    query("find.all", "text:string",
         "Find literal text in paragraphs and table cells",
-        "text:string",
-        false,
         (s, a) -> find(s.document(), str(a, "text")));
-    register(
-        "replace.all",
-        "Replace literal text in paragraphs and table cells",
-        "text:string,replacement:string",
-        true,
-        (s, a) -> {
+    edit("replace.all", "text:string,replacement:string",
+        "Replace literal text in paragraphs and table cells", (s, a) -> {
           String needle = str(a, "text");
           var matches = find(s.document(), needle);
           if (matches.size() > 10000) throw new IllegalArgumentException("Too many matches");

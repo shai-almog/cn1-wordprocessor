@@ -197,14 +197,9 @@ final class WorkflowCommands implements Commands.Extension {
           pasteSpecial(s, "merge", a);
           return null;
         });
-    c.register(
-        "format.fontDialog",
+    c.edit(
+        "format.fontDialog", "font?:string,size?:number,color?:string,bold?:boolean,italic?:boolean,underlineStyle?:string,underlineColor?:string,strike?:boolean,doubleStrike?:boolean,script?:string,smallCaps?:boolean,allCaps?:boolean,hidden?:boolean,characterSpacing?:number,characterScale?:number,characterPosition?:number",
         "Font dialog: set several character properties at once and return the effective font settings",
-        """
-        font?:string,size?:number,color?:string,bold?:boolean,italic?:boolean,underlineStyle?:string,\
-        underlineColor?:string,strike?:boolean,doubleStrike?:boolean,script?:string,smallCaps?:boolean,\
-        allCaps?:boolean,hidden?:boolean,characterSpacing?:number,characterScale?:number,characterPosition?:number""",
-        true,
         (s, a) -> {
           for (Map.Entry<String, Object> e : a.entrySet()) {
             var v = e.getValue();

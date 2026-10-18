@@ -37,9 +37,7 @@ final class WordMcp {
     MCP.addTool(
         new Tool(
             "word_snapshot",
-            """
-            Inspect the live document, selection and stateId. Optional xml includes native model\
-             XML.""",
+            "Inspect the live document, selection and stateId. Optional xml includes native model XML.",
             "{\"type\":\"object\",\"properties\":{\"xml\":{\"type\":\"boolean\"}}}",
             json ->
                 onEdt(
@@ -52,17 +50,13 @@ final class WordMcp {
     MCP.addTool(
         new Tool(
             "word_layout",
-            """
-            Inspect visible native editor cell and line geometry and selection; bounds are display\
-             pixels; line heights and clipping heights are also reported in points.""",
+            "Inspect visible native editor cell and line geometry and selection; bounds are display pixels; line heights and clipping heights are also reported in points.",
             "{\"type\":\"object\",\"properties\":{}}",
             json -> onEdt(context::layout)));
     MCP.addTool(
         new Tool(
             "word_load",
-            """
-            Replace the live document with native model XML and restore a recorded selection,\
-             cell, review author and tracking state (clears history). Used to replay recorded cases.""",
+            "Replace the live document with native model XML and restore a recorded selection, cell, review author and tracking state (clears history). Used to replay recorded cases.",
             "{\"type\":\"object\",\"properties\":{\"xml\":{\"type\":\"string\"},\"state\":{\"type\":\"object\"}},\"required\":[\"xml\"]}",
             json ->
                 onEdt(
@@ -109,9 +103,7 @@ final class WordMcp {
     MCP.addTool(
         new Tool(
             "word_command",
-            """
-            Execute one editor command against the observed stateId. Uses the live document and\
-             its normal undo history; refuses stale state and active dialogs.""",
+            "Execute one editor command against the observed stateId. Uses the live document and its normal undo history; refuses stale state and active dialogs.",
             "{\"type\":\"object\",\"properties\":{\"stateId\":{\"type\":\"string\"},\"command\":{\"type\":\"string\"},\"args\":{\"type\":\"object\"}},\"required\":[\"stateId\",\"command\"]}",
             json ->
                 onEdt(

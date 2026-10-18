@@ -205,9 +205,7 @@ public final class TextFormats {
                                 : "")
                 .append(
                     s.characters.outline
-                        ? """
-                              ;-webkit-text-stroke:.5pt\
-                               currentColor;-webkit-text-fill-color:transparent"""
+                        ? ";-webkit-text-stroke:.5pt currentColor;-webkit-text-fill-color:transparent"
                         : "")
                 .append(s.characters.shadow ? ";text-shadow:1pt 1pt #808080" : "")
                 .append(s.characters.emboss ? ";text-shadow:-1pt -1pt white,1pt 1pt #707070" : "")
@@ -269,9 +267,7 @@ public final class TextFormats {
       for (Block block : d.blocks)
         if (block instanceof Picture)
           throw new IllegalArgumentException(
-              """
-              This format cannot preserve embedded pictures. Use DOCX, HTML, PDF or\
-               CN1 document.""");
+              "This format cannot preserve embedded pictures. Use DOCX, HTML, PDF or CN1 document.");
     String html = html(d);
     return format == RichTextFormat.HTML ? html : RichTextImporter.fromHtml(html, format);
   }

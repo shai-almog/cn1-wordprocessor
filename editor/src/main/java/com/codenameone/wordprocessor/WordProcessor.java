@@ -1174,9 +1174,7 @@ public class WordProcessor {
                   if (ParagraphStyle.defaults().containsKey(selected.id)) {
                     showDialog(
                         "Built-in style",
-                        """
-                        Built-in styles can be modified but cannot be\
-                         deleted.""",
+                        "Built-in styles can be modified but cannot be deleted.",
                         "OK",
                         null);
                     return;
@@ -1805,9 +1803,7 @@ public class WordProcessor {
             template,
             preview,
             new SpanLabelCompat(
-                """
-                Editable tables with a repeating header row. Calendar is a\
-                 reusable 31-day sample.""")),
+                "Editable tables with a repeating header row. Calendar is a reusable 31-day sample.")),
         "Insert",
         "Cancel")) run("table.quick", Json.object("kind", kinds[template.getSelectedIndex()]));
   }
@@ -3533,10 +3529,7 @@ public class WordProcessor {
         .add(formatting);
     body.add(
         new SpanLabelCompat(
-            """
-            Compares paragraph and table-cell text and direct formatting. Resolve\
-             existing tracked changes first. Page layout and headers use the\
-             original document. Undo restores the original."""));
+            "Compares paragraph and table-cell text and direct formatting. Resolve existing tracked changes first. Page layout and headers use the original document. Undo restores the original."));
     if (!showDialog("Comparison options", body, "Compare", "Cancel")) return;
     var args =
         Json.object(
@@ -5964,10 +5957,7 @@ public class WordProcessor {
         BoxLayout.encloseY(
             formRow("Formula", formula),
             new SpanLabelCompat(
-                """
-                Use SUM, AVERAGE, COUNT, MIN, MAX or PRODUCT with ABOVE, BELOW,\
-                 LEFT, RIGHT, or cell ranges such as A1:B3. Numbers use a\
-                 decimal point."""));
+                "Use SUM, AVERAGE, COUNT, MIN, MAX or PRODUCT with ABOVE, BELOW, LEFT, RIGHT, or cell ranges such as A1:B3. Numbers use a decimal point."));
     if (showDialog("Table Formula", body, "Insert", "Cancel"))
       run("table.formula", Json.object("formula", formula.getText()));
   }
@@ -6562,11 +6552,7 @@ public class WordProcessor {
                                               ? "Print" + " cancelled"
                                               : result.isFailed()
                                                   ? "Print" + " failed:" + " " + result.getError()
-                                                  : """
-                                                      Document\
-                                                       sent\
-                                                       to printing\
-                                                       system""");
+                                                  : "Document sent to printing system");
                                     });
                           } catch (RuntimeException ex) {
                             printing = false;
@@ -6634,9 +6620,7 @@ public class WordProcessor {
                 for (Block b : snapshot.blocks)
                   if (b instanceof Table)
                     throw new IOException(
-                        """
-                        Use DOCX, HTML or native project format to retain\
-                         tables""");
+                        "Use DOCX, HTML or native project format to retain tables");
               bytes = TextFormats.write(snapshot, type).getBytes("UTF-8");
             }
             files.save(
@@ -6659,9 +6643,7 @@ public class WordProcessor {
                     else
                       showDialog(
                           "Document changed",
-                          """
-                          The saved copy is complete. Save the newer\
-                           changes before continuing.""",
+                          "The saved copy is complete. Save the newer changes before continuing.",
                           "OK",
                           null);
                   }

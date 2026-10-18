@@ -23,9 +23,7 @@ public final class Drawing {
   /** 1x1 transparent PNG used as the picture payload of every drawing. */
   static final byte[] PLACEHOLDER =
       hex(
-          """
-          89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c489\
-          0000000b49444154789c6360000200000500017a5eab3f0000000049454e44ae426082""");
+          "89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4890000000b49444154789c6360000200000500017a5eab3f0000000049454e44ae426082");
 
   private static byte[] hex(String s) {
     byte[] b = new byte[s.length() / 2];

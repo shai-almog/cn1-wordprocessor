@@ -102,15 +102,9 @@ final class LayoutDesignCommands implements Commands.Extension {
           for (String option : ParagraphFormat.ASIAN) out.put(option, p.format.asian(option));
           return out;
         });
-    c.register(
-        "para.dialog",
-        "Paragraph dialog: set several paragraph properties at once and return them",
-        """
-        align?:string,left?:number,right?:number,firstLine?:number,before?:number,after?:number,\
-        lineSpacing?:number,lineRule?:string,outlineLevel?:number,keepNext?:boolean,\
-        keepLines?:boolean,widowControl?:boolean,pageBreak?:boolean""",
-        true,
-        (s, a) -> {
+    c.edit(
+        "para.dialog", "align?:string,left?:number,right?:number,firstLine?:number,before?:number,after?:number,lineSpacing?:number,lineRule?:string,outlineLevel?:number,keepNext?:boolean,keepLines?:boolean,widowControl?:boolean,pageBreak?:boolean",
+        "Paragraph dialog: set several paragraph properties at once and return them", (s, a) -> {
           String[][] keys = {
             {"align", "align"}, {"left", "indent"}, {"right", "rightIndent"},
             {"firstLine", "firstIndent"}, {"before", "before"}, {"after", "after"},

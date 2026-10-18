@@ -529,9 +529,7 @@ static final char COLUMN_BREAK = '\u000B';
       for (TabStop stop : p.format.tabs)
         if ("bar".equals(stop.alignment)) {
           warnings.add(
-              """
-              Bar tabs with paragraph-specific default intervals require DOCX\
-               conversion""");
+              "Bar tabs with paragraph-specific default intervals require DOCX conversion");
           break;
         }
     if (!p.list.isEmpty() && !"bullet".equals(p.list) && !"number".equals(p.list))

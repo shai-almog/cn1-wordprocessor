@@ -36,9 +36,7 @@ public final class DocumentComparison {
     for (Block b : d.blocks) {
       if (!(b instanceof Paragraph))
         throw new IllegalArgumentException(
-            """
-            Comparison currently requires paragraphs; tables and pictures are not\
-             supported yet""");
+            "Comparison currently requires paragraphs; tables and pictures are not supported yet");
       var p = (Paragraph) b;
       for (int i = 0; i < p.text.length(); i++)
         if (p.text.objectAt(i))
@@ -230,9 +228,7 @@ public final class DocumentComparison {
         || !Revisions.list(original).isEmpty()
         || !Revisions.list(revised).isEmpty())
       throw new IllegalArgumentException(
-          """
-          Resolve changes and remove section, comment or bookmark ranges before\
-           comparing tables""");
+          "Resolve changes and remove section, comment or bookmark ranges before comparing tables");
     var output = new Sequence<Block>();
     long next = original.nextId;
     int changes = 0;
@@ -242,9 +238,7 @@ public final class DocumentComparison {
       if (a.size() == 0 || b.size() == 0) {
         if (a.size() != b.size())
           throw new IllegalArgumentException(
-              """
-              Comparison of paragraph insertion at a table boundary is not supported\
-               yet""");
+              "Comparison of paragraph insertion at a table boundary is not supported yet");
       } else {
         Result result =
             paragraphs(story(original, a, next), story(revised, b, revised.nextId), options);
