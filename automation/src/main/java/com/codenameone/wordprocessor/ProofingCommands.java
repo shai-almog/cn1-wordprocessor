@@ -67,7 +67,7 @@ final class ProofingCommands implements Commands.Extension {
   }
 
   private static Object spelling(Session s, Map<String, Object> a) {
-    String action = a.containsKey("action") ? Commands.str(a, "action") : "check";
+    String action = Commands.str(a, "action", "check");
     if ("check".equals(action)) return report(issues(s));
     if ("next".equals(action)) {
       var all = issues(s);
@@ -86,7 +86,7 @@ final class ProofingCommands implements Commands.Extension {
       m.put("remaining", Integer.valueOf(all.size()));
       return m;
     }
-    String word = a.containsKey("word") ? Commands.str(a, "word") : null;
+    String word = Commands.str(a, "word", null);
     if ("add".equals(action) || "ignoreAll".equals(action)) {
       if (word == null) word = current(s);
       if (word == null || word.length() == 0) throw new IllegalArgumentException("No word to " + action);
@@ -164,9 +164,9 @@ final class ProofingCommands implements Commands.Extension {
   }
 
   private static Object thesaurus(Session s, Map<String, Object> a) {
-    String word = a.containsKey("word") ? Commands.str(a, "word") : current(s);
+    String word = Commands.str(a, "word", current(s));
     if (word == null) throw new IllegalArgumentException("No word");
-    String replacement = a.containsKey("replacement") ? Commands.str(a, "replacement") : null;
+    String replacement = Commands.str(a, "replacement", null);
     if (replacement != null) {
       int[] at = locate(s, word);
       if (at == null) throw new IllegalArgumentException("Word not found: " + word);

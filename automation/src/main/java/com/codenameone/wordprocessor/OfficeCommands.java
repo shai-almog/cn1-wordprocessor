@@ -119,7 +119,7 @@ final class OfficeCommands implements Commands.Extension {
     c.query("file.encrypt", "password?:string",
         "Encrypt with Password: Word documents saved from now on are AES-256 encrypted (ECMA-376 agile); an empty password removes it",
         (s, a) -> {
-          String pw = a.containsKey("password") ? Commands.str(a, "password") : "";
+          String pw = Commands.str(a, "password", "");
           if (pw.length() > 255) throw new IllegalArgumentException("Passwords are at most 255 characters");
           password(s, pw);
           return Json.object("encrypted", password(s) != null);
@@ -176,7 +176,7 @@ final class OfficeCommands implements Commands.Extension {
     c.query("file.share", "name?:string,format?:string",
         "Share: the document as a .docx attachment (name, mime type, base64) for the platform share sheet",
         (s, a) -> {
-          String format = a.containsKey("format") ? Commands.str(a, "format") : "docx";
+          String format = Commands.str(a, "format", "docx");
           var title = s.document().properties.get("title");
           String name = a.containsKey("name") ? Commands.str(a, "name") : title == null || title.trim().isEmpty() ? "Document" : title.trim();
           byte[] data;
@@ -252,8 +252,8 @@ final class OfficeCommands implements Commands.Extension {
     c.edit("tools.templates", "action?:string,name?:string",
         "Templates and Add-ins: list templates, attach one, copy its styles in (update styles) or delete a saved template",
         (s, a) -> {
-          String action = a.containsKey("action") ? Commands.str(a, "action") : "list";
-          String name = a.containsKey("name") ? Commands.str(a, "name") : null;
+          String action = Commands.str(a, "action", "list");
+          String name = Commands.str(a, "name", null);
           if ("attach".equals(action) || "update".equals(action)) {
             if (name == null) throw new IllegalArgumentException("Template name required");
             Document t = template(name);
@@ -301,7 +301,7 @@ final class OfficeCommands implements Commands.Extension {
           }
           var hits = new ArrayList<Commands.Descriptor>(score.keySet());
           Collections.sort(hits, (x, y) -> score.get(y) - score.get(x) != 0 ? score.get(y) - score.get(x) : x.id.compareTo(y.id));
-          int limit = a.containsKey("limit") ? Commands.integer(a, "limit") : 10;
+          int limit = Commands.integer(a, "limit", 10);
           var out = new ArrayList<Object>();
           for (int i = 0; i < hits.size() && i < limit; i++)
             out.add(Json.object("id", hits.get(i).id, "description", hits.get(i).description, "parameters", new LinkedHashMap<String, Object>(hits.get(i).parameters)));
@@ -345,7 +345,7 @@ final class OfficeCommands implements Commands.Extension {
               steps = RECORDING.remove(s);
             }
             if (steps == null) throw new IllegalStateException("Not recording");
-            String name = a.containsKey("name") ? Commands.str(a, "name") : "Macro" + (macros(s).size() + 1);
+            String name = Commands.str(a, "name", "Macro" + (macros(s).size() + 1));
             if (name.isEmpty() || name.indexOf(' ') >= 0) throw new IllegalArgumentException("Macro names have no spaces");
             String json = com.codename1.io.JSONParser.toJson(Json.object("version", 1, "steps", steps));
             s.transact(x -> x.documentProperties(x.document().properties.withSetting("macro." + name, json)));
@@ -368,7 +368,7 @@ final class OfficeCommands implements Commands.Extension {
         "tools.autocorrect", "action?:string,from?:string,to?:string,option?:string,value?:boolean,text?:string",
         "AutoCorrect Options: list, add or remove a replacement, toggle an option, or correct a word as typed",
         (s, a) -> {
-          String action = a.containsKey("action") ? Commands.str(a, "action") : "list";
+          String action = Commands.str(a, "action", "list");
           Map<String, String> entries = AppOptions.autocorrect();
           if ("add".equals(action)) {
             entries.put(Commands.str(a, "from"), Commands.str(a, "to"));
@@ -426,7 +426,7 @@ final class OfficeCommands implements Commands.Extension {
             READING.remove(s);
             return Json.object("reading", false);
           }
-          float rate = a.containsKey("rate") ? ((Number) a.get("rate")).floatValue() : 1f;
+          float rate = Commands.number(a, "rate", 1f);
           if (rate < .25f || rate > 4f) throw new IllegalArgumentException("Rate is 0.25-4");
           var d = s.document();
           int[] at;
@@ -490,7 +490,7 @@ final class OfficeCommands implements Commands.Extension {
             if (b < 0 || b >= s.document().blocks.size() || !(s.document().blocks.get(b) instanceof Picture))
               throw new IllegalArgumentException("Block " + b + " is not a picture or object");
             var p = (Picture) s.document().blocks.get(b);
-            String text = a.containsKey("text") ? Commands.str(a, "text") : p.alt;
+            String text = Commands.str(a, "text", p.alt);
             if (text.length() > 2000) throw new IllegalArgumentException("Alt text is too long");
             s.updatePicture(b, p.width, p.height, text, p.align, false);
           }
@@ -511,13 +511,13 @@ final class OfficeCommands implements Commands.Extension {
     c.edit("insert.dropCap", "position?:string,lines?:integer,distance?:number,font?:string",
         "Drop Cap: none, dropped into the paragraph or in the margin, with lines to drop (1-10), distance from text and font",
         (s, a) -> {
-          String position = a.containsKey("position") ? Commands.str(a, "position") : "drop";
+          String position = Commands.str(a, "position", "drop");
           final String spec =
               "none".equals(position)
                   ? ""
                   : ParagraphFormat.dropCap(
-                      position + "," + (a.containsKey("lines") ? Commands.integer(a, "lines") : 3) + ","
-                          + (a.containsKey("distance") ? ((Number) a.get("distance")).floatValue() : 0) + ","
+                      position + "," + (Commands.integer(a, "lines", 3)) + ","
+                          + (Commands.number(a, "distance", 0)) + ","
                           + (a.containsKey("font") ? Commands.str(a, "font").replace(",", "") : ""));
           if (s.inCell()) throw new IllegalArgumentException("Drop caps apply to body paragraphs, not table cells");
           s.mapParagraphs(p -> p.with("dropCap", spec));

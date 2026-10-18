@@ -26,7 +26,7 @@ final class DrawingCommands implements Commands.Extension {
         "shape?:string,width?:number,height?:number,text?:string,fill?:string,line?:string",
         true,
         (s, a) -> {
-          String shape = a.containsKey("shape") ? Commands.str(a, "shape") : "rect";
+          String shape = Commands.str(a, "shape", "rect");
           if (!DrawingOps.SHAPES.contains(shape)) throw new IllegalArgumentException("Unknown shape: " + shape);
           var d = Drawing.of("shape").with("shape", shape);
           d = copy(a, d, "text", "fill", "line");
@@ -37,14 +37,14 @@ final class DrawingCommands implements Commands.Extension {
         "Insert a text box", (s, a) ->
             insert(
                 s,
-                Drawing.of("textBox").with("text", a.containsKey("text") ? Commands.str(a, "text") : "Type here").with("valign", "top"),
+                Drawing.of("textBox").with("text", Commands.str(a, "text", "Type here")).with("valign", "top"),
                 f(a, "width", 180),
                 f(a, "height", 72),
                 "Text box"));
     c.edit("insert.wordArt", "text?:string,style?:integer",
         "Insert WordArt text", (s, a) -> {
-          String text = a.containsKey("text") ? Commands.str(a, "text") : "Your text here";
-          Drawing d = wordArtStyle(Drawing.of("wordArt").with("text", text), a.containsKey("style") ? Commands.integer(a, "style") : 1);
+          String text = Commands.str(a, "text", "Your text here");
+          Drawing d = wordArtStyle(Drawing.of("wordArt").with("text", text), Commands.integer(a, "style", 1));
           return insert(s, d, Math.min(468, Math.max(120, text.length() * 26)), 60, text);
         });
     c.register(
@@ -183,7 +183,7 @@ final class DrawingCommands implements Commands.Extension {
         "type?:string,data?:string,title?:string",
         true,
         (s, a) -> {
-          String type = a.containsKey("type") ? Commands.str(a, "type") : "column";
+          String type = Commands.str(a, "type", "column");
           if (!DrawingOps.CHARTS.contains(type)) throw new IllegalArgumentException("Unknown chart type: " + type);
           var d = Drawing.of("chart").with("chartType", type).with("data", DrawingOps.SAMPLE_CHART);
           if (a.containsKey("data")) d = d.with("data", chartData(Commands.str(a, "data")));
@@ -208,13 +208,13 @@ final class DrawingCommands implements Commands.Extension {
     c.edit("chart.legend", "block?:integer,value?:boolean",
         "Show or hide the chart legend", (s, a) -> {
           Drawing d = chart(s, a);
-          boolean on = a.containsKey("value") ? (Boolean) a.get("value") : "false".equals(d.get("legend", "true"));
+          boolean on = Commands.flag(a, "value", "false".equals(d.get("legend", "true")));
           return update(s, a, d.with("legend", String.valueOf(on)));
         });
     c.edit("chart.dataLabels", "block?:integer,value?:boolean",
         "Show or hide data labels", (s, a) -> {
           Drawing d = chart(s, a);
-          boolean on = a.containsKey("value") ? (Boolean) a.get("value") : !d.flag("dataLabels");
+          boolean on = Commands.flag(a, "value", !d.flag("dataLabels"));
           return update(s, a, d.with("dataLabels", String.valueOf(on)));
         });
 
@@ -225,7 +225,7 @@ final class DrawingCommands implements Commands.Extension {
         "layout?:string,nodes?:string",
         true,
         (s, a) -> {
-          String layout = a.containsKey("layout") ? Commands.str(a, "layout") : "list";
+          String layout = Commands.str(a, "layout", "list");
           if (!DrawingOps.SMART_ART.contains(layout)) throw new IllegalArgumentException("Unknown layout: " + layout);
           var d = Drawing.of("smartArt").with("layout", layout).with("nodes", "Text\nText\nText");
           if (a.containsKey("nodes")) d = d.with("nodes", nodes(Commands.str(a, "nodes")));
@@ -241,11 +241,11 @@ final class DrawingCommands implements Commands.Extension {
         "Add a SmartArt node after the given node (default last)", (s, a) -> {
           Drawing d = smart(s, a);
           var lines = lines(d);
-          int after = a.containsKey("after") ? Commands.integer(a, "after") : lines.size() - 1;
+          int after = Commands.integer(a, "after", lines.size() - 1);
           if (after < -1 || after >= lines.size()) throw new IllegalArgumentException("Node out of range");
           String indent = after < 0 ? "" : tabs(lines.get(after));
           if (a.containsKey("below") && (Boolean) a.get("below")) indent += "\t";
-          lines.add(after + 1, indent + (a.containsKey("text") ? Commands.str(a, "text") : "Text"));
+          lines.add(after + 1, indent + (Commands.str(a, "text", "Text")));
           return update(s, a, d.with("nodes", join(lines)));
         });
     c.edit("smartArt.promote", "block?:integer,node:integer",
@@ -278,7 +278,7 @@ final class DrawingCommands implements Commands.Extension {
     // ---------------------------------------------------------------- equations
     c.edit("insert.equation", "text?:string,display?:boolean",
         "Insert an equation in linear format (\\\\alpha, x^2, (a)/(b) ...)", (s, a) -> {
-          var d = Drawing.of("equation").with("text", a.containsKey("text") ? Commands.str(a, "text") : "");
+          var d = Drawing.of("equation").with("text", Commands.str(a, "text", ""));
           boolean display = !a.containsKey("display") || (Boolean) a.get("display");
           float width = display ? s.activeSection().resolved.page.contentWidth() : 160;
           return insert(s, d.with("display", String.valueOf(display)), width, 30, "Equation");
@@ -294,7 +294,7 @@ final class DrawingCommands implements Commands.Extension {
     c.edit("equation.normalText", "block?:integer,value?:boolean",
         "Toggle upright normal text in the equation", (s, a) -> {
           Drawing d = equation(s, a);
-          boolean on = a.containsKey("value") ? (Boolean) a.get("value") : !d.flag("normalText");
+          boolean on = Commands.flag(a, "value", !d.flag("normalText"));
           return update(s, a, d.with("normalText", String.valueOf(on)));
         });
     c.edit("equation.insertSymbol", "block?:integer,name:string",
@@ -332,7 +332,7 @@ final class DrawingCommands implements Commands.Extension {
           int block = block(s, a);
           Picture p = picture(s, block);
           Drawing d = equation(s, a);
-          boolean display = a.containsKey("display") ? (Boolean) a.get("display") : !"true".equals(d.get("display", "true"));
+          boolean display = Commands.flag(a, "display", !"true".equals(d.get("display", "true")));
           float width = display ? s.activeSection().resolved.page.contentWidth() : Math.max(60, d.get("text", "").length() * 7f);
           s.replacePicture(block, p.drawing(d.with("display", String.valueOf(display))).resize(width, p.height, p.alt, p.align));
           return display;
@@ -344,7 +344,7 @@ final class DrawingCommands implements Commands.Extension {
         "Number the equation; numbers count display equations in document order", (s, a) -> {
           int block = block(s, a);
           Drawing d = equation(s, a);
-          boolean on = a.containsKey("value") ? (Boolean) a.get("value") : d.get("number", "").isEmpty();
+          boolean on = Commands.flag(a, "value", d.get("number", "").isEmpty());
           s.replacePicture(block, picture(s, block).drawing(d.with("number", on ? "#" : "")));
           return renumber(s);
         });

@@ -52,8 +52,8 @@ final class PictureCommands implements Commands.Extension {
           s.pictureLook(
               block,
               k.adjust(
-                  a.containsKey("brightness") ? Commands.integer(a, "brightness") : k.brightness,
-                  a.containsKey("contrast") ? Commands.integer(a, "contrast") : k.contrast,
+                  Commands.integer(a, "brightness", k.brightness),
+                  Commands.integer(a, "contrast", k.contrast),
                   k.transparency,
                   k.colorMode));
           return null;
@@ -70,7 +70,7 @@ final class PictureCommands implements Commands.Extension {
         (s, a) -> {
           int block = block(s, a);
           boolean off = a.containsKey("off") && (Boolean) a.get("off");
-          int tol = off ? -1 : a.containsKey("tolerance") ? Commands.integer(a, "tolerance") : 20;
+          int tol = off ? -1 : Commands.integer(a, "tolerance", 20);
           s.pictureLook(block, picture(s, block).look.removeBackground(tol));
           return null;
         });
@@ -82,7 +82,7 @@ final class PictureCommands implements Commands.Extension {
             throw new IllegalArgumentException("Picture compression needs the native image codec");
           int block = block(s, a);
           Picture old = picture(s, block);
-          int ppi = a.containsKey("ppi") ? Commands.integer(a, "ppi") : 150;
+          int ppi = Commands.integer(a, "ppi", 150);
           if (ppi < 1) throw new IllegalArgumentException("ppi must be positive");
           boolean del = !a.containsKey("deleteCropped") || (Boolean) a.get("deleteCropped");
           var l = old.look;
@@ -169,8 +169,8 @@ final class PictureCommands implements Commands.Extension {
               block,
               k.rotate(
                   a.containsKey("degrees") ? Math.round(f(a, "degrees", 0)) : k.rotation,
-                  a.containsKey("flipH") ? (Boolean) a.get("flipH") : k.flipH,
-                  a.containsKey("flipV") ? (Boolean) a.get("flipV") : k.flipV));
+                  Commands.flag(a, "flipH", k.flipH),
+                  Commands.flag(a, "flipV", k.flipV)));
           return null;
         });
     c.edit("arrange.rotate", "block?:integer,kind:string",
@@ -223,7 +223,7 @@ final class PictureCommands implements Commands.Extension {
   }
 
   private static int block(Session s, Map<String, Object> a) {
-    return a.containsKey("block") ? Commands.integer(a, "block") : s.selection().block;
+    return Commands.integer(a, "block", s.selection().block);
   }
 
   private static Picture picture(Session s, int block) {

@@ -67,7 +67,7 @@ final class WordAliasCommands implements Commands.Extension {
           if (url.trim().isEmpty()) throw new IllegalArgumentException("Enter a link address");
           var x = s.selection();
           if (x.start() == x.end() || a.containsKey("text")) {
-            String text = a.containsKey("text") ? Commands.str(a, "text") : url;
+            String text = Commands.str(a, "text", url);
             int from = x.start();
             s.replace(text);
             s.select(s.selection().block, from, from + text.length());
@@ -84,7 +84,7 @@ final class WordAliasCommands implements Commands.Extension {
         "Margins: a preset (normal, narrow, moderate, wide, mirrored) or explicit point values",
         (s, a) -> {
           Map<String, Object> m = Json.object();
-          String preset = a.containsKey("preset") ? Commands.str(a, "preset") : null;
+          String preset = Commands.str(a, "preset", null);
           float[] v =
               preset == null ? null
                   : "normal".equals(preset) ? new float[] {72, 72, 72, 72}
@@ -112,7 +112,7 @@ final class WordAliasCommands implements Commands.Extension {
     c.edit("arrange.position", "block?:integer,position:string",
         "Position an object: inline, or with square wrapping at left, center or right (a top/middle/bottom prefix such as topLeft is accepted; objects stay anchored to their paragraph vertically)",
         (s, a) -> {
-          int block = a.containsKey("block") ? Commands.integer(a, "block") : s.selection().block;
+          int block = Commands.integer(a, "block", s.selection().block);
           var b = s.document().blocks.get(block);
           if (!(b instanceof Picture)) throw new IllegalArgumentException("Select a picture or shape");
           var p = (Picture) b;

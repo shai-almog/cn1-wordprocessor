@@ -113,7 +113,7 @@ final class CatalogNavigationCommands implements Commands.Extension {
         });
     c.edit("insert.dateTime", "format?:string,update?:boolean",
         "Insert a DATE field with an optional picture (\\@ format)", (s, a) -> {
-          String format = a.containsKey("format") ? Commands.str(a, "format") : "M/d/yyyy";
+          String format = Commands.str(a, "format", "M/d/yyyy");
           if (format.indexOf('"') >= 0) throw new IllegalArgumentException("Invalid format");
           s.insertField(
               new InlineField(
@@ -145,7 +145,7 @@ final class CatalogNavigationCommands implements Commands.Extension {
     c.edit("review.newComment", "text:string,author?:string",
         "Comment on the selected range", (s, a) -> {
           s.addComment(
-              a.containsKey("author") ? Commands.str(a, "author") : s.reviewAuthor(),
+              Commands.str(a, "author", s.reviewAuthor()),
               Commands.str(a, "text"));
           return null;
         });
@@ -171,7 +171,7 @@ final class CatalogNavigationCommands implements Commands.Extension {
     c.edit("layout.differentFirstPage", "value?:boolean",
         "Use a different header/footer on the first page of the section", (s, a) -> {
           var f = s.activeSection().raw.furniture;
-          boolean v = a.containsKey("value") ? (Boolean) a.get("value") : !f.differentFirst;
+          boolean v = Commands.flag(a, "value", !f.differentFirst);
           s.section(
               s.activeSection()
                   .raw
@@ -181,7 +181,7 @@ final class CatalogNavigationCommands implements Commands.Extension {
     c.edit("layout.differentOddEven", "value?:boolean",
         "Use different odd and even page headers/footers", (s, a) -> {
           var f = s.activeSection().raw.furniture;
-          boolean v = a.containsKey("value") ? (Boolean) a.get("value") : !f.differentEven;
+          boolean v = Commands.flag(a, "value", !f.differentEven);
           s.section(
               s.activeSection()
                   .raw
@@ -197,7 +197,7 @@ final class CatalogNavigationCommands implements Commands.Extension {
           "text:string,align?:string,variant?:string",
           true,
           (s, a) -> {
-            String align = a.containsKey("align") ? Commands.str(a, "align") : "left";
+            String align = Commands.str(a, "align", "left");
             if (!Arrays.asList("left", "center", "right", "both").contains(align))
               throw new IllegalArgumentException("Unknown alignment " + align);
             String key = variant(a, kind);
@@ -234,7 +234,7 @@ final class CatalogNavigationCommands implements Commands.Extension {
           var range = s.activeSection();
           if (range.first == 0) throw new IllegalArgumentException("The first section has no previous");
           boolean linked = !range.raw.furniture.stories.containsKey(key);
-          boolean link = a.containsKey("value") ? (Boolean) a.get("value") : !linked;
+          boolean link = Commands.flag(a, "value", !linked);
           PageFurniture f =
               link
                   ? range.raw.furniture.inherit(key)
@@ -246,8 +246,8 @@ final class CatalogNavigationCommands implements Commands.Extension {
         "Header and footer distance from the page edge in points", (s, a) -> {
           var raw = s.activeSection().raw;
           var f = raw.furniture;
-          float h = a.containsKey("header") ? ((Number) a.get("header")).floatValue() : f.headerDistance;
-          float b = a.containsKey("footer") ? ((Number) a.get("footer")).floatValue() : f.footerDistance;
+          float h = Commands.number(a, "header", f.headerDistance);
+          float b = Commands.number(a, "footer", f.footerDistance);
           if (h > raw.page.height / 2 || b > raw.page.height / 2)
             throw new IllegalArgumentException("Distance exceeds half the page");
           s.section(raw.furniture(f.options(f.differentFirst, f.differentEven, h, b)));
@@ -286,7 +286,7 @@ final class CatalogNavigationCommands implements Commands.Extension {
           Table t = table(s);
           int rows = s.cellRow() + 1;
           boolean on =
-              a.containsKey("value") ? (Boolean) a.get("value") : t.format.headerRows < rows;
+              Commands.flag(a, "value", t.format.headerRows < rows);
           s.formatTable(s.cellBlock(), t.format.headerRows(on ? rows : 0));
           return null;
         });
@@ -305,7 +305,7 @@ final class CatalogNavigationCommands implements Commands.Extension {
               s,
               Commands.str(a, "kind"),
               a.containsKey("color") ? Integer.parseInt(hex(Commands.str(a, "color")), 16) : 0,
-              a.containsKey("width") ? ((Number) a.get("width")).floatValue() : .5f);
+              Commands.number(a, "width", .5f));
           return null;
         });
     c.edit("table.style", "style:string",
@@ -315,8 +315,8 @@ final class CatalogNavigationCommands implements Commands.Extension {
         });
     c.edit("table.cellMargins", "horizontal?:number,vertical?:number",
         "Cell padding in points for the selected cells", (s, a) -> {
-          final Float hz = a.containsKey("horizontal") ? ((Number) a.get("horizontal")).floatValue() : null;
-          final Float vt = a.containsKey("vertical") ? ((Number) a.get("vertical")).floatValue() : null;
+          final Float hz = a.containsKey("horizontal") ? (Float) ((Number) a.get("horizontal")).floatValue() : null;
+          final Float vt = a.containsKey("vertical") ? (Float) ((Number) a.get("vertical")).floatValue() : null;
           if (hz != null && (hz < 0 || hz > 72) || vt != null && (vt < 0 || vt > 72))
             throw new IllegalArgumentException("Margins must be 0-72pt");
           cells(
@@ -532,7 +532,7 @@ final class CatalogNavigationCommands implements Commands.Extension {
   }
 
   private static String variant(Map<String, Object> a, String kind) {
-    String v = a.containsKey("variant") ? Commands.str(a, "variant") : "primary";
+    String v = Commands.str(a, "variant", "primary");
     if ("primary".equals(v)) return kind.toLowerCase();
     if ("first".equals(v) || "even".equals(v)) return v + kind;
     throw new IllegalArgumentException("variant: primary, first or even");

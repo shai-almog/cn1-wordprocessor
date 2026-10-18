@@ -89,9 +89,9 @@ final class TableStyleCommands implements Commands.Extension {
     c.edit("table.borderPainter", "color?:string,width?:number,sides?:string",
         "Border painter: paint the pen (color, width, sides) onto the selected cells", (s, a) -> {
           int color = a.containsKey("color") ? Integer.parseInt(hex(Commands.str(a, "color")), 16) : 0;
-          float width = a.containsKey("width") ? ((Number) a.get("width")).floatValue() : .5f;
+          float width = Commands.number(a, "width", .5f);
           if (width < 0 || width > 12) throw new IllegalArgumentException("Pen width must be 0-12pt");
-          String sides = a.containsKey("sides") ? Commands.str(a, "sides") : "all";
+          String sides = Commands.str(a, "sides", "all");
           Table t = table(s);
           var r = s.cellSelection();
           int r0 = r == null ? s.cellRow() : r.firstRow, r1 = r == null ? s.cellRow() : r.lastRow;
@@ -118,7 +118,7 @@ final class TableStyleCommands implements Commands.Extension {
             s.insertTable(1, 1);
             return "table";
           }
-          String o = a.containsKey("orientation") ? Commands.str(a, "orientation") : "vertical";
+          String o = Commands.str(a, "orientation", "vertical");
           int block = s.cellBlock(), row = s.cellRow(), col = s.cellColumn();
           if ("vertical".equals(o)) s.splitCell(block, row, col, 2);
           else if ("horizontal".equals(o)) c.execute(s, "table.insertRowBelow", new LinkedHashMap<>());
@@ -131,7 +131,7 @@ final class TableStyleCommands implements Commands.Extension {
           Table t = table(s);
           int block = s.cellBlock();
           var span = t.span(s.cellRow(), s.cellColumn());
-          String dir = a.containsKey("direction") ? Commands.str(a, "direction") : "right";
+          String dir = Commands.str(a, "direction", "right");
           if ("right".equals(dir)) {
             if (span.column + span.columns >= t.columns()) throw new IllegalArgumentException("No cell to the right");
             var next = t.span(span.row, span.column + span.columns);

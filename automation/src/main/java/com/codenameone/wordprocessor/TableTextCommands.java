@@ -9,7 +9,7 @@ final class TableTextCommands implements Commands.Extension {
     c.edit("table.fromText", "separator?:string",
         "Convert the selected paragraphs to a table, splitting at tab, comma or semicolon",
         (s, a) -> {
-          String kind = a.containsKey("separator") ? Commands.str(a, "separator") : "tab";
+          String kind = Commands.str(a, "separator", "tab");
           char sep =
               "comma".equals(kind) ? ',' : "semicolon".equals(kind) ? ';' : "tab".equals(kind) ? '\t' : 0;
           if (sep == 0) throw new IllegalArgumentException("Separator must be tab, comma or semicolon");

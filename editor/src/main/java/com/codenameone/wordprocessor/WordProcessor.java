@@ -3626,17 +3626,17 @@ public class WordProcessor {
       zoomTo(editor.getZoom());
     });
     view("view.multiplePages", "Show pages side by side (default 2)", "count?:integer", a -> {
-      editor.fitPages(a.containsKey("count") ? Commands.integer(a, "count") : 2);
+      editor.fitPages(Commands.integer(a, "count", 2));
       zoomTo(editor.getZoom());
     });
     view("view.marks", "Show or hide formatting marks", "value?:boolean", a ->
-        editor.setShowMarks(a.containsKey("value") ? (Boolean) a.get("value") : !editor.isShowMarks()));
+        editor.setShowMarks(Commands.flag(a, "value", !editor.isShowMarks())));
     view("view.ruler", "Show or hide the ruler", "value?:boolean", a -> {
-      showRulers(a.containsKey("value") ? (Boolean) a.get("value") : ruler.isHidden());
+      showRulers(Commands.flag(a, "value", ruler.isHidden()));
     });
     view("view.navigationPane", "Show or hide the navigation pane", "value?:boolean", a -> {
       boolean shown = navigation.getParent() != null;
-      boolean show = a.containsKey("value") ? (Boolean) a.get("value") : !shown;
+      boolean show = Commands.flag(a, "value", !shown);
       if (show && !shown) workspace.add(BorderLayout.WEST, navigation);
       else if (!show && shown) workspace.removeComponent(navigation);
       workspace.revalidate();
@@ -3652,19 +3652,19 @@ public class WordProcessor {
       zoomTo(editor.getZoom());
     });
     view("view.draft", "Draft: reflowed text without headers, footers or page decoration", "value?:boolean", a -> {
-      boolean on = a.containsKey("value") ? (Boolean) a.get("value") : !editor.isDraft();
+      boolean on = Commands.flag(a, "value", !editor.isDraft());
       editor.setDraft(on);
       if (editor.isReflow() != on) editor.setReflow(on);
       zoomTo(editor.getZoom());
     });
     view("view.darkMode", "Switch the page between light and dark", "value?:boolean", a ->
-        editor.setDarkPage(a.containsKey("value") ? (Boolean) a.get("value") : !editor.isDarkPage()));
+        editor.setDarkPage(Commands.flag(a, "value", !editor.isDarkPage())));
     view("view.gridlines", "Show or hide 18pt gridlines", "value?:boolean", a ->
-        editor.setGridlines(a.containsKey("value") ? (Boolean) a.get("value") : !editor.isGridlines()));
+        editor.setGridlines(Commands.flag(a, "value", !editor.isGridlines())));
     view("table.viewGridlines", "Show or hide dotted table gridlines on borderless cell edges", "value?:boolean", a ->
-        editor.setTableGridlines(a.containsKey("value") ? (Boolean) a.get("value") : !editor.isTableGridlines()));
+        editor.setTableGridlines(Commands.flag(a, "value", !editor.isTableGridlines())));
     view("view.outline", "Outline view: paragraphs indented by level with expand/collapse", "value?:boolean", a ->
-        outlineView(a.containsKey("value") ? (Boolean) a.get("value") : editor.getOutline() == null));
+        outlineView(Commands.flag(a, "value", editor.getOutline() == null)));
     view("outline.close", "Close Outline view", "", a -> outlineView(false));
     view("outline.expand", "Expand the heading at the caret, or all headings", "all?:boolean", a ->
         outlineCollapse(Boolean.TRUE.equals(a.get("all")), false));
@@ -3677,24 +3677,24 @@ public class WordProcessor {
     view("outline.showFormatting", "Show text formatting in Outline view", "value?:boolean", a -> {
       outlineView(true);
       var o = editor.getOutline();
-      editor.setOutline(o.showFormatting(a.containsKey("value") ? (Boolean) a.get("value") : !o.showFormatting));
+      editor.setOutline(o.showFormatting(Commands.flag(a, "value", !o.showFormatting)));
     });
     view("outline.firstLineOnly", "Show only the first line of body paragraphs", "value?:boolean", a -> {
       outlineView(true);
       var o = editor.getOutline();
-      editor.setOutline(o.firstLineOnly(a.containsKey("value") ? (Boolean) a.get("value") : !o.firstLineOnly));
+      editor.setOutline(o.firstLineOnly(Commands.flag(a, "value", !o.firstLineOnly)));
     });
     view("view.focus", "Focus mode: hide the ribbon and status bar", "value?:boolean", a ->
-        focus(a.containsKey("value") ? (Boolean) a.get("value") : !ribbon.isHidden()));
+        focus(Commands.flag(a, "value", !ribbon.isHidden())));
     view("view.readMode", "Read mode: full screen, pages side by side, no editing", "value?:boolean", a -> {
-      boolean on = a.containsKey("value") ? (Boolean) a.get("value") : !editor.isViewOnly();
+      boolean on = Commands.flag(a, "value", !editor.isViewOnly());
       editor.setViewOnly(on);
       focus(on);
       editor.fitPages(on ? 2 : 1);
       zoomTo(editor.getZoom());
     });
     view("view.immersive", "Immersive reader: focus mode with reflowed, enlarged text", "value?:boolean", a -> {
-      boolean on = a.containsKey("value") ? (Boolean) a.get("value") : !(ribbon.isHidden() && editor.isReflow());
+      boolean on = Commands.flag(a, "value", !(ribbon.isHidden() && editor.isReflow()));
       focus(on);
       editor.setReflow(on);
       zoomTo(on ? Math.max(1.5f, editor.getZoom()) : 1);
@@ -3707,7 +3707,7 @@ public class WordProcessor {
         editor.setMarkup(a.containsKey("mode") ? Commands.str(a, "mode") : "all".equals(editor.getMarkup()) ? "simple" : "all"));
     view("review.showMarkup", "Show or hide revision markup", "value?:boolean", a ->
         editor.setMarkup(
-            (a.containsKey("value") ? (Boolean) a.get("value") : !"all".equals(editor.getMarkup())) ? "all" : "none"));
+            (Commands.flag(a, "value", !"all".equals(editor.getMarkup()))) ? "all" : "none"));
     view("insert.editHeader", "Edit the page header", "", a -> Display.getInstance().callSerially(() -> editFurniture(false)));
     view("insert.editFooter", "Edit the page footer", "", a -> Display.getInstance().callSerially(() -> editFurniture(true)));
     view("insert.closeHeader", "Close Header and Footer: keep the edits and return to the document body", "", a -> {

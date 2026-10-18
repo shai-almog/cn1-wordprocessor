@@ -157,7 +157,7 @@ final class CatalogCommands implements Commands.Extension {
         });
     c.edit("para.hangingIndent", "by?:number",
         "Hang the first line by the given amount (default 36pt)", (s, a) -> {
-          float by = a.containsKey("by") ? ((Number) a.get("by")).floatValue() : 36;
+          float by = Commands.number(a, "by", 36);
           Paragraph p = current(s);
           if (p.indent < by) s.paragraph("indent", trim(by));
           s.paragraph("firstIndent", trim(-by));
@@ -222,7 +222,7 @@ final class CatalogCommands implements Commands.Extension {
     c.edit("design.watermark", "text?:string,color?:string",
         "Diagonal text watermark behind the page; empty text removes it", (s, a) -> {
           var sec = s.activeSection().raw;
-          String text = a.containsKey("text") ? Commands.str(a, "text") : "CONFIDENTIAL";
+          String text = Commands.str(a, "text", "CONFIDENTIAL");
           int rgb =
               a.containsKey("color") ? Integer.parseInt(color(Commands.str(a, "color"), "c0c0c0"), 16) : 0xc0c0c0;
           s.section(sec.decor(sec.decor.watermark(text, rgb)));
@@ -235,10 +235,10 @@ final class CatalogCommands implements Commands.Extension {
           var sec = s.activeSection().raw;
           var side =
               new ParagraphBorders.Side(
-                  a.containsKey("width") ? ((Number) a.get("width")).floatValue() : .5f,
+                  Commands.number(a, "width", .5f),
                   a.containsKey("color") ? Integer.parseInt(color(Commands.str(a, "color"), "000000"), 16) : 0,
-                  a.containsKey("space") ? ((Number) a.get("space")).floatValue() : 24,
-                  a.containsKey("style") ? Commands.str(a, "style") : "single");
+                  Commands.number(a, "space", 24),
+                  Commands.str(a, "style", "single"));
           s.section(
               sec.decor(
                   sec.decor.borders(
@@ -263,7 +263,7 @@ final class CatalogCommands implements Commands.Extension {
               sec.decor(
                   sec.decor.lineNumbers(
                       Commands.integer(a, "countBy"),
-                      a.containsKey("restart") ? Commands.str(a, "restart") : sec.decor.lineRestart)));
+                      Commands.str(a, "restart", sec.decor.lineRestart))));
           return null;
         });
 
@@ -273,10 +273,10 @@ final class CatalogCommands implements Commands.Extension {
           Paragraph p = current(s);
           var side =
               new ParagraphBorders.Side(
-                  a.containsKey("width") ? ((Number) a.get("width")).floatValue() : .5f,
+                  Commands.number(a, "width", .5f),
                   a.containsKey("color") ? Integer.parseInt(color(Commands.str(a, "color"), "000000"), 16) : 0,
-                  a.containsKey("space") ? ((Number) a.get("space")).floatValue() : 1,
-                  a.containsKey("style") ? Commands.str(a, "style") : "single");
+                  Commands.number(a, "space", 1),
+                  Commands.str(a, "style", "single"));
           s.paragraph(
               "borders",
               ParagraphBorders.preset(Commands.str(a, "kind"), side, p.format.borders).encode());

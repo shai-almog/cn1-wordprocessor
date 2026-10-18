@@ -11,7 +11,7 @@ public final class TableLayoutCommands implements Commands.Extension {
     commands.edit("table.rowHeight", "height:number,rule?:string",
         "Set the current row height", (s, a) -> {
           Table t = table(s);
-          String rule = a.containsKey("rule") ? Commands.str(a, "rule") : "atLeast";
+          String rule = Commands.str(a, "rule", "atLeast");
           if (!("atLeast".equals(rule) || "exact".equals(rule)))
             throw new IllegalArgumentException("Use atLeast or exact row height");
           s.formatTable(
@@ -41,7 +41,7 @@ public final class TableLayoutCommands implements Commands.Extension {
           }
           var row = t.format.row(s.cellRow());
           float height =
-              a.containsKey("rowHeight") ? ((Number) a.get("rowHeight")).floatValue() : row.height;
+              Commands.number(a, "rowHeight", row.height);
           String rule =
               a.containsKey("rowHeightRule")
                   ? Commands.str(a, "rowHeightRule")
@@ -52,19 +52,15 @@ public final class TableLayoutCommands implements Commands.Extension {
                   new TableFormat.Row(
                       height,
                       rule,
-                      a.containsKey("allowBreak")
-                          ? (Boolean) a.get("allowBreak")
-                          : row.allowBreak));
+                      Commands.flag(a, "allowBreak", row.allowBreak)));
           s.formatTable(
               s.cellBlock(),
               format.sizing(
                   new TableFormat.Sizing(
                       unit,
                       width,
-                      a.containsKey("align") ? Commands.str(a, "align") : size.align,
-                      a.containsKey("indent")
-                          ? ((Number) a.get("indent")).floatValue()
-                          : size.indent,
+                      Commands.str(a, "align", size.align),
+                      Commands.number(a, "indent", size.indent),
                       size.fixed)));
           return null;
         });
@@ -73,7 +69,7 @@ public final class TableLayoutCommands implements Commands.Extension {
           Table t = table(s);
           var f = t.format;
           var size = f.sizing;
-          String mode = a.containsKey("mode") ? Commands.str(a, "mode") : "window";
+          String mode = Commands.str(a, "mode", "window");
           if ("window".equals(mode)) {
             f =
                 f.distributeColumns()
@@ -98,14 +94,14 @@ public final class TableLayoutCommands implements Commands.Extension {
         });
     commands.edit("table.quick", "kind?:string",
         "Insert an editable quick table", (s, a) -> {
-          s.insertQuickTable(a.containsKey("kind") ? Commands.str(a, "kind") : "tabular");
+          s.insertQuickTable(Commands.str(a, "kind", "tabular"));
           return null;
         });
     commands.edit("table.formula", "formula?:string",
         "Insert a calculated table formula field", (s, a) -> {
           Table table = table(s);
           String instruction =
-              a.containsKey("formula") ? Commands.str(a, "formula") : "=SUM(ABOVE)";
+              Commands.str(a, "formula", "=SUM(ABOVE)");
           String result = TableFormulas.calculate(table, s.cellRow(), s.cellColumn(), instruction);
           if (s.cellSelection() != null)
             throw new IllegalArgumentException(
@@ -121,8 +117,8 @@ public final class TableLayoutCommands implements Commands.Extension {
           s.formatTable(
               s.cellBlock(),
               table.format.altText(
-                  a.containsKey("title") ? Commands.str(a, "title") : table.format.title,
-                  a.containsKey("text") ? Commands.str(a, "text") : table.format.description));
+                  Commands.str(a, "title", table.format.title),
+                  Commands.str(a, "text", table.format.description)));
           return null;
         });
     commands.edit("table.splitTable", "",

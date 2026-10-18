@@ -150,7 +150,7 @@ final class CatalogEditingCommands implements Commands.Extension {
                 any[0] |= f.showCode;
                 return f;
               });
-          final boolean show = a.containsKey("value") ? (Boolean) a.get("value") : !any[0];
+          final boolean show = Commands.flag(a, "value", !any[0]);
           s.mapFields((p, offset, f) -> f.showCode(show));
           return show;
         });

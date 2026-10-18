@@ -112,7 +112,7 @@ final class WorkflowCommands implements Commands.Extension {
           int c0 = Commands.integer(a, "startColumn"), c1 = Commands.integer(a, "endColumn");
           if (b0 > b1 || c0 > c1 || b0 < 0 || b1 >= s.document().blocks.size() || c0 < 0)
             throw new IllegalArgumentException("Invalid column rectangle");
-          String action = a.containsKey("action") ? Commands.str(a, "action") : "copy";
+          String action = Commands.str(a, "action", "copy");
           var text = new StringBuilder();
           for (int b = b0; b <= b1; b++) {
             if (!(s.document().blocks.get(b) instanceof Paragraph)) continue;
@@ -153,7 +153,7 @@ final class WorkflowCommands implements Commands.Extension {
               } else i++;
             }
           }
-          int index = a.containsKey("index") ? Commands.integer(a, "index") : 0;
+          int index = Commands.integer(a, "index", 0);
           if (!found.isEmpty()) {
             var f = found.get(((index % found.size()) + found.size()) % found.size());
             s.select(f[0], f[1], f[2]);
@@ -164,9 +164,9 @@ final class WorkflowCommands implements Commands.Extension {
         });
     c.edit("edit.clipboardPane", "action?:string,index?:integer",
         "Office clipboard (last 24 copies): list, paste an item, delete one or clear", (s, a) -> {
-          String action = a.containsKey("action") ? Commands.str(a, "action") : "list";
+          String action = Commands.str(a, "action", "list");
           var items = clipboard(s);
-          int index = a.containsKey("index") ? Commands.integer(a, "index") : 0;
+          int index = Commands.integer(a, "index", 0);
           if ("paste".equals(action)) s.paste(item(items, index));
           else if ("delete".equals(action)) {
             item(items, index);
@@ -276,7 +276,7 @@ final class WorkflowCommands implements Commands.Extension {
           var p = d.paragraph(block);
           var st = d.styles.get(p.style);
           if (st == null) st = ParagraphStyle.defaults().get("Normal");
-          String clear = a.containsKey("clear") ? Commands.str(a, "clear") : "";
+          String clear = Commands.str(a, "clear", "");
           if ("paragraph".equals(clear)) {
             String[] keys = {"align", "before", "after", "indent", "spacing", "rightIndent", "firstIndent"};
             for (String k : keys) s.paragraph(k, paragraphValue(st.paragraph, k));
@@ -302,7 +302,7 @@ final class WorkflowCommands implements Commands.Extension {
         "Manage Styles: list, hide or show a style in the pane, or set the recommended order",
         (s, a) -> {
           var d = s.document();
-          String action = a.containsKey("action") ? Commands.str(a, "action") : "list";
+          String action = Commands.str(a, "action", "list");
           var p = d.properties;
           if ("hide".equals(action) || "show".equals(action)) {
             String id = Commands.str(a, "id");
@@ -356,10 +356,10 @@ final class WorkflowCommands implements Commands.Extension {
     c.edit("insert.spreadsheet", "rows?:integer,columns?:integer,data?:string",
         "Insert an embedded spreadsheet: a gridded table seeded from TSV whose =formulas evaluate",
         (s, a) -> {
-          String data = a.containsKey("data") ? Commands.str(a, "data") : "";
+          String data = Commands.str(a, "data", "");
           String[] lines = data.isEmpty() ? new String[0] : TextUtil.split(data, '\n');
-          int rows = a.containsKey("rows") ? Commands.integer(a, "rows") : Math.max(3, lines.length);
-          int cols = a.containsKey("columns") ? Commands.integer(a, "columns") : 3;
+          int rows = Commands.integer(a, "rows", Math.max(3, lines.length));
+          int cols = Commands.integer(a, "columns", 3);
           for (String line : lines) cols = Math.max(cols, TextUtil.split(line, '\t').length);
           s.insertTable(Math.max(rows, lines.length), cols);
           int block = s.cellBlock();
@@ -414,7 +414,7 @@ final class WorkflowCommands implements Commands.Extension {
               : "markdown".equals(format) ? com.codename1.ui.RichTextFormat.MARKDOWN : null;
       if (f == null) throw new IllegalArgumentException("Data is pasted as text, html, rtf or markdown");
       fragment = TextFormats.read(data, f);
-    } else fragment = item(clipboard(s), a.containsKey("index") ? Commands.integer(a, "index") : 0);
+    } else fragment = item(clipboard(s), Commands.integer(a, "index", 0));
     if ("text".equals(format)) {
       s.pasteText(fragment.plainText());
       return;
@@ -587,7 +587,7 @@ final class WorkflowCommands implements Commands.Extension {
       s.replaceDocument(d.blocks(rest, d.nextId).properties(d.properties.withSetting("coverPage.ids", "")));
       return null;
     }
-    String design = a.containsKey("design") ? Commands.str(a, "design") : "Austin";
+    String design = Commands.str(a, "design", "Austin");
     String[] spec = null;
     for (String[] c : COVERS) if (c[0].equalsIgnoreCase(design)) spec = c;
     if (spec == null) throw new IllegalArgumentException("Unknown cover page design: " + design);
@@ -595,7 +595,7 @@ final class WorkflowCommands implements Commands.Extension {
     String title = a.containsKey("title") ? Commands.str(a, "title") : d.properties.get("title").isEmpty() ? "[Document title]" : d.properties.get("title");
     String subtitle = a.containsKey("subtitle") ? Commands.str(a, "subtitle") : d.properties.get("subject").isEmpty() ? "[Document subtitle]" : d.properties.get("subject");
     String author = a.containsKey("author") ? Commands.str(a, "author") : d.properties.get("author").isEmpty() ? "[Author name]" : d.properties.get("author");
-    String date = a.containsKey("date") ? Commands.str(a, "date") : "[Date]";
+    String date = Commands.str(a, "date", "[Date]");
     int fg = Integer.parseInt(spec[1], 16);
     var titleStyle = TextStyle.DEFAULT.with("size", spec[3]).with("color", spec[1]).with("bold", "true");
     var sub = TextStyle.DEFAULT.with("size", "18").with("color", fg == 0xffffff ? "ffffff" : "595959");
@@ -637,7 +637,7 @@ final class WorkflowCommands implements Commands.Extension {
         "action?:string,name?:string",
         true,
         (s, a) -> {
-          String action = a.containsKey("action") ? Commands.str(a, "action") : "list";
+          String action = Commands.str(a, "action", "list");
           if ("list".equals(action)) return entries(s, prefix);
           var name = Commands.str(a, "name").trim();
           if (name.isEmpty() || name.length() > 40) throw new IllegalArgumentException("Entry name must be 1-40 characters");

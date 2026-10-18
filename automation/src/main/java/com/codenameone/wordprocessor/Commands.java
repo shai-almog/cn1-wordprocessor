@@ -233,6 +233,22 @@ public final class Commands {
     return ((Number) a.get(k)).intValue();
   }
 
+  public static String str(Map<String, Object> a, String k, String def) {
+    return a.containsKey(k) ? (String) a.get(k) : def;
+  }
+
+  public static int integer(Map<String, Object> a, String k, int def) {
+    return a.containsKey(k) ? ((Number) a.get(k)).intValue() : def;
+  }
+
+  public static float number(Map<String, Object> a, String k, float def) {
+    return a.containsKey(k) ? ((Number) a.get(k)).floatValue() : def;
+  }
+
+  public static boolean flag(Map<String, Object> a, String k, boolean def) {
+    return a.containsKey(k) ? (Boolean) a.get(k) : def;
+  }
+
   private static Map<String, Integer> contentsStyleLevels(Map<?, ?> source) {
     var result = new LinkedHashMap<String, Integer>();
     for (Map.Entry<?, ?> entry : source.entrySet()) {
@@ -295,7 +311,7 @@ public final class Commands {
         });
     edit("format.changeCase", "mode?:string",
         "Change selected text case or the word around the caret", (s, a) -> {
-          s.changeCase(a.containsKey("mode") ? str(a, "mode") : null);
+          s.changeCase(str(a, "mode", null));
           return null;
         });
     edit("format.set", "property:string,value:string",
@@ -439,15 +455,15 @@ public final class Commands {
         "layout.columns", "count?:number,preset?:string,space?:number,separator?:boolean,apply?:string",
         "Set newspaper columns: count 1-12 or preset one/two/three/left/right, optional space (pt), separator, and apply section/document/forward",
         (s, a) -> {
-          float space = a.containsKey("space") ? ((Number) a.get("space")).floatValue() : 36;
+          float space = number(a, "space", 36);
           boolean separator = a.containsKey("separator") && Boolean.TRUE.equals(a.get("separator"));
           Columns c =
               a.containsKey("preset")
                   ? Columns.preset(
                       str(a, "preset"), s.activeSection().raw.page.contentWidth(), space)
-                  : Columns.equal(a.containsKey("count") ? integer(a, "count") : 1, space, false);
+                  : Columns.equal(integer(a, "count", 1), space, false);
           c = new Columns(c.count, c.space, separator, c.widths());
-          s.columns(c, a.containsKey("apply") ? str(a, "apply") : "section");
+          s.columns(c, str(a, "apply", "section"));
           return null;
         });
     edit("layout.columnBreak", "",
@@ -473,7 +489,7 @@ public final class Commands {
                   paragraphs.append(
                       new Paragraph("part" + i, RichText.of(lines[i]))
                           .with("after", "0")
-                          .with("align", a.containsKey("align") ? str(a, "align") : "left"));
+                          .with("align", str(a, "align", "left")));
           s.furniture(s.activeSection().raw.furniture.story(key, paragraphs));
           return null;
         });
@@ -487,19 +503,19 @@ public final class Commands {
               + "levels?:integer,title?:string,pageNumbers?:boolean,rightAlign?:boolean,tabLeader?:string,hyperlinks?:boolean,headingStyles?:boolean,outlineLevels?:boolean,tcFields?:boolean,styleLevels?:object,tcIdentifier?:string",
           true,
           (s, a) -> {
-            String caption = figures ? (a.containsKey("label") ? str(a, "label") : "Figure") : null;
+            String caption = figures ? (str(a, "label", "Figure")) : null;
             TableContents.Options old = TableContents.options(s.document(), caption);
             var options =
                 new TableContents.Options(
-                    a.containsKey("levels") ? integer(a, "levels") : old.levels,
-                    a.containsKey("title") ? str(a, "title") : old.title,
+                    integer(a, "levels", old.levels),
+                    str(a, "title", old.title),
                     a.containsKey("pageNumbers")
                         ? Boolean.TRUE.equals(a.get("pageNumbers"))
                         : old.pageNumbers,
                     a.containsKey("rightAlign")
                         ? Boolean.TRUE.equals(a.get("rightAlign"))
                         : old.rightAlign,
-                    a.containsKey("tabLeader") ? str(a, "tabLeader") : old.leader,
+                    str(a, "tabLeader", old.leader),
                     a.containsKey("hyperlinks")
                         ? Boolean.TRUE.equals(a.get("hyperlinks"))
                         : old.hyperlinks,
@@ -516,14 +532,14 @@ public final class Commands {
                     a.containsKey("styleLevels")
                         ? contentsStyleLevels((Map<?, ?>) a.get("styleLevels"))
                         : old.styleLevels,
-                    a.containsKey("tcIdentifier") ? str(a, "tcIdentifier") : old.tcIdentifier);
+                    str(a, "tcIdentifier", old.tcIdentifier));
             var engine = layoutEngine;
             TableContents.insert(s, options, d -> engine.layout(d, s.revision()));
             return null;
           });
     edit("references.addText", "level?:integer",
         "Set the selected paragraphs' outline level", (s, a) -> {
-          s.paragraph("outlineLevel", "" + (a.containsKey("level") ? integer(a, "level") : 0));
+          s.paragraph("outlineLevel", "" + (integer(a, "level", 0)));
           return null;
         });
     edit("references.sources", "add?:object,remove?:string",
@@ -541,9 +557,9 @@ public final class Commands {
                 "tag",
                 Citations.insert(
                     s,
-                    a.containsKey("tag") ? str(a, "tag") : null,
+                    str(a, "tag", null),
                     a.containsKey("source") ? citationSource((Map<?, ?>) a.get("source")) : null,
-                    a.containsKey("pages") ? str(a, "pages") : "")));
+                    str(a, "pages", ""))));
     edit("references.citationStyle", "style:string",
         "Change citation style and refresh results", (s, a) -> {
           Citations.style(s, str(a, "style"));
@@ -551,7 +567,7 @@ public final class Commands {
         });
     edit("references.bibliography", "title?:string",
         "Insert or replace the bibliography", (s, a) -> {
-          Citations.bibliography(s, a.containsKey("title") ? str(a, "title") : null);
+          Citations.bibliography(s, str(a, "title", null));
           return null;
         });
     edit("references.updateBibliography", "",
@@ -566,7 +582,7 @@ public final class Commands {
         });
     edit("references.markCitation", "entry?:string",
         "Mark an authority citation after the selection", (s, a) -> {
-          String entry = a.containsKey("entry") ? str(a, "entry") : s.selectedText();
+          String entry = str(a, "entry", s.selectedText());
           TableAuthorities.mark(s, entry);
           return Json.object("entry", entry);
         });
@@ -575,8 +591,8 @@ public final class Commands {
           DocumentIndex.Options old = TableAuthorities.options(s.document());
           TableAuthorities.insert(
               s,
-              a.containsKey("title") ? str(a, "title") : old.title,
-              a.containsKey("tabLeader") ? str(a, "tabLeader") : old.leader,
+              str(a, "title", old.title),
+              str(a, "tabLeader", old.leader),
               d -> layoutEngine.layout(d, s.revision()));
           return null;
         });
@@ -593,15 +609,15 @@ public final class Commands {
     edit(
         "references.markEntry", "entry?:string,subentry?:string,crossReference?:string,bookmark?:string,bold?:boolean,italic?:boolean,all?:boolean,text?:string",
         "Mark an index entry without removing the selection", (s, a) -> {
-          String entry = a.containsKey("entry") ? str(a, "entry") : s.selectedText();
+          String entry = str(a, "entry", s.selectedText());
           var selected = s.selectedText().trim();
           int marked =
               DocumentIndex.mark(
                   s,
                   entry,
-                  a.containsKey("subentry") ? str(a, "subentry") : "",
-                  a.containsKey("crossReference") ? str(a, "crossReference") : "",
-                  a.containsKey("bookmark") ? str(a, "bookmark") : "",
+                  str(a, "subentry", ""),
+                  str(a, "crossReference", ""),
+                  str(a, "bookmark", ""),
                   Boolean.TRUE.equals(a.get("bold")),
                   Boolean.TRUE.equals(a.get("italic")),
                   Boolean.TRUE.equals(a.get("all")),
@@ -619,13 +635,13 @@ public final class Commands {
           DocumentIndex.insert(
               s,
               new DocumentIndex.Options(
-                  a.containsKey("title") ? str(a, "title") : old.title,
+                  str(a, "title", old.title),
                   a.containsKey("type") ? "runIn".equals(str(a, "type")) : old.runIn,
                   a.containsKey("headings") ? Boolean.TRUE.equals(a.get("headings")) : old.headings,
                   a.containsKey("rightAlign")
                       ? Boolean.TRUE.equals(a.get("rightAlign"))
                       : old.rightAlign,
-                  a.containsKey("tabLeader") ? str(a, "tabLeader") : old.leader),
+                  str(a, "tabLeader", old.leader)),
               d -> layoutEngine.layout(d, s.revision()));
           return null;
         });
@@ -643,9 +659,9 @@ public final class Commands {
         "Mark selected text as a contents entry without removing it", (s, a) -> {
           TableContents.markEntry(
               s,
-              a.containsKey("text") ? str(a, "text") : s.selectedText(),
-              a.containsKey("level") ? integer(a, "level") : 1,
-              a.containsKey("identifier") ? str(a, "identifier") : "C");
+              str(a, "text", s.selectedText()),
+              integer(a, "level", 1),
+              str(a, "identifier", "C"));
           return null;
         });
     edit("references.updateToc", "",
@@ -667,26 +683,26 @@ public final class Commands {
         });
     edit("references.removeFigures", "label?:string",
         "Remove a table of figures", (s, a) -> {
-          TableContents.remove(s, a.containsKey("label") ? str(a, "label") : "Figure");
+          TableContents.remove(s, str(a, "label", "Figure"));
           return null;
         });
     edit(
         "references.noteOptions", "kind?:string,scope?:string,numFmt?:string,numStart?:integer,numRestart?:string,pos?:string,footnoteFormat?:string,endnoteFormat?:string",
         "Set note numbering, placement and section overrides", (s, a) -> {
-          String kind = a.containsKey("kind") ? str(a, "kind") : "footnote";
-          String scope = a.containsKey("scope") ? str(a, "scope") : "document";
+          String kind = str(a, "kind", "footnote");
+          String scope = str(a, "scope", "document");
           if (!Arrays.asList("document", "section").contains(scope))
             throw new IllegalArgumentException("Unknown note scope");
-          int start = a.containsKey("numStart") ? integer(a, "numStart") : 0;
+          int start = integer(a, "numStart", 0);
           if (a.containsKey("numStart") && start < 1)
             throw new IllegalArgumentException("Note start must be 1 through 32767");
           s.noteOptions(
               kind,
               new NoteOptions.Properties(
-                  a.containsKey("numFmt") ? str(a, "numFmt") : null,
+                  str(a, "numFmt", null),
                   start,
-                  a.containsKey("numRestart") ? str(a, "numRestart") : null,
-                  a.containsKey("pos") ? str(a, "pos") : null),
+                  str(a, "numRestart", null),
+                  str(a, "pos", null)),
               "document".equals(scope));
           for (String k : new String[] {"footnote", "endnote"})
             if (a.containsKey(k + "Format"))
@@ -712,8 +728,8 @@ public final class Commands {
           (s, a) -> {
             s.insertNote(
                 noteKind,
-                a.containsKey("text") ? str(a, "text") : "",
-                a.containsKey("mark") ? str(a, "mark") : "");
+                str(a, "text", ""),
+                str(a, "mark", ""));
             return null;
           });
     query("references.nextFootnote", "",
@@ -739,7 +755,7 @@ public final class Commands {
         });
     edit("references.insertNote", "kind:string,text:string,mark?:string",
         "Insert a footnote or endnote at the selection", (s, a) -> {
-          s.insertNote(str(a, "kind"), str(a, "text"), a.containsKey("mark") ? str(a, "mark") : "");
+          s.insertNote(str(a, "kind"), str(a, "text"), str(a, "mark", ""));
           return null;
         });
     query("references.notes", "",
@@ -795,8 +811,8 @@ public final class Commands {
               found.id,
               new Note(
                   found.id,
-                  a.containsKey("kind") ? str(a, "kind") : found.kind,
-                  a.containsKey("mark") ? str(a, "mark") : found.mark,
+                  str(a, "kind", found.kind),
+                  str(a, "mark", found.mark),
                   found.label,
                   story));
           return null;
@@ -804,17 +820,17 @@ public final class Commands {
     edit(
         "references.caption", "label?:string,text?:string,position?:string,format?:string,excludeLabel?:boolean,chapter?:integer,separator?:string",
         "Insert an automatically numbered caption", (s, a) -> {
-          String position = a.containsKey("position") ? str(a, "position") : "below";
+          String position = str(a, "position", "below");
           if (!"above".equals(position) && !"below".equals(position))
             throw new IllegalArgumentException("Caption position must be above or below");
           s.insertCaption(
-              a.containsKey("label") ? str(a, "label") : "Figure",
-              a.containsKey("text") ? str(a, "text") : "",
+              str(a, "label", "Figure"),
+              str(a, "text", ""),
               "above".equals(position),
-              a.containsKey("format") ? str(a, "format") : "ARABIC",
+              str(a, "format", "ARABIC"),
               Boolean.TRUE.equals(a.get("excludeLabel")),
-              a.containsKey("chapter") ? integer(a, "chapter") : 0,
-              a.containsKey("separator") ? str(a, "separator") : "-");
+              integer(a, "chapter", 0),
+              str(a, "separator", "-"));
           return null;
         });
     edit("references.updateFields", "",
@@ -880,7 +896,7 @@ public final class Commands {
               s,
               str(a, "kind"),
               str(a, "target"),
-              a.containsKey("show") ? str(a, "show") : "text",
+              str(a, "show", "text"),
               layoutEngine);
           return null;
         });
@@ -889,7 +905,7 @@ public final class Commands {
           s.insertField(
               new InlineField(
                   str(a, "instruction"),
-                  a.containsKey("result") ? str(a, "result") : "",
+                  str(a, "result", ""),
                   false,
                   false));
           return null;
@@ -1070,16 +1086,10 @@ public final class Commands {
                       a.containsKey("borderColor")
                           ? Integer.parseInt(str(a, "borderColor"), 16)
                           : old.borderColor,
-                      a.containsKey("borderWidth")
-                          ? ((Number) a.get("borderWidth")).floatValue()
-                          : old.borderWidth,
-                      a.containsKey("horizontalPadding")
-                          ? ((Number) a.get("horizontalPadding")).floatValue()
-                          : old.horizontalPadding,
-                      a.containsKey("verticalPadding")
-                          ? ((Number) a.get("verticalPadding")).floatValue()
-                          : old.verticalPadding,
-                      a.containsKey("vertical") ? str(a, "vertical") : old.vertical,
+                      number(a, "borderWidth", old.borderWidth),
+                      number(a, "horizontalPadding", old.horizontalPadding),
+                      number(a, "verticalPadding", old.verticalPadding),
+                      str(a, "vertical", old.vertical),
                       old.sides));
           if (a.containsKey("columnPercent"))
             f = f.columnFraction(column, ((Number) a.get("columnPercent")).floatValue() / 100);
@@ -1118,7 +1128,7 @@ public final class Commands {
           int row = explicit ? integer(a, "row") : s.cellRow();
           int col = explicit ? integer(a, "column") : s.cellColumn();
           if (explicit && !a.containsKey("columns")) s.splitCell(block, row, col);
-          else s.splitCell(block, row, col, a.containsKey("columns") ? integer(a, "columns") : 2);
+          else s.splitCell(block, row, col, integer(a, "columns", 2));
           return null;
         });
     edit(
@@ -1154,7 +1164,7 @@ public final class Commands {
         "Enable or disable tracking", (s, a) -> {
           if (a.containsKey("author")) s.reviewAuthor(str(a, "author"));
           s.trackChanges(
-              a.containsKey("value") ? (Boolean) a.get("value") : !s.document().trackChanges);
+              flag(a, "value", !s.document().trackChanges));
           return s.document().trackChanges;
         });
     edit("review.acceptAll", "",
@@ -1233,7 +1243,7 @@ public final class Commands {
     edit("comment.edit", "id:string,text:string,reply?:integer",
         "Edit comment or reply text", (s, a) -> {
           s.editComment(
-              str(a, "id"), a.containsKey("reply") ? integer(a, "reply") : -1, str(a, "text"));
+              str(a, "id"), integer(a, "reply", -1), str(a, "text"));
           return null;
         });
     query("comment.next", "",
@@ -1375,9 +1385,9 @@ public final class Commands {
     };
     int[] found = {
       integer(match, "block"),
-      match.containsKey("row") ? integer(match, "row") : -1,
-      match.containsKey("column") ? integer(match, "column") : -1,
-      match.containsKey("paragraph") ? integer(match, "paragraph") : 0,
+      integer(match, "row", -1),
+      integer(match, "column", -1),
+      integer(match, "paragraph", 0),
       integer(match, "start")
     };
     for (int i = 0; i < current.length; i++) {

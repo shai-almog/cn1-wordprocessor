@@ -27,7 +27,7 @@ final class DeveloperCommands implements Commands.Extension {
                 any[0] |= ContentControl.is(f) && f.showCode;
                 return f;
               });
-          final boolean on = a.containsKey("value") ? (Boolean) a.get("value") : !any[0];
+          final boolean on = Commands.flag(a, "value", !any[0]);
           s.mapFields((p, offset, f) -> ContentControl.is(f) ? f.showCode(on) : f);
           return on;
         });
@@ -83,7 +83,7 @@ final class DeveloperCommands implements Commands.Extension {
           ContentControl control = ContentControl.of(type);
           for (String key : new String[] {"title", "tag", "items", "date", "format"})
             if (a.containsKey(key)) control = control.with(key, Commands.str(a, key));
-          String result = a.containsKey("text") ? Commands.str(a, "text") : "";
+          String result = Commands.str(a, "text", "");
           if ("checkBox".equals(type)) {
             boolean on = a.containsKey("checked") && (Boolean) a.get("checked");
             control = control.with("checked", String.valueOf(on));
