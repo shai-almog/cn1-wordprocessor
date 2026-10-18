@@ -887,6 +887,11 @@ public final class EditorSurface extends Container
     return pageX();
   }
 
+  /** Top of the caret's page relative to this component, after scrolling (vertical ruler). */
+  public int pageTop() {
+    return pageY(currentPage() - 1) - getScrollY();
+  }
+
   public int currentPage() {
     LayoutEngine.Line line = caretLine();
     return line == null ? pageAt(getScrollY()) + 1 : line.page + 1;
@@ -989,9 +994,11 @@ public final class EditorSurface extends Container
 
   @Override
   protected Dimension calcScrollSize() {
+    // Container.isScrollableX adds the horizontal padding to this width, so flooring at the
+    // full width would leave a full-length horizontal scrollbar on a page that fits.
     return new Dimension(
         Math.max(
-            getWidth(),
+            getWidth() - getStyle().getHorizontalPadding(),
             Math.round(layout().maxWidth * scale()) * (reflow ? 1 : across)
                 + (reflow ? OfficeTheme.px(16) : 24 * (across + 1))),
         pageY(layout().pages.size()));
@@ -1421,6 +1428,7 @@ public final class EditorSurface extends Container
               360);
       }
     }
+    paintInk(g);
   }
 
   public void selectAll() {
@@ -1577,8 +1585,103 @@ public final class EditorSurface extends Container
     return best;
   }
 
+  /** Receives a finished pen stroke: the ink block and its points in that object's points. */
+  public interface InkSink {
+    void stroke(int block, String points);
+  }
+
+  private InkSink ink;
+  private int inkBlock = -1, inkPage;
+  private LayoutEngine.PlacedPicture inkPicture;
+  private final java.util.ArrayList<float[]> inkPoints = new java.util.ArrayList<float[]>();
+  private int inkColor = 0x000000;
+
+  /** Draw mode: pointer drags over an ink object or drawing canvas become pen strokes. */
+  public void setInk(InkSink sink, int color) {
+    ink = sink;
+    inkColor = color;
+    inkPoints.clear();
+    inkBlock = -1;
+  }
+
+  public boolean isInking() {
+    return ink != null;
+  }
+
+  private boolean inkPress(int x, int y) {
+    for (int page = 0; page < layout().pages.size(); page++) {
+      float px = (x - viewportX() - pageX(page)) / scale();
+      float py = (y - viewportY() + getScrollY() - pageY(page)) / scale();
+      for (LayoutEngine.PlacedPicture pic : layout().pages.get(page).pictures) {
+        if (px < pic.x || px > pic.x + pic.width || py < pic.y || py > pic.y + pic.height) continue;
+        Drawing d = pic.picture.drawing;
+        if (d == null || !("ink".equals(d.kind) || "canvas".equals(d.kind))) continue;
+        inkBlock = pic.block;
+        inkPage = page;
+        inkPicture = pic;
+        inkPoints.clear();
+        inkPoints.add(new float[] {px - pic.x, py - pic.y});
+        repaint();
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private void inkDrag(int x, int y) {
+    if (inkBlock < 0) return;
+    float px = (x - viewportX() - pageX(inkPage)) / scale() - inkPicture.x;
+    float py = (y - viewportY() + getScrollY() - pageY(inkPage)) / scale() - inkPicture.y;
+    px = Math.max(0, Math.min(inkPicture.width, px));
+    py = Math.max(0, Math.min(inkPicture.height, py));
+    float[] last = inkPoints.get(inkPoints.size() - 1);
+    if (Math.abs(last[0] - px) + Math.abs(last[1] - py) < .75f) return;
+    if (inkPoints.size() < 5000) inkPoints.add(new float[] {px, py});
+    repaint();
+  }
+
+  private void inkRelease() {
+    if (inkBlock < 0) return;
+    StringBuilder b = new StringBuilder();
+    for (float[] pt : inkPoints) {
+      if (b.length() > 0) b.append(' ');
+      b.append(Math.round(pt[0] * 10) / 10f).append(',').append(Math.round(pt[1] * 10) / 10f);
+    }
+    int block = inkBlock;
+    inkBlock = -1;
+    inkPoints.clear();
+    ink.stroke(block, b.toString());
+    repaint();
+  }
+
+  private void paintInk(Graphics g) {
+    if (inkBlock < 0 || inkPoints.size() < 1) return;
+    float sc = scale();
+    int ox = getX() + pageX(inkPage) + getScrollX(), oy = getY() + pageY(inkPage);
+    boolean aa = g.isAntiAliased();
+    g.setAntiAliased(true);
+    g.setColor(inkColor);
+    int w = Math.max(1, Math.round(sc * 1.5f));
+    float[] prev = inkPoints.get(0);
+    for (int i = 1; i < inkPoints.size(); i++) {
+      float[] pt = inkPoints.get(i);
+      int x1 = ox + Math.round((inkPicture.x + prev[0]) * sc), y1 = oy + Math.round((inkPicture.y + prev[1]) * sc);
+      int x2 = ox + Math.round((inkPicture.x + pt[0]) * sc), y2 = oy + Math.round((inkPicture.y + pt[1]) * sc);
+      for (int t = -w / 2; t <= w / 2; t++) {
+        g.drawLine(x1 + t, y1, x2 + t, y2);
+        g.drawLine(x1, y1 + t, x2, y2 + t);
+      }
+      prev = pt;
+    }
+    g.setAntiAliased(aa);
+  }
+
   @Override
   public void pointerPressed(int x, int y) {
+    if (ink != null) {
+      inkPress(x, y);
+      return;
+    }
     if (OfficeTheme.mobile()) {
       touchX = x;
       touchY = y;
@@ -1643,6 +1746,10 @@ public final class EditorSurface extends Container
 
   @Override
   public void pointerDragged(int x, int y) {
+    if (ink != null) {
+      inkDrag(x, y);
+      return;
+    }
     if (OfficeTheme.mobile() && !touchSelecting) {
       if (Math.abs(x - touchX) + Math.abs(y - touchY) > OfficeTheme.px(6)) touchMoved = true;
       super.pointerDragged(x, y);
@@ -1683,6 +1790,10 @@ public final class EditorSurface extends Container
 
   @Override
   public void pointerReleased(int x, int y) {
+    if (ink != null) {
+      inkRelease();
+      return;
+    }
     if (OfficeTheme.mobile() && !touchMoved && !touchSelecting && pinchStart == 0) placeCaret(x, y);
     dragBlock = -1;
     dragTable = -1;

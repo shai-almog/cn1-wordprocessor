@@ -156,6 +156,8 @@ final class OfficeRibbon extends Container {
     body.setVisible(true);
     body.removeAll();
     body.add(BorderLayout.CENTER, pages.get(index));
+    // A page that was detached when the appearance last changed still has the old colors.
+    OfficeTheme.applyAppearance(pages.get(index));
     for (int i = 0; i < buttons.size(); i++) {
       Button b = buttons.get(i);
       boolean selected = i == index;

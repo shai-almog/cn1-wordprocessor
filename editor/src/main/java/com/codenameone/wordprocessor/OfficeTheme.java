@@ -32,11 +32,41 @@ final class OfficeTheme {
         .derive(px(size), bold ? Font.STYLE_BOLD : Font.STYLE_PLAIN);
   }
 
+  private static boolean installed;
+  private static final byte[] PIXELS = {
+    Style.UNIT_TYPE_PIXELS, Style.UNIT_TYPE_PIXELS, Style.UNIT_TYPE_PIXELS, Style.UNIT_TYPE_PIXELS
+  };
+
   static void install() {
     refreshAppearance();
     // Keep the native theme's desktop title/menu contract.
     Display.getInstance().installNativeTheme();
     Toolbar.setGlobalToolbar(true);
+    installed = true;
+    overlay();
+    if (UIManager.getInstance().getLookAndFeel() instanceof DefaultLookAndFeel) {
+      Style icon = new Style();
+      icon.setFgColor(INK);
+      icon.setBgTransparency(0);
+      Image unchecked =
+          FontImage.createMaterial(FontImage.MATERIAL_CHECK_BOX_OUTLINE_BLANK, icon)
+              .scaled(px(18), px(18));
+      icon.setFgColor(BLUE);
+      Image checked =
+          FontImage.createMaterial(FontImage.MATERIAL_CHECK_BOX, icon).scaled(px(18), px(18));
+      DefaultLookAndFeel look = (DefaultLookAndFeel) UIManager.getInstance().getLookAndFeel();
+      look.setCheckBoxImages(checked, unchecked);
+      look.setCheckBoxFocusImages(checked, unchecked, checked, unchecked);
+    }
+  }
+
+  /**
+   * Theme overlay for framework-drawn chrome (popups, scrollbars), colored for the active
+   * appearance. In dark mode UIManager resolves "$Dark" + UIID first, and the macOS native theme
+   * defines those for these UIIDs, so every key is written under both ids; otherwise the native
+   * dark values (a 20px track with a near-black thumb) win over ours.
+   */
+  private static void overlay() {
     java.util.Hashtable<String, Object> props = new java.util.Hashtable<String, Object>();
     if (Display.getInstance().isDesktop()) props.put("@hideLeftSideMenuBool", "true");
     // The document UI is light. Keep native popup behavior while making its surface
@@ -55,40 +85,43 @@ final class OfficeTheme {
       props.put(id + ".border", Border.createEmpty());
       // The track's cross-axis padding is the bar's thickness: 3pt + 3pt, an 6pt thumb.
       int t = px(3);
-      props.put(id + ".padding", id.contains("Horizontal") ? t + ",0," + t + ",0" : "0," + t + ",0," + t);
+      // Theme padding is top,bottom,left,right; the native theme's units are millimetres.
+      props.put(id + ".padding", id.contains("Horizontal") ? t + "," + t + ",0,0" : "0,0," + t + "," + t);
+      props.put(id + ".padUnit", PIXELS);
       props.put(id + ".margin", "0,0,0,0");
+      props.put(id + ".marUnit", PIXELS);
     }
     for (String id : new String[] {"ScrollThumb", "HorizontalScrollThumb", "DesktopScrollThumb",
         "DesktopHorizontalScrollThumb"}) {
-      props.put(id + ".bgColor", "a8a8a8");
+      props.put(id + ".bgColor", hex(chrome(0xa8a8a8)));
       props.put(id + ".transparency", "200");
       props.put(id + ".bgType", Byte.valueOf(Style.BACKGROUND_NONE));
       props.put(id + ".border", OfficeBorder.of(-1, 3));
       props.put(id + ".margin", "0,0,0,0");
+      props.put(id + ".marUnit", PIXELS);
+      props.put(id + ".padUnit", PIXELS);
       // Desktop thumbs darken on hover (selected) and drag (pressed), as AppKit overlay bars do.
       props.put(id + ".padding", "0,0,0,0");
       props.put(id + ".sel#derive", id);
-      props.put(id + ".sel#bgColor", "8a8a8a");
+      props.put(id + ".sel#bgColor", hex(chrome(0x8a8a8a)));
       props.put(id + ".press#derive", id);
-      props.put(id + ".press#bgColor", "707070");
+      props.put(id + ".press#bgColor", hex(chrome(0x707070)));
     }
-    UIManager.getInstance().addThemeProps(props);
+    java.util.Hashtable<String, Object> both = new java.util.Hashtable<String, Object>(props);
+    for (java.util.Map.Entry<String, Object> e : props.entrySet()) {
+      if (e.getKey().startsWith("@")) continue;
+      Object v = e.getValue();
+      // A derive names a style; the dark copy derives from the dark copy.
+      if (e.getKey().endsWith("derive") && v instanceof String) v = "$Dark" + v;
+      both.put("$Dark" + e.getKey(), v);
+    }
+    UIManager.getInstance().addThemeProps(both);
     // The look and feel caches its scrollbar labels; rebuild them so the thin bars apply.
     UIManager.getInstance().getLookAndFeel().refreshTheme(false);
-    if (UIManager.getInstance().getLookAndFeel() instanceof DefaultLookAndFeel) {
-      Style icon = new Style();
-      icon.setFgColor(INK);
-      icon.setBgTransparency(0);
-      Image unchecked =
-          FontImage.createMaterial(FontImage.MATERIAL_CHECK_BOX_OUTLINE_BLANK, icon)
-              .scaled(px(18), px(18));
-      icon.setFgColor(BLUE);
-      Image checked =
-          FontImage.createMaterial(FontImage.MATERIAL_CHECK_BOX, icon).scaled(px(18), px(18));
-      DefaultLookAndFeel look = (DefaultLookAndFeel) UIManager.getInstance().getLookAndFeel();
-      look.setCheckBoxImages(checked, unchecked);
-      look.setCheckBoxFocusImages(checked, unchecked, checked, unchecked);
-    }
+  }
+
+  private static String hex(int rgb) {
+    return Integer.toHexString(0x1000000 | rgb).substring(1);
   }
 
   static void space(Component c, int top, int bottom, int left, int right) {
@@ -138,6 +171,20 @@ final class OfficeTheme {
     b.getUnselectedStyle().setBorder(OfficeBorder.of(on ? 0x8c9dea : -1, 4));
   }
 
+  /** Primary action (Share): accent fill, white text, rounded 4pt. */
+  static void primary(Button b) {
+    button(b);
+    for (Style st : new Style[] {b.getUnselectedStyle(), b.getSelectedStyle(), b.getPressedStyle()}) {
+      st.setBgColor(ACCENT);
+      st.setBgTransparency(255);
+      st.setFgColor(0xffffff);
+    }
+    b.getPressedStyle().setBgColor(ACCENT_TEXT);
+    b.getAllStyles().setBorder(OfficeBorder.of(-1, 4));
+    Object glyph = b.getClientProperty("officeTheme.icon");
+    if (glyph instanceof int[]) icon(b, (char) ((int[]) glyph)[0], ((int[]) glyph)[1], 0xffffff);
+  }
+
   /** Framed button (Comments, Editing): white with an input border, rounded 4pt. */
   static void framed(Button b) {
     button(b);
@@ -154,6 +201,10 @@ final class OfficeTheme {
     b.putClientProperty(ICON, new int[] {glyph, size, color, chrome(color)});
     b.setIcon(glyph(glyph, size, chrome(color)));
     b.setGap(px(5));
+  }
+
+  static Image glyphImage(int glyph, int size, int color) {
+    return glyph(glyph, size, color);
   }
 
   private static Image glyph(int glyph, int size, int color) {
@@ -289,12 +340,17 @@ final class OfficeTheme {
   static boolean refreshAppearance() {
     // Office Theme (File > Options): follow the OS, or pin the chrome light or dark.
     String theme = AppOptions.get("officeTheme");
+    // Read the OS appearance, then pin the framework to ours so native-theme styles ("$Dark"
+    // variants, dialogs) agree with the chrome when Office Theme overrides the OS.
+    CN.setDarkMode(null);
     Boolean os = CN.isDarkMode();
     boolean d = "dark".equals(theme) || !"light".equals(theme) && os != null && os.booleanValue();
+    CN.setDarkMode(Boolean.valueOf(d));
     boolean c = Display.getInstance().isHighContrastEnabled();
     if (d == dark && c == contrast) return false;
     dark = d;
     contrast = c;
+    if (installed) overlay();
     return true;
   }
 
@@ -412,8 +468,10 @@ final class OfficeTheme {
     String bg = Integer.toHexString(0x1000000 | chrome(PAPER)).substring(1);
     String fg = Integer.toHexString(0x1000000 | chrome(INK)).substring(1);
     for (String id : new String[] {"ComboBoxPopup", "PopupContentPane", "ComboBoxList", "ComboBoxItem"}) {
-      props.put(id + ".bgColor", bg);
-      props.put(id + ".fgColor", fg);
+      for (String v : new String[] {id, "$Dark" + id}) {
+        props.put(v + ".bgColor", bg);
+        props.put(v + ".fgColor", fg);
+      }
     }
     UIManager.getInstance().addThemeProps(props);
   }

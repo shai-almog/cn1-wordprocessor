@@ -38,11 +38,12 @@ public class WordProcessor {
   private final Commands commands = new Commands();
   private EditorSurface editor;
   private Label status, zoomValue;
-  private Button readView, printView, webView;
+  private Button readView, printView, webView, language;
   private Label mergeStatus;
   private Container workspace, navigation, footer;
   private boolean backstage;
   private PageRuler ruler;
+  private VerticalRuler verticalRuler;
   private Slider zoomSlider;
   private Button quickUndo, quickRedo, documentTitle;
   private final Map<String, Runnable> uiActions = new LinkedHashMap<String, Runnable>();
@@ -215,12 +216,16 @@ public class WordProcessor {
     ribbon.addActionTab("File", this::showBackstage);
     ribbon.addTab("Home", home());
     ribbon.addTab("Insert", insert());
+    ribbon.addTab("Draw", draw());
+    ribbon.addTab("Design", design());
     ribbon.addTab("Layout", pageLayout());
     ribbon.addTab("References", references());
     ribbon.addTab("Mailings", mailings());
     ribbon.addTab("Review", review());
     ribbon.addTab("View", view());
+    ribbon.addTab("Developer", developer());
     ribbon.addTab("Automate", automation());
+    ribbon.addTab("Help", help());
     ribbon.addTab("Table Layout", tableRibbon());
     ribbon.setTabVisible("Table Layout", false);
     customTab = OfficeTheme.row();
@@ -228,8 +233,14 @@ public class WordProcessor {
     applyRibbonOptions();
     ribbon.select(0);
     if (OfficeTheme.mobile()) ribbon.toggleCollapsed();
-    ribbon.actions(
-        OfficeTheme.row(iconButton("Comments", FontImage.MATERIAL_COMMENT, this::comments, false)));
+    Button commentsButton = iconButton("Comments", FontImage.MATERIAL_COMMENT, this::comments, false);
+    editingButton = iconButton("Editing \u25be", FontImage.MATERIAL_EDIT, this::editingMode, false);
+    editingButton.setAccessibilityText("Editing mode");
+    Button share = iconButton("Share", FontImage.MATERIAL_IOS_SHARE, this::share, false);
+    OfficeTheme.framed(commentsButton);
+    OfficeTheme.framed(editingButton);
+    OfficeTheme.primary(share);
+    ribbon.actions(OfficeTheme.row(commentsButton, editingButton, share));
     if (Display.getInstance().isDesktop()) form.setToolbar(new OfficeTitleBar(titleBar()));
     form.add(BorderLayout.NORTH, ribbon);
     workspace = new Container(new BorderLayout());
@@ -263,7 +274,11 @@ public class WordProcessor {
     navigation.add(BorderLayout.CENTER, outline);
     Container documentPane = new Container(new BorderLayout());
     ruler = new PageRuler(editor, session, this::edited);
-    if (!OfficeTheme.mobile()) documentPane.add(BorderLayout.NORTH, ruler);
+    verticalRuler = new VerticalRuler(editor, session, this::edited);
+    if (!OfficeTheme.mobile()) {
+      documentPane.add(BorderLayout.NORTH, ruler);
+      documentPane.add(BorderLayout.WEST, verticalRuler);
+    }
     documentPane.add(BorderLayout.CENTER, editor);
     workspace.add(BorderLayout.CENTER, documentPane);
     form.add(BorderLayout.CENTER, workspace);
@@ -276,7 +291,12 @@ public class WordProcessor {
         .getAllStyles()
         .setBorder(
             Border.createCompoundBorder(Border.createLineBorder(1, OfficeTheme.BORDER), null, null, null));
-    footer.add(BorderLayout.CENTER, status);
+    language = button("English (United States)", () -> runPrompted("review.language"));
+    language.setAccessibilityText("Proofing language");
+    language.getAllStyles().setFont(OfficeTheme.font(11, false));
+    language.getAllStyles().setFgColor(OfficeTheme.DIM);
+    OfficeTheme.space(language, 0, 0, 14, 4);
+    footer.add(BorderLayout.CENTER, OfficeTheme.row(status, language));
     zoomSlider = new Slider();
     zoomSlider.setEditable(true);
     zoomSlider.setAccessibilityText("Zoom");
@@ -298,15 +318,18 @@ public class WordProcessor {
         new Style[] {
           zoomSlider.getSliderFullUnselectedStyle(), zoomSlider.getSliderFullSelectedStyle()
         }) {
-      s.setBgColor(OfficeTheme.ACCENT);
+      s.setBgColor(0xc4c4c4);
       s.setBgTransparency(255);
       s.setBorder(Border.createEmpty());
     }
-    Image thumb = Image.createImage(OfficeTheme.px(10), OfficeTheme.px(10), 0);
+    // Word's zoom thumb: a small upright white bar with a gray outline, no accent fill.
+    Image thumb = Image.createImage(OfficeTheme.px(6), OfficeTheme.px(14), 0);
     Graphics tg = thumb.getGraphics();
     tg.setAntiAliased(true);
-    tg.setColor(OfficeTheme.BLUE);
-    tg.fillArc(0, 0, thumb.getWidth(), thumb.getHeight(), 0, 360);
+    tg.setColor(0xffffff);
+    tg.fillRoundRect(0, 0, thumb.getWidth() - 1, thumb.getHeight() - 1, OfficeTheme.px(2), OfficeTheme.px(2));
+    tg.setColor(0x707070);
+    tg.drawRoundRect(0, 0, thumb.getWidth() - 1, thumb.getHeight() - 1, OfficeTheme.px(2), OfficeTheme.px(2));
     zoomSlider.setThumbImage(thumb);
     zoomSlider.addDataChangedListener(
         (type, index) -> {
@@ -319,7 +342,7 @@ public class WordProcessor {
     footer.add(
         BorderLayout.EAST,
         OfficeTheme.row(
-            statusIcon("Focus", FontImage.MATERIAL_CENTER_FOCUS_STRONG, "view.focus"),
+            focusButton(),
             readView = statusIcon("Read Mode", FontImage.MATERIAL_MENU_BOOK, "view.readMode"),
             printView = statusIcon("Print Layout", FontImage.MATERIAL_DESCRIPTION, "view.printLayout"),
             webView = statusIcon("Web Layout", FontImage.MATERIAL_LANGUAGE, "view.webLayout"),
@@ -446,7 +469,9 @@ public class WordProcessor {
     OfficeTheme.space(auto, 0, 0, 0, 8);
     autoLabel.getAllStyles().setMarginUnit(Style.UNIT_TYPE_PIXELS);
     autoLabel.getAllStyles().setMargin(0, 0, 0, OfficeTheme.px(6));
-    header.add(BorderLayout.WEST, OfficeTheme.row(auto, save, quickUndo, quickRedo));
+    Button more = iconButton("", FontImage.MATERIAL_MORE_HORIZ, this::quickAccessMore, false);
+    more.setAccessibilityText("More Quick Access commands");
+    header.add(BorderLayout.WEST, OfficeTheme.row(auto, save, quickUndo, quickRedo, more));
     documentTitle = button(session.document().title + " \u25be", this::rename);
     documentTitle.setAccessibilityText("Document name");
     documentTitle.getAllStyles().setFont(OfficeTheme.font(12, true));
@@ -730,6 +755,42 @@ public class WordProcessor {
     }
   }
 
+  static String languageName(String tag) {
+    String[] parts = com.codename1.util.StringUtil.tokenize(tag, '-').toArray(new String[0]);
+    if (parts.length == 0) return tag;
+    String[][] known = {
+      {"en", "English"}, {"fr", "French"}, {"de", "German"}, {"es", "Spanish"}, {"it", "Italian"},
+      {"pt", "Portuguese"}, {"nl", "Dutch"}, {"he", "Hebrew"}, {"ar", "Arabic"}, {"ja", "Japanese"},
+      {"zh", "Chinese"}, {"ko", "Korean"}, {"ru", "Russian"}
+    };
+    String[][] regions = {
+      {"US", "United States"}, {"GB", "United Kingdom"}, {"FR", "France"}, {"DE", "Germany"},
+      {"ES", "Spain"}, {"IL", "Israel"}, {"CA", "Canada"}, {"AU", "Australia"}, {"BR", "Brazil"}
+    };
+    String lang = parts[0];
+    for (String[] k : known) if (k[0].equalsIgnoreCase(parts[0])) lang = k[1];
+    if (parts.length < 2) return lang;
+    String region = parts[1];
+    for (String[] r : regions) if (r[0].equalsIgnoreCase(parts[1])) region = r[1];
+    return lang + " (" + region + ")";
+  }
+
+  /** Both rulers; the vertical one exists only in Print Layout, as in Word. */
+  private void showRulers(boolean show) {
+    ruler.setHidden(!show);
+    verticalRuler.setHidden(!show || editor.isReflow());
+    ruler.getParent().revalidate();
+  }
+
+  /** Status bar Focus: icon and label, as in Word. */
+  private Button focusButton() {
+    Button b = statusIcon("Focus", FontImage.MATERIAL_CENTER_FOCUS_STRONG, "view.focus");
+    b.setText("Focus");
+    b.getAllStyles().setFont(OfficeTheme.font(11, false));
+    b.getAllStyles().setFgColor(OfficeTheme.DIM);
+    return b;
+  }
+
   /** Status bar view toggle: 22x20 icon button, rounded 3pt, checked when it is the current view. */
   private Button statusIcon(String name, char icon, String command) {
     Button b = iconButton("", icon, () -> run(command, new HashMap<String, Object>()), false);
@@ -862,16 +923,27 @@ public class WordProcessor {
         OfficeTheme.row(
             toggle("Bold", FontImage.MATERIAL_FORMAT_BOLD, "bold"),
             toggle("Italic", FontImage.MATERIAL_FORMAT_ITALIC, "italic"),
-            toggle("Underline", FontImage.MATERIAL_FORMAT_UNDERLINED, "underline"),
+            split(
+                toggle("Underline", FontImage.MATERIAL_FORMAT_UNDERLINED, "underline"),
+                "Underline style",
+                this::underlineStyles),
             toggle("Strikethrough", FontImage.MATERIAL_STRIKETHROUGH_S, "strike"),
             scriptButton("x\u00b2", "Superscript", "superscript"),
             scriptButton("x\u2082", "Subscript", "subscript"),
-            iconButton("", FontImage.MATERIAL_FORMAT_COLOR_FILL, () -> color("background"), false),
-            iconButton("", FontImage.MATERIAL_FORMAT_COLOR_TEXT, () -> color("color"), false));
+            split(highlightButton = colorButton("Text Highlight Color", FontImage.MATERIAL_BORDER_COLOR, "background"),
+                "Highlight colors", () -> color("background")),
+            split(fontColorButton = colorButton("Font Color", FontImage.MATERIAL_FORMAT_COLOR_TEXT, "color"),
+                "Font colors", () -> color("color")));
     Container paragraphTop =
         OfficeTheme.row(
-            iconButton("", FontImage.MATERIAL_FORMAT_LIST_BULLETED, () -> list("bullet"), false),
-            iconButton("", FontImage.MATERIAL_FORMAT_LIST_NUMBERED, () -> list("number"), false),
+            split(
+                iconButton("", FontImage.MATERIAL_FORMAT_LIST_BULLETED, () -> list("bullet"), false),
+                "Bullet Library",
+                () -> listLibrary(true)),
+            split(
+                iconButton("", FontImage.MATERIAL_FORMAT_LIST_NUMBERED, () -> list("number"), false),
+                "Numbering Library",
+                () -> listLibrary(false)),
             iconButton("", FontImage.MATERIAL_FORMAT_INDENT_DECREASE, () -> indent(-18), false),
             iconButton("", FontImage.MATERIAL_FORMAT_INDENT_INCREASE, () -> indent(18), false));
     Container paragraphBottom =
@@ -926,10 +998,10 @@ public class WordProcessor {
                   editor.startInput();
                 }));
     return OfficeTheme.groups(
-        OfficeTheme.group("Clipboard", clipboard),
+        OfficeTheme.group("Clipboard", clipboard, this::officeClipboard),
         OfficeTheme.group("Font", BoxLayout.encloseY(fontTop, fontBottom), this::fontDialog),
-        OfficeTheme.group("Paragraph", BoxLayout.encloseY(paragraphTop, paragraphBottom)),
-        OfficeTheme.group("Styles", OfficeTheme.row(styles, moreStyles)),
+        OfficeTheme.group("Paragraph", BoxLayout.encloseY(paragraphTop, paragraphBottom), this::paragraphDialog),
+        OfficeTheme.group("Styles", OfficeTheme.row(styles, moreStyles), this::moreStyles),
         OfficeTheme.group("Editing", editing));
   }
 
@@ -3573,10 +3645,7 @@ public class WordProcessor {
                     }),
                 button(
                     "Ruler",
-                    () -> {
-                      ruler.setHidden(!ruler.isHidden());
-                      ruler.getParent().revalidate();
-                    }))),
+                    () -> showRulers(ruler.isHidden())))),
         OfficeTheme.group(
             "Zoom",
             OfficeTheme.row(
@@ -3635,8 +3704,7 @@ public class WordProcessor {
     view("view.marks", "Show or hide formatting marks", "value?:boolean", a ->
         editor.setShowMarks(a.containsKey("value") ? (Boolean) a.get("value") : !editor.isShowMarks()));
     view("view.ruler", "Show or hide the ruler", "value?:boolean", a -> {
-      ruler.setHidden(a.containsKey("value") ? !(Boolean) a.get("value") : !ruler.isHidden());
-      ruler.getParent().revalidate();
+      showRulers(a.containsKey("value") ? (Boolean) a.get("value") : ruler.isHidden());
     });
     view("view.navigationPane", "Show or hide the navigation pane", "value?:boolean", a -> {
       boolean shown = navigation.getParent() != null;
@@ -3647,10 +3715,12 @@ public class WordProcessor {
     });
     view("view.printLayout", "Paginated print layout", "", a -> {
       if (editor.isReflow()) editor.setReflow(false);
+      showRulers(!ruler.isHidden());
       zoomTo(editor.getZoom());
     });
     view("view.webLayout", "Reflow the document to the window width", "", a -> {
       if (!editor.isReflow()) editor.setReflow(true);
+      showRulers(!ruler.isHidden());
       zoomTo(editor.getZoom());
     });
     view("view.draft", "Draft: reflowed text without headers, footers or page decoration", "value?:boolean", a -> {
@@ -3984,6 +4054,246 @@ public class WordProcessor {
     editor.setZoom(zoom);
     updateStatus();
     ruler.repaint();
+  }
+
+  /** The Quick Access "more" menu: the commands Word offers there. */
+  private void quickAccessMore() {
+    String[] labels = {"New", "Open", "Print", "Customize Ribbon"};
+    String[] ids = {"file.new", "file.open", "file.print", "tools.customizeRibbon"};
+    ComboBox<String> pick = new ComboBox<String>(labels);
+    if (showDialog("Quick Access", pick, "Run", "Cancel")) runPrompted(ids[pick.getSelectedIndex()]);
+  }
+
+  /** Office Clipboard: the last copies, newest first; pick one to paste it, or clear them. */
+  private void officeClipboard() {
+    Object listed = commands.execute(session, "edit.clipboardPane", Json.object("action", "list"));
+    java.util.List<?> items = listed instanceof java.util.List ? (java.util.List<?>) listed : new ArrayList<Object>();
+    if (items.isEmpty()) {
+      showDialog("Clipboard", new Label("Copy or cut to collect items here."), "OK", null);
+      return;
+    }
+    String[] labels = new String[items.size()];
+    for (int i = 0; i < labels.length; i++) labels[i] = String.valueOf(items.get(i)).replace('\n', ' ');
+    ComboBox<String> pick = new ComboBox<String>(labels);
+    CheckBox clear = new CheckBox("Clear all instead");
+    if (!showDialog("Clipboard", BoxLayout.encloseY(pick, clear), "Paste", "Cancel")) return;
+    if (clear.isSelected()) run("edit.clipboardPane", Json.object("action", "clear"));
+    else run("edit.clipboardPane", Json.object("action", "paste", "index", pick.getSelectedIndex()));
+  }
+
+  private Button editingButton;
+
+  /** Word's mode switcher: Editing, Reviewing (Track Changes on) or Viewing (read only). */
+  private void editingMode() {
+    ComboBox<String> mode = new ComboBox<String>("Editing", "Reviewing", "Viewing");
+    mode.setSelectedIndex(editor.isViewOnly() ? 2 : session.document().trackChanges ? 1 : 0);
+    if (!showDialog("Mode", mode, "Apply", "Cancel")) return;
+    int m = mode.getSelectedIndex();
+    editor.finishComposing();
+    if (session.document().trackChanges != (m == 1)) session.trackChanges(m == 1);
+    editor.setViewOnly(m == 2);
+    editingButton.setText(mode.getSelectedItem() + " \u25be");
+    edited();
+  }
+
+  /** Share sheet with the .docx; where the platform has none, offer Save As instead. */
+  private void share() {
+    if (!Display.getInstance().isNativeShareSupported()) {
+      saveDocument(true);
+      return;
+    }
+    try {
+      @SuppressWarnings("unchecked")
+      Map<String, Object> r =
+          (Map<String, Object>) commands.execute(session, "file.share", new HashMap<String, Object>());
+      com.codename1.io.FileSystemStorage fs = com.codename1.io.FileSystemStorage.getInstance();
+      String path = fs.getAppHomePath() + String.valueOf(r.get("name"));
+      try (java.io.OutputStream out = fs.openOutputStream(path)) {
+        out.write(com.codename1.util.Base64.decode(String.valueOf(r.get("base64")).getBytes("UTF-8")));
+      }
+      Display.getInstance().share(null, path, String.valueOf(r.get("mime")));
+    } catch (java.io.IOException ex) {
+      status.setText("Share failed: " + ex.getMessage());
+    }
+  }
+
+  /** Ribbon button for a registered command; required arguments are asked for as Search does. */
+  private Button command(String label, char icon, String id, boolean large) {
+    return iconButton(label, icon, () -> runPrompted(id), large);
+  }
+
+  private void runPrompted(String id) {
+    for (Commands.Descriptor d : commands.descriptors())
+      if (d.id.equals(id)) {
+        promptArgs(d, new ArrayList<String>(d.parameters.keySet()), 0, new LinkedHashMap<String, Object>());
+        return;
+      }
+  }
+
+  /** Drop-down button: pick one of the names, then run the command with it as "name". */
+  private Button choices(String label, char icon, String id, java.util.List<String> names) {
+    return iconButton(
+        label + " \u25be",
+        icon,
+        () -> {
+          ComboBox<String> pick = new ComboBox<String>(names.toArray(new String[0]));
+          if (showDialog(label, pick, "Apply", "Cancel"))
+            run(id, Json.object("name", pick.getSelectedItem()));
+        },
+        true);
+  }
+
+  private static java.util.List<String> names(Object[][] table) {
+    java.util.List<String> out = new ArrayList<String>();
+    for (Object[] row : table) out.add(String.valueOf(row[0]));
+    return out;
+  }
+
+  private final java.util.List<Button> drawTools = new ArrayList<Button>();
+  private String drawTool = "";
+
+  private Container draw() {
+    drawTools.clear();
+    return OfficeTheme.groups(
+        OfficeTheme.group(
+            "Drawing Tools",
+            OfficeTheme.row(
+                drawTool("Select", FontImage.MATERIAL_NEAR_ME, ""),
+                drawTool("Pen", FontImage.MATERIAL_EDIT, "pen"),
+                drawTool("Pencil", FontImage.MATERIAL_CREATE, "pencil"),
+                drawTool("Highlighter", FontImage.MATERIAL_BORDER_COLOR, "highlighter"),
+                drawTool("Eraser", FontImage.MATERIAL_AUTO_FIX_NORMAL, "eraser"),
+                command("Add Pen", FontImage.MATERIAL_ADD, "draw.addPen", true))),
+        OfficeTheme.group(
+            "Insert",
+            OfficeTheme.row(
+                iconButton("Drawing Canvas", FontImage.MATERIAL_CROP_FREE, () -> run("insert.canvas", new HashMap<String, Object>()), true))),
+        OfficeTheme.group(
+            "Convert",
+            OfficeTheme.row(
+                iconButton("Ink to Shape", FontImage.MATERIAL_CATEGORY, () -> run("draw.inkToShape", new HashMap<String, Object>()), true))),
+        OfficeTheme.group(
+            "Replay",
+            OfficeTheme.row(
+                iconButton("Ink Replay", FontImage.MATERIAL_REPLAY, () -> run("draw.replay", new HashMap<String, Object>()), true))));
+  }
+
+  private Button drawTool(String label, char icon, String tool) {
+    Button b = iconButton(label, icon, () -> selectDrawTool(tool), true);
+    b.putClientProperty("drawTool", tool);
+    drawTools.add(b);
+    OfficeTheme.checked(b, tool.isEmpty());
+    return b;
+  }
+
+  /**
+   * Draw mode. A pen tool turns pointer drags over an ink object or drawing canvas into strokes
+   * (one undo step each); if the caret is not at ink, a drawing canvas is inserted first, as
+   * Word starts an ink region. Select leaves draw mode.
+   */
+  private void selectDrawTool(String tool) {
+    drawTool = tool;
+    for (Button b : drawTools) OfficeTheme.checked(b, tool.equals(b.getClientProperty("drawTool")));
+    if (tool.isEmpty()) {
+      editor.setInk(null, 0);
+      status.setText("");
+      return;
+    }
+    if (!inkAtCaret()) run("insert.canvas", new HashMap<String, Object>());
+    editor.setInk(this::inkStroke, "highlighter".equals(tool) ? 0xffd800 : "eraser".equals(tool) ? 0x9e9e9e : 0x000000);
+    status.setText("eraser".equals(tool) ? "Drag over ink to erase" : "Draw inside the canvas");
+    editor.repaint();
+  }
+
+  private boolean inkAtCaret() {
+    Document d = session.document();
+    int b = session.selection().block;
+    for (int i = Math.min(b, d.blocks.size() - 1); i >= 0 && i >= b - 2; i--) {
+      Block block = d.blocks.get(i);
+      if (block instanceof Picture && ((Picture) block).drawing != null
+          && ("ink".equals(((Picture) block).drawing.kind) || "canvas".equals(((Picture) block).drawing.kind)))
+        return true;
+    }
+    return false;
+  }
+
+  private void inkStroke(int block, String points) {
+    if ("eraser".equals(drawTool)) {
+      safe(() -> {
+        session.transact(t -> {
+          for (String pt : com.codename1.util.StringUtil.tokenize(points, ' ')) {
+            java.util.List<String> xy = com.codename1.util.StringUtil.tokenize(pt, ',');
+            if (xy.size() < 2) continue;
+            try {
+              commands.execute(t, "draw.eraser", Json.object("block", block,
+                  "x", Double.valueOf(xy.get(0)), "y", Double.valueOf(xy.get(1))));
+            } catch (IllegalArgumentException nothingNear) {
+              // no stroke under this point
+            }
+          }
+        });
+        edited();
+      });
+      return;
+    }
+    run("draw." + drawTool, Json.object("block", block, "points", points));
+  }
+
+  private Container design() {
+    return OfficeTheme.groups(
+        OfficeTheme.group(
+            "Document Formatting",
+            OfficeTheme.row(
+                choices("Themes", FontImage.MATERIAL_PALETTE, "design.theme", names(LayoutDesignCommands.THEMES)),
+                choices("Style Set", FontImage.MATERIAL_STYLE, "design.styleSet", LayoutDesignCommands.STYLE_SETS),
+                BoxLayout.encloseY(
+                    choices("Colors", FontImage.MATERIAL_COLOR_LENS, "design.themeColors", names(LayoutDesignCommands.COLORS)),
+                    choices("Fonts", FontImage.MATERIAL_FONT_DOWNLOAD, "design.themeFonts", names(LayoutDesignCommands.FONTS))),
+                BoxLayout.encloseY(
+                    choices("Paragraph Spacing", FontImage.MATERIAL_FORMAT_LINE_SPACING, "design.paragraphSpacing", names(LayoutDesignCommands.SPACING)),
+                    choices("Effects", FontImage.MATERIAL_AUTO_AWESOME, "design.effects", LayoutDesignCommands.EFFECTS)),
+                command("Set as Default", FontImage.MATERIAL_CHECK, "design.setDefault", false))),
+        OfficeTheme.group(
+            "Page Background",
+            OfficeTheme.row(
+                command("Watermark", FontImage.MATERIAL_BRANDING_WATERMARK, "design.watermark", true),
+                command("Page Color", FontImage.MATERIAL_FORMAT_COLOR_FILL, "design.pageColor", true),
+                command("Page Borders", FontImage.MATERIAL_BORDER_OUTER, "design.pageBorders", true))));
+  }
+
+  private Container developer() {
+    return OfficeTheme.groups(
+        OfficeTheme.group(
+            "Code",
+            OfficeTheme.row(
+                iconButton("Macros", FontImage.MATERIAL_PLAY_ARROW, this::macroDialog, true))),
+        OfficeTheme.group(
+            "Controls",
+            OfficeTheme.row(
+                BoxLayout.encloseY(
+                    command("Rich Text", FontImage.MATERIAL_TEXT_FIELDS, "developer.richText", false),
+                    command("Plain Text", FontImage.MATERIAL_SHORT_TEXT, "developer.plainText", false),
+                    command("Picture", FontImage.MATERIAL_IMAGE, "developer.picture", false)),
+                BoxLayout.encloseY(
+                    command("Check Box", FontImage.MATERIAL_CHECK_BOX, "developer.checkBox", false),
+                    command("Combo Box", FontImage.MATERIAL_ARROW_DROP_DOWN_CIRCLE, "developer.comboBox", false),
+                    command("Drop-Down List", FontImage.MATERIAL_LIST, "developer.dropDown", false)),
+                BoxLayout.encloseY(
+                    command("Date Picker", FontImage.MATERIAL_EVENT, "developer.datePicker", false),
+                    command("Building Block", FontImage.MATERIAL_VIEW_MODULE, "developer.buildingBlock", false),
+                    command("Repeating Section", FontImage.MATERIAL_REPEAT, "developer.repeatingSection", false)),
+                BoxLayout.encloseY(
+                    command("Design Mode", FontImage.MATERIAL_DESIGN_SERVICES, "developer.designMode", false),
+                    command("Properties", FontImage.MATERIAL_TUNE, "developer.properties", false)))));
+  }
+
+  private Container help() {
+    return OfficeTheme.groups(
+        OfficeTheme.group(
+            "Help",
+            OfficeTheme.row(
+                iconButton("Help", FontImage.MATERIAL_HELP_OUTLINE, this::searchCommands, true),
+                iconButton("Keyboard Shortcuts", FontImage.MATERIAL_KEYBOARD, this::customizeKeyboardDialog, true))));
   }
 
   private Container automation() {
@@ -4543,6 +4853,90 @@ public class WordProcessor {
     edited();
   }
 
+  private Button highlightButton, fontColorButton;
+  private int highlight = 0xffff00, fontColor = 0xc00000;
+
+  /** Word's split button: the main control plus a narrow chevron that opens its options. */
+  private Container split(Button main, String more, Runnable options) {
+    Button chevron = iconButton("", FontImage.MATERIAL_ARROW_DROP_DOWN, options, false);
+    chevron.setAccessibilityText(more);
+    OfficeTheme.icon(chevron, FontImage.MATERIAL_ARROW_DROP_DOWN, 12, OfficeTheme.DIM);
+    OfficeTheme.space(chevron, 4, 4, 0, 1);
+    Container c = OfficeTheme.row(main, chevron);
+    c.getAllStyles().setPadding(0, 0, 0, 0);
+    return c;
+  }
+
+  /** Highlight / font color: applies the last color used; the bar under the glyph shows it. */
+  private Button colorButton(String name, char glyph, String property) {
+    Runnable apply = () -> {
+      int c = "background".equals(property) ? highlight : fontColor;
+      run("format.set", Json.object("property", property, "value", Integer.toHexString(0x1000000 | c).substring(1)));
+    };
+    Button b = new Button("") {
+      @Override
+      public void paint(Graphics g) {
+        super.paint(g);
+        Object c = getClientProperty("barColor");
+        if (!(c instanceof Integer)) return;
+        int w = OfficeTheme.px(14), h = OfficeTheme.px(3);
+        g.setColor(((Integer) c).intValue());
+        g.fillRect(getX() + (getWidth() - w) / 2, getY() + getHeight() - h - OfficeTheme.px(3), w, h);
+      }
+    };
+    OfficeTheme.button(b);
+    b.addActionListener(e -> apply.run());
+    b.setAccessibilityText(name);
+    OfficeTheme.icon(b, glyph, 16, OfficeTheme.INK);
+    OfficeTheme.space(b, 3, 6, 4, 4);
+    paintColorIcon(b, "background".equals(property) ? highlight : fontColor);
+    return b;
+  }
+
+  private void paintColorIcon(Button b, int color) {
+    b.putClientProperty("barColor", Integer.valueOf(color));
+    b.repaint();
+  }
+
+  private void rememberColor(String property, int color) {
+    if ("background".equals(property)) {
+      highlight = color;
+      if (highlightButton != null) paintColorIcon(highlightButton, color);
+    } else if ("color".equals(property)) {
+      fontColor = color;
+      if (fontColorButton != null) paintColorIcon(fontColorButton, color);
+    }
+  }
+
+  private void underlineStyles() {
+    String[] styles = {"single", "double", "thick", "dotted", "dash", "dotDash", "wave", "none"};
+    String[] names = {"Single", "Double", "Thick", "Dotted", "Dashed", "Dot-dash", "Wave", "None"};
+    ComboBox<String> pick = new ComboBox<String>(names);
+    if (showDialog("Underline", pick, "Apply", "Cancel"))
+      run("format.underline", Json.object("style", styles[pick.getSelectedIndex()]));
+  }
+
+  /** Bullet and Numbering libraries: one list kind plus a label template, as one undo step. */
+  private void listLibrary(boolean bullets) {
+    String[] labels = bullets
+        ? new String[] {"\u2022", "\u25e6", "\u25aa", "\u25c6", "\u27a2", "\u2713", "\u2013"}
+        : new String[] {"1.", "1)", "I.", "A.", "a)", "a.", "i."};
+    String[] formats = bullets
+        ? new String[] {"bullet", "bullet|\u25e6", "bullet|\u25aa", "bullet|\u25c6", "bullet|\u27a2", "bullet|\u2713", "bullet|\u2013"}
+        : new String[] {"decimal", "decimal|%1)", "upperRoman", "upperLetter", "lowerLetter|%1)", "lowerLetter", "lowerRoman"};
+    ComboBox<String> pick = new ComboBox<String>(labels);
+    if (!showDialog(bullets ? "Bullet Library" : "Numbering Library", pick, "Apply", "Cancel")) return;
+    String format = formats[pick.getSelectedIndex()];
+    editor.finishComposing();
+    safe(() -> {
+      session.transact(x -> {
+        x.paragraph("list", bullets ? "bullet" : "number");
+        x.paragraph("listFormat", format);
+      });
+      edited();
+    });
+  }
+
   private void color(String property) {
     Dialog d = officeDialog("background".equals(property) ? "Text highlight color" : "Font color");
     d.setLayout(new BorderLayout());
@@ -4557,6 +4951,7 @@ public class WordProcessor {
               "  ",
               () -> {
                 d.dispose();
+                rememberColor(property, Integer.parseInt(hex, 16));
                 run("format.set", Json.object("property", property, "value", hex));
               });
       OfficeTheme.surface(swatch, Integer.parseInt(hex, 16));
@@ -5230,6 +5625,7 @@ public class WordProcessor {
     updateOutline();
     updateStatus();
     if (ruler != null) ruler.repaint();
+    if (verticalRuler != null) verticalRuler.repaint();
     Display.getInstance()
         .callSerially(
             () -> {
@@ -5269,6 +5665,14 @@ public class WordProcessor {
           session.document().trackChanges ? "Track Changes on" : "Track Changes off");
     }
     syncingControls = true;
+    // The indent markers follow the caret paragraph.
+    if (ruler != null) ruler.repaint();
+    if (verticalRuler != null) verticalRuler.repaint();
+    if (language != null) {
+      String tag = session.activeStyle().characters.lang;
+      String name = tag == null || tag.isEmpty() ? "English (United States)" : languageName(tag);
+      if (!name.equals(language.getText())) language.setText(name);
+    }
     if (printView != null) {
       boolean read = editor.isViewOnly();
       OfficeTheme.checked(readView, read);
