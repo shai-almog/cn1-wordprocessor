@@ -8,7 +8,7 @@ import org.junit.Test;
 
 public class GraphemesTest {
   @Test public void unicode16OfficialConformanceForwardBackwardAndEveryOffset() throws Exception {
-    Path data = Paths.get("../third-party/unicode-16.0.0/GraphemeBreakTest.txt");
+    Path data = Paths.get("../docs/third-party/unicode-16.0.0/GraphemeBreakTest.txt");
     int cases = 0;
     for (String raw : Files.readAllLines(data, StandardCharsets.UTF_8)) {
       var line = raw.split("#", 2)[0].trim();

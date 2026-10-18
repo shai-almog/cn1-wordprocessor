@@ -1,7 +1,7 @@
 package com.codenameone.wordprocessor;
 
 /** Generated Unicode 16.0.0 properties. See scripts/generate-grapheme-ranges.py
- * and third-party/unicode-16.0.0/LICENSE.txt. Do not edit these ranges manually. */
+ * and docs/third-party/unicode-16.0.0/LICENSE.txt. Do not edit these ranges manually. */
 final class GraphemeProperties {
   private GraphemeProperties() {}
   static final int OTHER=0, CR=1, LF=2, CONTROL=3, EXTEND=4, ZWJ=5, REGIONAL_INDICATOR=6, PREPEND=7, SPACINGMARK=8, L=9, V=10, T=11, LV=12, LVT=13;

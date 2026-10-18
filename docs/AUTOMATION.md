@@ -34,7 +34,7 @@ The two included extensions are `TemplateExtension` and `QualityExtension`. Thes
 
 ## Macros
 
-`examples/welcome-macro.json` is runnable with the README command. Macro JSON uses `version: 1` and a `steps` array containing `command` and `args`. `${parameter}` substitution is distinct from document template fields `{{field}}`. At most 1,000 steps execute; cancellation or command failure rolls back the transaction. Undo/redo commands cannot be nested in a macro.
+`docs/examples/welcome-macro.json` is runnable with the README command. Macro JSON uses `version: 1` and a `steps` array containing `command` and `args`. `${parameter}` substitution is distinct from document template fields `{{field}}`. At most 1,000 steps execute; cancellation or command failure rolls back the transaction. Undo/redo commands cannot be nested in a macro.
 
 ```java
 Macros.Preview preview = new Macros(commands).preview(

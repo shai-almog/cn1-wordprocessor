@@ -37,7 +37,7 @@ No application was launched or implementation changed while preparing this hando
 | App dirty state before handoff | 52 modified tracked entries, 317 untracked entries | 369 entries before this document; do not confuse entries with Java source files. |
 | Framework workspace | `/Users/shai/dev/cn4/CodenameOne` | Current agent cwd; many existing unrelated and relevant modifications. |
 | Framework branch / HEAD | `master`, `d519cd4e6fb061bb120877acb36aa3f4c87aa971` | Not the framework snapshot used for latest acceptance. |
-| Tested framework | Isolated `008f9ece62526d807c2064887ad8f8641d6195a4`-based snapshot plus recorded Mac fixes | Includes `framework-patches/mac-composite-selection.patch`; release integration remains open. |
+| Tested framework | Isolated `008f9ece62526d807c2064887ad8f8641d6195a4`-based snapshot plus recorded Mac fixes | Includes `docs/framework-patches/mac-composite-selection.patch`; release integration remains open. |
 | Wordcraft checkout | `/private/tmp/wordcraft-comparison` | Local pinned comparison tree. |
 | Wordcraft HEAD | `159b84f54c74e9e82fb3109b758ae7dd6f4e3ab0` | Verified during handoff; preserve pin for repeatability. |
 | Wordcraft executables | `target/release/wordcraft-cli`, expected GUI `target/release/wordcraft` under that checkout | Inspect availability before running. |

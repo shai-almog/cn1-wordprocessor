@@ -17,7 +17,7 @@ Artifacts, screenshots, source hashes, native bundles, earlier failed runs and f
 
 ## Framework dependency
 
-The app remains a normal Codename One application built through Maven and ParparVM. The isolated baseline is the previously recorded `008f9ece` snapshot plus its prior Mac input fixes, with the additional local patch in `framework-patches/mac-composite-selection.patch`. It forwards horizontal movement and deletion to the rich editor and allows the editor to decide whether an empty active text story nevertheless represents a cell/object selection for Copy/Cut. Existing clipboard restrictions and window ownership guards remain. The native command harness adds empty-focus cut, blocked clipboard and inactive-session checks.
+The app remains a normal Codename One application built through Maven and ParparVM. The isolated baseline is the previously recorded `008f9ece` snapshot plus its prior Mac input fixes, with the additional local patch in `docs/framework-patches/mac-composite-selection.patch`. It forwards horizontal movement and deletion to the rich editor and allows the editor to decide whether an empty active text story nevertheless represents a cell/object selection for Copy/Cut. Existing clipboard restrictions and window ownership guards remain. The native command harness adds empty-focus cut, blocked clipboard and inactive-session checks.
 
 The patch is local and has **not** been published as a PR or applied to upstream master. The tested snapshot and cache are uniquely named under `/private/tmp/cn1-word-tables-20261016-xtUzBOG9`; the build does not use `~/.m2`. Current upstream/release-baseline acceptance is a separate outstanding task.
 

@@ -6,11 +6,17 @@ import { writeFileSync } from 'node:fs';
 const url = process.argv[2], out = process.argv[3], lines = JSON.parse(process.argv[4]);
 const profile = process.argv[5] || '/tmp/web-smoke-profile';
 const browser = process.env.CHROME || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+// Ubuntu 24.04 blocks the unprivileged user namespaces Chrome's sandbox needs.
+const sandbox = process.platform === 'linux' ? ['--no-sandbox'] : [];
 const chrome = spawn(browser,
-  ['--headless=new','--remote-debugging-port=9333',`--user-data-dir=${profile}`,'--window-size=1440,900','--force-device-scale-factor=2','about:blank'],{stdio:'ignore'});
+  [...sandbox,'--headless=new','--remote-debugging-port=9333',`--user-data-dir=${profile}`,'--window-size=1440,900','--force-device-scale-factor=2','about:blank'],{stdio:'ignore'});
 const sleep = ms => new Promise(r => setTimeout(r, ms));
-await sleep(2500);
-const targets = await (await fetch('http://127.0.0.1:9333/json')).json();
+let targets;
+for (let i = 0; !targets; i++) {
+  await sleep(500);
+  try { targets = await (await fetch('http://127.0.0.1:9333/json')).json(); }
+  catch (e) { if (i > 60) throw e; }
+}
 const ws = new WebSocket(targets.find(t => t.type === 'page').webSocketDebuggerUrl);
 await new Promise(r => ws.onopen = r);
 let id = 0; const pending = {};

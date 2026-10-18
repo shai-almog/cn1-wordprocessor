@@ -35,14 +35,14 @@ jobs:
         run: |
           export WORDPROCESSOR_MAVEN_REPO="$PWD/.local/maven-repository"
           start=$(date +%s)
-          mvn -B -ntp -o -Dmaven.repo.local="$WORDPROCESSOR_MAVEN_REPO" \
+          mvn -B -ntp -Dmaven.repo.local="$WORDPROCESSOR_MAVEN_REPO" \
             -pl common surefire:test | tee test.log
           echo "$(( $(date +%s) - start ))" > java-test-seconds.txt
           grep -h 'Tests run:' test.log | grep -v ' in ' | awk -F'[:,]' '{s+=$2} END{print s}' > java-tests.txt
       - name: JVM engine benchmark
         run: |
           export WORDPROCESSOR_MAVEN_REPO="$PWD/.local/maven-repository"
-          mvn -B -ntp -o -Dmaven.repo.local="$WORDPROCESSOR_MAVEN_REPO" -pl common \
+          mvn -B -ntp -Dmaven.repo.local="$WORDPROCESSOR_MAVEN_REPO" -pl common \
             org.apache.maven.plugins:maven-dependency-plugin:3.6.1:build-classpath \
             -DincludeScope=test -Dmdep.outputFile=target/test-classpath.txt
           scripts/benchmark.sh | tee java-benchmark.txt
@@ -110,7 +110,7 @@ jobs:
       - name: Fixtures
         run: |
           export WORDPROCESSOR_MAVEN_REPO="$PWD/.local/maven-repository"
-          mvn -B -ntp -o -Dmaven.repo.local="$WORDPROCESSOR_MAVEN_REPO" -pl common \
+          mvn -B -ntp -Dmaven.repo.local="$WORDPROCESSOR_MAVEN_REPO" -pl common \
             org.apache.maven.plugins:maven-dependency-plugin:3.6.1:build-classpath \
             -DincludeScope=test -Dmdep.outputFile=target/test-classpath.txt
           mkdir -p artifacts/startup-final
@@ -199,13 +199,18 @@ jobs:
             xcrun simctl terminate "$dev" "$bid" 2>/dev/null || true
             start=$(python3 -c 'import time;print(time.time())')
             xcrun simctl launch "$dev" "$bid" >/dev/null
-            until xcrun simctl spawn "$dev" log show --last 30s --style compact --predicate 'process == "Main"' 2>/dev/null | grep -q 'Codename One revisions'; do sleep 0.2; done
+            # Bounded: an app that never shows its window fails the job instead of hanging it.
+            for t in $(seq 300); do
+              xcrun simctl spawn "$dev" log show --last 30s --style compact --predicate 'process == "Main"' 2>/dev/null | grep -q 'UIKit:KeyWindow' && break
+              [ $t = 300 ] && { echo 'The app did not start'; exit 1; }
+              sleep 0.2
+            done
             python3 -c "import time;print(round((time.time()-$start)*1000))" >> ios-launch-ms.txt
           done
           sleep 5
           xcrun simctl io "$dev" screenshot ios.png
           du -sk "$app" | cut -f1 > ios-app-kib.txt
-          echo "iOS simulator launch-to-EDT ms: $(tr '\n' ' ' < ios-launch-ms.txt); app KiB: $(cat ios-app-kib.txt)" >> "$GITHUB_STEP_SUMMARY"
+          echo "iOS simulator launch-to-key-window ms: $(tr '\n' ' ' < ios-launch-ms.txt); app KiB: $(cat ios-app-kib.txt)" >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -220,12 +225,10 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: |
-            17
-            8
+          java-version: '17'
       - name: Build the APK
         run: |
-          export JAVA17_HOME="$JAVA_HOME_17_X64" JAVA_HOME="$JAVA_HOME_8_X64"
+          export JAVA17_HOME="$JAVA_HOME"
           export ANDROID_HOME="$ANDROID_SDK_ROOT"
           export WORDPROCESSOR_MAVEN_REPO="$PWD/.local/maven-repository"
           scripts/build-android.sh -DskipTests

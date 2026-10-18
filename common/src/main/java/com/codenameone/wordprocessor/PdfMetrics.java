@@ -4,7 +4,7 @@ package com.codenameone.wordprocessor;
  * Metrics for the four Helvetica faces actually emitted by PdfExporter, without AWT. Width data
  * derived from Adobe Core 14 AFM files (1997), reduced to WinAnsi advances. Copyright (c) 1985,
  * 1987, 1989, 1990, 1997 Adobe Systems Incorporated. All Rights Reserved. See
- * notices/Adobe-AFM-MustRead.html. Kerning is deliberately absent because the exporter emits
+ * docs/third-party/Adobe-AFM-MustRead.html. Kerning is deliberately absent because the exporter emits
  * unkerned PDF strings.
  */
 final class PdfMetrics implements LayoutEngine.Metrics {

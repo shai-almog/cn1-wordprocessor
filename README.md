@@ -104,7 +104,7 @@ for both projects on GitHub's runners:
 | `java` | Ubuntu | Cold build and functional-test time, test count, JVM engine benchmark, source lines and tokens |
 | `wordcraft` | Ubuntu | Wordcraft's cold build and `cargo test` time and test count |
 | `macos` | macOS | Startup, idle RAM, command-to-paint latency and bundle size of both native apps, same fixtures |
-| `ios` | macOS | The same source built for the iPhone simulator, launch time, app size and a screenshot |
+| `ios` | macOS | The same source built for the iPhone simulator, launch-to-key-window time, app size and a screenshot |
 | `android` | Ubuntu | The same source built as an APK, cold-start time on an emulator, APK size and a screenshot |
 | `web` | Ubuntu | The browser build, run headless in Chrome, bundle size and a screenshot |
 
@@ -168,8 +168,14 @@ single package:
 | UI | `WordProcessor`, `EditorSurface`, `OfficeTheme`; lifecycle in `app/Main` |
 
 `common/src/test/java` holds the JUnit tests and the JVM tools: the `Cli`/MCP server and the
-benchmarks, which run on the JavaSE port. `ios/`, `android/`, `javascript/`, `javase/`,
-`linux/` and `win/` hold the per-platform native code.
+benchmarks, which run on the JavaSE port. The root directories are the standard ones:
+
+| Directory | Contents |
+| --- | --- |
+| `common/` | All Java code, resources and tests |
+| `ios/`, `android/`, `javascript/`, `javase/`, `linux/`, `win/` | Each platform's native code (the Save dialog) |
+| `scripts/` | Build, packaging, verification and benchmark scripts |
+| `docs/` | Documentation, evidence, examples, framework patches and third-party notices |
 
 ```sh
 scripts/build.sh
@@ -193,7 +199,7 @@ native Linux target. See [Linux](docs/LINUX.md) and [platform evidence](docs/pla
 Linux and Windows packages are built in CI only and have not been run on a desktop yet;
 physical mobile devices remain unverified. Live native UI debugging uses the
 optional [built-in MCP integration](docs/LIVE-MCP.md). A project license has not yet been
-selected; see [third-party notices](third-party/README.md).
+selected; see [third-party notices](docs/third-party/README.md).
 
 Regenerate the charts with `python3 scripts/readme-charts.py` after
 `scripts/native-bench/report.py` and `scripts/source-metrics.py`.

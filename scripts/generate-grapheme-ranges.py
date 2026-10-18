@@ -3,7 +3,7 @@
 from pathlib import Path
 import hashlib, json
 root = Path(__file__).resolve().parent.parent
-data = root / 'third-party/unicode-16.0.0'
+data = root / 'docs/third-party/unicode-16.0.0'
 for name, entry in json.loads((data / 'manifest.json').read_text()).items():
     assert hashlib.sha256((data / name).read_bytes()).hexdigest() == entry['sha256'], name
 names = ['Other','CR','LF','Control','Extend','ZWJ','Regional_Indicator','Prepend','SpacingMark','L','V','T','LV','LVT']
@@ -27,7 +27,7 @@ incb = table((a,b,['None','Consonant','Extend','Linker'].index(p[1])) for a,b,p 
 source = """package com.codenameone.wordprocessor;
 
 /** Generated Unicode 16.0.0 properties. See scripts/generate-grapheme-ranges.py
- * and third-party/unicode-16.0.0/LICENSE.txt. Do not edit these ranges manually. */
+ * and docs/third-party/unicode-16.0.0/LICENSE.txt. Do not edit these ranges manually. */
 final class GraphemeProperties {
   private GraphemeProperties() {}
 """
