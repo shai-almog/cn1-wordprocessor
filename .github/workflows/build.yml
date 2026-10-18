@@ -72,7 +72,8 @@ jobs:
       - name: Visual Studio environment
         if: matrix.platform == 'windows'
         uses: ilammy/msvc-dev-cmd@v1
-        with: { arch: amd64 }
+        # arm64 cross-compiles from the x64 runner; x64 libraries cannot link into it.
+        with: { arch: "${{ matrix.arch == 'arm64' && 'amd64_arm64' || 'amd64' }}" }
       - name: Build
         run: ${{ matrix.build }}
       - name: Package
