@@ -64,7 +64,8 @@ jobs:
           sudo apt-get update -q
           sudo apt-get install -y -q clang cmake ninja-build libgtk-3-dev libcairo2-dev \
             libpango1.0-dev libfontconfig1-dev libfreetype-dev libcurl4-openssl-dev libssl-dev \
-            libwebkit2gtk-4.1-dev libsecret-1-dev libnotify-dev libepoxy-dev
+            libwebkit2gtk-4.1-dev libsecret-1-dev libnotify-dev libepoxy-dev \
+            libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev libgeoclue-2-dev
       - name: Android toolchain
         if: matrix.platform == 'android'
         run: echo "JAVA17_HOME=$JAVA_HOME" >> "$GITHUB_ENV"

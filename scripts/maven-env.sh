@@ -10,7 +10,7 @@ if [[ -z "${WORDPROCESSOR_MAVEN_REPO:-}" ]]; then
 fi
 case "$WORDPROCESSOR_MAVEN_REPO" in
   "$HOME/.m2"|"$HOME/.m2/"*) echo 'The shared ~/.m2 repository is forbidden for this build.' >&2; exit 1 ;;
-  /*) ;;
+  /*|[A-Za-z]:[\\/]*) ;; # POSIX, or a Windows drive path from Git Bash
   *) echo 'WORDPROCESSOR_MAVEN_REPO must be an absolute, project-specific path.' >&2; exit 1 ;;
 esac
 # Require callers to use the single configuration variable, so a later Maven
