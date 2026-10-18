@@ -190,8 +190,18 @@ public final class Proofing {
 
   /** Spelling plus grammar issues sorted by position. */
   public static List<Issue> check(String text, Options o) {
+    List<Issue> out = marks(text, o);
+    for (Issue i : out)
+      if ("spelling".equals(i.kind)) i.suggestions.addAll(suggest(text.substring(i.start, i.end), 5));
+    return out;
+  }
+
+  /**
+   * The same issues without spelling suggestions, for painting marks. Suggestions scan the
+   * whole word list per misspelling; on the paint path that cost every keystroke in a word.
+   */
+  public static List<Issue> marks(String text, Options o) {
     List<Issue> out = checkSpelling(text, o);
-    for (Issue i : out) i.suggestions.addAll(suggest(text.substring(i.start, i.end), 5));
     out.addAll(checkGrammar(text));
     Collections.sort(
         out,

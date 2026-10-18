@@ -1660,7 +1660,7 @@ public final class EditorSurface extends Container
     }
     java.util.List<Proofing.Issue> issues = proofCache.get(p);
     if (issues == null) {
-      issues = Proofing.check(p.text.plainText(), proofOptions);
+      issues = Proofing.marks(p.text.plainText(), proofOptions);
       proofCache.put(p, issues);
     }
     return issues;
