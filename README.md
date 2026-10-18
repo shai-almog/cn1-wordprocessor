@@ -152,20 +152,24 @@ Windows x64/arm64 `.zip`. `scripts/dist.sh` packages them into `dist/`. Pushing 
 package to a GitHub release. The Apple packages are unsigned; signing needs your certificates.
 
 The standard CN1 lifecycle is `common/src/main/java/com/codenameone/wordprocessor/app/Main.java`.
-It uses the shared `editor` application and CN1 platform file APIs.
+It starts the `WordProcessor` UI and uses the CN1 platform file APIs.
 
-## Libraries and tools
+## Project layout
 
-| Module | Responsibility |
+One standard Codename One project. All application code is in `common/src/main/java`, in a
+single package:
+
+| Area | Main classes |
 | --- | --- |
-| document | Styled text/block trees, selection, transactions, undo and composition |
-| layout | Pagination, table layout and platform metrics interface |
-| formats | Native project, DOCX, text adapters and PDF export |
-| automation | Commands, macros, extensions and previews |
-| editor | Codename One editor UI and recovery |
-| common | Standard Codename One lifecycle and platform integration |
-| cli | Separate JVM command-line and MCP development tools; no UI host |
-| benchmarks | Model/import measurements and pinned Wordcraft inventory |
+| Model | `Document`, `RichText`, `Session` (selection, transactions, undo) |
+| Layout | `LayoutEngine` (pagination, tables), shared by screen and PDF |
+| Formats | `Docx`, `DocumentXml` (`.cn1doc`), `TextFormats`, `PdfExporter`, `OfficeCrypto` |
+| Commands | `Commands` and its `*Commands` groups, used by the ribbon, macros and MCP |
+| UI | `WordProcessor`, `EditorSurface`, `OfficeTheme`; lifecycle in `app/Main` |
+
+`common/src/test/java` holds the JUnit tests and the JVM tools: the `Cli`/MCP server and the
+benchmarks, which run on the JavaSE port. `ios/`, `android/`, `javascript/`, `javase/`,
+`linux/` and `win/` hold the per-platform native code.
 
 ```sh
 scripts/build.sh
