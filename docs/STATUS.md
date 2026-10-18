@@ -8,7 +8,8 @@ The approved target is a standalone application and reusable Java libraries, tar
 - `build.yml` packages every platform and `release.yml` publishes them, but neither has run in CI yet.
 - Linux and Windows packages have not been run on a desktop.
 - Apple packages are unsigned.
-- The Mac, iOS-simulator, Android and web packages were built locally before the crypto, JSON and theme changes. Encrypted save has not been rechecked on any native target since the move to the framework cipher.
+- The iOS-simulator, Android and web packages were built locally before the crypto, JSON and theme changes.
+- On the native Mac build (ParparVM), an encrypted DOCX produced through `file.share` decrypts in the independent `msoffcrypto-tool`, and its HMAC integrity check passes. Opening an encrypted file natively, and encryption on the other targets, are unchecked.
 - Native benchmarks were not rerun after the zip change because the machine was under heavy load.
 
 **Native catalog certification (2026-10-17).** All 487 implementable Wordcraft catalog rows are `certified` in [the matrix](acceptance-matrix.json). The remaining 15 are `reference-stub`. Evidence is in [native-certification.json](native-certification.json), produced by `scripts/native-certify.py` and `scripts/certify-matrix.py` against the Mac native ParparVM app over the live MCP. It covers 466 commands:
