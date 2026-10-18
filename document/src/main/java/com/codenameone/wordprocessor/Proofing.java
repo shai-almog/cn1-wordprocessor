@@ -28,14 +28,7 @@ public final class Proofing {
   public record Issue(int start, int end, String kind, String message, List<String> suggestions) {}
 
   /** User dictionary and ignore list (lowercase). */
-  public static final class Options {
-    public final Set<String> dictionary, ignore;
-
-    public Options(Set<String> dictionary, Set<String> ignore) {
-      this.dictionary = dictionary;
-      this.ignore = ignore;
-    }
-
+  public record Options(Set<String> dictionary, Set<String> ignore) {
     public static Options none() {
       return new Options(new HashSet<String>(), new HashSet<String>());
     }

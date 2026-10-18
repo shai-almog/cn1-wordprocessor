@@ -17,17 +17,7 @@ import java.util.Set;
 final class ProofingCommands implements Commands.Extension {
   private static final SessionMap<Set<String>> ONCE = new SessionMap<>();
 
-  private static final class Found {
-    final int block;
-    final Proofing.Issue issue;
-    final String word;
-
-    Found(int block, Proofing.Issue issue, String word) {
-      this.block = block;
-      this.issue = issue;
-      this.word = word;
-    }
-
+  private record Found(int block, Proofing.Issue issue, String word) {
     Map<String, Object> map() {
       var m = new LinkedHashMap<String, Object>();
       m.put("block", Integer.valueOf(block));
