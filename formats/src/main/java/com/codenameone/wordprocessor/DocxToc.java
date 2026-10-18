@@ -10,14 +10,12 @@ final class DocxToc {
   static final String END_FIELD = "<w:r><w:fldChar w:fldCharType=\"end\"/></w:r>";
 
   static InlineField marker(Paragraph p) {
-    for (int i = 0; i < p.text.length(); i++) {
-      InlineField f = p.text.fieldAt(i);
-      if (f != null && contents(f.instruction)) return f;
-    }
+    for (InlineField f : p.text.fields()) if (contents(f.instruction)) return f;
     return null;
   }
 
   static Paragraph withoutMarker(Paragraph p) {
+    if (marker(p) == null) return p;
     for (int i = p.text.length() - 1; i >= 0; i--) {
       InlineField f = p.text.fieldAt(i);
       if (f != null && contents(f.instruction)) p = p.text(p.text.replace(i, i + 1, new RichText()));

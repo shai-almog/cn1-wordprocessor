@@ -679,7 +679,10 @@ static final char COLUMN_BREAK = '\u000B';
     }
   }
 
-  private static String documentXml(
+  /** Size of the last document.xml: presizes the next one so it is built without regrowth. */
+  private static volatile int lastDocumentChars = 1 << 16;
+
+  private static StringBuilder documentXml(
       Document d,
       DocxLists lists,
       DocxTabs tabs,
@@ -687,8 +690,11 @@ static final char COLUMN_BREAK = '\u000B';
       DocxComments comments,
       DocxPictures pictures,
       List<DocxFurniture> furniture) {
+    // The part is encoded straight from this builder: a large document's XML is copied as
+    // few times as possible, since each copy is allocation the ParparVM collector pays for.
     StringBuilder b =
-        new StringBuilder("<?xml version=\"1.0\" encoding=\"UTF-8\"?><w:document xmlns:w=\"")
+        new StringBuilder(lastDocumentChars + lastDocumentChars / 8)
+            .append("<?xml version=\"1.0\" encoding=\"UTF-8\"?><w:document xmlns:w=\"")
             .append(W)
             .append(
                 "\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\">");
@@ -794,7 +800,9 @@ static final char COLUMN_BREAK = '\u000B';
       blockIndex++;
     }
     b.append(sectionXml(d.lastSection, furniture.get(furniture.size() - 1)));
-    return b.append("</w:body></w:document>").toString();
+    b.append("</w:body></w:document>");
+    lastDocumentChars = b.length();
+    return b;
   }
 
   private static String sectionXml(Section section, DocxFurniture furniture) {
