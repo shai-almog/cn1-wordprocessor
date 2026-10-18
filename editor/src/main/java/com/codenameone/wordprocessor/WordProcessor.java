@@ -2280,82 +2280,48 @@ public class WordProcessor {
   }
 
   private void envelopeDialog() {
-    var size = new ComboBox<String>(MailingSheets.ENVELOPES);
-    EditField
-        delivery =
-            field(
-                session.mergeData().rows.isEmpty()
-                    ? ""
-                    : session.mergeData().address(session.mergeData().record),
-                5,
-                40),
-        returned = field("", 3, 40);
-    var add = check("Add before the current document", true);
-    if (showDialog(
-        "Envelopes",
-        BoxLayout.encloseY(
-            formRow("Envelope size", size),
-            formRow("Delivery address", delivery),
-            formRow("Return address", returned),
-            add),
-        "Create",
-        "Cancel")) {
-      mailing(
-          "envelopes",
-          Json.object(
-              "delivery",
-              delivery.getText(),
-              "return",
-              returned.getText(),
-              "size",
-              size.getSelectedItem(),
-              "add",
-              add.isSelected()));
-      if (!add.isSelected()) {
-        forgetFile();
-        source = null;
-      }
-    }
-  }
-
-  private void labelsDialog() {
-    ComboBox<String> product = new ComboBox<String>(MailingSheets.PRODUCTS),
-        mode =
-            new ComboBox<String>(
-                "Full sheet of the same label", "One recipient per label", "Single label");
-    EditField text = field("", 5, 40), row = field("1"), column = field("1");
-    if (showDialog(
-        "Labels",
-        BoxLayout.encloseY(
-            formRow("Label product", product),
-            formRow("Contents", mode),
-            OfficeTheme.label(
-                "Recipient labels continue onto additional sheets automatically.",
-                12,
-                OfficeTheme.INK),
-            formRow("Label text", text),
-            formRow("Label row", row),
-            formRow("Label column", column)),
-        "Create",
-        "Cancel")) {
-      var args =
-          Json.object(
-              "product",
-              product.getSelectedItem(),
-              "text",
-              text.getText(),
-              "fromRecipients",
-              mode.getSelectedIndex() == 1);
-      if (mode.getSelectedIndex() == 2)
-        args.put(
-            "single",
-            Json.object(
-                "row", Integer.parseInt(row.getText()), "col", Integer.parseInt(column.getText())));
-      mailing("labels", args);
+    var data = session.mergeData();
+    var args =
+        new Fields()
+            .choice("size", "Envelope size", MailingSheets.ENVELOPES, null)
+            .text("delivery", "Delivery address", data.rows.isEmpty() ? "" : data.address(data.record), 5, 40)
+            .text("return", "Return address", "", 3, 40)
+            .check("add", "Add before the current document", true)
+            .ask("Envelopes", "Create");
+    if (args == null) return;
+    mailing("envelopes", args);
+    if (!(Boolean) args.get("add")) {
       forgetFile();
       source = null;
     }
   }
+
+
+  private void labelsDialog() {
+    var form =
+        new Fields()
+            .choice("product", "Label product", MailingSheets.PRODUCTS, null)
+            .choice(
+                "mode",
+                "Contents",
+                new String[] {"Full sheet of the same label", "One recipient per label", "Single label"},
+                new String[] {"sheet", "recipients", "single"},
+                "sheet")
+            .note("Recipient labels continue onto additional sheets automatically.")
+            .text("text", "Label text", "", 5, 40)
+            .number("row", "Label row", 1)
+            .number("col", "Label column", 1);
+    var args = form.ask("Labels", "Create");
+    if (args == null) return;
+    var mode = args.remove("mode");
+    args.put("fromRecipients", "recipients".equals(mode));
+    var single = Json.object("row", args.remove("row"), "col", args.remove("col"));
+    if ("single".equals(mode)) args.put("single", single);
+    mailing("labels", args);
+    forgetFile();
+    source = null;
+  }
+
 
   private void mergeStartDialog() {
     var type =
@@ -2870,72 +2836,48 @@ public class WordProcessor {
 
   private void markIndexDialog() {
     editor.stopInput();
-    EditField entry = field(session.selectedText()),
-        sub = field(""),
-        cross = field(""),
-        bookmark = field("");
-    CheckBox bold = check("Bold page numbers", false), italic = check("Italic page numbers", false);
-    var all = check("Mark all occurrences", false);
-    var search = field(session.selectedText());
-    if (!showDialog(
-        "Mark index entry",
-        BoxLayout.encloseY(
-            formRow("Main entry", entry),
-            formRow("Subentry", sub),
-            formRow("Cross-reference", cross),
-            formRow("Page-range bookmark", bookmark),
-            bold,
-            italic,
-            all,
-            formRow("Text to mark", search)),
-        "Mark",
-        "Cancel")) return;
+    var f =
+        new Fields()
+            .text("entry", "Main entry", session.selectedText())
+            .text("sub", "Subentry", "")
+            .text("cross", "Cross-reference", "")
+            .text("bookmark", "Page-range bookmark", "")
+            .check("bold", "Bold page numbers", false)
+            .check("italic", "Italic page numbers", false)
+            .check("all", "Mark all occurrences", false)
+            .text("search", "Text to mark", session.selectedText());
+    if (f.ask("Mark index entry", "Mark") == null) return;
+    var entry = f.str("entry");
     DocumentIndex.mark(
-        session,
-        entry.getText(),
-        sub.getText(),
-        cross.getText(),
-        bookmark.getText().trim(),
-        bold.isSelected(),
-        italic.isSelected(),
-        all.isSelected(),
-        search.getText().isEmpty() ? entry.getText() : search.getText());
+        session, entry, f.str("sub"), f.str("cross"), f.str("bookmark").trim(), f.flag("bold"),
+        f.flag("italic"), f.flag("all"), f.str("search").isEmpty() ? entry : f.str("search"));
     edited();
   }
 
+
   private void indexDialog() {
     editor.stopInput();
-    DocumentIndex.Options old = DocumentIndex.options(session.document());
-    var title = field(old.title);
-    var type = new ComboBox<String>("Indented", "Run-in");
-    type.setSelectedIndex(old.runIn ? 1 : 0);
-    CheckBox headings = check("Letter headings", old.headings),
-        right = check("Right-align page numbers", old.rightAlign);
-    String[] leaders = {"none", "dot", "hyphen", "underscore", "middleDot"};
-    var leader =
-        new ComboBox<String>("None", "Dots", "Hyphens", "Underscores", "Middle dots");
-    leader.setSelectedIndex(Arrays.asList(leaders).indexOf(old.leader));
-    if (!showDialog(
-        "Index",
-        BoxLayout.encloseY(
-            formRow("Title", title),
-            formRow("Type", type),
-            headings,
-            right,
-            formRow("Tab leader", leader)),
-        "Apply",
-        "Cancel")) return;
-    DocumentIndex.insert(
-        session,
+    var old = DocumentIndex.options(session.document());
+    var f =
+        new Fields()
+            .text("title", "Title", old.title)
+            .choice("type", "Type", new String[] {"Indented", "Run-in"}, old.runIn ? "Run-in" : "Indented")
+            .check("headings", "Letter headings", old.headings)
+            .check("right", "Right-align page numbers", old.rightAlign)
+            .choice(
+                "leader",
+                "Tab leader",
+                new String[] {"None", "Dots", "Hyphens", "Underscores", "Middle dots"},
+                new String[] {"none", "dot", "hyphen", "underscore", "middleDot"},
+                old.leader);
+    if (f.ask("Index", "Apply") == null) return;
+    var options =
         new DocumentIndex.Options(
-            title.getText(),
-            type.getSelectedIndex() == 1,
-            headings.isSelected(),
-            right.isSelected(),
-            leaders[leader.getSelectedIndex()]),
-        editor::printLayout);
+            f.str("title"), "Run-in".equals(f.str("type")), f.flag("headings"), f.flag("right"), f.str("leader"));
+    DocumentIndex.insert(session, options, editor::printLayout);
     edited();
   }
+
 
   private void removeFiguresDialog() {
     var label = field("Figure");
@@ -5235,6 +5177,82 @@ public class WordProcessor {
               .start(types[start.getSelectedIndex()])
               .numbering(Integer.parseInt(number.getText())));
       edited();
+    }
+  }
+
+  /**
+   * A declarative dialog form. Each field is keyed by the command argument it fills, so the
+   * accepted values go straight to {@code commands.execute} without per-dialog plumbing.
+   */
+  final class Fields {
+    final Container body = new Container(BoxLayout.y());
+    private final Map<String, java.util.function.Supplier<Object>> values = new LinkedHashMap<>();
+
+    Fields text(String key, String label, String initial) {
+      return text(key, label, field(initial));
+    }
+
+    Fields text(String key, String label, String initial, int rows, int columns) {
+      return text(key, label, field(initial, rows, columns));
+    }
+
+    private Fields text(String key, String label, EditField f) {
+      body.add(formRow(label, f));
+      values.put(key, f::getText);
+      return this;
+    }
+
+    Fields number(String key, String label, int initial) {
+      var f = field(String.valueOf(initial));
+      body.add(formRow(label, f));
+      values.put(key, () -> Integer.parseInt(f.getText().trim()));
+      return this;
+    }
+
+    Fields check(String key, String label, boolean selected) {
+      var c = WordProcessor.this.check(label, selected);
+      body.add(c);
+      values.put(key, c::isSelected);
+      return this;
+    }
+
+    /** A choice whose value is the selected item itself. */
+    Fields choice(String key, String label, String[] items, String selected) {
+      return choice(key, label, items, items, selected);
+    }
+
+    /** A choice showing {@code labels} and yielding the matching entry of {@code keys}. */
+    Fields choice(String key, String label, String[] labels, String[] keys, String selected) {
+      var box = new ComboBox<String>(labels);
+      box.setSelectedIndex(Math.max(0, Arrays.asList(keys).indexOf(selected)));
+      body.add(formRow(label, box));
+      values.put(key, () -> keys[box.getSelectedIndex()]);
+      return this;
+    }
+
+    Fields note(String text) {
+      body.add(OfficeTheme.label(text, 12, OfficeTheme.INK));
+      return this;
+    }
+
+    Object get(String key) {
+      return values.get(key).get();
+    }
+
+    String str(String key) {
+      return (String) get(key);
+    }
+
+    boolean flag(String key) {
+      return (Boolean) get(key);
+    }
+
+    /** Shows the form; the field values keyed by argument name, or null when cancelled. */
+    Map<String, Object> ask(String title, String ok) {
+      if (!showDialog(title, body, ok, "Cancel")) return null;
+      var out = new LinkedHashMap<String, Object>();
+      values.forEach((k, v) -> out.put(k, v.get()));
+      return out;
     }
   }
 
