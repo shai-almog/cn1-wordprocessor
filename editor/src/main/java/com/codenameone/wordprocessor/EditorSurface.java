@@ -182,7 +182,9 @@ public final class EditorSurface extends Container
   private final LayoutEngine.Metrics fontMetrics =
       new LayoutEngine.Metrics() {
         public float width(String text, TextStyle style) {
-          return font(style, 1).stringWidth(text) / pointsToPixels();
+          Font f = measureFont(style);
+          if (f == null) return font(style, 1).stringWidth(text) / pointsToPixels();
+          return f.stringWidth(text) / (MEASURE_SCALE * pointsToPixels());
         }
 
         public float ascent(TextStyle style) {
@@ -831,6 +833,28 @@ public final class EditorSurface extends Container
     getAllStyles().setBgTransparency(255);
     engine = new LayoutEngine(fontMetrics);
     commands.setLayoutEngine(engine);
+  }
+
+  /**
+   * Fonts report whole-pixel widths. Layout measures at MEASURE_SCALE times the size so a line
+   * built from separately cached word widths lands where the run is drawn, instead of drifting
+   * up to a pixel per word (which shifted runs after long plain chunks).
+   */
+  private static final int MEASURE_SCALE = 4;
+
+  private final Map<TextStyle, Font> measureFonts = fontCache();
+
+  /** The scaled measuring font, or null when the style has no scalable document font. */
+  private Font measureFont(TextStyle s) {
+    if (measureFonts.containsKey(s)) return measureFonts.get(s);
+    Font f;
+    try {
+      f = DocumentFonts.font(s, Math.max(1, s.renderedSize() * pointsToPixels() * MEASURE_SCALE));
+    } catch (RuntimeException e) {
+      f = null;
+    }
+    measureFonts.put(s, f);
+    return f;
   }
 
   private Font font(TextStyle s, float zoom) {

@@ -54,8 +54,13 @@ final class MeasurementCache implements LayoutEngine.Metrics {
     // Do not pin large pastes or whole paragraphs in a measurement cache.
     if (text.length() > 256) return CharacterMetrics.width(delegate, text, style);
     Values v = values(style);
+    if (text.length() > 12 && text.indexOf(' ') > 0) return words(text, style);
     // Line chunks are mostly unique; sharing one LRU with clusters evicted the widths that
     // line breaking looks up for every grapheme.
+    return cached(text, style, v);
+  }
+
+  private float cached(String text, TextStyle style, Values v) {
     Map<String, Float> cache = text.length() > 12 ? v.runs : v.widths;
     Float width = cache.get(text);
     if (width == null) {
@@ -63,6 +68,28 @@ final class MeasurementCache implements LayoutEngine.Metrics {
       cache.put(text, width);
     }
     return width;
+  }
+
+  /**
+   * A line chunk as the sum of its words, each cached with the spaces that follow it. Line
+   * chunks rarely repeat but their words do. Fonts rarely kern across a space, so this
+   * matches measuring the whole chunk to within rounding (as browser word-shape caches do)
+   * with far fewer native calls. A space is never measured on its own: the Mac port reports
+   * a whitespace-only string narrower than it draws, which shifted every following run.
+   */
+  private float words(String text, TextStyle style) {
+    Values v = values(style);
+    float total = 0;
+    int start = 0, n = text.length();
+    while (start < n) {
+      int end = start;
+      while (end < n && text.charAt(end) == ' ') end++;
+      while (end < n && text.charAt(end) != ' ') end++;
+      while (end < n && text.charAt(end) == ' ') end++;
+      total += cached(start == 0 && end == n ? text : text.substring(start, end), style, v);
+      start = end;
+    }
+    return total;
   }
 
   /** Width of one ASCII character c (whose string is text), cached per style. */
