@@ -25,10 +25,8 @@ public final class DocumentIndex {
   public static InlineField marker(Paragraph p) { return marker(p, "INDEX"); }
 
   static InlineField marker(Paragraph p, String kind) {
-    for (int i = 0; i < p.text.length(); i++) {
-      InlineField f = p.text.fieldAt(i);
-      if (f != null && kind.equals(new FieldCode(f.instruction).name)) return f;
-    }
+    for (InlineField f : p.text.fields())
+      if (kind.equals(new FieldCode(f.instruction).name)) return f;
     return null;
   }
 

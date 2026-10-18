@@ -80,13 +80,8 @@ public final class TableContents {
   }
 
   private static InlineField marker(Paragraph paragraph) {
-    for (int i = 0; i < paragraph.text.length(); i++) {
-      InlineField f = paragraph.text.fieldAt(i);
-      if (f != null) {
-        FieldCode code = new FieldCode(f.instruction);
-        if ("TOC".equals(code.name)) return f;
-      }
-    }
+    for (InlineField f : paragraph.text.fields())
+      if ("TOC".equals(new FieldCode(f.instruction).name)) return f;
     return null;
   }
 

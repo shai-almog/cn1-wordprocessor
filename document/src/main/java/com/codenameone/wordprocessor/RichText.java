@@ -41,7 +41,7 @@ public final class RichText {
     final InlineField field;
     final Note note;
     final int length, height;
-    final boolean hasNotes;
+    final boolean hasNotes, hasFields;
 
     Node(String s, TextStyle t) {
       this(s, t, null);
@@ -54,6 +54,7 @@ public final class RichText {
     Node(String s, TextStyle t, InlineField field, Note note) {
       this.note = note;
       hasNotes = note != null;
+      hasFields = field != null;
       this.field = field;
       l = r = null;
       text = s;
@@ -65,6 +66,7 @@ public final class RichText {
     Node(Node a, Node b) {
       note = null;
       hasNotes = a.hasNotes || b.hasNotes;
+      hasFields = a.hasFields || b.hasFields;
       field = null;
       l = a;
       r = b;
@@ -219,6 +221,22 @@ public final class RichText {
       else { offset -= k; n = n.r; }
     }
     return n;
+  }
+
+  /** Fields in text order (one entry per field run), skipping subtrees that hold none. */
+  public List<InlineField> fields() {
+    List<InlineField> out = new ArrayList<InlineField>();
+    if (root != null) fields(root, out);
+    return out;
+  }
+
+  private static void fields(Node n, List<InlineField> out) {
+    if (!n.hasFields) return;
+    if (n.text != null) out.add(n.field);
+    else {
+      fields(n.l, out);
+      fields(n.r, out);
+    }
   }
 
   public InlineField fieldAt(int offset) {
