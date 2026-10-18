@@ -32,28 +32,44 @@ final class OfficeBorder extends Border {
   @Override
   public void paintBorderBackground(Graphics g, Component c) {
     Style s = c.getStyle();
-    if (s.getBgTransparency() == 0) return;
     boolean aa = g.isAntiAliased();
     g.setAntiAliased(true);
     int alpha = g.getAlpha();
-    g.setAlpha(s.getBgTransparency() & 0xff);
-    g.setColor(s.getBgColor());
-    int arc = arc();
-    g.fillRoundRect(c.getX(), c.getY(), c.getWidth(), c.getHeight(), arc, arc);
+    int arc = arc(), x = c.getX(), y = c.getY(), w = c.getWidth(), h = c.getHeight();
+    // The outline is a stroke-colored round rect with the fill inset one hairline inside it.
+    // Graphics.drawRoundRect strokes through the Metal shape pipeline, which renders nothing
+    // visible on the macOS port, while fillRoundRect is reliable there.
+    int line = 0;
+    if (stroke >= 0) {
+      line = Math.max(1, OfficeTheme.px(1));
+      g.setAlpha(255);
+      g.setColor(OfficeTheme.chrome(stroke));
+      g.fillRoundRect(x, y, w, h, arc, arc);
+      int inner = Math.max(0, arc - line);
+      g.setColor(behind(c));
+      g.fillRoundRect(x + line, y + line, w - 2 * line, h - 2 * line, inner, inner);
+    }
+    if (s.getBgTransparency() != 0) {
+      int inner = Math.max(0, arc - line);
+      g.setAlpha(s.getBgTransparency() & 0xff);
+      g.setColor(s.getBgColor());
+      g.fillRoundRect(x + line, y + line, w - 2 * line, h - 2 * line, inner, inner);
+    }
     g.setAlpha(alpha);
     g.setAntiAliased(aa);
   }
 
-  @Override
-  public void paint(Graphics g, Component c) {
-    if (stroke < 0) return;
-    boolean aa = g.isAntiAliased();
-    g.setAntiAliased(true);
-    g.setColor(OfficeTheme.chrome(stroke));
-    int arc = arc();
-    g.drawRoundRect(c.getX(), c.getY(), c.getWidth() - 1, c.getHeight() - 1, arc, arc);
-    g.setAntiAliased(aa);
+  /** The color showing through behind c: the nearest opaque ancestor background. */
+  private static int behind(Component c) {
+    for (Component p = c.getParent(); p != null; p = p.getParent()) {
+      Style ps = p.getStyle();
+      if ((ps.getBgTransparency() & 0xff) == 255) return ps.getBgColor();
+    }
+    return OfficeTheme.chrome(OfficeTheme.PAPER);
   }
+
+  @Override
+  public void paint(Graphics g, Component c) {}
 
   private int arc() {
     return OfficeTheme.px(radius * 2);

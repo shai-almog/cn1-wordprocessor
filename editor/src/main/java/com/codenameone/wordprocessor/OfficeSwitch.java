@@ -38,10 +38,12 @@ final class OfficeSwitch extends Button {
     int x = getX(), y = getY() + (getHeight() - h) / 2;
     boolean aa = g.isAntiAliased();
     g.setAntiAliased(true);
-    g.setColor(OfficeTheme.chrome(on ? OfficeTheme.ACCENT : OfficeTheme.PAPER));
+    // Outline as an inset fill: drawRoundRect strokes are invisible on the macOS Metal port.
+    int line = Math.max(1, OfficeTheme.px(1));
+    g.setColor(OfficeTheme.chrome(on ? OfficeTheme.ACCENT : OfficeTheme.INPUT_BORDER));
     g.fillRoundRect(x, y, w, h, h, h);
-    g.setColor(OfficeTheme.chrome(on ? OfficeTheme.ACCENT : OfficeTheme.BORDER_STRONG));
-    g.drawRoundRect(x, y, w - 1, h - 1, h, h);
+    g.setColor(OfficeTheme.chrome(on ? OfficeTheme.ACCENT : OfficeTheme.PAPER));
+    g.fillRoundRect(x + line, y + line, w - 2 * line, h - 2 * line, h - 2 * line, h - 2 * line);
     int knob = OfficeTheme.px(10), cx = on ? x + w - OfficeTheme.px(8) : x + OfficeTheme.px(8);
     g.setColor(on ? 0xffffff : OfficeTheme.chrome(OfficeTheme.DIM));
     g.fillArc(cx - knob / 2, y + (h - knob) / 2, knob, knob, 0, 360);

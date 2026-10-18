@@ -240,6 +240,12 @@ public class WordProcessor {
     OfficeTheme.framed(commentsButton);
     OfficeTheme.framed(editingButton);
     OfficeTheme.primary(share);
+    // Word's tab-row actions: 28pt tall, inset from the strip and 6pt apart.
+    for (Button b : new Button[] {commentsButton, editingButton, share}) {
+      OfficeTheme.space(b, 4, 4, 10, 10);
+      b.getAllStyles().setMarginUnit(Style.UNIT_TYPE_PIXELS);
+      b.getAllStyles().setMargin(OfficeTheme.px(4), OfficeTheme.px(4), OfficeTheme.px(3), OfficeTheme.px(3));
+    }
     ribbon.actions(OfficeTheme.row(commentsButton, editingButton, share));
     if (Display.getInstance().isDesktop()) form.setToolbar(new OfficeTitleBar(titleBar()));
     form.add(BorderLayout.NORTH, ribbon);
@@ -479,10 +485,14 @@ public class WordProcessor {
     Button search =
         iconButton("Search commands and help", FontImage.MATERIAL_SEARCH, this::searchCommands, false);
     search.setAccessibilityText("Search commands");
-    search.getAllStyles().setBorder(OfficeBorder.of(OfficeTheme.BORDER, 6));
+    search.getAllStyles().setBorder(OfficeBorder.of(OfficeTheme.BORDER_STRONG, 6));
     search.getUnselectedStyle().setFgColor(OfficeTheme.DIM);
-    OfficeTheme.surface(search, OfficeTheme.RIBBON);
+    OfficeTheme.surface(search, OfficeTheme.PAPER);
     search.getSelectedStyle().setBgColor(OfficeTheme.PAPER);
+    search.getPressedStyle().setBgColor(OfficeTheme.HOVER);
+    OfficeTheme.space(search, 3, 3, 10, 10);
+    search.getAllStyles().setMarginUnit(Style.UNIT_TYPE_PIXELS);
+    search.getAllStyles().setMargin(OfficeTheme.px(4), OfficeTheme.px(4), 0, OfficeTheme.px(8));
     search.setAlignment(Component.LEFT);
     search.setPreferredW(OfficeTheme.px(260));
     header.add(BorderLayout.EAST, search);
@@ -804,7 +814,7 @@ public class WordProcessor {
   private Button iconButton(String name, char icon, Runnable action, boolean large) {
     Button b = button(name, action);
     b.setAccessibilityText(name.isEmpty() ? iconName(icon) : name);
-    OfficeTheme.icon(b, icon, large ? 27 : 16, OfficeTheme.INK);
+    OfficeTheme.icon(b, icon, large ? 27 : 18, OfficeTheme.INK);
     if (large) {
       b.setTextPosition(Component.BOTTOM);
       b.setAlignment(Component.CENTER);
@@ -873,6 +883,12 @@ public class WordProcessor {
     editor.startInput();
   }
 
+  /** Word's stacked small buttons: icon and label flush left in an even column. */
+  private static Container leftColumn(Button... buttons) {
+    for (Button b : buttons) b.setAlignment(Component.LEFT);
+    return BoxLayout.encloseY(buttons);
+  }
+
   private Container home() {
     painterButton =
         iconButton(
@@ -884,7 +900,7 @@ public class WordProcessor {
     Container clipboard =
         OfficeTheme.row(
             iconButton("Paste", FontImage.MATERIAL_CONTENT_PASTE, () -> clipboard("paste"), true),
-            BoxLayout.encloseY(
+            leftColumn(
                 iconButton("Cut", FontImage.MATERIAL_CONTENT_CUT, () -> clipboard("cut"), false),
                 iconButton("Copy", FontImage.MATERIAL_CONTENT_COPY, () -> clipboard("copy"), false),
                 painterButton));
@@ -928,8 +944,8 @@ public class WordProcessor {
                 "Underline style",
                 this::underlineStyles),
             toggle("Strikethrough", FontImage.MATERIAL_STRIKETHROUGH_S, "strike"),
-            scriptButton("x\u00b2", "Superscript", "superscript"),
             scriptButton("x\u2082", "Subscript", "subscript"),
+            scriptButton("x\u00b2", "Superscript", "superscript"),
             split(highlightButton = colorButton("Text Highlight Color", FontImage.MATERIAL_BORDER_COLOR, "background"),
                 "Highlight colors", () -> color("background")),
             split(fontColorButton = colorButton("Font Color", FontImage.MATERIAL_FORMAT_COLOR_TEXT, "color"),
@@ -973,35 +989,45 @@ public class WordProcessor {
         OfficeTheme.row(
             styleTile("Normal", 0, 11),
             styleTile("No Spacing", -1, 11),
-            styleTile("Heading 1", 1, 13),
-            styleTile("Heading 2", 2, 12),
-            styleTile("Title", 3, 17),
-            styleTile("Subtitle", 4, 12));
+            styleTile("Heading 1", 1, 16),
+            styleTile("Title", 3, 25),
+            styleTile("Heading 2", 2, 13),
+            styleTile("Subtitle", 4, 13));
     // Gallery well: six 74pt tiles on a 76pt step inside a rounded white frame.
-    OfficeTheme.space(styles, 3, 3, 3, 3);
+    OfficeTheme.space(styles, 3, 3, 3, 0);
     OfficeTheme.surface(styles, OfficeTheme.PAPER);
-    styles.getAllStyles().setBorder(OfficeBorder.of(OfficeTheme.BORDER, 4));
     styles.setPreferredW(OfficeTheme.px(6 * 76 + 6));
     styles.setPreferredH(OfficeTheme.px(66));
     styles.setScrollableX(true);
     styles.setScrollVisible(false);
-    Button moreStyles = button("\u25be", this::moreStyles);
-    moreStyles.setAccessibilityText("More styles");
+    // Word's gallery scroller: row up, row down and the expand button, stacked at the right.
+    Button up = galleryArrow(FontImage.MATERIAL_KEYBOARD_ARROW_UP, "Previous styles", () -> scrollGallery(styles, -1));
+    Button down = galleryArrow(FontImage.MATERIAL_KEYBOARD_ARROW_DOWN, "Next styles", () -> scrollGallery(styles, 1));
+    Button expand = galleryArrow(FontImage.MATERIAL_MORE_HORIZ, "More styles", this::moreStyles);
+    Container moreStyles = BoxLayout.encloseY(up, down, expand);
+    Container gallery = OfficeTheme.row(styles, moreStyles);
+    OfficeTheme.surface(gallery, OfficeTheme.PAPER);
+    gallery.getAllStyles().setBorder(OfficeBorder.of(OfficeTheme.BORDER_STRONG, 4));
+    Button select =
+        iconButton(
+            "Select",
+            FontImage.MATERIAL_NEAR_ME,
+            () -> {
+              editor.selectAll();
+              editor.startInput();
+            },
+            false);
+    select.setAccessibilityText("Select all");
     Container editing =
-        BoxLayout.encloseY(
+        leftColumn(
             iconButton("Find", FontImage.MATERIAL_SEARCH, this::find, false),
             iconButton("Replace", FontImage.MATERIAL_FIND_REPLACE, this::find, false),
-            button(
-                "Select all",
-                () -> {
-                  editor.selectAll();
-                  editor.startInput();
-                }));
+            select);
     return OfficeTheme.groups(
         OfficeTheme.group("Clipboard", clipboard, this::officeClipboard),
         OfficeTheme.group("Font", BoxLayout.encloseY(fontTop, fontBottom), this::fontDialog),
         OfficeTheme.group("Paragraph", BoxLayout.encloseY(paragraphTop, paragraphBottom), this::paragraphDialog),
-        OfficeTheme.group("Styles", OfficeTheme.row(styles, moreStyles), this::moreStyles),
+        OfficeTheme.group("Styles", gallery, this::moreStyles),
         OfficeTheme.group("Editing", editing));
   }
 
@@ -1260,17 +1286,37 @@ public class WordProcessor {
     return b instanceof Paragraph ? ((Paragraph) b).text.length() : 0;
   }
 
+  private Button galleryArrow(char icon, String name, Runnable action) {
+    Button b = iconButton("", icon, action, false);
+    b.setAccessibilityText(name);
+    OfficeTheme.icon(b, icon, 14, OfficeTheme.DIM);
+    OfficeTheme.space(b, 1, 1, 2, 2);
+    return b;
+  }
+
+  private static void scrollGallery(Container styles, int direction) {
+    int max = Math.max(0, styles.getScrollDimension().getWidth() - styles.getWidth());
+    int x = Math.max(0, Math.min(max, styles.getScrollX() + direction * styles.getWidth()));
+    styles.scrollRectToVisible(x, 0, styles.getWidth(), 1, styles);
+  }
+
   private Container styleTile(String name, int level, int size) {
-    Button preview = button("AaBbCcDd", () -> applyStyle(name, level));
+    // Word's gallery previews: Heading 1/2 in the accent teal, Title large, Subtitle gray.
+    String sample = level == 3 ? "AaBb" : level == 1 ? "AaBbCc" : "AaBbCcDd";
+    int color = level == 1 || level == 2 ? 0x0f4761 : level == 4 ? 0x595959 : OfficeTheme.INK;
+    Button preview = button(sample, () -> applyStyle(name, level));
     preview.setAccessibilityText(name);
-    OfficeTheme.space(preview, 4, 2, 3, 3);
-    preview.getAllStyles().setFont(OfficeTheme.font(size, level == 1 || level == 2));
-    preview.getAllStyles().setFgColor(level == 1 || level == 2 ? 0x185568 : OfficeTheme.INK);
+    OfficeTheme.space(preview, 3, 0, 4, 2);
+    preview.setAlignment(Component.LEFT);
+    preview.getAllStyles().setFont(OfficeTheme.font(size, level <= 0));
+    preview.getAllStyles().setFgColor(color);
     preview.getAllStyles().setBgTransparency(0);
     preview.getAllStyles().setBorder(Border.createEmpty());
-    Label caption = OfficeTheme.label(name, 10.5f, OfficeTheme.INK);
+    Label caption = OfficeTheme.label(name, 11, OfficeTheme.INK);
     caption.setAlignment(Component.CENTER);
-    Container c = BoxLayout.encloseY(preview, caption);
+    OfficeTheme.space(caption, 0, 3, 0, 0);
+    Container c = new Container(new BorderLayout());
+    c.add(BorderLayout.NORTH, preview).add(BorderLayout.SOUTH, caption);
     OfficeTheme.space(c, 2, 2, 2, 2);
     c.getAllStyles().setMarginUnit(Style.UNIT_TYPE_PIXELS);
     c.getAllStyles().setMargin(0, 0, 0, OfficeTheme.px(2));
