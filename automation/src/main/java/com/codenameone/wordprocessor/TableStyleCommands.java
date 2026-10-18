@@ -28,11 +28,9 @@ final class TableStyleCommands implements Commands.Extension {
   static final String DEFAULT_LOOK = "headerRow,firstColumn,bandedRows";
 
   public void register(Commands c) {
-    c.register(
-        "table.look",
+    c.edit(
+        "table.look", "headerRow?:boolean,firstColumn?:boolean,lastRow?:boolean,lastColumn?:boolean,bandedRows?:boolean,bandedColumns?:boolean",
         "Table style options: headerRow, firstColumn, lastRow, lastColumn, bandedRows, bandedColumns",
-        "headerRow?:boolean,firstColumn?:boolean,lastRow?:boolean,lastColumn?:boolean,bandedRows?:boolean,bandedColumns?:boolean",
-        true,
         (s, a) -> {
           Table t = table(s);
           var look = t.format.prop("look", DEFAULT_LOOK);
@@ -47,11 +45,9 @@ final class TableStyleCommands implements Commands.Extension {
           s.formatTable(s.cellBlock(), f);
           return lookMap(f);
         });
-    c.register(
-        "table.newStyle",
+    c.edit(
+        "table.newStyle", "name:string,header?:string,band?:string,border?:string,width?:number,sides?:string,basedOn?:string",
         "Create a custom table style: header/band fills, border color, width and sides (all, horizontal, outside, none)",
-        "name:string,header?:string,band?:string,border?:string,width?:number,sides?:string,basedOn?:string",
-        true,
         (s, a) -> {
           String name = name(a);
           if (spec(s.document(), name, false) != null) throw new IllegalArgumentException("Style exists: " + name);
@@ -61,11 +57,9 @@ final class TableStyleCommands implements Commands.Extension {
           save(s, name, spec);
           return describe(spec);
         });
-    c.register(
-        "table.modifyStyle",
+    c.edit(
+        "table.modifyStyle", "name:string,header?:string,band?:string,border?:string,width?:number,sides?:string",
         "Modify a table style (a built-in becomes a document override) and re-apply it to every table using it",
-        "name:string,header?:string,band?:string,border?:string,width?:number,sides?:string",
-        true,
         (s, a) -> {
           String name = name(a);
           String[] spec = edit(spec(s.document(), name).clone(), a);
@@ -73,12 +67,8 @@ final class TableStyleCommands implements Commands.Extension {
           reapply(s, name);
           return describe(spec);
         });
-    c.register(
-        "table.deleteStyle",
-        "Delete a custom table style; tables keep their current formatting",
-        "name:string",
-        true,
-        (s, a) -> {
+    c.edit("table.deleteStyle", "name:string",
+        "Delete a custom table style; tables keep their current formatting", (s, a) -> {
           String name = name(a);
           if (!s.document().properties.settings().containsKey(key(name)))
             throw new IllegalArgumentException(
@@ -94,18 +84,10 @@ final class TableStyleCommands implements Commands.Extension {
           s.documentProperties(s.document().properties.withSetting(key(name), ""));
           return null;
         });
-    c.register(
-        "table.styles",
-        "List built-in and custom table style names",
-        "",
-        false,
-        (s, a) -> Arrays.asList(names(s.document())));
-    c.register(
-        "table.borderPainter",
-        "Border painter: paint the pen (color, width, sides) onto the selected cells",
-        "color?:string,width?:number,sides?:string",
-        true,
-        (s, a) -> {
+    c.query("table.styles", "",
+        "List built-in and custom table style names", (s, a) -> Arrays.asList(names(s.document())));
+    c.edit("table.borderPainter", "color?:string,width?:number,sides?:string",
+        "Border painter: paint the pen (color, width, sides) onto the selected cells", (s, a) -> {
           int color = a.containsKey("color") ? Integer.parseInt(hex(Commands.str(a, "color")), 16) : 0;
           float width = a.containsKey("width") ? ((Number) a.get("width")).floatValue() : .5f;
           if (width < 0 || width > 12) throw new IllegalArgumentException("Pen width must be 0-12pt");
@@ -129,11 +111,8 @@ final class TableStyleCommands implements Commands.Extension {
           s.formatTable(s.cellBlock(), f);
           return null;
         });
-    c.register(
-        "table.draw",
+    c.edit("table.draw", "orientation?:string",
         "Draw Table pen: a vertical line splits the cell into two columns, a horizontal line adds a row below; outside a table it draws a 1x1 table",
-        "orientation?:string",
-        true,
         (s, a) -> {
           if (s.cellBlock() < 0) {
             s.insertTable(1, 1);
@@ -146,11 +125,8 @@ final class TableStyleCommands implements Commands.Extension {
           else throw new IllegalArgumentException("Orientation is vertical or horizontal");
           return o;
         });
-    c.register(
-        "table.eraser",
+    c.edit("table.eraser", "direction?:string",
         "Eraser: remove the border between the current cell and its neighbor (right or down) by merging them",
-        "direction?:string",
-        true,
         (s, a) -> {
           Table t = table(s);
           int block = s.cellBlock();
@@ -171,22 +147,15 @@ final class TableStyleCommands implements Commands.Extension {
           } else throw new IllegalArgumentException("Direction is right or down");
           return null;
         });
-    c.register(
-        "table.rtl",
-        "Right-to-left table: columns are laid out from the right",
-        "value?:boolean",
-        true,
-        (s, a) -> {
+    c.edit("table.rtl", "value?:boolean",
+        "Right-to-left table: columns are laid out from the right", (s, a) -> {
           Table t = table(s);
           boolean on = !a.containsKey("value") || Boolean.TRUE.equals(a.get("value"));
           s.formatTable(s.cellBlock(), t.format.withProp("rtl", String.valueOf(on)));
           return on;
         });
-    c.register(
-        "table.textDirection",
+    c.edit("table.textDirection", "value:string",
         "Text direction of the selected cells: lrTb (horizontal), tbRl (rotate 90) or btLr (rotate 270)",
-        "value:string",
-        true,
         (s, a) -> {
           Table t = table(s);
           String dir = Commands.str(a, "value");

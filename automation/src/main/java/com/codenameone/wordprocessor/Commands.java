@@ -115,6 +115,16 @@ public final class Commands {
     commands.put(id, new Descriptor(id, description, params, required, transactional, handler));
   }
 
+  /** Registers an undoable editing command. */
+  public void edit(String id, String spec, String description, Handler handler) {
+    register(id, description, spec, true, handler);
+  }
+
+  /** Registers a command that reads state or changes settings outside the undo history. */
+  public void query(String id, String spec, String description, Handler handler) {
+    register(id, description, spec, false, handler);
+  }
+
   public Collection<Descriptor> descriptors() {
     return Collections.unmodifiableCollection(commands.values());
   }

@@ -17,12 +17,8 @@ final class PictureCommands implements Commands.Extension {
   }
 
   public void register(final Commands c) {
-    c.register(
-        "picture.crop",
-        "Crop edges as fractions of the source (0-0.95)",
-        "block?:integer,left?:number,top?:number,right?:number,bottom?:number",
-        true,
-        (s, a) -> {
+    c.edit("picture.crop", "block?:integer,left?:number,top?:number,right?:number,bottom?:number",
+        "Crop edges as fractions of the source (0-0.95)", (s, a) -> {
           int block = block(s, a);
           var k = picture(s, block).look;
           s.pictureLook(
@@ -34,12 +30,8 @@ final class PictureCommands implements Commands.Extension {
                   f(a, "bottom", k.cropBottom)));
           return null;
         });
-    c.register(
-        "picture.border",
-        "Picture border color RRGGBB (or none) and width in points",
-        "block?:integer,color?:string,width?:number",
-        true,
-        (s, a) -> {
+    c.edit("picture.border", "block?:integer,color?:string,width?:number",
+        "Picture border color RRGGBB (or none) and width in points", (s, a) -> {
           int block = block(s, a);
           var k = picture(s, block).look;
           var color = a.get("color");
@@ -53,12 +45,8 @@ final class PictureCommands implements Commands.Extension {
           s.pictureLook(block, k.border(rgb, width));
           return null;
         });
-    c.register(
-        "picture.corrections",
-        "Brightness and contrast, -100 to 100 percent",
-        "block?:integer,brightness?:integer,contrast?:integer",
-        true,
-        (s, a) -> {
+    c.edit("picture.corrections", "block?:integer,brightness?:integer,contrast?:integer",
+        "Brightness and contrast, -100 to 100 percent", (s, a) -> {
           int block = block(s, a);
           var k = picture(s, block).look;
           s.pictureLook(
@@ -70,21 +58,15 @@ final class PictureCommands implements Commands.Extension {
                   k.colorMode));
           return null;
         });
-    c.register(
-        "picture.effects",
+    c.edit("picture.effects", "block?:integer,effect:string",
         "Artistic effect: none, blur, pencilSketch, posterize, negative, glowEdges or sharpen",
-        "block?:integer,effect:string",
-        true,
         (s, a) -> {
           int block = block(s, a);
           s.pictureLook(block, picture(s, block).look.effect(Commands.str(a, "effect")));
           return null;
         });
-    c.register(
-        "picture.removeBackground",
+    c.edit("picture.removeBackground", "block?:integer,tolerance?:integer,off?:boolean",
         "Make the border-connected background transparent; tolerance 0-100, or off:true to restore",
-        "block?:integer,tolerance?:integer,off?:boolean",
-        true,
         (s, a) -> {
           int block = block(s, a);
           boolean off = a.containsKey("off") && (Boolean) a.get("off");
@@ -92,11 +74,8 @@ final class PictureCommands implements Commands.Extension {
           s.pictureLook(block, picture(s, block).look.removeBackground(tol));
           return null;
         });
-    c.register(
-        "picture.compress",
+    c.edit("picture.compress", "block?:integer,ppi?:integer,deleteCropped?:boolean",
         "Compress pictures to a resolution (ppi, default 150) and optionally delete cropped areas",
-        "block?:integer,ppi?:integer,deleteCropped?:boolean",
-        true,
         (s, a) -> {
           var k = codec;
           if (k == null)
@@ -129,33 +108,22 @@ final class PictureCommands implements Commands.Extension {
           s.selectRange(keep.anchorBlock, keep.anchor, keep.block, keep.caret);
           return null;
         });
-    c.register(
-        "picture.color",
-        "Recolor: color, grayscale, washout or blackWhite",
-        "block?:integer,mode:string",
-        true,
-        (s, a) -> {
+    c.edit("picture.color", "block?:integer,mode:string",
+        "Recolor: color, grayscale, washout or blackWhite", (s, a) -> {
           int block = block(s, a);
           var k = picture(s, block).look;
           s.pictureLook(block, k.adjust(k.brightness, k.contrast, k.transparency, Commands.str(a, "mode")));
           return null;
         });
-    c.register(
-        "picture.transparency",
-        "Picture transparency, 0 to 100 percent",
-        "block?:integer,percent:integer",
-        true,
-        (s, a) -> {
+    c.edit("picture.transparency", "block?:integer,percent:integer",
+        "Picture transparency, 0 to 100 percent", (s, a) -> {
           int block = block(s, a);
           var k = picture(s, block).look;
           s.pictureLook(block, k.adjust(k.brightness, k.contrast, Commands.integer(a, "percent"), k.colorMode));
           return null;
         });
-    c.register(
-        "picture.style",
+    c.edit("picture.style", "block?:integer,name:string",
         "Picture style: simpleFrameBlack, simpleFrameWhite, thickMatteBlack, thinGray or none",
-        "block?:integer,name:string",
-        true,
         (s, a) -> {
           int block = block(s, a);
           var k = picture(s, block).look;
@@ -174,11 +142,8 @@ final class PictureCommands implements Commands.Extension {
           s.pictureLook(block, next);
           return null;
         });
-    c.register(
-        "picture.change",
+    c.edit("picture.change", "block?:integer,base64:string",
         "Replace the picture's image (base64 PNG/JPEG), keeping size, look and alt text",
-        "block?:integer,base64:string",
-        true,
         (s, a) -> {
           int block = block(s, a);
           Picture old = picture(s, block);
@@ -196,12 +161,8 @@ final class PictureCommands implements Commands.Extension {
           s.selectRange(keep.anchorBlock, keep.anchor, keep.block, keep.caret);
           return null;
         });
-    c.register(
-        "arrange.rotation",
-        "Set picture rotation in degrees and flips",
-        "block?:integer,degrees?:number,flipH?:boolean,flipV?:boolean",
-        true,
-        (s, a) -> {
+    c.edit("arrange.rotation", "block?:integer,degrees?:number,flipH?:boolean,flipV?:boolean",
+        "Set picture rotation in degrees and flips", (s, a) -> {
           int block = block(s, a);
           var k = picture(s, block).look;
           s.pictureLook(
@@ -212,12 +173,8 @@ final class PictureCommands implements Commands.Extension {
                   a.containsKey("flipV") ? (Boolean) a.get("flipV") : k.flipV));
           return null;
         });
-    c.register(
-        "arrange.rotate",
-        "Rotate right/left 90 degrees or flip horizontal/vertical",
-        "block?:integer,kind:string",
-        true,
-        (s, a) -> {
+    c.edit("arrange.rotate", "block?:integer,kind:string",
+        "Rotate right/left 90 degrees or flip horizontal/vertical", (s, a) -> {
           int block = block(s, a);
           var k = picture(s, block).look;
           String kind = Commands.str(a, "kind");
@@ -233,21 +190,13 @@ final class PictureCommands implements Commands.Extension {
           s.pictureLook(block, next);
           return null;
         });
-    c.register(
-        "picture.reset",
-        "Remove crop, border and rotation",
-        "block?:integer",
-        true,
-        (s, a) -> {
+    c.edit("picture.reset", "block?:integer",
+        "Remove crop, border and rotation", (s, a) -> {
           s.pictureLook(block(s, a), Picture.Look.NONE);
           return null;
         });
-    c.register(
-        "picture.size",
-        "Resize in points; a single dimension keeps the aspect ratio",
-        "block?:integer,width?:number,height?:number",
-        true,
-        (s, a) -> {
+    c.edit("picture.size", "block?:integer,width?:number,height?:number",
+        "Resize in points; a single dimension keeps the aspect ratio", (s, a) -> {
           int block = block(s, a);
           Picture p = picture(s, block);
           float w = f(a, "width", 0), h = f(a, "height", 0);

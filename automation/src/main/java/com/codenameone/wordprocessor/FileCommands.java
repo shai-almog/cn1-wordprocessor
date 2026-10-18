@@ -28,12 +28,8 @@ final class FileCommands implements Commands.Extension {
           if (!p.equals(s.document().properties)) s.replaceDocument(s.document().properties(p));
           return properties(s.document().properties);
         });
-    c.register(
-        "file.protect",
-        "Restrict editing: none, readOnly, comments or trackedChanges",
-        "mode:string",
-        true,
-        (s, a) -> {
+    c.edit("file.protect", "mode:string",
+        "Restrict editing: none, readOnly, comments or trackedChanges", (s, a) -> {
           String mode = Commands.str(a, "mode");
           if (!DocumentProperties.PROTECTION.contains(mode))
             throw new IllegalArgumentException("Unknown protection mode: " + mode);
@@ -45,17 +41,11 @@ final class FileCommands implements Commands.Extension {
           s.selectRange(keep.anchorBlock, keep.anchor, keep.block, keep.caret);
           return mode;
         });
-    c.register(
-        "review.restrict",
+    c.edit("review.restrict", "mode:string",
         "Restrict editing (same as File > Protect): none, readOnly, comments or trackedChanges",
-        "mode:string",
-        true,
         (s, a) -> c.execute(s, "file.protect", a));
-    c.register(
-        "file.inspect",
+    c.edit("file.inspect", "remove?:array",
         "Document inspector: report comments, revisions, hidden text, properties and headers; remove listed kinds",
-        "remove?:array",
-        true,
         (s, a) -> {
           @SuppressWarnings("unchecked")
           List<Object> remove =
@@ -73,18 +63,11 @@ final class FileCommands implements Commands.Extension {
           if (remove.contains("hidden")) removeHidden(s);
           return Json.object("found", before, "after", inspect(s.document()));
         });
-    c.register(
-        "file.accessibility",
+    c.query("file.accessibility", "",
         "Accessibility checker: missing alt text, heading order, table headers, contrast, title and link text",
-        "",
-        false,
         (s, a) -> accessibility(s.document()));
-    c.register(
-        "file.compatibility",
-        "Compatibility checker: features that change when saved as Word (.docx)",
-        "",
-        false,
-        (s, a) -> {
+    c.query("file.compatibility", "",
+        "Compatibility checker: features that change when saved as Word (.docx)", (s, a) -> {
           var out = new ByteArrayOutputStream();
           try {
             Docx.write(s.document(), out);
@@ -98,12 +81,8 @@ final class FileCommands implements Commands.Extension {
             throw new IllegalStateException("Compatibility check failed: " + ex.getMessage(), ex);
           }
         });
-    c.register(
-        "file.exportPdf",
-        "Export the document as PDF (base64)",
-        "",
-        false,
-        (s, a) -> {
+    c.query("file.exportPdf", "",
+        "Export the document as PDF (base64)", (s, a) -> {
           try {
             byte[] pdf = PdfExporter.write(OfficeCommands.printable(s.document()));
             return Json.object(

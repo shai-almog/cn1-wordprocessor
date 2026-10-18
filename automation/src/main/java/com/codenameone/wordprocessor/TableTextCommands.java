@@ -6,11 +6,8 @@ import java.util.List;
 /** Convert text to a table, delete cells with shifting, and set a column's width in points. */
 final class TableTextCommands implements Commands.Extension {
   public void register(final Commands c) {
-    c.register(
-        "table.fromText",
+    c.edit("table.fromText", "separator?:string",
         "Convert the selected paragraphs to a table, splitting at tab, comma or semicolon",
-        "separator?:string",
-        true,
         (s, a) -> {
           String kind = a.containsKey("separator") ? Commands.str(a, "separator") : "tab";
           char sep =
@@ -56,11 +53,8 @@ final class TableTextCommands implements Commands.Extension {
           s.enterCell(from, 0, 0);
           return Json.object("rows", rows.size(), "columns", columns);
         });
-    c.register(
-        "table.deleteCells",
+    c.edit("table.deleteCells", "shift:string",
         "Delete the caret cell: shift left, shift up, or delete the whole row or column",
-        "shift:string",
-        true,
         (s, a) -> {
           if (!s.inCell()) throw new IllegalArgumentException("Place the caret in a table");
           String shift = Commands.str(a, "shift");
@@ -83,12 +77,8 @@ final class TableTextCommands implements Commands.Extension {
           s.enterCell(block, row, col);
           return null;
         });
-    c.register(
-        "table.columnWidth",
-        "Set the caret column's width in points (other columns share the rest)",
-        "width:number",
-        true,
-        (s, a) -> {
+    c.edit("table.columnWidth", "width:number",
+        "Set the caret column's width in points (other columns share the rest)", (s, a) -> {
           if (!s.inCell()) throw new IllegalArgumentException("Place the caret in a table");
           int block = s.cellBlock(), col = s.cellColumn();
           var t = (Table) s.document().blocks.get(block);

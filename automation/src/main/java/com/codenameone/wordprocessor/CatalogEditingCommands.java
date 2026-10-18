@@ -19,38 +19,23 @@ final class CatalogEditingCommands implements Commands.Extension {
   private Paragraph paintedParagraph;
 
   public void register(final Commands c) {
-    c.register(
-        "para.moveUp",
-        "Move the caret paragraph above the previous paragraph",
-        "",
-        true,
-        (s, a) -> move(s, true));
-    c.register(
-        "para.moveDown",
-        "Move the caret paragraph below the next paragraph",
-        "",
-        true,
-        (s, a) -> move(s, false));
-    c.register("outline.moveUp", "Move the paragraph up in the outline", "", true, (s, a) -> move(s, true));
-    c.register(
-        "outline.moveDown", "Move the paragraph down in the outline", "", true, (s, a) -> move(s, false));
+    c.edit("para.moveUp", "",
+        "Move the caret paragraph above the previous paragraph", (s, a) -> move(s, true));
+    c.edit("para.moveDown", "",
+        "Move the caret paragraph below the next paragraph", (s, a) -> move(s, false));
+    c.edit("outline.moveUp", "",
+        "Move the paragraph up in the outline", (s, a) -> move(s, true));
+    c.edit("outline.moveDown", "",
+        "Move the paragraph down in the outline", (s, a) -> move(s, false));
 
-    c.register(
-        "edit.copyFormat",
-        "Format painter: remember the character and paragraph format at the caret",
-        "",
-        false,
-        (s, a) -> {
+    c.query("edit.copyFormat", "",
+        "Format painter: remember the character and paragraph format at the caret", (s, a) -> {
           paintedText = s.activeStyle();
           paintedParagraph = s.document().paragraph(s.selection().block);
           return true;
         });
-    c.register(
-        "edit.pasteFormat",
-        "Format painter: apply the remembered format to the selection",
-        "",
-        true,
-        (s, a) -> {
+    c.edit("edit.pasteFormat", "",
+        "Format painter: apply the remembered format to the selection", (s, a) -> {
           if (paintedText == null) throw new IllegalStateException("Copy a format first");
           if (!s.selection().collapsed()) {
             var t = paintedText;
@@ -83,21 +68,13 @@ final class CatalogEditingCommands implements Commands.Extension {
           return null;
         });
 
-    c.register(
-        "edit.repeat",
-        "Repeat the last editing command",
-        "",
-        false,
-        (s, a) -> {
+    c.query("edit.repeat", "",
+        "Repeat the last editing command", (s, a) -> {
           if (c.lastId == null) throw new IllegalStateException("Nothing to repeat");
           return c.execute(s, c.lastId, c.lastArgs);
         });
-    c.register(
-        "edit.goBack",
-        "Return the caret to an earlier edit location (cycles through the last three)",
-        "",
-        false,
-        (s, a) -> {
+    c.query("edit.goBack", "",
+        "Return the caret to an earlier edit location (cycles through the last three)", (s, a) -> {
           var spots = new ArrayList<int[]>(c.editSpots);
           var d = s.document();
           for (int k = spots.size() - 1; k >= 0; k--) {
@@ -114,11 +91,8 @@ final class CatalogEditingCommands implements Commands.Extension {
           return false;
         });
 
-    c.register(
-        "text.toggleUnicode",
+    c.edit("text.toggleUnicode", "",
         "Alt+X: convert the hex code before the caret to its character, or the character to its code",
-        "",
-        true,
         (s, a) -> {
           var x = s.selection();
           var text = s.document().paragraph(x.block).text.plainText();
@@ -148,11 +122,8 @@ final class CatalogEditingCommands implements Commands.Extension {
           return code;
         });
 
-    c.register(
-        "fields.setCode",
+    c.edit("fields.setCode", "code:string",
         "Replace the instruction of the field at the caret; the result refreshes on update",
-        "code:string",
-        true,
         (s, a) -> {
           final String code = Commands.str(a, "code");
           final var para = s.document().paragraph(s.selection().block).id;
@@ -171,12 +142,8 @@ final class CatalogEditingCommands implements Commands.Extension {
           return count[0];
         });
 
-    c.register(
-        "view.fieldCodes",
-        "Alt+F9: show field codes instead of results for every field, or switch back",
-        "value?:boolean",
-        true,
-        (s, a) -> {
+    c.edit("view.fieldCodes", "value?:boolean",
+        "Alt+F9: show field codes instead of results for every field, or switch back", (s, a) -> {
           final boolean[] any = {false};
           s.mapFields(
               (p, offset, f) -> {
@@ -187,24 +154,16 @@ final class CatalogEditingCommands implements Commands.Extension {
           s.mapFields((p, offset, f) -> f.showCode(show));
           return show;
         });
-    c.register(
-        "insert.blankPage",
-        "Insert a blank page at the caret",
-        "",
-        true,
-        (s, a) -> {
+    c.edit("insert.blankPage", "",
+        "Insert a blank page at the caret", (s, a) -> {
           c.execute(s, "insert.pageBreak");
           c.execute(s, "insert.pageBreak");
           var x = s.selection();
           s.select(x.block - 1, 0, 0);
           return null;
         });
-    c.register(
-        "insert.docProperty",
-        "Insert a document property field (title, author, subject...)",
-        "name:string",
-        true,
-        (s, a) -> {
+    c.edit("insert.docProperty", "name:string",
+        "Insert a document property field (title, author, subject...)", (s, a) -> {
           String name = Commands.str(a, "name");
           boolean valid = !name.isEmpty() && name.length() <= 40 && Character.isLetter(name.charAt(0));
           for (int i = 0; i < name.length(); i++)

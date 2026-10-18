@@ -3863,7 +3863,8 @@ public class WordProcessor {
       editTabs(tabs);
       paragraph("tabs", TabStop.encode(tabs[0]));
     });
-    commands.register("file.exportPng", "Export the current page (or page N, 1-based) as a PNG image; returns base64", "page?:integer,width?:integer", false, (x, a) -> {
+    commands.query("file.exportPng", "page?:integer,width?:integer",
+        "Export the current page (or page N, 1-based) as a PNG image; returns base64", (x, a) -> {
       int page = a.containsKey("page") ? ((Number) a.get("page")).intValue() - 1 : currentPage();
       int width = a.containsKey("width") ? ((Number) a.get("width")).intValue() : 1240;
       if (width < 64 || width > 6000) throw new IllegalArgumentException("Width is 64-6000 pixels");

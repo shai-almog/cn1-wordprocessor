@@ -33,12 +33,8 @@ final class CatalogCommands implements Commands.Extension {
     toggle(c, "format.engrave", "Toggle engrave effect", "engrave");
     script(c, "format.superscript", "superscript");
     script(c, "format.subscript", "subscript");
-    c.register(
-        "format.underline",
-        "Toggle underline, or set an underline style",
-        "style?:string",
-        true,
-        (s, a) -> {
+    c.edit("format.underline", "style?:string",
+        "Toggle underline, or set an underline style", (s, a) -> {
           if (!a.containsKey("style")) s.format("underline", "" + !s.activeStyle().underline);
           else if ("none".equals(a.get("style"))) s.format("underline", "false");
           else {
@@ -47,81 +43,44 @@ final class CatalogCommands implements Commands.Extension {
           }
           return null;
         });
-    c.register(
-        "format.font",
-        "Set the font family",
-        "name:string",
-        true,
-        (s, a) -> format(s, "font", Commands.str(a, "name")));
-    c.register(
-        "format.size",
-        "Set the font size in points (1-1638)",
-        "size:number",
-        true,
-        (s, a) -> {
+    c.edit("format.font", "name:string",
+        "Set the font family", (s, a) -> format(s, "font", Commands.str(a, "name")));
+    c.edit("format.size", "size:number",
+        "Set the font size in points (1-1638)", (s, a) -> {
           float size = ((Number) a.get("size")).floatValue();
           if (size < 1 || size > 1638) throw new IllegalArgumentException("Size must be 1-1638");
           return format(s, "size", trim(size));
         });
-    c.register(
-        "format.growFont",
+    c.edit("format.growFont", "",
         "Increase to the next font size",
-        "",
-        true,
         (s, a) -> format(s, "size", trim(step(s.activeStyle().size, true))));
-    c.register(
-        "format.shrinkFont",
+    c.edit("format.shrinkFont", "",
         "Decrease to the previous font size",
-        "",
-        true,
         (s, a) -> format(s, "size", trim(step(s.activeStyle().size, false))));
-    c.register(
-        "format.color",
+    c.edit("format.color", "color:string",
         "Set the font color (RRGGBB or auto)",
-        "color:string",
-        true,
         (s, a) -> format(s, "color", color(Commands.str(a, "color"), hex(TextStyle.DEFAULT.color))));
-    c.register(
-        "format.highlight",
+    c.edit("format.highlight", "color:string",
         "Set the highlight color (RRGGBB or none)",
-        "color:string",
-        true,
         (s, a) -> format(s, "background", color(Commands.str(a, "color"), hex(TextStyle.DEFAULT.background))));
-    c.register(
-        "format.shading",
+    c.edit("format.shading", "color:string",
         "Set character shading (RRGGBB or none)",
-        "color:string",
-        true,
         (s, a) -> format(s, "shading", color(Commands.str(a, "color"), "none")));
-    c.register(
-        "format.border",
+    c.edit("format.border", "color:string",
         "Set a character border (RRGGBB or none)",
-        "color:string",
-        true,
         (s, a) -> format(s, "border", color(Commands.str(a, "color"), "none")));
-    c.register(
-        "format.phonetic",
+    c.edit("format.phonetic", "text:string",
         "Set the phonetic guide (ruby) text; empty removes it",
-        "text:string",
-        true,
         (s, a) -> format(s, "ruby", Commands.str(a, "text")));
-    c.register(
-        "format.enclose",
-        "Enclose characters: none, circle, square, triangle or diamond",
-        "shape:string",
-        true,
-        (s, a) -> {
+    c.edit("format.enclose", "shape:string",
+        "Enclose characters: none, circle, square, triangle or diamond", (s, a) -> {
           String shape = Commands.str(a, "shape");
           if (!java.util.Arrays.asList(CharacterFormat.ENCLOSURES).contains(shape))
             throw new IllegalArgumentException("Unknown enclosure: " + shape);
           return format(s, "enclose", shape);
         });
-    c.register(
-        "review.language",
-        "Set the proofing language tag of the selection (e.g. en-US; empty inherits)",
-        "lang:string",
-        true,
-        (s, a) -> {
+    c.edit("review.language", "lang:string",
+        "Set the proofing language tag of the selection (e.g. en-US; empty inherits)", (s, a) -> {
           String lang = Commands.str(a, "lang");
           for (int i = 0; i < lang.length(); i++) {
             char ch = lang.charAt(i);
@@ -130,40 +89,23 @@ final class CatalogCommands implements Commands.Extension {
           }
           return format(s, "lang", lang);
         });
-    c.register(
-        "format.textEffects",
+    c.edit(
+        "format.textEffects", "outline?:boolean,shadow?:boolean,emboss?:boolean,engrave?:boolean",
         "Apply outline, shadow, emboss and engrave together; omitted effects are unchanged",
-        "outline?:boolean,shadow?:boolean,emboss?:boolean,engrave?:boolean",
-        true,
         (s, a) -> {
           for (String k : new String[] {"outline", "shadow", "emboss", "engrave"})
             if (a.containsKey(k)) s.format(k, String.valueOf(Boolean.TRUE.equals(a.get(k))));
           return null;
         });
-    c.register(
-        "format.spacing",
-        "Character spacing in points",
-        "value:number",
-        true,
-        (s, a) -> format(s, "characterSpacing", number(a, "value")));
-    c.register(
-        "format.scale",
-        "Character scale in percent",
-        "value:number",
-        true,
-        (s, a) -> format(s, "characterScale", number(a, "value")));
-    c.register(
-        "format.position",
+    c.edit("format.spacing", "value:number",
+        "Character spacing in points", (s, a) -> format(s, "characterSpacing", number(a, "value")));
+    c.edit("format.scale", "value:number",
+        "Character scale in percent", (s, a) -> format(s, "characterScale", number(a, "value")));
+    c.edit("format.position", "value:number",
         "Raise (positive) or lower character position in points",
-        "value:number",
-        true,
         (s, a) -> format(s, "characterPosition", number(a, "value")));
-    c.register(
-        "format.clear",
-        "Clear direct character formatting",
-        "",
-        true,
-        (s, a) -> {
+    c.edit("format.clear", "",
+        "Clear direct character formatting", (s, a) -> {
           var d = TextStyle.DEFAULT;
           s.format("font", d.font);
           s.format("size", trim(d.size));
@@ -195,85 +137,50 @@ final class CatalogCommands implements Commands.Extension {
     align(c, "para.alignCenter", "center");
     align(c, "para.alignRight", "right");
     align(c, "para.justify", "both");
-    c.register(
-        "para.align",
-        "Set paragraph alignment (left, center, right, both)",
-        "value:string",
-        true,
-        (s, a) -> {
+    c.edit("para.align", "value:string",
+        "Set paragraph alignment (left, center, right, both)", (s, a) -> {
           String v = "justify".equals(a.get("value")) ? "both" : Commands.str(a, "value");
           if (!ALIGN.contains(v)) throw new IllegalArgumentException("Unknown alignment " + v);
           s.paragraph("align", v);
           return null;
         });
-    c.register(
-        "para.indent",
-        "Increase the left indent by one 36pt step",
-        "",
-        true,
-        (s, a) -> indent(s, 36));
-    c.register(
-        "para.outdent",
-        "Decrease the left indent by one 36pt step",
-        "",
-        true,
-        (s, a) -> indent(s, -36));
-    c.register(
-        "para.indents",
-        "Set left/right/first-line indents in points",
-        "left?:number,right?:number,firstLine?:number",
-        true,
-        (s, a) -> {
+    c.edit("para.indent", "",
+        "Increase the left indent by one 36pt step", (s, a) -> indent(s, 36));
+    c.edit("para.outdent", "",
+        "Decrease the left indent by one 36pt step", (s, a) -> indent(s, -36));
+    c.edit("para.indents", "left?:number,right?:number,firstLine?:number",
+        "Set left/right/first-line indents in points", (s, a) -> {
           if (a.containsKey("left")) s.paragraph("indent", number(a, "left"));
           if (a.containsKey("right")) s.paragraph("rightIndent", number(a, "right"));
           if (a.containsKey("firstLine")) s.paragraph("firstIndent", number(a, "firstLine"));
           return null;
         });
-    c.register(
-        "para.hangingIndent",
-        "Hang the first line by the given amount (default 36pt)",
-        "by?:number",
-        true,
-        (s, a) -> {
+    c.edit("para.hangingIndent", "by?:number",
+        "Hang the first line by the given amount (default 36pt)", (s, a) -> {
           float by = a.containsKey("by") ? ((Number) a.get("by")).floatValue() : 36;
           Paragraph p = current(s);
           if (p.indent < by) s.paragraph("indent", trim(by));
           s.paragraph("firstIndent", trim(-by));
           return null;
         });
-    c.register(
-        "para.spacing",
-        "Space before/after in points",
-        "before?:number,after?:number",
-        true,
-        (s, a) -> {
+    c.edit("para.spacing", "before?:number,after?:number",
+        "Space before/after in points", (s, a) -> {
           if (a.containsKey("before")) s.paragraph("before", number(a, "before"));
           if (a.containsKey("after")) s.paragraph("after", number(a, "after"));
           return null;
         });
-    c.register(
-        "para.addSpaceBefore",
-        "Toggle 12pt space before the paragraph",
-        "",
-        true,
-        (s, a) -> {
+    c.edit("para.addSpaceBefore", "",
+        "Toggle 12pt space before the paragraph", (s, a) -> {
           s.paragraph("before", current(s).before > 0 ? "0" : "12");
           return null;
         });
-    c.register(
-        "para.removeSpaceAfter",
-        "Toggle space after the paragraph",
-        "",
-        true,
-        (s, a) -> {
+    c.edit("para.removeSpaceAfter", "",
+        "Toggle space after the paragraph", (s, a) -> {
           s.paragraph("after", current(s).after > 0 ? "0" : "8");
           return null;
         });
-    c.register(
-        "para.lineSpacing",
+    c.edit("para.lineSpacing", "value?:number,exactly?:number,atLeast?:number",
         "Line spacing as a multiple (value) or exact points (exactly) or minimum (atLeast)",
-        "value?:number,exactly?:number,atLeast?:number",
-        true,
         (s, a) -> {
           if (a.containsKey("exactly")) {
             s.paragraph("lineRule", "exact");
@@ -291,12 +198,8 @@ final class CatalogCommands implements Commands.Extension {
     flag(c, "para.keepLines", "Toggle keep lines together", "keepLines");
     flag(c, "para.pageBreakBefore", "Toggle page break before", "pageBreak");
     flag(c, "para.widowControl", "Toggle widow/orphan control", "widowControl");
-    c.register(
-        "para.outlineLevel",
-        "Outline level 1-9, or 0 for body text",
-        "level:integer",
-        true,
-        (s, a) -> {
+    c.edit("para.outlineLevel", "level:integer",
+        "Outline level 1-9, or 0 for body text", (s, a) -> {
           int level = Commands.integer(a, "level");
           if (level < 0 || level > 9) throw new IllegalArgumentException("Level must be 0-9");
           s.paragraph("outlineLevel", "" + level);
@@ -304,12 +207,8 @@ final class CatalogCommands implements Commands.Extension {
         });
 
     // Design tab: page color, watermark and page borders of the active section.
-    c.register(
-        "design.pageColor",
-        "Page color RRGGBB, or none/null for white paper",
-        "color?:any",
-        true,
-        (s, a) -> {
+    c.edit("design.pageColor", "color?:any",
+        "Page color RRGGBB, or none/null for white paper", (s, a) -> {
           var v = a.get("color");
           var sec = s.activeSection().raw;
           s.section(
@@ -320,12 +219,8 @@ final class CatalogCommands implements Commands.Extension {
                           : Integer.parseInt(color(String.valueOf(v), "ffffff"), 16))));
           return null;
         });
-    c.register(
-        "design.watermark",
-        "Diagonal text watermark behind the page; empty text removes it",
-        "text?:string,color?:string",
-        true,
-        (s, a) -> {
+    c.edit("design.watermark", "text?:string,color?:string",
+        "Diagonal text watermark behind the page; empty text removes it", (s, a) -> {
           var sec = s.activeSection().raw;
           String text = a.containsKey("text") ? Commands.str(a, "text") : "CONFIDENTIAL";
           int rgb =
@@ -333,11 +228,9 @@ final class CatalogCommands implements Commands.Extension {
           s.section(sec.decor(sec.decor.watermark(text, rgb)));
           return null;
         });
-    c.register(
-        "design.pageBorders",
+    c.edit(
+        "design.pageBorders", "kind:string,style?:string,width?:number,color?:string,space?:number",
         "Page borders: kind none, all, outside, top, bottom, left or right; space is from the page edge",
-        "kind:string,style?:string,width?:number,color?:string,space?:number",
-        true,
         (s, a) -> {
           var sec = s.activeSection().raw;
           var side =
@@ -353,11 +246,8 @@ final class CatalogCommands implements Commands.Extension {
           return null;
         });
 
-    c.register(
-        "layout.pageNumberFormat",
+    c.edit("layout.pageNumberFormat", "format:string,start?:integer",
         "Section page-number format (decimal, upperRoman, lowerRoman, upperLetter, lowerLetter) and optional restart",
-        "format:string,start?:integer",
-        true,
         (s, a) -> {
           var sec = s.activeSection().raw;
           sec = sec.decor(sec.decor.numberFormat(Commands.str(a, "format")));
@@ -365,11 +255,8 @@ final class CatalogCommands implements Commands.Extension {
           s.section(sec);
           return null;
         });
-    c.register(
-        "layout.lineNumbers",
+    c.edit("layout.lineNumbers", "countBy:integer,restart?:string",
         "Margin line numbers: countBy (0 = off) and restart page, section or continuous",
-        "countBy:integer,restart?:string",
-        true,
         (s, a) -> {
           var sec = s.activeSection().raw;
           s.section(
@@ -381,12 +268,8 @@ final class CatalogCommands implements Commands.Extension {
         });
 
     // Borders and shading.
-    c.register(
-        "para.borders",
-        "Paragraph borders: kind none, all, outside, top, bottom, left or right",
-        "kind:string,style?:string,width?:number,color?:string,space?:number",
-        true,
-        (s, a) -> {
+    c.edit("para.borders", "kind:string,style?:string,width?:number,color?:string,space?:number",
+        "Paragraph borders: kind none, all, outside, top, bottom, left or right", (s, a) -> {
           Paragraph p = current(s);
           var side =
               new ParagraphBorders.Side(
@@ -399,23 +282,15 @@ final class CatalogCommands implements Commands.Extension {
               ParagraphBorders.preset(Commands.str(a, "kind"), side, p.format.borders).encode());
           return null;
         });
-    c.register(
-        "para.shading",
-        "Paragraph shading RRGGBB, or none/null to clear",
-        "color?:any",
-        true,
-        (s, a) -> {
+    c.edit("para.shading", "color?:any",
+        "Paragraph shading RRGGBB, or none/null to clear", (s, a) -> {
           var v = a.get("color");
           s.paragraph(
               "shading", v == null || "none".equals(v) ? "" : color(String.valueOf(v), "ffffff"));
           return null;
         });
-    c.register(
-        "insert.horizontalLine",
-        "Insert an empty paragraph with a bottom border after the caret paragraph",
-        "",
-        true,
-        (s, a) -> {
+    c.edit("insert.horizontalLine", "",
+        "Insert an empty paragraph with a bottom border after the caret paragraph", (s, a) -> {
           Paragraph p = current(s);
           s.select(s.selection().block, p.text.length(), p.text.length());
           s.enterParagraph();
@@ -436,28 +311,17 @@ final class CatalogCommands implements Commands.Extension {
         });
 
     // Lists.
-    c.register(
-        "para.bullets",
-        "Toggle bullets, or turn lists off",
-        "kind?:string,off?:boolean",
-        true,
-        (s, a) -> list(s, "bullet", a));
-    c.register(
-        "para.numbering",
-        "Toggle numbering with a number format (decimal, lowerLetter, upperRoman, ...)",
-        "kind?:string,off?:boolean",
-        true,
-        (s, a) -> {
+    c.edit("para.bullets", "kind?:string,off?:boolean",
+        "Toggle bullets, or turn lists off", (s, a) -> list(s, "bullet", a));
+    c.edit("para.numbering", "kind?:string,off?:boolean",
+        "Toggle numbering with a number format (decimal, lowerLetter, upperRoman, ...)", (s, a) -> {
           list(s, "number", a);
           if (a.containsKey("kind") && !Boolean.TRUE.equals(a.get("off")))
             s.paragraph("listFormat", Commands.str(a, "kind"));
           return null;
         });
-    c.register(
-        "para.multilevel",
+    c.edit("para.multilevel", "kind:string",
         "Multilevel list: outline (1. a. i.), legal (1.1.1.) or bullets; off removes the list",
-        "kind:string",
-        true,
         (s, a) -> {
           String kind = Commands.str(a, "kind");
           if ("off".equals(kind)) {
@@ -475,11 +339,8 @@ final class CatalogCommands implements Commands.Extension {
           s.paragraph("listFormat", kind);
           return null;
         });
-    c.register(
-        "para.defineNumber",
+    c.edit("para.defineNumber", "format:string,label?:string",
         "Define a number format: format (decimal, lowerLetter, ...) and a Word label like %1) or (%1)",
-        "format:string,label?:string",
-        true,
         (s, a) -> {
           String f = Commands.str(a, "format");
           String value = a.containsKey("label") ? f + "|" + Commands.str(a, "label") : f;
@@ -489,23 +350,16 @@ final class CatalogCommands implements Commands.Extension {
           s.paragraph("listFormat", value);
           return null;
         });
-    c.register(
-        "para.defineBullet",
-        "Define a bullet character (any symbol, e.g. \u2713 or \u2794)",
-        "symbol:string",
-        true,
-        (s, a) -> {
+    c.edit("para.defineBullet", "symbol:string",
+        "Define a bullet character (any symbol, e.g. \u2713 or \u2794)", (s, a) -> {
           var v = "bullet|" + Commands.str(a, "symbol");
           if (!ListNumbers.valid(v)) throw new IllegalArgumentException("Invalid bullet symbol");
           s.paragraph("list", "bullet");
           s.paragraph("listFormat", v);
           return null;
         });
-    c.register(
-        "list.define",
+    c.edit("list.define", "kind:string,format?:string,label?:string",
         "Define the caret list: kind outline|legal|bullets|number with optional format and label",
-        "kind:string,format?:string,label?:string",
-        true,
         (s, a) ->
             "number".equals(Commands.str(a, "kind"))
                 ? c.execute(
@@ -515,32 +369,20 @@ final class CatalogCommands implements Commands.Extension {
                         ? Json.object("format", a.containsKey("format") ? a.get("format") : "decimal", "label", a.get("label"))
                         : Json.object("format", a.containsKey("format") ? a.get("format") : "decimal"))
                 : c.execute(s, "para.multilevel", Json.object("kind", a.get("kind"))));
-    c.register(
-        "para.listLevel",
-        "Set the list level (0-8)",
-        "level:integer",
-        true,
-        (s, a) -> {
+    c.edit("para.listLevel", "level:integer",
+        "Set the list level (0-8)", (s, a) -> {
           int level = Commands.integer(a, "level");
           if (level < 0 || level > 8) throw new IllegalArgumentException("Level must be 0-8");
           s.paragraph("listLevel", "" + level);
           return null;
         });
-    c.register(
-        "para.restartNumbering",
-        "Restart numbering at 1 from this paragraph",
-        "",
-        true,
-        (s, a) -> {
+    c.edit("para.restartNumbering", "",
+        "Restart numbering at 1 from this paragraph", (s, a) -> {
           s.paragraph("listStart", "1");
           return null;
         });
-    c.register(
-        "para.setNumberingValue",
-        "Start numbering at the given value",
-        "value:integer",
-        true,
-        (s, a) -> {
+    c.edit("para.setNumberingValue", "value:integer",
+        "Start numbering at the given value", (s, a) -> {
           int v = Commands.integer(a, "value");
           if (v < 0) throw new IllegalArgumentException("Value must not be negative");
           s.paragraph("listStart", "" + v);
@@ -548,12 +390,8 @@ final class CatalogCommands implements Commands.Extension {
         });
 
     // Styles.
-    c.register(
-        "para.style",
-        "Apply a paragraph style by id",
-        "style:string",
-        true,
-        (s, a) -> {
+    c.edit("para.style", "style:string",
+        "Apply a paragraph style by id", (s, a) -> {
           s.applyStyle(Commands.str(a, "style"));
           return null;
         });
@@ -563,53 +401,33 @@ final class CatalogCommands implements Commands.Extension {
     style(c, "para.heading3", "Heading3");
 
     // Editing.
-    c.register(
-        "edit.copy",
-        "Copy the selection; returns the copied text",
-        "",
-        false,
-        (s, a) -> {
+    c.query("edit.copy", "",
+        "Copy the selection; returns the copied text", (s, a) -> {
           WorkflowCommands.record(s);
           return s.selectedText();
         });
-    c.register(
-        "edit.cut",
-        "Delete the selection; returns the removed text",
-        "",
-        true,
-        (s, a) -> {
+    c.edit("edit.cut", "",
+        "Delete the selection; returns the removed text", (s, a) -> {
           var text = s.selectedText();
           WorkflowCommands.record(s);
           if (!s.selection().collapsed()) s.replace("");
           return text;
         });
-    c.register(
-        "edit.paste",
-        "Paste plain text at the selection",
-        "text:string",
-        true,
-        (s, a) -> {
+    c.edit("edit.paste", "text:string",
+        "Paste plain text at the selection", (s, a) -> {
           s.pasteText(Commands.str(a, "text"));
           return null;
         });
-    c.register(
-        "select.all",
-        "Select the whole document body",
-        "",
-        false,
-        (s, a) -> {
+    c.query("select.all", "",
+        "Select the whole document body", (s, a) -> {
           var d = s.document();
           int last = d.blocks.size() - 1;
           var b = d.blocks.get(last);
           s.selectRange(0, 0, last, b instanceof Paragraph p ? p.text.length() : 0);
           return null;
         });
-    c.register(
-        "select.text",
-        "Select the first occurrence of literal text in a paragraph",
-        "text:string",
-        false,
-        (s, a) -> {
+    c.query("select.text", "text:string",
+        "Select the first occurrence of literal text in a paragraph", (s, a) -> {
           String needle = Commands.str(a, "text");
           if (needle.isEmpty()) throw new IllegalArgumentException("Text is empty");
           var d = s.document();
@@ -623,51 +441,31 @@ final class CatalogCommands implements Commands.Extension {
             }
           return false;
         });
-    c.register(
-        "text.newParagraph",
-        "Split the paragraph at the caret",
-        "",
-        true,
-        (s, a) -> {
+    c.edit("text.newParagraph", "",
+        "Split the paragraph at the caret", (s, a) -> {
           s.enterParagraph();
           return null;
         });
-    c.register(
-        "text.columnBreak",
-        "Start the following text in the next column",
-        "",
-        true,
-        (s, a) -> {
+    c.edit("text.columnBreak", "",
+        "Start the following text in the next column", (s, a) -> {
           s.columnBreak();
           return null;
         });
-    c.register(
-        "text.delete",
-        "Delete forward",
-        "",
-        true,
-        (s, a) -> {
+    c.edit("text.delete", "",
+        "Delete forward", (s, a) -> {
           s.deleteForward();
           return null;
         });
-    c.register(
-        "text.tab",
-        "Insert a tab",
-        "",
-        true,
-        (s, a) -> {
+    c.edit("text.tab", "",
+        "Insert a tab", (s, a) -> {
           s.replace("\t");
           return null;
         });
     insertText(c, "text.nbsp", "Insert a non-breaking space", "\u00a0");
     insertText(c, "text.nbHyphen", "Insert a non-breaking hyphen", "\u2011");
     insertText(c, "text.optionalHyphen", "Insert an optional hyphen", "\u00ad");
-    c.register(
-        "insert.pageBreak",
-        "Insert a page break before the text after the caret",
-        "",
-        true,
-        (s, a) -> {
+    c.edit("insert.pageBreak", "",
+        "Insert a page break before the text after the caret", (s, a) -> {
           s.enterParagraph();
           s.paragraph("pageBreak", "true");
           return null;
@@ -676,12 +474,8 @@ final class CatalogCommands implements Commands.Extension {
     // Tables (the caret must be in a table cell).
     table(c, "table.deleteRow", "deleteRow", false);
     table(c, "table.deleteColumn", "deleteColumn", false);
-    c.register(
-        "table.deleteTable",
-        "Delete the table at the caret",
-        "",
-        true,
-        (s, a) -> {
+    c.edit("table.deleteTable", "",
+        "Delete the table at the caret", (s, a) -> {
           int block = tableBlock(s);
           s.leaveCell();
           s.deleteTable(block);

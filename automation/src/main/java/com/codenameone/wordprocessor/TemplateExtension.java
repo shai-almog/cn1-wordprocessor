@@ -5,12 +5,8 @@ import java.util.*;
 /** Example compiled extension: substitute {{field}} values, retaining surrounding formatting. */
 public final class TemplateExtension implements Commands.Extension {
   public void register(Commands commands) {
-    commands.register(
-        "template.fill",
-        "Fill {{field}} placeholders in paragraphs and table cells",
-        "values:object",
-        true,
-        (s, a) -> {
+    commands.edit("template.fill", "values:object",
+        "Fill {{field}} placeholders in paragraphs and table cells", (s, a) -> {
           Map<?, ?> values = (Map<?, ?>) a.get("values");
           for (Object key : values.keySet())
             if (!(key instanceof String) || !(values.get(key) instanceof String))

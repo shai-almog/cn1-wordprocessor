@@ -19,12 +19,8 @@ final class DeveloperCommands implements Commands.Extension {
     control(c, "developer.dropDown", "dropDown", "Insert a drop-down list content control (items separated by |)");
     control(c, "developer.datePicker", "datePicker", "Insert a date picker content control (date yyyy-mm-dd)");
     control(c, "developer.repeatingSection", "repeatingSection", "Insert a repeating section content control (items separated by |)");
-    c.register(
-        "developer.designMode",
-        "Design mode: show each content control's tag around its content",
-        "value?:boolean",
-        true,
-        (s, a) -> {
+    c.edit("developer.designMode", "value?:boolean",
+        "Design mode: show each content control's tag around its content", (s, a) -> {
           final boolean[] any = {false};
           s.mapFields(
               (p, offset, f) -> {
@@ -35,11 +31,9 @@ final class DeveloperCommands implements Commands.Extension {
           s.mapFields((p, offset, f) -> ContentControl.is(f) ? f.showCode(on) : f);
           return on;
         });
-    c.register(
-        "developer.properties",
+    c.edit(
+        "developer.properties", "title?:string,tag?:string,lock?:string,items?:string,value?:string,checked?:boolean,date?:string,format?:string,gallery?:string",
         "Read or change the content control at the caret: title, tag, lock, items, value, checked, date, format",
-        "title?:string,tag?:string,lock?:string,items?:string,value?:string,checked?:boolean,date?:string,format?:string,gallery?:string",
-        true,
         (s, a) -> {
           final var found = new ArrayList<Object>();
           final var para = s.document().paragraph(s.selection().block).id;

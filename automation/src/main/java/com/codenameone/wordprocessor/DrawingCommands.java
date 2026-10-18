@@ -33,24 +33,16 @@ final class DrawingCommands implements Commands.Extension {
           boolean line = "line".equals(shape) || "arrowLine".equals(shape);
           return insert(s, d, f(a, "width", 144), f(a, "height", line ? 12 : 96), "Shape: " + shape);
         });
-    c.register(
-        "insert.textBox",
-        "Insert a text box",
-        "text?:string,width?:number,height?:number",
-        true,
-        (s, a) ->
+    c.edit("insert.textBox", "text?:string,width?:number,height?:number",
+        "Insert a text box", (s, a) ->
             insert(
                 s,
                 Drawing.of("textBox").with("text", a.containsKey("text") ? Commands.str(a, "text") : "Type here").with("valign", "top"),
                 f(a, "width", 180),
                 f(a, "height", 72),
                 "Text box"));
-    c.register(
-        "insert.wordArt",
-        "Insert WordArt text",
-        "text?:string,style?:integer",
-        true,
-        (s, a) -> {
+    c.edit("insert.wordArt", "text?:string,style?:integer",
+        "Insert WordArt text", (s, a) -> {
           String text = a.containsKey("text") ? Commands.str(a, "text") : "Your text here";
           Drawing d = wordArtStyle(Drawing.of("wordArt").with("text", text), a.containsKey("style") ? Commands.integer(a, "style") : 1);
           return insert(s, d, Math.min(468, Math.max(120, text.length() * 26)), 60, text);
@@ -68,22 +60,14 @@ final class DrawingCommands implements Commands.Extension {
           float size = f(a, "size", 48);
           return insert(s, d, size, size, icon + " icon");
         });
-    c.register(
-        "insert.signatureLine",
-        "Insert a signature line with the suggested signer and title",
-        "signer?:string,title?:string",
-        true,
-        (s, a) -> {
+    c.edit("insert.signatureLine", "signer?:string,title?:string",
+        "Insert a signature line with the suggested signer and title", (s, a) -> {
           Drawing d = copy(a, Drawing.of("signature"), "signer");
           if (a.containsKey("title")) d = d.with("signerTitle", Commands.str(a, "title"));
           return insert(s, d, 216, 72, "Signature line" + (a.containsKey("signer") ? ": " + Commands.str(a, "signer") : ""));
         });
-    c.register(
-        "insert.object",
-        "Embed a file as an object (shown as an icon with its name)",
-        "name:string,base64?:string",
-        true,
-        (s, a) -> {
+    c.edit("insert.object", "name:string,base64?:string",
+        "Embed a file as an object (shown as an icon with its name)", (s, a) -> {
           String name = Commands.str(a, "name");
           if (name.isEmpty() || name.length() > 200) throw new IllegalArgumentException("Invalid object name");
           var d = Drawing.of("object").with("name", name);
@@ -94,54 +78,36 @@ final class DrawingCommands implements Commands.Extension {
           }
           return insert(s, d, 72, 72, name);
         });
-    c.register(
-        "insert.canvas",
+    c.edit("insert.canvas", "width?:number,height?:number",
         "Insert a drawing canvas for ink and shapes",
-        "width?:number,height?:number",
-        true,
         (s, a) -> insert(s, Drawing.of("canvas"), f(a, "width", 432), f(a, "height", 216), "Drawing canvas"));
 
     // ---------------------------------------------------------------- shape formatting
-    c.register(
-        "shape.fill",
-        "Set the shape or text box fill color (hex or none) and transparency (0-100)",
-        "block?:integer,color?:string,transparency?:number",
-        true,
-        (s, a) -> {
+    c.edit("shape.fill", "block?:integer,color?:string,transparency?:number",
+        "Set the shape or text box fill color (hex or none) and transparency (0-100)", (s, a) -> {
           Drawing d = drawing(s, a);
           if (a.containsKey("color")) d = d.with("fill", color(Commands.str(a, "color")));
           if (a.containsKey("transparency"))
             d = d.with("transparency", String.valueOf(clamp(f(a, "transparency", 0), 0, 100)));
           return update(s, a, d);
         });
-    c.register(
-        "shape.outline",
-        "Set the shape outline color (hex or none) and width in points",
-        "block?:integer,color?:string,width?:number",
-        true,
-        (s, a) -> {
+    c.edit("shape.outline", "block?:integer,color?:string,width?:number",
+        "Set the shape outline color (hex or none) and width in points", (s, a) -> {
           Drawing d = drawing(s, a);
           if (a.containsKey("color")) d = d.with("line", color(Commands.str(a, "color")));
           if (a.containsKey("width")) d = d.with("lineWidth", String.valueOf(clamp(f(a, "width", 1), 0, 72)));
           return update(s, a, d);
         });
-    c.register(
-        "shape.effects",
-        "Shadow and glow effects for an object",
-        "block?:integer,shadow?:boolean,glow?:string",
-        true,
-        (s, a) -> {
+    c.edit("shape.effects", "block?:integer,shadow?:boolean,glow?:string",
+        "Shadow and glow effects for an object", (s, a) -> {
           Drawing d = drawing(s, a);
           if (a.containsKey("shadow")) d = d.with("shadow", String.valueOf(a.get("shadow")));
           if (a.containsKey("glow")) d = d.with("glow", color(Commands.str(a, "glow")));
           return update(s, a, d);
         });
-    c.register(
-        "shape.text",
-        "Set the text inside a shape or text box",
-        "block?:integer,text:string,size?:number,color?:string,bold?:boolean,align?:string",
-        true,
-        (s, a) -> {
+    c.edit(
+        "shape.text", "block?:integer,text:string,size?:number,color?:string,bold?:boolean,align?:string",
+        "Set the text inside a shape or text box", (s, a) -> {
           var d = drawing(s, a).with("text", Commands.str(a, "text"));
           if (a.containsKey("size")) d = d.with("fontSize", String.valueOf(clamp(f(a, "size", 11), 1, 400)));
           if (a.containsKey("color")) d = d.with("textColor", color(Commands.str(a, "color")));
@@ -149,36 +115,21 @@ final class DrawingCommands implements Commands.Extension {
           if (a.containsKey("align")) d = d.with("align", oneOf(Commands.str(a, "align"), "left", "center", "right"));
           return update(s, a, d);
         });
-    c.register(
-        "shape.textDirection",
-        "Text direction in a shape: horizontal, rotate90, rotate270 or stacked",
-        "block?:integer,direction:string",
-        true,
-        (s, a) ->
+    c.edit("shape.textDirection", "block?:integer,direction:string",
+        "Text direction in a shape: horizontal, rotate90, rotate270 or stacked", (s, a) ->
             update(s, a, drawing(s, a).with("textDirection",
                 oneOf(Commands.str(a, "direction"), "horizontal", "rotate90", "rotate270", "stacked"))));
-    c.register(
-        "shape.alignText",
+    c.edit("shape.alignText", "block?:integer,align:string",
         "Vertical text alignment in a shape: top, middle or bottom",
-        "block?:integer,align:string",
-        true,
         (s, a) -> update(s, a, drawing(s, a).with("valign", oneOf(Commands.str(a, "align"), "top", "middle", "bottom"))));
-    c.register(
-        "shape.change",
-        "Change the geometry of a shape",
-        "block?:integer,shape:string",
-        true,
-        (s, a) -> {
+    c.edit("shape.change", "block?:integer,shape:string",
+        "Change the geometry of a shape", (s, a) -> {
           String shape = Commands.str(a, "shape");
           if (!DrawingOps.SHAPES.contains(shape)) throw new IllegalArgumentException("Unknown shape: " + shape);
           return update(s, a, drawing(s, a).with("shape", shape));
         });
-    c.register(
-        "shape.link",
-        "Link a text box to another so overflowing text continues there",
-        "block?:integer,target:integer",
-        true,
-        (s, a) -> {
+    c.edit("shape.link", "block?:integer,target:integer",
+        "Link a text box to another so overflowing text continues there", (s, a) -> {
           int from = block(s, a), to = Commands.integer(a, "target");
           Picture source = picture(s, from), target = picture(s, to);
           if (from == to || source.drawing == null || target.drawing == null
@@ -205,23 +156,14 @@ final class DrawingCommands implements Commands.Extension {
         });
 
     // ---------------------------------------------------------------- WordArt
-    c.register(
-        "wordArt.style",
+    c.edit("wordArt.style", "block?:integer,style:integer",
         "Apply a WordArt style (1-6)",
-        "block?:integer,style:integer",
-        true,
         (s, a) -> update(s, a, wordArtStyle(drawing(s, a), Commands.integer(a, "style"))));
-    c.register(
-        "wordArt.textFill",
+    c.edit("wordArt.textFill", "block?:integer,color:string",
         "WordArt text fill color",
-        "block?:integer,color:string",
-        true,
         (s, a) -> update(s, a, drawing(s, a).with("textFill", color(Commands.str(a, "color")))));
-    c.register(
-        "wordArt.textOutline",
+    c.edit("wordArt.textOutline", "block?:integer,color:string",
         "WordArt text outline color (or none)",
-        "block?:integer,color:string",
-        true,
         (s, a) -> update(s, a, drawing(s, a).with("textOutline", color(Commands.str(a, "color")))));
     c.register(
         "wordArt.transform",
@@ -248,48 +190,29 @@ final class DrawingCommands implements Commands.Extension {
           if (a.containsKey("title")) d = d.with("title", Commands.str(a, "title")).with("titleSet", "true");
           return insert(s, d, 360, 216, "Chart");
         });
-    c.register(
-        "chart.type",
-        "Change chart type",
-        "block?:integer,type:string",
-        true,
-        (s, a) -> {
+    c.edit("chart.type", "block?:integer,type:string",
+        "Change chart type", (s, a) -> {
           String type = Commands.str(a, "type");
           if (!DrawingOps.CHARTS.contains(type)) throw new IllegalArgumentException("Unknown chart type: " + type);
           return update(s, a, chart(s, a).with("chartType", type));
         });
-    c.register(
-        "chart.editData",
-        "Read or replace chart data (CSV: header row, then one row per category)",
-        "block?:integer,data?:string",
-        true,
-        (s, a) -> {
+    c.edit("chart.editData", "block?:integer,data?:string",
+        "Read or replace chart data (CSV: header row, then one row per category)", (s, a) -> {
           Drawing d = chart(s, a);
           if (a.containsKey("data")) update(s, a, d = d.with("data", chartData(Commands.str(a, "data"))));
           return d.get("data", DrawingOps.SAMPLE_CHART);
         });
-    c.register(
-        "chart.title",
+    c.edit("chart.title", "block?:integer,title:string",
         "Set or remove the chart title",
-        "block?:integer,title:string",
-        true,
         (s, a) -> update(s, a, chart(s, a).with("title", Commands.str(a, "title")).with("titleSet", "true")));
-    c.register(
-        "chart.legend",
-        "Show or hide the chart legend",
-        "block?:integer,value?:boolean",
-        true,
-        (s, a) -> {
+    c.edit("chart.legend", "block?:integer,value?:boolean",
+        "Show or hide the chart legend", (s, a) -> {
           Drawing d = chart(s, a);
           boolean on = a.containsKey("value") ? (Boolean) a.get("value") : "false".equals(d.get("legend", "true"));
           return update(s, a, d.with("legend", String.valueOf(on)));
         });
-    c.register(
-        "chart.dataLabels",
-        "Show or hide data labels",
-        "block?:integer,value?:boolean",
-        true,
-        (s, a) -> {
+    c.edit("chart.dataLabels", "block?:integer,value?:boolean",
+        "Show or hide data labels", (s, a) -> {
           Drawing d = chart(s, a);
           boolean on = a.containsKey("value") ? (Boolean) a.get("value") : !d.flag("dataLabels");
           return update(s, a, d.with("dataLabels", String.valueOf(on)));
@@ -308,22 +231,14 @@ final class DrawingCommands implements Commands.Extension {
           if (a.containsKey("nodes")) d = d.with("nodes", nodes(Commands.str(a, "nodes")));
           return insert(s, d, 432, 216, "SmartArt " + layout);
         });
-    c.register(
-        "smartArt.textPane",
-        "Read or replace SmartArt text (one node per line, tab-indented for levels)",
-        "block?:integer,nodes?:string",
-        true,
-        (s, a) -> {
+    c.edit("smartArt.textPane", "block?:integer,nodes?:string",
+        "Read or replace SmartArt text (one node per line, tab-indented for levels)", (s, a) -> {
           Drawing d = smart(s, a);
           if (a.containsKey("nodes")) update(s, a, d = d.with("nodes", nodes(Commands.str(a, "nodes"))));
           return d.get("nodes", "");
         });
-    c.register(
-        "smartArt.addShape",
-        "Add a SmartArt node after the given node (default last)",
-        "block?:integer,text?:string,after?:integer,below?:boolean",
-        true,
-        (s, a) -> {
+    c.edit("smartArt.addShape", "block?:integer,text?:string,after?:integer,below?:boolean",
+        "Add a SmartArt node after the given node (default last)", (s, a) -> {
           Drawing d = smart(s, a);
           var lines = lines(d);
           int after = a.containsKey("after") ? Commands.integer(a, "after") : lines.size() - 1;
@@ -333,10 +248,10 @@ final class DrawingCommands implements Commands.Extension {
           lines.add(after + 1, indent + (a.containsKey("text") ? Commands.str(a, "text") : "Text"));
           return update(s, a, d.with("nodes", join(lines)));
         });
-    c.register("smartArt.promote", "Promote a SmartArt node one level", "block?:integer,node:integer", true,
-        (s, a) -> level(s, a, -1));
-    c.register("smartArt.demote", "Demote a SmartArt node one level", "block?:integer,node:integer", true,
-        (s, a) -> level(s, a, 1));
+    c.edit("smartArt.promote", "block?:integer,node:integer",
+        "Promote a SmartArt node one level", (s, a) -> level(s, a, -1));
+    c.edit("smartArt.demote", "block?:integer,node:integer",
+        "Demote a SmartArt node one level", (s, a) -> level(s, a, 1));
     c.register(
         "smartArt.layout",
         "Change SmartArt layout: " + DrawingOps.SMART_ART,
@@ -347,70 +262,43 @@ final class DrawingCommands implements Commands.Extension {
           if (!DrawingOps.SMART_ART.contains(layout)) throw new IllegalArgumentException("Unknown layout: " + layout);
           return update(s, a, smart(s, a).with("layout", layout));
         });
-    c.register(
-        "smartArt.colors",
-        "SmartArt colors: colorful or accent1..accent6",
-        "block?:integer,colors:string",
-        true,
-        (s, a) -> {
+    c.edit("smartArt.colors", "block?:integer,colors:string",
+        "SmartArt colors: colorful or accent1..accent6", (s, a) -> {
           String v = Commands.str(a, "colors");
           if (!"colorful".equals(v) && !(v.startsWith("accent") && v.length() == 7 && v.charAt(6) >= '1' && v.charAt(6) <= '6'))
             throw new IllegalArgumentException("colors: colorful or accent1..accent6");
           return update(s, a, smart(s, a).with("colors", v));
         });
-    c.register(
-        "smartArt.reset",
-        "Reset SmartArt colors and styles, keeping text and layout",
-        "block?:integer",
-        true,
-        (s, a) -> {
+    c.edit("smartArt.reset", "block?:integer",
+        "Reset SmartArt colors and styles, keeping text and layout", (s, a) -> {
           Drawing d = smart(s, a);
           return update(s, a, Drawing.of("smartArt").with("layout", d.get("layout", "list")).with("nodes", d.get("nodes", "")));
         });
 
     // ---------------------------------------------------------------- equations
-    c.register(
-        "insert.equation",
-        "Insert an equation in linear format (\\\\alpha, x^2, (a)/(b) ...)",
-        "text?:string,display?:boolean",
-        true,
-        (s, a) -> {
+    c.edit("insert.equation", "text?:string,display?:boolean",
+        "Insert an equation in linear format (\\\\alpha, x^2, (a)/(b) ...)", (s, a) -> {
           var d = Drawing.of("equation").with("text", a.containsKey("text") ? Commands.str(a, "text") : "");
           boolean display = !a.containsKey("display") || (Boolean) a.get("display");
           float width = display ? s.activeSection().resolved.page.contentWidth() : 160;
           return insert(s, d.with("display", String.valueOf(display)), width, 30, "Equation");
         });
-    c.register(
-        "equation.inputFormat",
+    c.edit("equation.inputFormat", "block?:integer,format:string",
         "Show the equation in professional (built-up) or linear form",
-        "block?:integer,format:string",
-        true,
         (s, a) -> update(s, a, equation(s, a).with("format", oneOf(Commands.str(a, "format"), "professional", "linear"))));
-    c.register(
-        "equation.convert",
-        "Toggle the equation between professional and linear form",
-        "block?:integer",
-        true,
-        (s, a) -> {
+    c.edit("equation.convert", "block?:integer",
+        "Toggle the equation between professional and linear form", (s, a) -> {
           Drawing d = equation(s, a);
           return update(s, a, d.with("format", "linear".equals(d.get("format", "professional")) ? "professional" : "linear"));
         });
-    c.register(
-        "equation.normalText",
-        "Toggle upright normal text in the equation",
-        "block?:integer,value?:boolean",
-        true,
-        (s, a) -> {
+    c.edit("equation.normalText", "block?:integer,value?:boolean",
+        "Toggle upright normal text in the equation", (s, a) -> {
           Drawing d = equation(s, a);
           boolean on = a.containsKey("value") ? (Boolean) a.get("value") : !d.flag("normalText");
           return update(s, a, d.with("normalText", String.valueOf(on)));
         });
-    c.register(
-        "equation.insertSymbol",
-        "Append a math symbol by control word (alpha, pm, infty, sum ...)",
-        "block?:integer,name:string",
-        true,
-        (s, a) -> {
+    c.edit("equation.insertSymbol", "block?:integer,name:string",
+        "Append a math symbol by control word (alpha, pm, infty, sum ...)", (s, a) -> {
           String name = Commands.str(a, "name");
           String word = name.startsWith("\\") ? name : "\\" + name;
           boolean known = false;
@@ -419,11 +307,8 @@ final class DrawingCommands implements Commands.Extension {
           Drawing d = equation(s, a);
           return update(s, a, d.with("text", d.get("text", "") + word + " "));
         });
-    c.register(
-        "equation.structure",
+    c.edit("equation.structure", "block?:integer,kind:string",
         "Append a structure: fraction, script, subscript, radical, integral, sum, bracket, function, accent, limit, matrix",
-        "block?:integer,kind:string",
-        true,
         (s, a) -> {
           String kind = Commands.str(a, "kind");
           String snippet =
@@ -442,12 +327,8 @@ final class DrawingCommands implements Commands.Extension {
           Drawing d = equation(s, a);
           return update(s, a, d.with("text", d.get("text", "") + snippet));
         });
-    c.register(
-        "equation.display",
-        "Change the equation to display (own line, full width) or inline",
-        "block?:integer,display?:boolean",
-        true,
-        (s, a) -> {
+    c.edit("equation.display", "block?:integer,display?:boolean",
+        "Change the equation to display (own line, full width) or inline", (s, a) -> {
           int block = block(s, a);
           Picture p = picture(s, block);
           Drawing d = equation(s, a);
@@ -456,18 +337,11 @@ final class DrawingCommands implements Commands.Extension {
           s.replacePicture(block, p.drawing(d.with("display", String.valueOf(display))).resize(width, p.height, p.alt, p.align));
           return display;
         });
-    c.register(
-        "equation.justify",
+    c.edit("equation.justify", "block?:integer,justify:string",
         "Equation justification: left, center or right",
-        "block?:integer,justify:string",
-        true,
         (s, a) -> update(s, a, equation(s, a).with("justify", oneOf(Commands.str(a, "justify"), "left", "center", "right"))));
-    c.register(
-        "equation.number",
-        "Number the equation; numbers count display equations in document order",
-        "block?:integer,value?:boolean",
-        true,
-        (s, a) -> {
+    c.edit("equation.number", "block?:integer,value?:boolean",
+        "Number the equation; numbers count display equations in document order", (s, a) -> {
           int block = block(s, a);
           Drawing d = equation(s, a);
           boolean on = a.containsKey("value") ? (Boolean) a.get("value") : d.get("number", "").isEmpty();
@@ -494,11 +368,8 @@ final class DrawingCommands implements Commands.Extension {
             s.replacePicture(block, p.drawing(p.drawing.with("strokes", strokes.isEmpty() ? stroke : strokes + "|" + stroke)));
             return Json.object("block", block, "strokes", count(p.drawing.get("strokes", "")) + 1);
           });
-    c.register(
-        "draw.addPen",
+    c.query("draw.addPen", "tool:string,color:string,width?:number",
         "Add a pen preset (tool pen|pencil|highlighter, color, width) to the pen gallery",
-        "tool:string,color:string,width?:number",
-        false,
         (s, a) -> {
           String tool = oneOf(Commands.str(a, "tool"), "pen", "pencil", "highlighter");
           String color = color(Commands.str(a, "color"));
@@ -506,12 +377,8 @@ final class DrawingCommands implements Commands.Extension {
           pens.add(tool + "," + color + "," + clamp(f(a, "width", 1), .25f, 72));
           return new ArrayList<Object>(pens);
         });
-    c.register(
-        "draw.eraser",
-        "Erase ink strokes passing near a point (x, y in points within the object)",
-        "block?:integer,x:number,y:number,radius?:number",
-        true,
-        (s, a) -> {
+    c.edit("draw.eraser", "block?:integer,x:number,y:number,radius?:number",
+        "Erase ink strokes passing near a point (x, y in points within the object)", (s, a) -> {
           int block = block(s, a);
           Picture p = ink(s, block);
           var before = p.drawing.get("strokes", "");
@@ -519,12 +386,8 @@ final class DrawingCommands implements Commands.Extension {
           if (!after.equals(before)) s.replacePicture(block, p.drawing(p.drawing.with("strokes", after)));
           return count(before) - count(after);
         });
-    c.register(
-        "draw.lasso",
-        "Lasso select: report the ink strokes whose points fall inside a rectangle",
-        "block?:integer,x:number,y:number,width:number,height:number",
-        false,
-        (s, a) -> {
+    c.query("draw.lasso", "block?:integer,x:number,y:number,width:number,height:number",
+        "Lasso select: report the ink strokes whose points fall inside a rectangle", (s, a) -> {
           Picture p = ink(s, block(s, a));
           float x = f(a, "x", 0), y = f(a, "y", 0), w = f(a, "width", 0), h = f(a, "height", 0);
           var hits = new ArrayList<Object>();
@@ -535,11 +398,8 @@ final class DrawingCommands implements Commands.Extension {
           }
           return hits;
         });
-    c.register(
-        "draw.inkToShape",
+    c.edit("draw.inkToShape", "block?:integer",
         "Convert the last ink stroke to the closest shape (line, rectangle, ellipse or triangle)",
-        "block?:integer",
-        true,
         (s, a) -> {
           int block = block(s, a);
           Picture p = ink(s, block);
@@ -563,12 +423,8 @@ final class DrawingCommands implements Commands.Extension {
           near(s, keep.block > block ? keep.block + 1 : keep.block);
           return shape;
         });
-    c.register(
-        "draw.replay",
-        "Ink replay: the strokes of an ink object in drawing order",
-        "block?:integer",
-        false,
-        (s, a) -> {
+    c.query("draw.replay", "block?:integer",
+        "Ink replay: the strokes of an ink object in drawing order", (s, a) -> {
           var out = new ArrayList<Object>();
           for (String stroke : DrawingOps.split(ink(s, block(s, a)).drawing.get("strokes", ""), '|'))
             if (!stroke.isEmpty()) out.add(stroke);
@@ -576,23 +432,15 @@ final class DrawingCommands implements Commands.Extension {
         });
 
     // ---------------------------------------------------------------- arrange
-    c.register(
-        "arrange.align",
-        "Align the object left, center or right",
-        "block?:integer,align:string",
-        true,
-        (s, a) -> {
+    c.edit("arrange.align", "block?:integer,align:string",
+        "Align the object left, center or right", (s, a) -> {
           int block = block(s, a);
           Picture p = picture(s, block);
           s.updatePicture(block, p.width, p.height, p.alt, oneOf(Commands.str(a, "align"), "left", "center", "right"), false);
           return null;
         });
-    c.register(
-        "arrange.wrap",
-        "Text wrapping: inline, square, tight, topBottom, behind or front",
-        "block?:integer,wrap:string",
-        true,
-        (s, a) -> {
+    c.edit("arrange.wrap", "block?:integer,wrap:string",
+        "Text wrapping: inline, square, tight, topBottom, behind or front", (s, a) -> {
           int block = block(s, a);
           Picture p = picture(s, block);
           String wrap = oneOf(Commands.str(a, "wrap"), "inline", "square", "tight", "topBottom", "behind", "front");
@@ -601,24 +449,12 @@ final class DrawingCommands implements Commands.Extension {
           s.replacePicture(block, p.drawing(d));
           return wrap;
         });
-    c.register(
-        "arrange.bringForward",
-        "Bring the object forward (or to front with all)",
-        "block?:integer,all?:boolean",
-        true,
-        (s, a) -> z(s, a, 1));
-    c.register(
-        "arrange.sendBackward",
-        "Send the object backward (or to back with all)",
-        "block?:integer,all?:boolean",
-        true,
-        (s, a) -> z(s, a, -1));
-    c.register(
-        "arrange.selectionPane",
-        "Selection pane: list objects, rename one or hide/show it",
-        "block?:integer,name?:string,visible?:boolean",
-        true,
-        (s, a) -> {
+    c.edit("arrange.bringForward", "block?:integer,all?:boolean",
+        "Bring the object forward (or to front with all)", (s, a) -> z(s, a, 1));
+    c.edit("arrange.sendBackward", "block?:integer,all?:boolean",
+        "Send the object backward (or to back with all)", (s, a) -> z(s, a, -1));
+    c.edit("arrange.selectionPane", "block?:integer,name?:string,visible?:boolean",
+        "Selection pane: list objects, rename one or hide/show it", (s, a) -> {
           if (a.containsKey("name") || a.containsKey("visible")) {
             int block = block(s, a);
             Picture p = picture(s, block);
@@ -630,17 +466,10 @@ final class DrawingCommands implements Commands.Extension {
           }
           return objects(s.document());
         });
-    c.register(
-        "select.objects",
-        "List every picture and drawn object (block, kind, name)",
-        "",
-        false,
-        (s, a) -> objects(s.document()));
-    c.register(
-        "arrange.group",
+    c.query("select.objects", "",
+        "List every picture and drawn object (block, kind, name)", (s, a) -> objects(s.document()));
+    c.edit("arrange.group", "block?:integer,from?:integer,to?:integer,ungroup?:boolean",
         "Group the drawn objects in blocks from..to into one canvas, or ungroup a group",
-        "block?:integer,from?:integer,to?:integer,ungroup?:boolean",
-        true,
         DrawingCommands::group);
   }
 

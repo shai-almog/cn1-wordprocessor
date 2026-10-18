@@ -120,12 +120,9 @@ public final class MailingsCommands implements Commands.Extension {
   }
 
   public void register(Commands c) {
-    c.register(
-        "mailings.envelopes",
-        "Create an envelope, optionally before the current document",
-        "delivery?:string,return?:string,size?:string,width?:number,height?:number,add?:boolean",
-        true,
-        (s, a) -> {
+    c.edit(
+        "mailings.envelopes", "delivery?:string,return?:string,size?:string,width?:number,height?:number,add?:boolean",
+        "Create an envelope, optionally before the current document", (s, a) -> {
           if (a.containsKey("width") != a.containsKey("height"))
             throw new IllegalArgumentException("Both envelope dimensions are required");
           if (a.containsKey("width"))
@@ -149,12 +146,9 @@ public final class MailingsCommands implements Commands.Extension {
               "height",
               s.document().sectionAt(0).raw.page.height);
         });
-    c.register(
-        "mailings.labels",
-        "Create label sheets from text or all selected recipients",
-        "text?:string,product?:string,rows?:integer,cols?:integer,fromRecipients?:boolean,single?:object",
-        true,
-        (s, a) -> {
+    c.edit(
+        "mailings.labels", "text?:string,product?:string,rows?:integer,cols?:integer,fromRecipients?:boolean,single?:object",
+        "Create label sheets from text or all selected recipients", (s, a) -> {
           int row = 0, column = 0;
           if (a.containsKey("single")) {
             Map<?, ?> single = (Map<?, ?>) a.get("single");
@@ -195,34 +189,20 @@ public final class MailingsCommands implements Commands.Extension {
               "product",
               text(a, "product", "letter-3x10"));
         });
-    c.register(
-        "mailings.inspect",
-        "Inspect current recipient and merge state",
-        "",
-        false,
-        (s, a) -> state(s));
-    c.register(
-        "mailings.start",
-        "Choose merged document type",
-        "kind:string",
-        true,
-        (s, a) -> {
+    c.query("mailings.inspect", "",
+        "Inspect current recipient and merge state", (s, a) -> state(s));
+    c.edit("mailings.start", "kind:string",
+        "Choose merged document type", (s, a) -> {
           var d = s.mergeData();
           s.mergeData(d.options((String) a.get("kind"), d.preview, d.highlight, d.record));
           return state(s);
         });
-    c.register(
-        "mailings.recipients",
-        "Load a CSV or typed recipient list",
-        "csv?:string,headers?:boolean,rows?:array,fields?:array,data?:string,sheet?:string,sheetIndex?:integer",
-        true,
-        MailingsCommands::recipients);
-    c.register(
-        "mailings.editRecipients",
-        "Read or replace the current recipient list",
-        "csv?:string,headers?:boolean,rows?:array,fields?:array,data?:string,sheet?:string,sheetIndex?:integer",
-        true,
-        (s, a) -> {
+    c.edit(
+        "mailings.recipients", "csv?:string,headers?:boolean,rows?:array,fields?:array,data?:string,sheet?:string,sheetIndex?:integer",
+        "Load a CSV or typed recipient list", MailingsCommands::recipients);
+    c.edit(
+        "mailings.editRecipients", "csv?:string,headers?:boolean,rows?:array,fields?:array,data?:string,sheet?:string,sheetIndex?:integer",
+        "Read or replace the current recipient list", (s, a) -> {
           if (!a.isEmpty()) return recipients(s, a);
           return Json.object(
               "fields",
@@ -234,41 +214,26 @@ public final class MailingsCommands implements Commands.Extension {
               "sourceIndices",
               s.mergeData().sourceIndices);
         });
-    c.register(
-        "mailings.insertField",
-        "Insert a recipient field",
-        "field:string",
-        true,
-        (s, a) -> {
+    c.edit("mailings.insertField", "field:string",
+        "Insert a recipient field", (s, a) -> {
           var field = (String) a.get("field");
           if (field.trim().isEmpty()) throw new IllegalArgumentException("Enter a field name");
           MailMerge.insert(s, "MERGEFIELD " + MailMerge.quote(field));
           return null;
         });
-    c.register(
-        "mailings.addressBlock",
-        "Insert a mailing address block",
-        "",
-        true,
-        (s, a) -> {
+    c.edit("mailings.addressBlock", "",
+        "Insert a mailing address block", (s, a) -> {
           MailMerge.insert(s, "ADDRESSBLOCK");
           return null;
         });
-    c.register(
-        "mailings.greetingLine",
-        "Insert a personalized greeting",
-        "",
-        true,
-        (s, a) -> {
+    c.edit("mailings.greetingLine", "",
+        "Insert a personalized greeting", (s, a) -> {
           MailMerge.insert(s, "GREETINGLINE");
           return null;
         });
-    c.register(
-        "mailings.rules",
-        "Insert an IF, NEXT, NEXTIF, SKIPIF or MERGEREC field",
-        "rule:string,field?:string,operator?:string,value?:string,then?:string,else?:string",
-        true,
-        (s, a) -> {
+    c.edit(
+        "mailings.rules", "rule:string,field?:string,operator?:string,value?:string,then?:string,else?:string",
+        "Insert an IF, NEXT, NEXTIF, SKIPIF or MERGEREC field", (s, a) -> {
           MailMerge.insert(
               s,
               MailMerge.rule(
@@ -280,12 +245,9 @@ public final class MailingsCommands implements Commands.Extension {
                   text(a, "else", "")));
           return null;
         });
-    c.register(
-        "mailings.manageRecipients",
-        "Sort, filter and exclude recipients without deleting source rows",
-        "sortField?:string,descending?:boolean,filterField?:string,filterOperator?:string,filterValue?:string,excluded?:array",
-        true,
-        (s, a) -> {
+    c.edit(
+        "mailings.manageRecipients", "sortField?:string,descending?:boolean,filterField?:string,filterOperator?:string,filterValue?:string,excluded?:array",
+        "Sort, filter and exclude recipients without deleting source rows", (s, a) -> {
           var d = s.mergeData();
           Collection<Integer> excluded = d.excluded;
           if (a.containsKey("excluded")) {
@@ -309,12 +271,8 @@ public final class MailingsCommands implements Commands.Extension {
           MailMerge.refresh(s);
           return state(s);
         });
-    c.register(
-        "mailings.matchFields",
-        "Read or override address field mappings",
-        "mapping?:object",
-        true,
-        (s, a) -> {
+    c.edit("mailings.matchFields", "mapping?:object",
+        "Read or override address field mappings", (s, a) -> {
           if (a.containsKey("mapping")) {
             var map = new LinkedHashMap<String, String>();
             for (Map.Entry<?, ?> e : ((Map<?, ?>) a.get("mapping")).entrySet()) {
@@ -328,53 +286,33 @@ public final class MailingsCommands implements Commands.Extension {
           return Json.object(
               "fields", s.mergeData().fields, "mapping", s.mergeData().mappedFields());
         });
-    c.register(
-        "mailings.highlightFields",
-        "Toggle merge field shading",
-        "value?:boolean",
-        true,
-        (s, a) -> {
+    c.edit("mailings.highlightFields", "value?:boolean",
+        "Toggle merge field shading", (s, a) -> {
           var d = s.mergeData();
           s.mergeData(d.options(d.kind, d.preview, bool(a, "value", !d.highlight), d.record));
           return state(s);
         });
-    c.register(
-        "mailings.preview",
-        "Toggle personalized result preview",
-        "value?:boolean,record?:integer",
-        true,
-        (s, a) -> {
+    c.edit("mailings.preview", "value?:boolean,record?:integer",
+        "Toggle personalized result preview", (s, a) -> {
           MailMerge.preview(
               s,
               bool(a, "value", !s.mergeData().preview),
               integer(a, "record", s.mergeData().record + 1) - 1);
           return state(s);
         });
-    c.register(
-        "mailings.next",
-        "Preview next recipient",
-        "",
-        true,
-        (s, a) -> {
+    c.edit("mailings.next", "",
+        "Preview next recipient", (s, a) -> {
           MailMerge.preview(
               s, true, Math.min(s.mergeData().rows.size() - 1, s.mergeData().record + 1));
           return state(s);
         });
-    c.register(
-        "mailings.previous",
-        "Preview previous recipient",
-        "",
-        true,
-        (s, a) -> {
+    c.edit("mailings.previous", "",
+        "Preview previous recipient", (s, a) -> {
           MailMerge.preview(s, true, Math.max(0, s.mergeData().record - 1));
           return state(s);
         });
-    c.register(
-        "mailings.findRecipient",
-        "Find a recipient containing text",
-        "text:string",
-        true,
-        (s, a) -> {
+    c.edit("mailings.findRecipient", "text:string",
+        "Find a recipient containing text", (s, a) -> {
           var query = ((String) a.get("text")).toLowerCase();
           for (int i = 0; i < s.mergeData().rows.size(); i++)
             for (String value : s.mergeData().rows.get(i))
@@ -384,12 +322,8 @@ public final class MailingsCommands implements Commands.Extension {
               }
           throw new IllegalArgumentException("No matching recipient");
         });
-    c.register(
-        "mailings.checkErrors",
-        "Check template fields against recipient columns",
-        "",
-        false,
-        (s, a) -> {
+    c.query("mailings.checkErrors", "",
+        "Check template fields against recipient columns", (s, a) -> {
           var missing = MailMerge.errors(s.document(), s.mergeData());
           return Json.object(
               "ok",
@@ -399,12 +333,8 @@ public final class MailingsCommands implements Commands.Extension {
               "records",
               s.mergeData().rows.size());
         });
-    c.register(
-        "mailings.finish",
-        "Create an editable merged document; undo restores the template",
-        "from?:integer,to?:integer",
-        true,
-        (s, a) ->
+    c.edit("mailings.finish", "from?:integer,to?:integer",
+        "Create an editable merged document; undo restores the template", (s, a) ->
             Json.object(
                 "records",
                 MailMerge.finish(

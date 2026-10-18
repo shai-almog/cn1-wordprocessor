@@ -29,24 +29,16 @@ final class CatalogNavigationCommands implements Commands.Extension {
     caret(c, "caret.paraDown", s -> TextNavigation.paragraph(s.document(), b(s), o(s), true));
     caret(c, "caret.docStart", s -> TextNavigation.boundary(s.document(), false));
     caret(c, "caret.docEnd", s -> TextNavigation.boundary(s.document(), true));
-    c.register(
-        "select.word",
-        "Select the word at the caret",
-        "",
-        false,
-        (s, a) -> {
+    c.query("select.word", "",
+        "Select the word at the caret", (s, a) -> {
           int[] start = TextNavigation.word(s.document(), b(s), o(s) + 1, false);
           int[] end = TextNavigation.word(s.document(), start[0], start[1], true);
           if (end[0] != start[0]) end = TextNavigation.paragraphEnd(s.document(), start[0], 0);
           s.selectRange(start[0], start[1], end[0], end[1]);
           return s.selectedText();
         });
-    c.register(
-        "select.sentence",
-        "Select the sentence at the caret",
-        "",
-        false,
-        (s, a) -> {
+    c.query("select.sentence", "",
+        "Select the sentence at the caret", (s, a) -> {
           var text = paragraph(s).text.plainText();
           int at = Math.min(o(s), text.length()), start = at, end = at;
           while (start > 0 && !sentenceEnd(text, start - 1)) start--;
@@ -57,39 +49,23 @@ final class CatalogNavigationCommands implements Commands.Extension {
           s.select(b(s), start, end);
           return s.selectedText();
         });
-    c.register(
-        "select.paragraph",
-        "Select the paragraph at the caret",
-        "",
-        false,
-        (s, a) -> {
+    c.query("select.paragraph", "",
+        "Select the paragraph at the caret", (s, a) -> {
           s.select(b(s), 0, paragraph(s).text.length());
           return s.selectedText();
         });
-    c.register(
-        "text.lineBreak",
-        "Insert a line break within the paragraph",
-        "",
-        true,
-        (s, a) -> {
+    c.edit("text.lineBreak", "",
+        "Insert a line break within the paragraph", (s, a) -> {
           s.replace("\n");
           return null;
         });
-    c.register(
-        "text.deleteWordBack",
-        "Delete to the previous word start",
-        "",
-        true,
-        (s, a) -> {
+    c.edit("text.deleteWordBack", "",
+        "Delete to the previous word start", (s, a) -> {
           TextNavigation.deleteWord(s, false);
           return null;
         });
-    c.register(
-        "text.deleteWordForward",
-        "Delete to the next word start",
-        "",
-        true,
-        (s, a) -> {
+    c.edit("text.deleteWordForward", "",
+        "Delete to the next word start", (s, a) -> {
           TextNavigation.deleteWord(s, true);
           return null;
         });
@@ -97,18 +73,10 @@ final class CatalogNavigationCommands implements Commands.Extension {
     // Find, replace and history.
     find(c, "edit.findNext", true);
     find(c, "edit.findPrevious", false);
-    c.register(
-        "edit.replaceAll",
-        "Replace every occurrence of literal text",
-        "text:string,replacement:string",
-        true,
-        (s, a) -> c.execute(s, "replace.all", a));
-    c.register(
-        "edit.undoTo",
-        "Undo the given number of steps",
-        "count:integer",
-        false,
-        (s, a) -> {
+    c.edit("edit.replaceAll", "text:string,replacement:string",
+        "Replace every occurrence of literal text", (s, a) -> c.execute(s, "replace.all", a));
+    c.query("edit.undoTo", "count:integer",
+        "Undo the given number of steps", (s, a) -> {
           int count = Commands.integer(a, "count"), done = 0;
           if (count < 1) throw new IllegalArgumentException("Count must be positive");
           while (done < count && s.canUndo()) {
@@ -124,12 +92,8 @@ final class CatalogNavigationCommands implements Commands.Extension {
     fieldFlag(c, "fields.toggleCode", "Toggle field codes in the selection", false, false);
     fieldStep(c, "fields.next", true);
     fieldStep(c, "fields.previous", false);
-    c.register(
-        "fields.unlink",
-        "Replace fields in the selection with their current results",
-        "",
-        true,
-        (s, a) -> {
+    c.edit("fields.unlink", "",
+        "Replace fields in the selection with their current results", (s, a) -> {
           int block = b(s), from = s.selection().start(), to = s.selection().end(), count = 0;
           if (s.selection().startBlock() != s.selection().endBlock())
             throw new IllegalArgumentException("Select within one paragraph");
@@ -142,21 +106,13 @@ final class CatalogNavigationCommands implements Commands.Extension {
           }
           return count;
         });
-    c.register(
-        "insert.pageNumber",
-        "Insert a PAGE field",
-        "",
-        true,
-        (s, a) -> {
+    c.edit("insert.pageNumber", "",
+        "Insert a PAGE field", (s, a) -> {
           s.insertField(new InlineField("PAGE", "1", false, false));
           return null;
         });
-    c.register(
-        "insert.dateTime",
-        "Insert a DATE field with an optional picture (\\@ format)",
-        "format?:string,update?:boolean",
-        true,
-        (s, a) -> {
+    c.edit("insert.dateTime", "format?:string,update?:boolean",
+        "Insert a DATE field with an optional picture (\\@ format)", (s, a) -> {
           String format = a.containsKey("format") ? Commands.str(a, "format") : "M/d/yyyy";
           if (format.indexOf('"') >= 0) throw new IllegalArgumentException("Invalid format");
           s.insertField(
@@ -164,12 +120,8 @@ final class CatalogNavigationCommands implements Commands.Extension {
                   "DATE \\@ \"" + format + "\"", "", Boolean.FALSE.equals(a.get("update")), false));
           return null;
         });
-    c.register(
-        "insert.symbol",
-        "Insert a character by text or code point",
-        "text?:string,code?:integer",
-        true,
-        (s, a) -> {
+    c.edit("insert.symbol", "text?:string,code?:integer",
+        "Insert a character by text or code point", (s, a) -> {
           String text =
               a.containsKey("code")
                   ? new String(Character.toChars(Commands.integer(a, "code")))
@@ -178,81 +130,46 @@ final class CatalogNavigationCommands implements Commands.Extension {
           s.replace(text);
           return null;
         });
-    c.register(
-        "insert.table",
-        "Insert a table at the caret",
-        "rows:integer,cols:integer",
-        true,
-        (s, a) -> {
+    c.edit("insert.table", "rows:integer,cols:integer",
+        "Insert a table at the caret", (s, a) -> {
           s.insertTable(Commands.integer(a, "rows"), Commands.integer(a, "cols"));
           return null;
         });
-    c.register(
-        "insert.removeLink",
-        "Remove hyperlinks from the selection",
-        "",
-        true,
-        (s, a) -> {
+    c.edit("insert.removeLink", "",
+        "Remove hyperlinks from the selection", (s, a) -> {
           s.format("link", "");
           return null;
         });
 
     // Comments under the Review tab ids.
-    c.register(
-        "review.newComment",
-        "Comment on the selected range",
-        "text:string,author?:string",
-        true,
-        (s, a) -> {
+    c.edit("review.newComment", "text:string,author?:string",
+        "Comment on the selected range", (s, a) -> {
           s.addComment(
               a.containsKey("author") ? Commands.str(a, "author") : s.reviewAuthor(),
               Commands.str(a, "text"));
           return null;
         });
-    c.register(
-        "review.nextComment",
-        "Move to the next comment",
-        "",
-        false,
-        (s, a) -> s.navigateComment(false));
-    c.register(
-        "review.previousComment",
-        "Move to the previous comment",
-        "",
-        false,
-        (s, a) -> s.navigateComment(true));
+    c.query("review.nextComment", "",
+        "Move to the next comment", (s, a) -> s.navigateComment(false));
+    c.query("review.previousComment", "",
+        "Move to the previous comment", (s, a) -> s.navigateComment(true));
 
     // Outline levels through heading styles.
     outline(c, "outline.promote", -1);
     outline(c, "para.promote", -1);
     outline(c, "outline.demote", 1);
     outline(c, "para.demote", 1);
-    c.register(
-        "outline.promoteToHeading1",
-        "Make the paragraph Heading 1",
-        "",
-        true,
-        (s, a) -> heading(s, 1));
-    c.register(
-        "outline.demoteToBody",
-        "Make the paragraph body text",
-        "",
-        true,
-        (s, a) -> heading(s, 0));
-    c.register(
-        "outline.level",
+    c.edit("outline.promoteToHeading1", "",
+        "Make the paragraph Heading 1", (s, a) -> heading(s, 1));
+    c.edit("outline.demoteToBody", "",
+        "Make the paragraph body text", (s, a) -> heading(s, 0));
+    c.edit("outline.level", "level:integer",
         "Set the heading level 1-9, or 0 for body text",
-        "level:integer",
-        true,
         (s, a) -> heading(s, Commands.integer(a, "level")));
 
     // Section options.
-    c.register(
-        "layout.differentFirstPage",
-        "Use a different header/footer on the first page of the section",
-        "value?:boolean",
-        true,
-        (s, a) -> {
+    c.edit("layout.differentFirstPage", "value?:boolean",
+        "Use a different header/footer on the first page of the section", (s, a) -> {
           var f = s.activeSection().raw.furniture;
           boolean v = a.containsKey("value") ? (Boolean) a.get("value") : !f.differentFirst;
           s.section(
@@ -261,12 +178,8 @@ final class CatalogNavigationCommands implements Commands.Extension {
                   .furniture(f.options(v, f.differentEven, f.headerDistance, f.footerDistance)));
           return null;
         });
-    c.register(
-        "layout.differentOddEven",
-        "Use different odd and even page headers/footers",
-        "value?:boolean",
-        true,
-        (s, a) -> {
+    c.edit("layout.differentOddEven", "value?:boolean",
+        "Use different odd and even page headers/footers", (s, a) -> {
           var f = s.activeSection().raw.furniture;
           boolean v = a.containsKey("value") ? (Boolean) a.get("value") : !f.differentEven;
           s.section(
@@ -313,11 +226,8 @@ final class CatalogNavigationCommands implements Commands.Extension {
             return null;
           });
     }
-    c.register(
-        "layout.linkToPrevious",
+    c.edit("layout.linkToPrevious", "story:string,value?:boolean",
         "Link a header/footer variant to the previous section, or unlink it with a copy",
-        "story:string,value?:boolean",
-        true,
         (s, a) -> {
           String key = Commands.str(a, "story");
           PageFurniture.check(key);
@@ -332,12 +242,8 @@ final class CatalogNavigationCommands implements Commands.Extension {
           s.section(range.raw.furniture(f));
           return link;
         });
-    c.register(
-        "hf.position",
-        "Header and footer distance from the page edge in points",
-        "header?:number,footer?:number",
-        true,
-        (s, a) -> {
+    c.edit("hf.position", "header?:number,footer?:number",
+        "Header and footer distance from the page edge in points", (s, a) -> {
           var raw = s.activeSection().raw;
           var f = raw.furniture;
           float h = a.containsKey("header") ? ((Number) a.get("header")).floatValue() : f.headerDistance;
@@ -347,11 +253,8 @@ final class CatalogNavigationCommands implements Commands.Extension {
           s.section(raw.furniture(f.options(f.differentFirst, f.differentEven, h, b)));
           return null;
         });
-    c.register(
-        "layout.size",
+    c.edit("layout.size", "name?:string,width?:number,height?:number",
         "Paper size by name (Letter, Legal, Executive, Tabloid, A3, A4, A5, B5) or width/height",
-        "name?:string,width?:number,height?:number",
-        true,
         (s, a) -> {
           var p = s.activeSection().raw.page;
           float w, h;
@@ -378,12 +281,8 @@ final class CatalogNavigationCommands implements Commands.Extension {
         });
 
     // Table properties at the caret cell.
-    c.register(
-        "table.repeatHeader",
-        "Toggle repeating the caret row (and rows above) as a header",
-        "value?:boolean",
-        true,
-        (s, a) -> {
+    c.edit("table.repeatHeader", "value?:boolean",
+        "Toggle repeating the caret row (and rows above) as a header", (s, a) -> {
           Table t = table(s);
           int rows = s.cellRow() + 1;
           boolean on =
@@ -391,23 +290,16 @@ final class CatalogNavigationCommands implements Commands.Extension {
           s.formatTable(s.cellBlock(), t.format.headerRows(on ? rows : 0));
           return null;
         });
-    c.register(
-        "table.shading",
-        "Shade the selected cells (RRGGBB, or null/none to clear)",
-        "color?:string",
-        true,
-        (s, a) -> {
+    c.edit("table.shading", "color?:string",
+        "Shade the selected cells (RRGGBB, or null/none to clear)", (s, a) -> {
           var v = a.get("color");
           int color =
               v == null || "none".equals(v) ? 0xffffff : Integer.parseInt(hex((String) v), 16);
           cells(s, cell -> cell(cell, color, cell.horizontalPadding, cell.verticalPadding));
           return null;
         });
-    c.register(
-        "table.borders",
+    c.edit("table.borders", "kind:string,color?:string,width?:number",
         "Borders on the selected cells: all, none, outside, inside, insideH, insideV, top, bottom, left, right",
-        "kind:string,color?:string,width?:number",
-        true,
         (s, a) -> {
           tableBorders(
               s,
@@ -416,21 +308,13 @@ final class CatalogNavigationCommands implements Commands.Extension {
               a.containsKey("width") ? ((Number) a.get("width")).floatValue() : .5f);
           return null;
         });
-    c.register(
-        "table.style",
-        "Apply a built-in table style",
-        "style:string",
-        true,
-        (s, a) -> {
+    c.edit("table.style", "style:string",
+        "Apply a built-in table style", (s, a) -> {
           tableStyle(s, Commands.str(a, "style"));
           return null;
         });
-    c.register(
-        "table.cellMargins",
-        "Cell padding in points for the selected cells",
-        "horizontal?:number,vertical?:number",
-        true,
-        (s, a) -> {
+    c.edit("table.cellMargins", "horizontal?:number,vertical?:number",
+        "Cell padding in points for the selected cells", (s, a) -> {
           final Float hz = a.containsKey("horizontal") ? ((Number) a.get("horizontal")).floatValue() : null;
           final Float vt = a.containsKey("vertical") ? ((Number) a.get("vertical")).floatValue() : null;
           if (hz != null && (hz < 0 || hz > 72) || vt != null && (vt < 0 || vt > 72))

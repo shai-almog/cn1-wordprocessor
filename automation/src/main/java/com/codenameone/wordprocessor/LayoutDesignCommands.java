@@ -75,23 +75,14 @@ final class LayoutDesignCommands implements Commands.Extension {
       Arrays.asList("Heading1", "Heading2", "Heading3", "Heading4", "Heading5", "Heading6", "Title", "Subtitle");
 
   public void register(Commands c) {
-    c.register(
-        "para.rtl",
+    c.edit("para.rtl", "",
         "Make the selected paragraphs right-to-left (mirrors alignment and indents)",
-        "",
-        true,
         (s, a) -> direction(s, true));
-    c.register(
-        "para.ltr",
-        "Make the selected paragraphs left-to-right",
-        "",
-        true,
-        (s, a) -> direction(s, false));
-    c.register(
-        "para.asianTypography",
+    c.edit("para.ltr", "",
+        "Make the selected paragraphs left-to-right", (s, a) -> direction(s, false));
+    c.edit(
+        "para.asianTypography", "kinsoku?:boolean,wordWrap?:boolean,overflowPunct?:boolean,autoSpaceDE?:boolean,autoSpaceDN?:boolean",
         "Asian typography: kinsoku line breaking, Latin word wrap, hanging punctuation, auto spacing",
-        "kinsoku?:boolean,wordWrap?:boolean,overflowPunct?:boolean,autoSpaceDE?:boolean,autoSpaceDN?:boolean",
-        true,
         (s, a) -> {
           final Map<String, Object> args = a;
           s.mapParagraphs(
@@ -161,29 +152,17 @@ final class LayoutDesignCommands implements Commands.Extension {
           out.put("rtl", p.format.rtl);
           return out;
         });
-    c.register(
-        "layout.sectionRtl",
+    c.edit("layout.sectionRtl", "value?:boolean",
         "Right-to-left section: columns and gutter run right to left",
-        "value?:boolean",
-        true,
         (s, a) -> sectionLayout(s, "rtl", String.valueOf(!a.containsKey("value") || Boolean.TRUE.equals(a.get("value")))));
-    c.register(
-        "layout.verticalAlign",
+    c.edit("layout.verticalAlign", "value:string",
         "Vertical page alignment of the section: top, center, both or bottom",
-        "value:string",
-        true,
         (s, a) -> sectionLayout(s, "verticalAlign", Commands.str(a, "value")));
-    c.register(
-        "layout.textDirection",
+    c.edit("layout.textDirection", "value:string",
         "Section text flow: lrTb (horizontal), tbRl (vertical) or btLr",
-        "value:string",
-        true,
         (s, a) -> sectionLayout(s, "textDirection", Commands.str(a, "value")));
-    c.register(
-        "layout.documentGrid",
+    c.edit("layout.documentGrid", "type:string,linePitch?:number,charPitch?:number",
         "Document grid: default, lines, linesAndChars or snapToChars, with line/character pitch in points",
-        "type:string,linePitch?:number,charPitch?:number",
-        true,
         (s, a) -> {
           var r = s.activeSection().raw;
           var d = r.decor.withLayout("grid", Commands.str(a, "type"));
@@ -193,11 +172,9 @@ final class LayoutDesignCommands implements Commands.Extension {
           s.section(r.decor(d));
           return d.layout();
         });
-    c.register(
-        "layout.pageSetup",
+    c.edit(
+        "layout.pageSetup", "width?:number,height?:number,orientation?:string,top?:number,right?:number,bottom?:number,left?:number,verticalAlign?:string",
         "Page setup dialog: size, orientation and margins in points for the current section",
-        "width?:number,height?:number,orientation?:string,top?:number,right?:number,bottom?:number,left?:number,verticalAlign?:string",
-        true,
         (s, a) -> {
           var r = s.activeSection().raw;
           var p = r.page;
@@ -234,11 +211,8 @@ final class LayoutDesignCommands implements Commands.Extension {
           out.put("verticalAlign", s.activeSection().raw.decor.layout("verticalAlign", "top"));
           return out;
         });
-    c.register(
-        "layout.hyphenation",
+    c.edit("layout.hyphenation", "mode:string,zone?:number,limit?:number,caps?:boolean",
         "Hyphenation: none, automatic or manual, with hyphenation zone (pt), consecutive-hyphen limit and caps",
-        "mode:string,zone?:number,limit?:number,caps?:boolean",
-        true,
         (s, a) -> {
           String mode = Commands.str(a, "mode");
           if (!Arrays.asList("none", "automatic", "manual").contains(mode))
@@ -251,57 +225,37 @@ final class LayoutDesignCommands implements Commands.Extension {
           return p.setting("hyphenation", "none");
         });
 
-    c.register(
-        "design.theme",
-        "Apply a document theme (colors and fonts of headings, title and body)",
-        "name:string",
-        true,
-        (s, a) -> {
+    c.edit("design.theme", "name:string",
+        "Apply a document theme (colors and fonts of headings, title and body)", (s, a) -> {
           String[] t = find(THEMES, Commands.str(a, "name"));
           restyle(s, t[1], t[2], t[3], t[4]);
           settings(s, "design.theme", t[0], "design.colors", t[0], "design.fonts", t[0]);
           return t[0];
         });
-    c.register(
-        "design.themeColors",
-        "Apply a theme color set to headings and title",
-        "name:string",
-        true,
-        (s, a) -> {
+    c.edit("design.themeColors", "name:string",
+        "Apply a theme color set to headings and title", (s, a) -> {
           String[] t = find(COLORS, Commands.str(a, "name"));
           restyle(s, t[1], t[2], null, null);
           settings(s, "design.colors", t[0]);
           return t[0];
         });
-    c.register(
-        "design.themeFonts",
-        "Apply a theme font pair (headings, body)",
-        "name:string",
-        true,
-        (s, a) -> {
+    c.edit("design.themeFonts", "name:string",
+        "Apply a theme font pair (headings, body)", (s, a) -> {
           String[] t = find(FONTS, Commands.str(a, "name"));
           restyle(s, null, null, t[1], t[2]);
           settings(s, "design.fonts", t[0]);
           return t[0];
         });
-    c.register(
-        "design.styleSet",
-        "Apply a style set to the heading and title styles",
-        "name:string",
-        true,
-        (s, a) -> {
+    c.edit("design.styleSet", "name:string",
+        "Apply a style set to the heading and title styles", (s, a) -> {
           String name = Commands.str(a, "name");
           if (!STYLE_SETS.contains(name)) throw new IllegalArgumentException("Unknown style set: " + name);
           styleSet(s, name);
           settings(s, "design.styleSet", name);
           return name;
         });
-    c.register(
-        "design.paragraphSpacing",
-        "Paragraph spacing preset for the Normal style",
-        "name:string",
-        true,
-        (s, a) -> {
+    c.edit("design.paragraphSpacing", "name:string",
+        "Paragraph spacing preset for the Normal style", (s, a) -> {
           String name = Commands.str(a, "name");
           for (Object[] p : SPACING)
             if (p[0].equals(name)) {
@@ -318,11 +272,8 @@ final class LayoutDesignCommands implements Commands.Extension {
             }
           throw new IllegalArgumentException("Unknown paragraph spacing: " + name);
         });
-    c.register(
-        "design.effects",
+    c.edit("design.effects", "name:string",
         "Theme effects: the shadow/glow look applied to shapes, text boxes, SmartArt and charts",
-        "name:string",
-        true,
         (s, a) -> {
           String name = Commands.str(a, "name");
           if (!EFFECTS.contains(name)) throw new IllegalArgumentException("Unknown effects: " + name);
@@ -343,11 +294,8 @@ final class LayoutDesignCommands implements Commands.Extension {
           s.documentProperties(s.document().properties.withSetting("design.effects", name));
           return name;
         });
-    c.register(
-        "design.setDefault",
+    c.query("design.setDefault", "",
         "Remember the current theme, colors, fonts, style set and spacing as the default for new documents",
-        "",
-        false,
         (s, a) -> {
           var p = s.document().properties;
           var b = new StringBuilder();

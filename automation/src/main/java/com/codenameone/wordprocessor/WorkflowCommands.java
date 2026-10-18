@@ -52,13 +52,12 @@ final class WorkflowCommands implements Commands.Extension {
   };
 
   public void register(Commands c) {
-    c.register("hf.previous", "Go to the previous section's header/footer", "", false, (s, a) -> section(s, -1));
-    c.register("hf.next", "Go to the next section's header/footer", "", false, (s, a) -> section(s, 1));
-    c.register(
-        "select.extend",
+    c.query("hf.previous", "",
+        "Go to the previous section's header/footer", (s, a) -> section(s, -1));
+    c.query("hf.next", "",
+        "Go to the next section's header/footer", (s, a) -> section(s, 1));
+    c.query("select.extend", "block?:integer,offset?:integer",
         "Extend selection (F8): grow to word, sentence, paragraph, then the document; or extend to block/offset",
-        "block?:integer,offset?:integer",
-        false,
         (s, a) -> {
           var sel = s.selection();
           if (a.containsKey("block")) {
@@ -76,11 +75,8 @@ final class WorkflowCommands implements Commands.Extension {
           }
           return s.selectedText();
         });
-    c.register(
-        "select.similar",
+    c.edit("select.similar", "property?:string,value?:string",
         "Select text with similar formatting; returns the ranges and, with property/value, formats them all",
-        "property?:string,value?:string",
-        true,
         (s, a) -> {
           var like = s.document().paragraph(s.selection().block).text.styleAt(Math.max(0, s.selection().start() - (s.selection().collapsed() ? 1 : 0)));
           var ranges = new ArrayList<int[]>();
@@ -108,11 +104,9 @@ final class WorkflowCommands implements Commands.Extension {
           for (int[] r : ranges) out.add(Arrays.asList(r[0], r[1], r[2]));
           return out;
         });
-    c.register(
-        "select.column",
+    c.edit(
+        "select.column", "fromBlock:integer,toBlock:integer,startColumn:integer,endColumn:integer,action?:string",
         "Column (block) selection: characters startColumn..endColumn of blocks fromBlock..toBlock; copy or delete",
-        "fromBlock:integer,toBlock:integer,startColumn:integer,endColumn:integer,action?:string",
-        true,
         (s, a) -> {
           int b0 = Commands.integer(a, "fromBlock"), b1 = Commands.integer(a, "toBlock");
           int c0 = Commands.integer(a, "startColumn"), c1 = Commands.integer(a, "endColumn");
@@ -138,11 +132,9 @@ final class WorkflowCommands implements Commands.Extension {
           else s.selectRange(b0, Math.min(c0, s.document().paragraph(b0).text.length()), b1, Math.min(c1, s.document().paragraph(b1).text.length()));
           return text.toString();
         });
-    c.register(
-        "edit.advancedFind",
+    c.query(
+        "edit.advancedFind", "text:string,matchCase?:boolean,wholeWord?:boolean,wildcards?:boolean,index?:integer",
         "Advanced Find: match case, whole words and wildcards (? * [abc] [!a] [a-z] < >); selects match number 'index'",
-        "text:string,matchCase?:boolean,wholeWord?:boolean,wildcards?:boolean,index?:integer",
-        false,
         (s, a) -> {
           String pattern = Commands.str(a, "text");
           if (pattern.isEmpty()) throw new IllegalArgumentException("Find what?");
@@ -170,12 +162,8 @@ final class WorkflowCommands implements Commands.Extension {
           for (int[] f : found) out.add(Arrays.asList(f[0], f[1], f[2]));
           return out;
         });
-    c.register(
-        "edit.clipboardPane",
-        "Office clipboard (last 24 copies): list, paste an item, delete one or clear",
-        "action?:string,index?:integer",
-        true,
-        (s, a) -> {
+    c.edit("edit.clipboardPane", "action?:string,index?:integer",
+        "Office clipboard (last 24 copies): list, paste an item, delete one or clear", (s, a) -> {
           String action = a.containsKey("action") ? Commands.str(a, "action") : "list";
           var items = clipboard(s);
           int index = a.containsKey("index") ? Commands.integer(a, "index") : 0;
@@ -197,20 +185,14 @@ final class WorkflowCommands implements Commands.Extension {
           }
           return out;
         });
-    c.register(
-        "edit.pasteSpecial",
+    c.edit("edit.pasteSpecial", "format:string,data?:string,index?:integer",
         "Paste Special: keepSource, merge, text, or html/rtf/markdown data; defaults to the newest clipboard item",
-        "format:string,data?:string,index?:integer",
-        true,
         (s, a) -> {
           pasteSpecial(s, Commands.str(a, "format"), a);
           return null;
         });
-    c.register(
-        "edit.pasteMerge",
+    c.edit("edit.pasteMerge", "index?:integer",
         "Paste with merge formatting: keep emphasis, take the destination font, size and color",
-        "index?:integer",
-        true,
         (s, a) -> {
           pasteSpecial(s, "merge", a);
           return null;
@@ -247,11 +229,8 @@ final class WorkflowCommands implements Commands.Extension {
             out.put(k, t.characters.value(k));
           return out;
         });
-    c.register(
-        "format.charStyle",
+    c.edit("format.charStyle", "name:string",
         "Apply a style's character formatting to the selected text only (a linked character style)",
-        "name:string",
-        true,
         (s, a) -> {
           ParagraphStyle st = style(s.document(), Commands.str(a, "name"));
           var t = st.text;
@@ -265,11 +244,8 @@ final class WorkflowCommands implements Commands.Extension {
           s.format("smallCaps", String.valueOf(t.characters.smallCaps));
           return st.id;
         });
-    c.register(
-        "styles.pane",
+    c.query("styles.pane", "all?:boolean",
         "Styles pane: styles with usage counts and the current style (hidden styles only with all=true)",
-        "all?:boolean",
-        false,
         (s, a) -> {
           var d = s.document();
           var hidden = "," + d.properties.setting("styles.hidden", "") + ",";
@@ -296,11 +272,8 @@ final class WorkflowCommands implements Commands.Extension {
           }
           return out;
         });
-    c.register(
-        "styles.inspector",
+    c.edit("styles.inspector", "clear?:string",
         "Style Inspector: paragraph/character style and direct formatting at the caret; clear=paragraph|character resets it",
-        "clear?:string",
-        true,
         (s, a) -> {
           var d = s.document();
           int block = s.selection().block;
@@ -330,11 +303,8 @@ final class WorkflowCommands implements Commands.Extension {
           out.put("characterDirect", td);
           return out;
         });
-    c.register(
-        "styles.manage",
+    c.edit("styles.manage", "action?:string,id?:string,order?:string",
         "Manage Styles: list, hide or show a style in the pane, or set the recommended order",
-        "action?:string,id?:string,order?:string",
-        true,
         (s, a) -> {
           var d = s.document();
           String action = a.containsKey("action") ? Commands.str(a, "action") : "list";
@@ -360,19 +330,14 @@ final class WorkflowCommands implements Commands.Extension {
           out.put("hidden", s.document().properties.setting("styles.hidden", ""));
           return out;
         });
-    c.register(
-        "insert.coverPage",
+    c.edit(
+        "insert.coverPage", "design?:string,title?:string,subtitle?:string,author?:string,date?:string,remove?:boolean",
         "Insert a designed cover page (title, subtitle, author, date, page break) or remove it",
-        "design?:string,title?:string,subtitle?:string,author?:string,date?:string,remove?:boolean",
-        true,
         WorkflowCommands::coverPage);
     gallery(c, "insert.quickParts", "quickPart.", "Quick Parts gallery: save the selection, insert, list or delete an entry");
     gallery(c, "insert.autoText", "autoText.", "AutoText gallery: save the selection, insert, list or delete an entry");
-    c.register(
-        "insert.textFromFile",
+    c.edit("insert.textFromFile", "data:string,format:string",
         "Insert Text from File: base64 DOCX, or RTF/HTML/Markdown/plain/native XML text, at the caret",
-        "data:string,format:string",
-        true,
         (s, a) -> {
           String format = Commands.str(a, "format"), data = Commands.str(a, "data");
           Document doc;
@@ -393,11 +358,8 @@ final class WorkflowCommands implements Commands.Extension {
           s.paste(doc);
           return doc.blocks.size();
         });
-    c.register(
-        "insert.spreadsheet",
+    c.edit("insert.spreadsheet", "rows?:integer,columns?:integer,data?:string",
         "Insert an embedded spreadsheet: a gridded table seeded from TSV whose =formulas evaluate",
-        "rows?:integer,columns?:integer,data?:string",
-        true,
         (s, a) -> {
           String data = a.containsKey("data") ? Commands.str(a, "data") : "";
           String[] lines = data.isEmpty() ? new String[0] : TextUtil.split(data, '\n');

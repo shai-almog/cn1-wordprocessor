@@ -8,12 +8,8 @@ public final class TableLayoutCommands implements Commands.Extension {
   }
 
   public void register(Commands commands) {
-    commands.register(
-        "table.rowHeight",
-        "Set the current row height",
-        "height:number,rule?:string",
-        true,
-        (s, a) -> {
+    commands.edit("table.rowHeight", "height:number,rule?:string",
+        "Set the current row height", (s, a) -> {
           Table t = table(s);
           String rule = a.containsKey("rule") ? Commands.str(a, "rule") : "atLeast";
           if (!("atLeast".equals(rule) || "exact".equals(rule)))
@@ -28,12 +24,9 @@ public final class TableLayoutCommands implements Commands.Extension {
                       t.format.row(s.cellRow()).allowBreak)));
           return null;
         });
-    commands.register(
-        "table.properties",
-        "Set preferred table width and placement",
-        "width?:number,widthPct?:number,align?:string,indent?:number,rowHeight?:number,rowHeightRule?:string,allowBreak?:boolean",
-        true,
-        (s, a) -> {
+    commands.edit(
+        "table.properties", "width?:number,widthPct?:number,align?:string,indent?:number,rowHeight?:number,rowHeightRule?:string,allowBreak?:boolean",
+        "Set preferred table width and placement", (s, a) -> {
           Table t = table(s);
           var size = t.format.sizing;
           var unit = size.unit;
@@ -75,12 +68,8 @@ public final class TableLayoutCommands implements Commands.Extension {
                       size.fixed)));
           return null;
         });
-    commands.register(
-        "table.autofit",
-        "Fit table to contents or page, or freeze current widths",
-        "mode?:string",
-        true,
-        (s, a) -> {
+    commands.edit("table.autofit", "mode?:string",
+        "Fit table to contents or page, or freeze current widths", (s, a) -> {
           Table t = table(s);
           var f = t.format;
           var size = f.sizing;
@@ -107,21 +96,13 @@ public final class TableLayoutCommands implements Commands.Extension {
           s.formatTable(s.cellBlock(), f);
           return null;
         });
-    commands.register(
-        "table.quick",
-        "Insert an editable quick table",
-        "kind?:string",
-        true,
-        (s, a) -> {
+    commands.edit("table.quick", "kind?:string",
+        "Insert an editable quick table", (s, a) -> {
           s.insertQuickTable(a.containsKey("kind") ? Commands.str(a, "kind") : "tabular");
           return null;
         });
-    commands.register(
-        "table.formula",
-        "Insert a calculated table formula field",
-        "formula?:string",
-        true,
-        (s, a) -> {
+    commands.edit("table.formula", "formula?:string",
+        "Insert a calculated table formula field", (s, a) -> {
           Table table = table(s);
           String instruction =
               a.containsKey("formula") ? Commands.str(a, "formula") : "=SUM(ABOVE)";
@@ -132,12 +113,8 @@ public final class TableLayoutCommands implements Commands.Extension {
           s.insertField(new InlineField(instruction.trim(), result, false, false));
           return Json.object("result", result);
         });
-    commands.register(
-        "table.altText",
-        "Set table accessibility title or description",
-        "title?:string,text?:string",
-        true,
-        (s, a) -> {
+    commands.edit("table.altText", "title?:string,text?:string",
+        "Set table accessibility title or description", (s, a) -> {
           Table table = table(s);
           if (!a.containsKey("title") && !a.containsKey("text"))
             throw new IllegalArgumentException("Supply a title or description");
@@ -148,12 +125,8 @@ public final class TableLayoutCommands implements Commands.Extension {
                   a.containsKey("text") ? Commands.str(a, "text") : table.format.description));
           return null;
         });
-    commands.register(
-        "table.splitTable",
-        "Split table before the current row",
-        "",
-        true,
-        (s, a) -> {
+    commands.edit("table.splitTable", "",
+        "Split table before the current row", (s, a) -> {
           table(s);
           s.splitTable(
               s.cellBlock(), s.cellSelection() == null ? s.cellRow() : s.cellSelection().firstRow);
@@ -209,12 +182,8 @@ public final class TableLayoutCommands implements Commands.Extension {
                 rows ? table.format.distributeRows() : table.format.distributeColumns());
             return null;
           });
-    commands.register(
-        "table.cellAlign",
-        "Set horizontal and vertical cell alignment",
-        "value:string",
-        true,
-        (s, a) -> {
+    commands.edit("table.cellAlign", "value:string",
+        "Set horizontal and vertical cell alignment", (s, a) -> {
           Table table = table(s);
           String value = Commands.str(a, "value"), vertical, horizontal;
           if ("center".equals(value)) {

@@ -5,12 +5,9 @@ import java.util.*;
 /** Comparison works on supplied document data; filesystem access stays in the host. */
 public final class ComparisonCommands implements Commands.Extension {
   public void register(Commands commands) {
-    commands.register(
-        "review.compare",
-        "Compare text and direct formatting as tracked changes",
-        "text?:string,xml?:string,originalXml?:string,author?:string,caseChanges?:boolean,whiteSpace?:boolean,formatting?:boolean,level?:string",
-        true,
-        (s, a) -> {
+    commands.edit(
+        "review.compare", "text?:string,xml?:string,originalXml?:string,author?:string,caseChanges?:boolean,whiteSpace?:boolean,formatting?:boolean,level?:string",
+        "Compare text and direct formatting as tracked changes", (s, a) -> {
           if (a.containsKey("text") == a.containsKey("xml"))
             throw new IllegalArgumentException("Supply revised text or document XML");
           Document original = s.document(), revised;

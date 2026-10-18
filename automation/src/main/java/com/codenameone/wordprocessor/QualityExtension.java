@@ -5,12 +5,8 @@ import java.util.*;
 /** Example extension: deterministic writing checks, without an online service. */
 public final class QualityExtension implements Commands.Extension {
   public void register(Commands commands) {
-    commands.register(
-        "quality.inspect",
-        "Find repeated spaces, long paragraphs and vague link labels",
-        "",
-        false,
-        (session, args) -> {
+    commands.query("quality.inspect", "",
+        "Find repeated spaces, long paragraphs and vague link labels", (session, args) -> {
           var issues = new ArrayList<Object>();
           for (int i = 0; i < session.document().blocks.size(); i++) {
             var b = session.document().blocks.get(i);

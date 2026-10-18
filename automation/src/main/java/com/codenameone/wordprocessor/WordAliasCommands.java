@@ -24,39 +24,22 @@ final class WordAliasCommands implements Commands.Extension {
         "what:string,target?:any",
         false,
         (s, a) -> goTo(s, Commands.str(a, "what"), a.get("target")));
-    c.register(
-        "para.sort",
+    c.edit("para.sort", "descending?:boolean,numeric?:boolean",
         "Sort the selected paragraphs (or all body paragraphs) as text or numbers",
-        "descending?:boolean,numeric?:boolean",
-        true,
         (s, a) -> sort(s, Boolean.TRUE.equals(a.get("descending")), Boolean.TRUE.equals(a.get("numeric"))));
-    c.register(
-        "para.distribute",
-        "Distributed alignment: spread characters evenly between the margins",
-        "",
-        true,
-        (s, a) -> {
+    c.edit("para.distribute", "",
+        "Distributed alignment: spread characters evenly between the margins", (s, a) -> {
           s.paragraph("align", "distribute");
           return null;
         });
-    c.register(
-        "review.wordCount",
+    c.query("review.wordCount", "",
         "Word Count: pages, words, characters (with and without spaces), paragraphs and lines",
-        "",
-        false,
         (s, a) -> wordCount(s));
-    c.register(
-        "review.editor",
+    c.query("review.editor", "",
         "Editor pane: spelling and grammar issue counts with the first suggestion",
-        "",
-        false,
         (s, a) -> c.execute(s, "review.spelling", Json.object("action", "check")));
-    c.register(
-        "file.info",
-        "Document information: title, properties, statistics, protection and tracking",
-        "",
-        false,
-        (s, a) -> {
+    c.query("file.info", "",
+        "Document information: title, properties, statistics, protection and tracking", (s, a) -> {
           var d = s.document();
           var out = wordCount(s);
           out.put("title", d.title);
@@ -65,28 +48,17 @@ final class WordAliasCommands implements Commands.Extension {
           out.put("properties", c.execute(s, "file.properties", Collections.<String, Object>emptyMap()));
           return out;
         });
-    c.register(
-        "review.deleteComment",
+    c.edit("review.deleteComment", "id?:string",
         "Delete the comment at the selection (or by id)",
-        "id?:string",
-        true,
         (s, a) -> c.execute(s, "comment.delete", Json.object("id", commentId(s, a))));
-    c.register(
-        "review.resolveComment",
-        "Resolve (or reopen) the comment at the selection (or by id)",
-        "id?:string,resolved?:boolean",
-        true,
-        (s, a) ->
+    c.edit("review.resolveComment", "id?:string,resolved?:boolean",
+        "Resolve (or reopen) the comment at the selection (or by id)", (s, a) ->
             c.execute(
                 s,
                 "comment.resolve",
                 Json.object("id", commentId(s, a), "resolved", !Boolean.FALSE.equals(a.get("resolved")))));
-    c.register(
-        "review.reply",
-        "Reply to the comment at the selection (or by id)",
-        "id?:string,author?:string,text:string",
-        true,
-        (s, a) ->
+    c.edit("review.reply", "id?:string,author?:string,text:string",
+        "Reply to the comment at the selection (or by id)", (s, a) ->
             c.execute(
                 s,
                 "comment.reply",
@@ -94,12 +66,8 @@ final class WordAliasCommands implements Commands.Extension {
                     "id", commentId(s, a),
                     "author", a.containsKey("author") ? a.get("author") : s.reviewAuthor(),
                     "text", a.get("text"))));
-    c.register(
-        "insert.link",
-        "Link the selection to a URL, or insert the URL as linked text",
-        "url:string,text?:string",
-        true,
-        (s, a) -> {
+    c.edit("insert.link", "url:string,text?:string",
+        "Link the selection to a URL, or insert the URL as linked text", (s, a) -> {
           String url = Commands.str(a, "url");
           if (url.trim().isEmpty()) throw new IllegalArgumentException("Enter a link address");
           var x = s.selection();
@@ -112,23 +80,13 @@ final class WordAliasCommands implements Commands.Extension {
           s.format("link", url);
           return url;
         });
-    c.register(
-        "insert.bookmark",
-        "Add a bookmark at the selection",
-        "name:string",
-        true,
-        (s, a) -> c.execute(s, "bookmark.add", a));
-    c.register(
-        "insert.field",
+    c.edit("insert.bookmark", "name:string",
+        "Add a bookmark at the selection", (s, a) -> c.execute(s, "bookmark.add", a));
+    c.edit("insert.field", "instruction:string,result?:string",
         "Insert a field by instruction, such as PAGE, DATE or NUMPAGES",
-        "instruction:string,result?:string",
-        true,
         (s, a) -> c.execute(s, "field.insert", a));
-    c.register(
-        "layout.margins",
+    c.edit("layout.margins", "preset?:string,top?:number,right?:number,bottom?:number,left?:number",
         "Margins: a preset (normal, narrow, moderate, wide, mirrored) or explicit point values",
-        "preset?:string,top?:number,right?:number,bottom?:number,left?:number",
-        true,
         (s, a) -> {
           Map<String, Object> m = Json.object();
           String preset = a.containsKey("preset") ? Commands.str(a, "preset") : null;
@@ -149,12 +107,8 @@ final class WordAliasCommands implements Commands.Extension {
           if (m.isEmpty()) throw new IllegalArgumentException("Choose a preset or margin values");
           return c.execute(s, "layout.pageSetup", m);
         });
-    c.register(
-        "layout.orientation",
-        "Page orientation: portrait or landscape",
-        "value:string",
-        true,
-        (s, a) -> {
+    c.edit("layout.orientation", "value:string",
+        "Page orientation: portrait or landscape", (s, a) -> {
           String v = Commands.str(a, "value");
           if (!"portrait".equals(v) && !"landscape".equals(v))
             throw new IllegalArgumentException("Orientation is portrait or landscape");
@@ -184,11 +138,8 @@ final class WordAliasCommands implements Commands.Extension {
           s.replacePicture(block, next);
           return inline ? "inline" : align;
         });
-    c.register(
-        "draw.select",
+    c.query("draw.select", "block:integer",
         "Select an object (ink, shape or picture) by block, as the Draw tab's Select tool does",
-        "block:integer",
-        false,
         (s, a) -> {
           int block = Commands.integer(a, "block");
           if (!(s.document().blocks.get(block) instanceof Picture))

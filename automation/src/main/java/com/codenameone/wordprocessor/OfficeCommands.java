@@ -116,22 +116,16 @@ final class OfficeCommands implements Commands.Extension {
 
   public void register(final Commands c) {
     registerDropCap(c);
-    c.register(
-        "file.encrypt",
+    c.query("file.encrypt", "password?:string",
         "Encrypt with Password: Word documents saved from now on are AES-256 encrypted (ECMA-376 agile); an empty password removes it",
-        "password?:string",
-        false,
         (s, a) -> {
           String pw = a.containsKey("password") ? Commands.str(a, "password") : "";
           if (pw.length() > 255) throw new IllegalArgumentException("Passwords are at most 255 characters");
           password(s, pw);
           return Json.object("encrypted", password(s) != null);
         });
-    c.register(
-        "file.options",
+    c.query("file.options", "key?:string,value?:string,reset?:boolean",
         "Word Options: list all, or set one option (user name, units, AutoSave, numerals, proofing, AutoCorrect)",
-        "key?:string,value?:string,reset?:boolean",
-        false,
         (s, a) -> {
           if (Boolean.TRUE.equals(a.get("reset"))) AppOptions.reset();
           if (a.containsKey("key")) {
@@ -141,51 +135,34 @@ final class OfficeCommands implements Commands.Extension {
           }
           return new LinkedHashMap<String, Object>(AppOptions.all());
         });
-    c.register(
-        "file.autosave",
-        "AutoSave on or off (toggles without a value) and its interval in minutes",
-        "value?:boolean,minutes?:integer",
-        false,
-        (s, a) -> {
+    c.query("file.autosave", "value?:boolean,minutes?:integer",
+        "AutoSave on or off (toggles without a value) and its interval in minutes", (s, a) -> {
           option("autosave", String.valueOf(a.containsKey("value") ? Boolean.TRUE.equals(a.get("value")) : !AppOptions.flag("autosave")));
           if (a.containsKey("minutes")) option("autosaveMinutes", String.valueOf(Commands.integer(a, "minutes")));
           return Json.object("value", AppOptions.flag("autosave"), "minutes", Integer.parseInt(AppOptions.get("autosaveMinutes")));
         });
-    c.register(
-        "view.numeral",
+    c.query("view.numeral", "value?:string",
         "Numerals: arabic (0-9), hindi (Arabic-Indic digits) or context (Hindi in right-to-left text)",
-        "value?:string",
-        false,
         (s, a) -> {
           if (a.containsKey("value")) option("numeral", Commands.str(a, "value"));
           return Json.object("value", AppOptions.get("numeral"));
         });
-    c.register(
-        "file.printMarkup",
+    c.query("file.printMarkup", "value?:boolean",
         "Print Markup: print tracked changes and comments (true) or the final document (false)",
-        "value?:boolean",
-        false,
         (s, a) -> {
           option("printMarkup", String.valueOf(a.containsKey("value") ? Boolean.TRUE.equals(a.get("value")) : !AppOptions.flag("printMarkup")));
           return Json.object("value", AppOptions.flag("printMarkup"));
         });
-    c.register(
-        "review.hideInk",
-        "Hide Ink: hide or show ink drawings on screen without deleting them",
-        "value?:boolean",
-        false,
-        (s, a) -> {
+    c.query("review.hideInk", "value?:boolean",
+        "Hide Ink: hide or show ink drawings on screen without deleting them", (s, a) -> {
           option("hideInk", String.valueOf(a.containsKey("value") ? Boolean.TRUE.equals(a.get("value")) : !AppOptions.flag("hideInk")));
           int ink = 0;
           for (Block b : s.document().blocks)
             if (b instanceof Picture picture && picture.drawing != null && "ink".equals(picture.drawing.kind)) ink++;
           return Json.object("hidden", AppOptions.flag("hideInk"), "ink", ink);
         });
-    c.register(
-        "review.comments",
+    c.query("review.comments", "value?:boolean",
         "Show Comments: list every comment with its replies and show or hide the comment pane",
-        "value?:boolean",
-        false,
         (s, a) -> {
           if (a.containsKey("value")) option("showComments", String.valueOf(Boolean.TRUE.equals(a.get("value"))));
           var out = new ArrayList<Object>();
@@ -196,11 +173,8 @@ final class OfficeCommands implements Commands.Extension {
           }
           return Json.object("shown", AppOptions.flag("showComments"), "comments", out);
         });
-    c.register(
-        "file.share",
+    c.query("file.share", "name?:string,format?:string",
         "Share: the document as a .docx attachment (name, mime type, base64) for the platform share sheet",
-        "name?:string,format?:string",
-        false,
         (s, a) -> {
           String format = a.containsKey("format") ? Commands.str(a, "format") : "docx";
           var title = s.document().properties.get("title");
@@ -225,11 +199,8 @@ final class OfficeCommands implements Commands.Extension {
               "name", name + "." + format, "mime", mime, "bytes", data.length,
               "base64", new String(com.codename1.util.Base64.encodeNoNewline(data)));
         });
-    c.register(
-        "file.versions",
+    c.query("file.versions", "save?:string,restore?:integer,compare?:integer",
         "Version History: save a labelled version, list versions, restore one (undoable) or compare it with the current document",
-        "save?:string,restore?:integer,compare?:integer",
-        false,
         (s, a) -> {
           if (a.containsKey("save")) snapshot(s, Commands.str(a, "save"));
           var list = versions(s);
@@ -245,11 +216,8 @@ final class OfficeCommands implements Commands.Extension {
           }
           return listing(list);
         });
-    c.register(
-        "file.recover",
+    c.query("file.recover", "open?:integer",
         "Recover Unsaved Documents: list AutoSave and version snapshots, or open one (undoable)",
-        "open?:integer",
-        false,
         (s, a) -> {
           var list = versions(s);
           if (a.containsKey("open")) {
@@ -258,11 +226,8 @@ final class OfficeCommands implements Commands.Extension {
           }
           return listing(list);
         });
-    c.register(
-        "file.saveTemplate",
+    c.query("file.saveTemplate", "name:string",
         "Save as Template: store the document (styles, layout and content) in the template library",
-        "name:string",
-        false,
         (s, a) -> {
           String name = templateName(Commands.str(a, "name"));
           String xml = DocumentXml.write(s.document());
@@ -277,21 +242,15 @@ final class OfficeCommands implements Commands.Extension {
           }
           return Json.object("name", name, "templates", templateNames());
         });
-    c.register(
-        "file.newFromTemplate",
+    c.edit("file.newFromTemplate", "name:string",
         "New from Template: start a new document from a built-in or saved template (undoable)",
-        "name:string",
-        true,
         (s, a) -> {
           Document d = template(Commands.str(a, "name"));
           s.replaceDocument(d.properties(d.properties.withSetting("attachedTemplate", Commands.str(a, "name"))));
           return Json.object("name", Commands.str(a, "name"), "blocks", s.document().blocks.size());
         });
-    c.register(
-        "tools.templates",
+    c.edit("tools.templates", "action?:string,name?:string",
         "Templates and Add-ins: list templates, attach one, copy its styles in (update styles) or delete a saved template",
-        "action?:string,name?:string",
-        true,
         (s, a) -> {
           String action = a.containsKey("action") ? Commands.str(a, "action") : "list";
           String name = a.containsKey("name") ? Commands.str(a, "name") : null;
@@ -318,11 +277,8 @@ final class OfficeCommands implements Commands.Extension {
               "attached", s.document().properties.setting("attachedTemplate", "Normal"),
               "templates", templateNames());
         });
-    c.register(
-        "tools.search",
+    c.query("tools.search", "query:string,run?:boolean,limit?:integer",
         "Search (Tell Me): find commands by name or description; run the best match with run=true",
-        "query:string,run?:boolean,limit?:integer",
-        false,
         (s, a) -> {
           var q = Commands.str(a, "query").trim().toLowerCase();
           if (q.isEmpty()) throw new IllegalArgumentException("Search for what?");
@@ -358,11 +314,8 @@ final class OfficeCommands implements Commands.Extension {
           }
           return Json.object("results", out, "ran", ran);
         });
-    c.register(
-        "tools.recordMacro",
+    c.query("tools.recordMacro", "action?:string,name?:string",
         "Record Macro: start recording editing commands, stop and save the macro under a name, run or list saved macros",
-        "action?:string,name?:string",
-        false,
         (s, a) -> {
           String action = a.containsKey("action") ? Commands.str(a, "action") : RECORDING.containsKey(s) ? "stop" : "start";
           if ("start".equals(action)) {
@@ -411,11 +364,9 @@ final class OfficeCommands implements Commands.Extension {
           if (!"list".equals(action)) throw new IllegalArgumentException("Action is start, stop, run or list");
           return Json.object("recording", RECORDING.containsKey(s), "macros", macros(s));
         });
-    c.register(
-        "tools.autocorrect",
+    c.query(
+        "tools.autocorrect", "action?:string,from?:string,to?:string,option?:string,value?:boolean,text?:string",
         "AutoCorrect Options: list, add or remove a replacement, toggle an option, or correct a word as typed",
-        "action?:string,from?:string,to?:string,option?:string,value?:boolean,text?:string",
-        false,
         (s, a) -> {
           String action = a.containsKey("action") ? Commands.str(a, "action") : "list";
           Map<String, String> entries = AppOptions.autocorrect();
@@ -440,11 +391,8 @@ final class OfficeCommands implements Commands.Extension {
           out.put("entries", new LinkedHashMap<String, Object>(AppOptions.autocorrect()));
           return out;
         });
-    c.register(
-        "references.researcher",
+    c.edit("references.researcher", "query:string,cite?:integer",
         "Researcher: search online sources for a topic, and add a result as a citation source (cited at the caret)",
-        "query:string,cite?:integer",
-        true,
         (s, a) -> {
           if (research == null) throw new IllegalStateException("Researcher needs an internet connection provider");
           List<Map<String, String>> results;
@@ -470,11 +418,8 @@ final class OfficeCommands implements Commands.Extension {
           for (Map<String, String> r : results) out.add(new LinkedHashMap<String, Object>(r));
           return Json.object("results", out, "cited", tag);
         });
-    c.register(
-        "review.readAloud",
+    c.query("review.readAloud", "action?:string,rate?:number",
         "Read Aloud: start at the caret, advance to the next or previous sentence, or stop; selects the sentence being read and returns its text and the speaking rate",
-        "action?:string,rate?:number",
-        false,
         (s, a) -> {
           String action = a.containsKey("action") ? Commands.str(a, "action") : READING.containsKey(s) ? "stop" : "start";
           if ("stop".equals(action)) {
@@ -510,11 +455,8 @@ final class OfficeCommands implements Commands.Extension {
           s.select(range[0], range[1], range[2]);
           return Json.object("reading", true, "block", range[0], "text", s.selectedText(), "rate", rate);
         });
-    c.register(
-        "review.combine",
+    c.edit("review.combine", "xml?:string,docx?:string,author?:string",
         "Combine: merge a reviewer's revised copy (native XML or base64 .docx) into this document as that reviewer's tracked changes",
-        "xml?:string,docx?:string,author?:string",
-        true,
         (s, a) -> {
           Document revised;
           try {
@@ -540,11 +482,8 @@ final class OfficeCommands implements Commands.Extension {
           s.replaceDocument(r.document.comments(comments));
           return Json.object("changes", r.changes, "author", o.author, "acceptedOwnRevisions", pending, "comments", revised.comments.size());
         });
-    c.register(
-        "view.altTextPane",
+    c.edit("view.altTextPane", "block?:integer,text?:string",
         "Alt Text pane: list every picture and object with its alt text, or set one (marks decorative with an empty text)",
-        "block?:integer,text?:string",
-        true,
         (s, a) -> {
           if (a.containsKey("block")) {
             int b = Commands.integer(a, "block");
@@ -569,11 +508,8 @@ final class OfficeCommands implements Commands.Extension {
   }
 
   static void registerDropCap(Commands c) {
-    c.register(
-        "insert.dropCap",
+    c.edit("insert.dropCap", "position?:string,lines?:integer,distance?:number,font?:string",
         "Drop Cap: none, dropped into the paragraph or in the margin, with lines to drop (1-10), distance from text and font",
-        "position?:string,lines?:integer,distance?:number,font?:string",
-        true,
         (s, a) -> {
           String position = a.containsKey("position") ? Commands.str(a, "position") : "drop";
           final String spec =

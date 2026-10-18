@@ -42,17 +42,11 @@ final class ProofingCommands implements Commands.Extension {
   }
 
   public void register(Commands c) {
-    c.register(
-        "review.spelling",
+    c.edit("review.spelling", "action?:string,word?:string,replacement?:string",
         "Spelling and grammar: action check (default), next, ignore, ignoreAll, add, change, changeAll",
-        "action?:string,word?:string,replacement?:string",
-        true,
         ProofingCommands::spelling);
-    c.register(
-        "review.thesaurus",
+    c.edit("review.thesaurus", "word?:string,replacement?:string",
         "Thesaurus: synonyms of the word (default: selection or word at the caret); replacement swaps it",
-        "word?:string,replacement?:string",
-        true,
         ProofingCommands::thesaurus);
   }
 
