@@ -14,7 +14,9 @@ public final class Xml {
    * lock, which made attribute storage the largest cost of opening a document natively.
    */
   static final class Node extends Element {
-    HashMap<String, String> attrs;
+    /** Attribute names and values, alternating; elements carry only a handful. */
+    String[] attrs;
+    int attrCount;
     /** Tag without its namespace prefix, pooled at parse time. */
     String local;
 
@@ -23,30 +25,80 @@ public final class Xml {
       this.local = local;
     }
 
+    int index(String name) {
+      for (int i = 0; i < attrCount; i += 2) if (attrs[i].equals(name)) return i;
+      return -1;
+    }
+
     public int setAttribute(String name, String value) {
-      if (attrs == null) attrs = new HashMap<String, String>(4);
-      attrs.put(name, value);
+      int i = index(name);
+      if (i >= 0) {
+        attrs[i + 1] = value;
+        return -1;
+      }
+      if (attrs == null) attrs = new String[4];
+      else if (attrCount == attrs.length) attrs = Arrays.copyOf(attrs, attrCount * 2);
+      attrs[attrCount++] = name;
+      attrs[attrCount++] = value;
       return -1;
     }
 
     public String getAttribute(String name) {
-      if (attrs == null) return null;
-      String v = attrs.get(name);
-      return v != null ? v : attrs.get(name.toLowerCase());
+      int i = index(name);
+      if (i < 0 && attrCount > 0) i = index(name.toLowerCase());
+      return i < 0 ? null : attrs[i + 1];
     }
 
     public void removeAttribute(String name) {
-      if (attrs != null) attrs.remove(name);
+      int i = index(name);
+      if (i < 0) return;
+      System.arraycopy(attrs, i + 2, attrs, i, attrCount - i - 2);
+      attrCount -= 2;
+      attrs[attrCount] = attrs[attrCount + 1] = null;
     }
 
     public Hashtable getAttributes() {
-      return attrs == null ? null : new Hashtable(attrs);
+      if (attrCount == 0) return null;
+      Hashtable h = new Hashtable();
+      for (int i = 0; i < attrCount; i += 2) h.put(attrs[i], attrs[i + 1]);
+      return h;
     }
   }
 
-  /** The attributes of e without copying, or null. */
-  static Map attributes(Element e) {
-    return e instanceof Node ? ((Node) e).attrs : e.getAttributes();
+  /** True when a and b have the same tags, attributes and text, recursively. */
+  static boolean same(Element a, Element b) {
+    if (a == b) return true;
+    if (a.isTextElement() || b.isTextElement())
+      return a.isTextElement() && b.isTextElement() && a.getText().equals(b.getText());
+    if (!a.getTagName().equals(b.getTagName()) || a.getNumChildren() != b.getNumChildren())
+      return false;
+    if (a instanceof Node && b instanceof Node) {
+      Node x = (Node) a, y = (Node) b;
+      if (x.attrCount != y.attrCount) return false;
+      for (int i = 0; i < x.attrCount; i += 2) {
+        int j = y.index(x.attrs[i]);
+        if (j < 0 || !x.attrs[i + 1].equals(y.attrs[j + 1])) return false;
+      }
+    } else {
+      Hashtable p = a.getAttributes(), q = b.getAttributes();
+      if (p == null ? q != null && !q.isEmpty() : !p.equals(q == null ? new Hashtable() : q))
+        return false;
+    }
+    for (int i = 0; i < a.getNumChildren(); i++)
+      if (!same(a.getChildAt(i), b.getChildAt(i))) return false;
+    return true;
+  }
+
+  /** Order-independent hash consistent with {@link #same}. */
+  static int shape(Element e) {
+    if (e.isTextElement()) return e.getText().hashCode();
+    int h = e.getTagName().hashCode();
+    if (e instanceof Node) {
+      Node n = (Node) e;
+      for (int i = 0; i < n.attrCount; i += 2) h += n.attrs[i].hashCode() ^ n.attrs[i + 1].hashCode();
+    } else if (e.getAttributes() != null) h += e.getAttributes().hashCode();
+    for (int i = 0; i < e.getNumChildren(); i++) h = h * 31 + shape(e.getChildAt(i));
+    return h;
   }
 
   public static String escape(String s) {
@@ -81,16 +133,22 @@ public final class Xml {
       return;
     }
     out.append('<').append(element.getTagName());
-    Map attributes = attributes(element);
-    if (attributes != null)
-      for (Object key : attributes.keySet()) {
-        String name = (String) key;
-        out.append(' ')
-            .append(name)
-            .append("=\"")
-            .append(escape((String) attributes.get(name)))
-            .append('"');
-      }
+    if (element instanceof Node) {
+      Node n = (Node) element;
+      for (int i = 0; i < n.attrCount; i += 2)
+        out.append(' ').append(n.attrs[i]).append("=\"").append(escape(n.attrs[i + 1])).append('"');
+    } else {
+      Hashtable attributes = element.getAttributes();
+      if (attributes != null)
+        for (Object key : attributes.keySet()) {
+          String name = (String) key;
+          out.append(' ')
+              .append(name)
+              .append("=\"")
+              .append(escape((String) attributes.get(name)))
+              .append('"');
+        }
+    }
     out.append('>');
     for (int i = 0; i < element.getNumChildren(); i++) write(element.getChildAt(i), out);
     out.append("</").append(element.getTagName()).append('>');
@@ -111,10 +169,16 @@ public final class Xml {
 
   private static final class Reader {
     final String s;
+    // The hot loops index this copy directly: String.charAt is a checked call per character
+    // on ParparVM, and a part is scanned character by character.
+    final char[] c;
+    final int n;
     int pos, count;
 
     Reader(String s) {
       this.s = s;
+      c = s.toCharArray();
+      n = c.length;
     }
 
     IOException error(String m) {
@@ -122,7 +186,12 @@ public final class Xml {
     }
 
     void whitespace() {
-      while (pos < s.length() && Character.isWhitespace(s.charAt(pos))) pos++;
+      while (pos < n) {
+        char ch = c[pos];
+        if (ch == ' ' || ch == '\n' || ch == '\r' || ch == '\t' || ch > 127 && Character.isWhitespace(ch)) pos++;
+        else if (ch < 32 && Character.isWhitespace(ch)) pos++;
+        else break;
+      }
     }
 
     boolean nameStart(char c) {
@@ -135,15 +204,15 @@ public final class Xml {
 
     String name() throws IOException {
       int start = pos;
-      if (pos >= s.length() || !nameStart(s.charAt(pos))) throw error("Expected XML name");
+      if (pos >= n || !nameStart(c[pos])) throw error("Expected XML name");
       pos++;
-      while (pos < s.length()) {
-        char c = s.charAt(pos);
-        if (nameStart(c)
-            || c >= '0' && c <= '9'
-            || c == '-'
-            || c == '.'
-            || c > 127 && Character.isDigit(c)) pos++;
+      while (pos < n) {
+        char ch = c[pos];
+        if (nameStart(ch)
+            || ch >= '0' && ch <= '9'
+            || ch == '-'
+            || ch == '.'
+            || ch > 127 && Character.isDigit(ch)) pos++;
         else break;
       }
       return shared(start, pos);
@@ -156,12 +225,12 @@ public final class Xml {
       int len = end - start;
       if (len > 24) return s.substring(start, end);
       int h = len;
-      for (int i = start; i < end; i++) h = 31 * h + s.charAt(i);
+      for (int i = start; i < end; i++) h = 31 * h + c[i];
       int slot = (h ^ (h >>> 16)) & (pool.length - 1);
       String cached = pool[slot];
       if (cached != null && cached.length() == len && s.regionMatches(start, cached, 0, len))
         return cached;
-      String v = s.substring(start, end);
+      String v = new String(c, start, len);
       pool[slot] = v;
       return v;
     }
@@ -208,19 +277,17 @@ public final class Xml {
           break;
         }
         String key = name();
-        HashMap<String, String> seen = ((Node) e).attrs;
-        if (seen != null && seen.containsKey(key)) throw error("Duplicate attribute");
+        if (((Node) e).index(key) >= 0) throw error("Duplicate attribute");
         whitespace();
         expect('=');
         whitespace();
         if (pos >= s.length()) throw error("Missing attribute value");
         char quote = s.charAt(pos++);
         if (quote != '\"' && quote != '\'') throw error("Unquoted attribute");
-        int end = s.indexOf(quote, pos);
-        if (end < 0) throw error("Unterminated attribute");
-        String raw = shared(pos, end);
-        if (raw.indexOf('<') >= 0) throw error("Invalid attribute value");
-        e.setAttribute(key, decode(raw));
+        int end = pos;
+        while (end < n && c[end] != quote) end++;
+        if (end >= n) throw error("Unterminated attribute");
+        e.setAttribute(key, value(pos, end, true));
         pos = end + 1;
       }
       while (pos < s.length()) {
@@ -241,15 +308,33 @@ public final class Xml {
           continue;
         }
         if (skip("<?", "?>")) continue;
-        if (s.charAt(pos) == '<') e.addChild(element(depth + 1));
+        if (c[pos] == '<') e.addChild(element(depth + 1));
         else {
-          int end = s.indexOf('<', pos);
-          if (end < 0) throw error("Unterminated element");
-          e.addChild(new Element(decode(s.substring(pos, end)), true));
+          int end = pos;
+          while (end < n && c[end] != '<') end++;
+          if (end >= n) throw error("Unterminated element");
+          e.addChild(new Element(value(pos, end, false), true));
           pos = end;
         }
       }
       throw error("Unterminated element");
+    }
+
+    /**
+     * The decoded text of [start, end): validated in place, and only copied out (pooled for
+     * attributes) when it holds no entity, which is nearly every value in OOXML.
+     */
+    String value(int start, int end, boolean attribute) throws IOException {
+      boolean entity = false;
+      for (int i = start; i < end; i++) {
+        char ch = c[i];
+        if (ch < 32) {
+          if (ch != '\t' && ch != '\n' && ch != '\r') throw error("Invalid XML control character");
+        } else if (ch == '&') entity = true;
+        else if (ch == '<' && attribute) throw error("Invalid attribute value");
+      }
+      if (entity) return decode(new String(c, start, end - start));
+      return attribute ? shared(start, end) : new String(c, start, end - start);
     }
 
     String decode(String raw) throws IOException {
@@ -302,7 +387,19 @@ public final class Xml {
   public static String attr(Element e, String name, String fallback) {
     // Exact lookups: Element.getAttribute lower-cases the name on every call, which made
     // attribute reads the largest cost of opening a document. OOXML names are case-exact.
-    Map attributes = attributes(e);
+    if (e instanceof Node) {
+      Node n = (Node) e;
+      int i = n.index(name);
+      if (i < 0) i = n.index("w:" + name);
+      for (int j = 0; i < 0 && j < n.attrCount; j += 2) {
+        String k = n.attrs[j];
+        if (k.length() > name.length()
+            && k.endsWith(name)
+            && k.charAt(k.length() - name.length() - 1) == ':') i = j;
+      }
+      return i < 0 ? fallback : n.attrs[i + 1];
+    }
+    java.util.Hashtable attributes = e.getAttributes();
     if (attributes == null) return fallback;
     String v = (String) attributes.get(name);
     if (v == null) v = (String) attributes.get("w:" + name);
@@ -310,12 +407,13 @@ public final class Xml {
       for (Object key : attributes.keySet()) {
         String k = (String) key;
         if (k.endsWith(":" + name)) {
-          v = e.getAttribute(k);
+          v = (String) attributes.get(k);
           break;
         }
       }
     return v == null ? fallback : v;
   }
+
 
   public static Element child(Element e, String name) {
     for (int i = 0; i < e.getNumChildren(); i++) {

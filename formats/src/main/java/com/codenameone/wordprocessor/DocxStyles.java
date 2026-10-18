@@ -102,7 +102,7 @@ final class DocxStyles {
     return baseFormat;
   }
 
-  private final Map<String, TextStyle> runs = new HashMap<String, TextStyle>();
+  private final Map<Long, Object[]> runs = new HashMap<Long, Object[]>();
 
   TextStyle text(String paragraphStyle, Element direct) {
     Element characterStyle = direct == null ? null : Xml.child(direct, "rStyle");
@@ -121,13 +121,16 @@ final class DocxStyles {
     if (direct == null) current = result;
     else if (change != null) current = apply(result, direct, false);
     else {
-      // Runs repeat a handful of direct formats; reuse one style object per distinct rPr.
-      String runKey = key + "\u0001" + Xml.write(direct);
-      current = runs.get(runKey);
-      if (current == null) {
+      // Runs repeat a handful of direct formats; reuse one style object per distinct rPr,
+      // matched structurally so the lookup allocates nothing.
+      long runKey = ((long) key.hashCode() << 32) ^ (Xml.shape(direct) & 0xffffffffL);
+      Object[] hit = runs.get(runKey);
+      if (hit != null && hit[0] == result && Xml.same((Element) hit[1], direct))
+        current = (TextStyle) hit[2];
+      else {
         current = apply(result, direct, false);
         if (runs.size() > 4096) runs.clear();
-        runs.put(runKey, current);
+        runs.put(runKey, new Object[] {result, direct, current});
       }
     }
     if (change != null) {

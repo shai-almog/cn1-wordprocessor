@@ -39,7 +39,9 @@ public final class Docx {
           || name.contains("\\")
           || parts.containsKey(name)) throw new IOException("Invalid or duplicate package path");
       if (entry.isDirectory()) continue;
-      ByteArrayOutputStream out = new ByteArrayOutputStream();
+      long size = entry.getSize();
+      ByteArrayOutputStream out =
+          new ByteArrayOutputStream(size > 0 && size <= MAX_ENTRY ? (int) size : 8192);
       byte[] buf = new byte[8192];
       int n;
       while ((n = zip.read(buf)) != -1) {

@@ -734,6 +734,12 @@ public final class LayoutEngine {
 
   // Keep a cluster on one line even when a formatting boundary divides its glyphs.
   private float clusterWidth(Paragraph p, String text, int start, int end) {
+    if (end == start + 1) {
+      char c = text.charAt(start);
+      // Plain Latin characters: a per-style table, no substring or hash lookup.
+      if (c < 128 && !p.text.objectAt(start) && p.text.displayAt(start, ASCII[c]) == ASCII[c])
+        return metrics.ascii(c, ASCII[c], p.text.styleAt(start));
+    }
     float width = 0;
     for (int at = start; at < end; ) {
       TextStyle style = p.text.styleAt(at);

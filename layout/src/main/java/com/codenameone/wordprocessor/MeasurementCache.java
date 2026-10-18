@@ -14,10 +14,18 @@ final class MeasurementCache implements LayoutEngine.Metrics {
 
   private static final class Values {
     Float height, ascent;
+    float[] ascii;
     final Map<String, Float> widths =
         new LinkedHashMap<String, Float>(256, .75f, true) {
           protected boolean removeEldestEntry(Map.Entry<String, Float> e) {
-            return size() > 512;
+            return size() > 2048;
+          }
+        };
+    /** Line-length chunks, kept apart so they cannot evict the cluster widths. */
+    final Map<String, Float> runs =
+        new LinkedHashMap<String, Float>(64, .75f, true) {
+          protected boolean removeEldestEntry(Map.Entry<String, Float> e) {
+            return size() > 128;
           }
         };
   }
@@ -46,12 +54,50 @@ final class MeasurementCache implements LayoutEngine.Metrics {
     // Do not pin large pastes or whole paragraphs in a measurement cache.
     if (text.length() > 256) return CharacterMetrics.width(delegate, text, style);
     Values v = values(style);
-    Float width = v.widths.get(text);
+    if (text.length() > 12 && text.indexOf(' ') >= 0) return words(text, style);
+    // Line chunks are mostly unique; sharing one LRU with clusters evicted the widths that
+    // line breaking looks up for every grapheme.
+    Map<String, Float> cache = text.length() > 12 ? v.runs : v.widths;
+    Float width = cache.get(text);
     if (width == null) {
       width = CharacterMetrics.width(delegate, text, style);
-      v.widths.put(text, width);
+      cache.put(text, width);
     }
     return width;
+  }
+
+  /**
+   * A line chunk as the sum of its words and spaces, each cached. Line chunks rarely repeat
+   * but their words do. Fonts rarely kern across a space, so this matches measuring the
+   * whole chunk to within rounding (as browser word-shape caches do) with far fewer native
+   * calls. The chunk itself is still drawn as one string.
+   */
+  private float words(String text, TextStyle style) {
+    float total = 0;
+    int start = 0, n = text.length();
+    while (start < n) {
+      int end = start;
+      if (text.charAt(start) == ' ') {
+        while (end < n && text.charAt(end) == ' ') end++;
+      } else {
+        while (end < n && text.charAt(end) != ' ') end++;
+      }
+      total += width(start == 0 && end == n ? text : text.substring(start, end), style);
+      start = end;
+    }
+    return total;
+  }
+
+  /** Width of one ASCII character c (whose string is text), cached per style. */
+  float ascii(char c, String text, TextStyle style) {
+    Values v = values(style);
+    if (v.ascii == null) {
+      v.ascii = new float[128];
+      java.util.Arrays.fill(v.ascii, -1);
+    }
+    float w = v.ascii[c];
+    if (w < 0) v.ascii[c] = w = CharacterMetrics.width(delegate, text, style);
+    return w;
   }
 
   public float height(TextStyle style) {
