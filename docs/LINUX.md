@@ -1,6 +1,6 @@
 # Local native Linux build
 
-Run `scripts/build-linux.sh` on Linux with Java 8 and Maven. It uses Codename One's `local-linux-device` target and ParparVM; the output is an ELF executable, not a JVM UI host. The script selects the host's ARM64 or x64 architecture. Use a project-specific `WORDPROCESSOR_MAVEN_REPO` populated with the same framework snapshot as the other targets. Never install the custom snapshot in `~/.m2`. Native builds and tests are local only.
+Run `scripts/build-linux.sh` on Linux with JDK 17 and Maven. It uses Codename One's `local-linux-device` target and ParparVM; the output is an ELF executable, not a JVM UI host. The script selects the host's ARM64 or x64 architecture. Use a project-specific `WORDPROCESSOR_MAVEN_REPO` populated with the same framework snapshot as the other targets. Never install the custom snapshot in `~/.m2`. CI (`build.yml`) builds x64 and arm64 packages; neither has been run on a Linux desktop yet.
 
 The GTK port requires CMake, Ninja, a C compiler and pkg-config, plus development packages for GTK 3, Cairo, Pango, GdkPixbuf, GLib/GIO, fontconfig, FreeType, OpenSSL/libcrypto, libcurl, Epoxy/EGL/GLES, GStreamer (including app/video), WebKitGTK 4.1, libsecret, libnotify and GeoClue. On Ubuntu 22.04 the additional packages include `libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev libwebkit2gtk-4.1-dev libsecret-1-dev libnotify-dev libgeoclue-2-dev librsvg2-common` alongside the GTK/curl/SSL development packages. Xvfb and xauth are needed only for a headless local review session.
 

@@ -21,7 +21,7 @@ No application was launched or implementation changed while preparing this hando
 - Finish functional and visual parity before presenting performance numbers as a fair comparison. Measure actual resulting-source tokens, LOC, supported versus tested platforms, startup, latency, binary/bundle size and minimum/peak RSS over meaningful workloads.
 - Do not manufacture evidence that Java or Codename One is generally superior for agentic coding. Separate measured outcomes from hypotheses and disclose framework/runtime contributions.
 - **Do not create another PR without explicit authorization. Do not post PR comments.** The user specifically objected to unauthorized PRs and subsequently prohibited comments.
-- Use Java 8 for Maven. Custom framework snapshots must use an isolated, uniquely named cache, never `~/.m2` or generic temporary paths such as `/tmp/local-cn1`.
+- Use JDK 17 for Maven. Custom framework snapshots must use an isolated, uniquely named cache, never `~/.m2` or generic temporary paths such as `/tmp/local-cn1`.
 - Native/GraalVM tests are local only. Never dispatch, rerun, enable or recreate native CI jobs, equivalent workflows or the banned `native-test` label. The framework's AGENTS.md still applies.
 - Keep at most one task-owned native review app running. Stop the exact owned process when finished; preserve unrelated applications. Preserve original document XML and Mailings recipient state, restore both, wait for recovery to save, then stop.
 - Built-in application MCP debugging is explicitly authorized. Use real native interaction for keyboard/touch/IME, window chrome, file pickers and OS integration acceptance where app-level commands cannot prove behavior.
@@ -43,7 +43,7 @@ No application was launched or implementation changed while preparing this hando
 | Wordcraft executables | `target/release/wordcraft-cli`, expected GUI `target/release/wordcraft` under that checkout | Inspect availability before running. |
 | Wordcraft catalog | `crates/engine/src/catalog.rs` | Compare actual behavior as well as declarations. |
 
-The application POM is `0.1.0-SNAPSHOT`, uses `cn1.version=8.0-SNAPSHOT`, and targets Java 8. The user's original desire for Codename One 7.0.277 as a released baseline has **not** been satisfied by calling this isolated snapshot a release.
+The application POM is `0.1.0-SNAPSHOT`, uses `cn1.version=8.0-SNAPSHOT`, and targets Java 17 (records, text blocks, switch expressions; Android needs the `java.version=17` build hint). The user's original desire for Codename One 7.0.277 as a released baseline has **not** been satisfied by calling this isolated snapshot a release.
 
 Framework dirty files span core implementation/MCP/Dialog/List/Toolbar/Window/accessibility, Linux native and Java ports, Mac AppKit text input/window/chrome/Metal and Java bridges, iOS input, builder tests, core tests and developer documentation. Untracked work includes TextInputGeometry, Linux text input files/tests, initializr-related files and generated backend content. These were not modified by the latest font batches. Determine provenance before touching them; do not assume they are all this app's work or all already upstream.
 
@@ -223,7 +223,7 @@ xcodebuild -project app/common/target/app-common-0.1.0-SNAPSHOT-ios-source/Main.
 
 Verify the simulator ID still exists, stop the other owned review app, then use `xcrun simctl install`, `launch`, and `terminate` for bundle ID `com.codenameone.wordprocessor.app`. Do not reset or delete simulator user data.
 
-Other builds: `scripts/build-android.sh` uses Java 8 Maven for source generation, `JAVA17_HOME` for Gradle, `ANDROID_HOME`, and a project-local Gradle cache by default. `scripts/build-web.sh` and `scripts/serve-web.sh` build/serve the JS port. Use a fresh origin and close old PWA clients to avoid testing cached code. `scripts/build-linux.sh` is for Linux with Java 8 and an isolated cache; see [LINUX.md](LINUX.md) for dependencies. Clean generated Linux target content appropriately because the translator can index old generated C; do not hide that problem with a larger heap. Container `--init` helps Xvfb process cleanup. The previous Linux debug RelWithDebInfo/no-LTO build is not a release performance baseline.
+Other builds: `scripts/build-android.sh` uses JDK 17 Maven for source generation, `JAVA17_HOME` for Gradle, `ANDROID_HOME`, and a project-local Gradle cache by default. `scripts/build-web.sh` and `scripts/serve-web.sh` build/serve the JS port. Use a fresh origin and close old PWA clients to avoid testing cached code. `scripts/build-linux.sh` is for Linux with JDK 17 and an isolated cache; see [LINUX.md](LINUX.md) for dependencies. Clean generated Linux target content appropriately because the translator can index old generated C; do not hide that problem with a larger heap. Container `--init` helps Xvfb process cleanup. The previous Linux debug RelWithDebInfo/no-LTO build is not a release performance baseline.
 
 Formatter used: JBR Java17 at `/Users/shai/Library/Java/JavaVirtualMachines/jbr-17.0.7/Contents/Home/bin/java`, with `/private/tmp/cn1-word-mailings-20261015-H6Rey6wk/google-java-format-1.17.0.jar`. Do not accidentally switch Maven to Java17.
 

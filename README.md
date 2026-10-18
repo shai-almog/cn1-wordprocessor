@@ -17,7 +17,7 @@ Rust/egui clone of the same 502-row Word feature catalog.
 | **More platforms from one source** | macOS, iPhone/iPad, Android, browser | desktop and browser |
 | **More features, deeper native** | native menu bar, rich copy out, drag out, high contrast | see [below](#more-features-and-deeper-native) |
 | **Equally functional** | 487 / 487 implementable catalog rows | 487 rows implemented, 15 stubs |
-| **Easier for LLMs** | 43,644 lines, 471,703 tokens | 118,659 lines, 1,646,847 tokens |
+| **Easier for LLMs** | 42,475 lines, 490,197 tokens | 118,659 lines, 1,646,847 tokens |
 | **Cheaper CI** | 623 functional tests in 6 s on the JVM | 1,921 tests after a 165 s compile |
 
 Startup and RAM are for 1 / 1,000 / 10,000-paragraph documents (launch to first painted
@@ -80,7 +80,7 @@ The complete comparison, including features where the two are level, is in
 
 ![Source size](docs/images/source.svg)
 
-Less than half the code and under a third of the tokens (tiktoken `o200k_base`) for the
+About a third of the code and a quarter of the tokens (tiktoken `o200k_base`) for the
 same catalog: an agent reads the whole application in a fraction of the context, and every
 edit touches less code.
 
@@ -113,7 +113,8 @@ workflow artifacts. Local runs use the same scripts (`scripts/native-bench/`).
 
 ## Build and run the native macOS application
 
-Use JDK 8 for Maven, Xcode, and current Codename One `8.0-SNAPSHOT` artifacts. The
+Use JDK 17 for Maven (the sources use records, text blocks and switch expressions), Xcode,
+and current Codename One `8.0-SNAPSHOT` artifacts. The
 validated merged framework baseline is `008f9ece62526d807c2064887ad8f8641d6195a4` (PR #6019). The native
 runtime must include the shared ZIP API. If using a local framework checkout, refresh its
 ParparVM bundle when it is stale. Every framework and application Maven invocation must
@@ -139,7 +140,16 @@ This generates `app/common/target/app-common-0.1.0-SNAPSHOT-mac-source/Main.xcod
 The script builds its Release configuration with Xcode into
 `app/common/target/mac-native/Build/Products/Release/Main.app` and the run script opens
 that bundle. The binary uses AppKit and Metal and needs no JVM. Signing is disabled for
-this local development build; native builds/tests are local only, never CI.
+this local development build.
+
+## Distributables and releases
+
+[`.github/workflows/build.yml`](.github/workflows/build.yml) runs the tests, then builds every
+platform from the same source and uploads each as a workflow artifact: macOS `.dmg`, iOS
+simulator `.zip` and unsigned `.ipa`, Android `.apk`, web `.zip`, Linux x64/arm64 `.tar.gz` and
+Windows x64/arm64 `.zip`. `scripts/dist.sh` packages them into `dist/`. Pushing a `v*` tag runs
+[`release.yml`](.github/workflows/release.yml), which reuses that build and attaches every
+package to a GitHub release. The Apple packages are unsigned; signing needs your certificates.
 
 The standard CN1 lifecycle is `app/common/src/main/java/com/codenameone/wordprocessor/app/Main.java`.
 It uses the shared `editor` application and CN1 platform file APIs.
@@ -176,7 +186,8 @@ See [formats](docs/FORMATS.md), [automation](docs/AUTOMATION.md), and
 `app/common` is shared with Codename One's browser, Android and iOS targets.
 `scripts/build-web.sh` builds the JavaScript target; `scripts/build-linux.sh` uses the local
 native Linux target. See [Linux](docs/LINUX.md) and [platform evidence](docs/platforms.json).
-Windows and physical mobile devices remain unverified. Live native UI debugging uses the
+Linux and Windows packages are built in CI only and have not been run on a desktop yet;
+physical mobile devices remain unverified. Live native UI debugging uses the
 optional [built-in MCP integration](docs/LIVE-MCP.md). A project license has not yet been
 selected; see [third-party notices](third-party/README.md).
 

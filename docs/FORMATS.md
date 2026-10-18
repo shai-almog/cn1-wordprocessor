@@ -195,7 +195,7 @@ Application settings (design choices, hyphenation, and others) persist in native
 - Picture artistic effects and background removal are stored non-destructively in the native `adjust` attribute (`brightness,contrast,transparency,mode,effect,tolerance`). DOCX does not write them (no `a14:imgEffect` / background-removal mapping), so they are lost when exported to .docx.
 - Picture compression rewrites the stored image bytes via the platform image codec (PNG stays PNG; others become JPEG at 0.85).
 - Spelling and hyphenation use bundled public-domain Moby word data and CC0 Liang patterns (see `third-party/README.md`).
-- Encrypted .docx: agile encryption written as a CFB v3 container (DataSpaces, EncryptionInfo 4.4, EncryptedPackage); read supports CFB v3/v4 and SHA-512 agile only.
+- Encrypted .docx: agile encryption written as a CFB v3 container (DataSpaces, EncryptionInfo 4.4, EncryptedPackage); read supports CFB v3/v4 and SHA-512 agile only. Hashing, HMAC and AES-CBC come from `com.codename1.security`; the framework cipher has been verified on the JVM only, not yet on the native targets.
 
 ## Native XML round-trip hardening (2026-10-17)
 

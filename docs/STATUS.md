@@ -4,6 +4,13 @@ The approved target is a standalone application and reusable Java libraries, tar
 
 ## Latest verified scope
 
+**Java 17 and framework services (2026-10-18).** Sources target Java 17 and use records, text blocks and switch expressions. DOCX zip, Office encryption (SHA-512, HMAC, AES-CBC through `com.codename1.security`) and JSON output (`JSONParser.toJson`) now use the framework instead of local copies. The CSV reader stays local because the framework parser accepts malformed files. Headless JVM tools install `JavaSEPort` for the crypto services. Limitations:
+- `build.yml` packages every platform and `release.yml` publishes them, but neither has run in CI yet.
+- Linux and Windows packages have not been run on a desktop.
+- Apple packages are unsigned.
+- The Mac, iOS-simulator, Android and web packages were built locally before the crypto, JSON and theme changes. Encrypted save has not been rechecked on any native target since the move to the framework cipher.
+- Native benchmarks were not rerun after the zip change because the machine was under heavy load.
+
 **Native catalog certification (2026-10-17).** All 487 implementable Wordcraft catalog rows are `certified` in [the matrix](acceptance-matrix.json). The remaining 15 are `reference-stub`. Evidence is in [native-certification.json](native-certification.json), produced by `scripts/native-certify.py` and `scripts/certify-matrix.py` against the Mac native ParparVM app over the live MCP. It covers 466 commands:
 
 - **415 rows by native replay.** A JUnit `RunListener` (`ReplayRecorder`, `-Dreplay.out`) records each command executed by the JVM tests: the before-document, selection, arguments, after-document and after-selection. `scripts/native-cert/CaseFinder.java` generates cases for commands no test exercised. The native app loads each before-state (`word_load`), runs the command, and must produce the same document XML (revision dates masked) and selection.
