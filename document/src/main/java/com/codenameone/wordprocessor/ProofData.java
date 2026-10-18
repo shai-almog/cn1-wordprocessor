@@ -1,12 +1,12 @@
 package com.codenameone.wordprocessor;
 
-import com.codename1.io.gzip.Inflater;
-import com.codename1.io.gzip.InflaterInputStream;
+import java.util.zip.Inflater;
+import java.util.zip.InflaterInputStream;
 import com.codename1.ui.Display;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 
-/** Loads bundled proofing resources (raw-deflate or plain) with Codename One's own inflater. */
+/** Loads bundled proofing resources (raw-deflate or plain). */
 final class ProofData {
   private ProofData() {}
 
