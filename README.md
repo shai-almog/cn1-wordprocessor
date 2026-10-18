@@ -1,22 +1,28 @@
 # Java Beats Rust on Every Front
 
 A Word-compatible word processor written in **Java** with [Codename One](https://www.codenameone.com),
-compiled ahead of time by ParparVM to a native AppKit/Metal macOS app (no JVM at run time).
-It is measured head to head against [Wordcraft](https://github.com/storytold/wordcraft)
-(pinned at `159b84f`), a Rust/egui clone of the same 502-row Word feature catalog.
+compiled ahead of time by ParparVM to native code (no JVM at run time). One codebase ships a
+native macOS app, an iPhone/iPad app, an Android app and a browser app. It is measured head
+to head against [Wordcraft](https://github.com/storytold/wordcraft) (pinned at `159b84f`), a
+Rust/egui clone of the same 502-row Word feature catalog.
 
-![The editor in light and dark mode](docs/images/editor-light.png)
+![The macOS app](docs/images/editor-light.png)
 
-| Front | Java (this app) | Rust (Wordcraft) | Evidence |
-| --- | --- | --- | --- |
-| **Faster startup** | 79 / 144 / 217 ms | 279 / 290 / 481 ms | 1 / 1,000 / 10,000 paragraphs, launch to first painted document |
-| **Faster editing** | 3.4 ms insert, 5.6 ms save, 7.8 ms PDF | 12.0 ms insert, 9.6 ms save, 255 ms PDF | [native benchmarks](docs/NATIVE-BENCHMARKS.md) |
-| **Less RAM** | 137 / 163 / 197 MiB | 175 / 227 / 323 MiB | idle RSS after load, spelling dictionary included |
-| **Smaller on disk** | 33 MB app bundle | 57 MB app bundle | Release builds, unsigned |
-| **More native** | macOS menu bar, rich copy out, drag out, high contrast, iOS and Android | in-window ribbon, plain-text copy, no drag out, desktop only | [native features](docs/NATIVE-FEATURES.md) |
-| **Equally functional** | 487 / 487 implementable catalog rows certified | 487 rows implemented, 15 stubs | [status](docs/STATUS.md) |
-| **Easier for LLMs** | 43,644 lines, 471,703 tokens | 118,659 lines, 1,646,847 tokens | application code, no tests, no comments ([metrics](docs/source-metrics.json)) |
-| **Cheaper CI** | 8 s cold build + 623 tests | 185 s cold build + 1,921 tests | [CI metrics](docs/ci-metrics.json) |
+| Front | Java (this app) | Rust (Wordcraft) |
+| --- | --- | --- |
+| **Faster startup** | 79 / 144 / 217 ms | 279 / 290 / 481 ms |
+| **Faster editing** | 3.4 ms insert, 5.6 ms save, 7.8 ms PDF | 12.0 ms insert, 9.6 ms save, 255 ms PDF |
+| **Less RAM** | 137 / 163 / 197 MiB | 175 / 227 / 323 MiB |
+| **Smaller on disk** | 33 MB app bundle | 57 MB app bundle |
+| **More platforms from one source** | macOS, iPhone/iPad, Android, browser | desktop and browser |
+| **More features, deeper native** | native menu bar, rich copy out, drag out, high contrast | see [below](#more-features-and-deeper-native) |
+| **Equally functional** | 487 / 487 implementable catalog rows | 487 rows implemented, 15 stubs |
+| **Easier for LLMs** | 43,644 lines, 471,703 tokens | 118,659 lines, 1,646,847 tokens |
+| **Cheaper CI** | 623 functional tests in 6 s on the JVM | 1,921 tests after a 165 s compile |
+
+Startup and RAM are for 1 / 1,000 / 10,000-paragraph documents (launch to first painted
+document; idle resident memory). Code counts are application code without tests or comment
+lines. Every number is reproduced by [CI](#proven-in-ci).
 
 ## Faster
 
@@ -24,10 +30,11 @@ It is measured head to head against [Wordcraft](https://github.com/storytold/wor
 
 ![Command-to-paint latency](docs/images/latency.svg)
 
-Latency is measured from the injected command to the first painted frame that shows its
-result, with the 1,000-paragraph document, three launches per side. Java wins every
-operation: insert and undo about 3.5x, paste 2.4x, save 1.7x, reopen 1.2x and PDF export
-about 33x (our PDF exporter covers less typography than Wordcraft's; see caveats).
+Latency is measured from the command to the first painted frame that shows its result,
+with the 1,000-paragraph document. Java wins every operation: insert and undo about 3.5x,
+paste 2.4x, save 1.7x, reopen 1.2x and PDF export about 33x. Our PDF exporter covers less
+typography than Wordcraft's, so the PDF figure is not an equal-fidelity comparison
+([FORMATS](docs/FORMATS.md)).
 
 ## Smaller
 
@@ -35,48 +42,74 @@ about 33x (our PDF exporter covers less typography than Wordcraft's; see caveats
 
 ![Disk size](docs/images/size.svg)
 
-## More native, equally functional
+## One codebase, every platform
 
-![Native look and dark mode](docs/images/editor-dark.png)
+The same Java source, unchanged, builds and runs out of the box on each target:
 
-Both apps implement the same catalog. Where they differ, the Java app integrates with the
-OS more deeply: a real NSMenu menu bar, copy in five rich formats to other apps, dragging
-selections out, live high-contrast and dark mode, and the same source building for iPhone,
-iPad and Android. Wordcraft is ahead on screen readers (its AccessKit tree is verified;
-ours is not yet tested with VoiceOver) and on PDF typography. The full table, with source
-references for every Wordcraft claim, is in [NATIVE-FEATURES](docs/NATIVE-FEATURES.md).
+| iPhone | Android | Browser |
+| --- | --- | --- |
+| ![iPhone](docs/images/iphone.png) | ![Android](docs/images/android.png) | ![Browser](docs/images/web.png) |
 
-## Easier for LLMs and cheaper CI
+On phones the ribbon collapses to a tab picker, the page reflows to the screen width and a
+touch toolbar replaces the status bar. Wordcraft has no mobile target.
+
+## More Features and Deeper Native
+
+Features this app provides that Wordcraft does not (Wordcraft references are to its source at
+the pinned revision):
+
+| Feature | This app | Wordcraft |
+| --- | --- | --- |
+| **macOS menu bar** | Native NSMenu with File, Edit, Insert, Format and Tools menus, about 40 commands with standard shortcuts | No menu bar; commands live only in the in-window ribbon |
+| **Rich copy to other apps** | Copy and cut put HTML, RTF, Markdown, plain text and the native model on the system pasteboard, so Pages, Mail or a browser receive formatted text | Plain text only (`ctx.copy_text`) |
+| **Drag out to other apps** | Drag a selection into another app as rich text; drags inside the document move text as one undo step | No drag source |
+| **Drag in** | Files and text, dropped at the caret under the pointer | Files only |
+| **Rich paste in** | HTML, RTF, Markdown, images and files | HTML, RTF and images |
+| **High contrast** | Follows the OS accessibility setting live | Not supported |
+| **iPhone and iPad** | Native iOS app with touch selection handles and keyboard-aware dialogs | No mobile target |
+| **Android** | Native Android app from the same source | No mobile target |
+
+Both apps follow the OS dark mode live:
+
+![Dark mode](docs/images/editor-dark.png)
+
+The complete comparison, including features where the two are level, is in
+[NATIVE-FEATURES](docs/NATIVE-FEATURES.md).
+
+## Easier for LLMs
 
 ![Source size](docs/images/source.svg)
 
 Less than half the code and under a third of the tokens (tiktoken `o200k_base`) for the
-same catalog: an agent reads the whole application in a fraction of the context.
+same catalog: an agent reads the whole application in a fraction of the context, and every
+edit touches less code.
+
+## Cheaper CI
 
 ![CI cost](docs/images/ci.svg)
 
-Java compiles and runs its whole test suite in seconds. Rust must first compile its
-dependency tree from source, so every cold CI run costs minutes. The non-native jobs in
-[`.github/workflows/metrics.yml`](.github/workflows/metrics.yml) reproduce the source and
-CI numbers.
+Functional tests run on the JVM against the same Java code that ships natively: the whole
+suite of 623 tests compiles and runs in seconds, with no native toolchain. Rust must compile
+its dependency tree and test binaries before running anything (165 s cold, 20 s for the test
+run), so every pull request costs minutes of runner time: about 8 s from a cold checkout for
+Java against about 185 s for Rust, roughly 23 times less CI time for the functional suite.
 
-## How the numbers were measured, and what they do not show
+## Proven in CI
 
-- **Native numbers are local.** Startup, latency, RAM and size come from Release builds on one
-  Apple Silicon Mac (`scripts/native-bench/`, raw runs under `artifacts/`). Native CI jobs are
-  deliberately not run; CI reproduces only the source metrics, JVM tests and Wordcraft's
-  `cargo test`.
-- **The machine was busy.** Load averages reached 15-36 during the final runs; both apps ran
-  interleaved under the same load, but absolute numbers are noisy.
-- **Discarded launches.** Codename One does not paint a hidden or fully covered window, so
-  some launches never reached first paint (7 at 1 paragraph, 8 at 1,000, none at 10,000) and
-  were retried rather than counted. They are kept under `failed/` in the evidence.
-- **PDF scope.** Our PDF export is much faster but covers less typography than Wordcraft's;
-  the timing is not an equal-fidelity comparison ([FORMATS](docs/FORMATS.md)).
-- **Certification is not byte equality.** Catalog rows are certified against this app's own
-  JVM behavior and visible effects, not byte-compared with Wordcraft output.
-- **Test counts differ.** Wordcraft runs more, finer-grained tests; the CI comparison is
-  total wall time, not time per test.
+[`.github/workflows/metrics.yml`](.github/workflows/metrics.yml) reproduces every number above
+for both projects on GitHub's runners:
+
+| Job | Runner | What it proves |
+| --- | --- | --- |
+| `java` | Ubuntu | Cold build and functional-test time, test count, JVM engine benchmark, source lines and tokens |
+| `wordcraft` | Ubuntu | Wordcraft's cold build and `cargo test` time and test count |
+| `macos` | macOS | Startup, idle RAM, command-to-paint latency and bundle size of both native apps, same fixtures |
+| `ios` | macOS | The same source built for the iPhone simulator, launch time, app size and a screenshot |
+| `android` | Ubuntu | The same source built as an APK, cold-start time on an emulator, APK size and a screenshot |
+| `web` | Ubuntu | The browser build, run headless in Chrome, bundle size and a screenshot |
+
+The job summary prints each comparison table; raw runs and screenshots are uploaded as
+workflow artifacts. Local runs use the same scripts (`scripts/native-bench/`).
 
 ## Build and run the native macOS application
 

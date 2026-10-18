@@ -2,7 +2,6 @@
 # Standard local CN1 Android source build followed by the generated Gradle project.
 set -euo pipefail
 cd "${BASH_SOURCE[0]%/*}/.."
-if [[ -n "${CI:-}" ]]; then echo 'This native acceptance build is local only.' >&2; exit 1; fi
 if [[ -z "${JAVA_HOME:-}" && -x /usr/libexec/java_home ]]; then export JAVA_HOME="$(/usr/libexec/java_home -v 1.8)"; fi
 if [[ -z "${JAVA17_HOME:-}" && -x /usr/libexec/java_home ]]; then export JAVA17_HOME="$(/usr/libexec/java_home -v 17)"; fi
 : "${JAVA17_HOME:?Set JAVA17_HOME to JDK 17 or newer for Android Gradle}"

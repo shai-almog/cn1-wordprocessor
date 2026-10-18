@@ -1,7 +1,9 @@
-# Public, reproducible evidence for the README's non-native claims: source size/tokens,
-# test-suite cost and JVM engine measurements, for this project and for Wordcraft at the
-# pinned revision, on the same runner image. Native GUI latency, RAM and bundle size are
-# measured locally (scripts/native-bench); native jobs are deliberately not run in CI.
+# Public, reproducible evidence for every README claim, for this project and for Wordcraft at
+# the pinned revision on the same runner images:
+#   java / wordcraft  source size and tokens, functional-test cost (JVM vs cargo), JVM engine
+#   macos             native startup, idle RAM, command-to-paint latency and bundle size
+#                     against Wordcraft (scripts/native-bench)
+#   ios / android / web  the same source built, launched and screenshotted on each target
 name: metrics
 
 on:
@@ -87,6 +89,202 @@ jobs:
         with:
           name: wordcraft-metrics
           path: rust-*.txt
+
+  macos:
+    runs-on: macos-15
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '8'
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Production builds (Java app and Wordcraft)
+        run: |
+          export WORDPROCESSOR_MAVEN_REPO="$PWD/.local/maven-repository"
+          scripts/build-native.sh -DskipTests
+          git clone -q "$WORDCRAFT_REPO" "$RUNNER_TEMP/wordcraft"
+          git -C "$RUNNER_TEMP/wordcraft" checkout -q "$WORDCRAFT_REV"
+          (cd "$RUNNER_TEMP/wordcraft" && cargo build --release --locked -p wordcraft \
+            && bash packaging/macos/package.sh --arch aarch64)
+      - name: Fixtures
+        run: |
+          export WORDPROCESSOR_MAVEN_REPO="$PWD/.local/maven-repository"
+          mvn -B -ntp -o -Dmaven.repo.local="$WORDPROCESSOR_MAVEN_REPO" -f cli/pom.xml \
+            org.apache.maven.plugins:maven-dependency-plugin:3.6.1:build-classpath \
+            -DincludeScope=runtime -Dmdep.outputFile=target/runtime-classpath.txt
+          mkdir -p artifacts/startup-final
+          scripts/benchmark.sh 1 1 artifacts/startup-final/1-paragraphs.docx
+          scripts/benchmark.sh 1000 1 artifacts/1000-paragraphs.docx
+          scripts/benchmark.sh 10000 1 artifacts/startup-final/10000-paragraphs.docx
+      - name: Instrumented copies
+        run: |
+          rsync -a --exclude target --exclude .git ./ "$RUNNER_TEMP/cn1-bench/"
+          cp -R "$RUNNER_TEMP/wordcraft" "$RUNNER_TEMP/wordcraft-bench"
+          python3 scripts/native-bench/prepare.py "$RUNNER_TEMP/cn1-bench" "$RUNNER_TEMP/wordcraft-bench"
+          (cd "$RUNNER_TEMP/cn1-bench" && WORDPROCESSOR_MAVEN_REPO="$PWD/.local/maven-repository" \
+            scripts/build-native.sh -DskipTests)
+          (cd "$RUNNER_TEMP/wordcraft-bench" && cargo build --release --locked -p wordcraft)
+      - name: Startup, RAM and workload
+        run: |
+          base=artifacts/native-bench/ci
+          cn1="$RUNNER_TEMP/cn1-bench/app/common/target/mac-native/Build/Products/Release/Main.app/Contents/MacOS/Main"
+          wc="$RUNNER_TEMP/wordcraft-bench/target/release/wordcraft"
+          c=scripts/native-bench/collect.sh
+          bash $c "$cn1" "$wc" artifacts/startup-final/1-paragraphs.docx $base/startup-1 10
+          bash $c "$cn1" "$wc" artifacts/1000-paragraphs.docx $base/startup-1000 10
+          bash $c "$cn1" "$wc" artifacts/startup-final/10000-paragraphs.docx $base/startup-10000 10
+          bash $c "$cn1" "$wc" artifacts/1000-paragraphs.docx $base/workload-1000 3 --workload
+      - name: Sizes and report
+        run: |
+          python3 - <<'PY'
+          import hashlib, json, os, platform, subprocess
+          def bundle(path):
+              return sum(os.path.getsize(os.path.join(r, f)) for r, _, fs in os.walk(path) for f in fs
+                         if not os.path.islink(os.path.join(r, f)))
+          def side(exe, app):
+              return {'executableBytes': os.path.getsize(exe), 'appBundleBytes': bundle(app),
+                      'sha256': hashlib.sha256(open(exe, 'rb').read()).hexdigest()}
+          t = os.environ['RUNNER_TEMP']
+          cn1 = 'app/common/target/mac-native/Build/Products/Release/Main.app'
+          wc = subprocess.check_output(['bash', '-c', f'ls -d {t}/wordcraft/target/*/WordCraft.app {t}/wordcraft/*.app 2>/dev/null | head -1']).decode().strip()
+          art = {'cn1': side(cn1 + '/Contents/MacOS/Main', cn1),
+                 'wordcraft': side(f'{t}/wordcraft/target/release/wordcraft', wc or f'{t}/wordcraft/target/release'),
+                 'platform': platform.platform(), 'machine': platform.machine() + ' GitHub macos-15 runner',
+                 'cpuCount': os.cpu_count(), 'ramBytes': int(subprocess.check_output(['sysctl', '-n', 'hw.memsize'])),
+                 'wordcraftRevision': os.environ['WORDCRAFT_REV'], 'frameworkRevision': 'cn1 7.0.278',
+                 'cn1Revision': os.environ['GITHUB_SHA']}
+          json.dump(art, open('artifacts/native-bench/ci/artifacts.json', 'w'), indent=2)
+          PY
+          git clone -q "$WORDCRAFT_REPO" wordcraft-src && git -C wordcraft-src checkout -q "$WORDCRAFT_REV"
+          brew install -q cloc
+          python3 -m venv .venv && .venv/bin/pip install -q -r scripts/metrics-requirements.txt
+          .venv/bin/python scripts/source-metrics.py wordcraft-src --out artifacts/source-metrics.json
+          python3 scripts/native-bench/report.py --base artifacts/native-bench/ci \
+            --out native-benchmarks.md --json native-benchmarks.json
+          cat native-benchmarks.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: macos-native
+          path: |
+            native-benchmarks.*
+            artifacts/native-bench/ci
+
+  ios:
+    runs-on: macos-15
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '8'
+      - name: Build for the iPhone simulator
+        run: |
+          repo="$PWD/.local/maven-repository"
+          mvn -B -ntp -Dmaven.repo.local="$repo" -pl editor -am install -DskipTests
+          mvn -B -ntp -Dmaven.repo.local="$repo" -f app/pom.xml package -DskipTests \
+            -Dcodename1.platform=ios -Dcodename1.buildTarget=ios-source
+          cd app/common/target/app-common-0.1.0-SNAPSHOT-ios-source
+          xcodebuild -quiet -project Main.xcodeproj -scheme Main -configuration Release \
+            -sdk iphonesimulator -derivedDataPath "$RUNNER_TEMP/ios" CODE_SIGNING_ALLOWED=NO build
+      - name: Launch, time and screenshot
+        run: |
+          app=$(ls -d "$RUNNER_TEMP"/ios/Build/Products/Release-iphonesimulator/Main.app)
+          dev=$(xcrun simctl list devices available -j | python3 -c "import json,sys;print([d['udid'] for r,ds in json.load(sys.stdin)['devices'].items() if 'iOS' in r for d in ds if d['name'].startswith('iPhone')][0])")
+          xcrun simctl boot "$dev"; xcrun simctl bootstatus "$dev" -b
+          xcrun simctl install "$dev" "$app"
+          bid=$(defaults read "$app/Info" CFBundleIdentifier)
+          for i in 1 2 3 4 5 6; do
+            xcrun simctl terminate "$dev" "$bid" 2>/dev/null || true
+            start=$(python3 -c 'import time;print(time.time())')
+            xcrun simctl launch "$dev" "$bid" >/dev/null
+            until xcrun simctl spawn "$dev" log show --last 30s --style compact --predicate 'process == "Main"' 2>/dev/null | grep -q 'Codename One revisions'; do sleep 0.2; done
+            python3 -c "import time;print(round((time.time()-$start)*1000))" >> ios-launch-ms.txt
+          done
+          sleep 5
+          xcrun simctl io "$dev" screenshot ios.png
+          du -sk "$app" | cut -f1 > ios-app-kib.txt
+          echo "iOS simulator launch-to-EDT ms: $(tr '\n' ' ' < ios-launch-ms.txt); app KiB: $(cat ios-app-kib.txt)" >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ios
+          path: ios*
+
+  android:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: |
+            17
+            8
+      - name: Build the APK
+        run: |
+          export JAVA17_HOME="$JAVA_HOME_17_X64" JAVA_HOME="$JAVA_HOME_8_X64"
+          export ANDROID_HOME="$ANDROID_SDK_ROOT"
+          export WORDPROCESSOR_MAVEN_REPO="$PWD/.local/maven-repository"
+          scripts/build-android.sh -DskipTests
+          find app/common/target -name '*.apk' | head -1 > apk-path.txt
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules && sudo udevadm trigger --name-match=kvm
+      - name: Launch, time and screenshot
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          script: |
+            adb install -r "$(cat apk-path.txt)"
+            pkg=com.codenameone.wordprocessor.app
+            act=$(adb shell cmd package resolve-activity --brief $pkg | tail -1 | tr -d '\r')
+            for i in 1 2 3 4 5 6; do adb shell am force-stop $pkg; adb shell am start -W -n "$act" | grep TotalTime | awk '{print $2}' >> android-launch-ms.txt; sleep 2; done
+            sleep 8; adb exec-out screencap -p > android.png
+            stat -c %s "$(cat apk-path.txt)" > android-apk-bytes.txt
+            echo "Android cold start TotalTime ms: $(tr '\n' ' ' < android-launch-ms.txt); APK bytes: $(cat android-apk-bytes.txt)" >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: android
+          path: android*
+
+  web:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '8'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Build the browser app
+        run: |
+          export WORDPROCESSOR_MAVEN_REPO="$PWD/.local/maven-repository"
+          scripts/build-web.sh
+          du -sk app/common/target/web-preview | cut -f1 > web-kib.txt
+      - name: Headless run and screenshot
+        run: |
+          python3 -m http.server 8768 --bind 127.0.0.1 --directory app/common/target/web-preview &
+          sleep 1
+          CHROME="$(command -v google-chrome)" node scripts/web-smoke.mjs http://127.0.0.1:8768/index.html web.png \
+            '["Quarterly Product Review","Written in the browser build of the same Java source."]'
+          echo "Web bundle KiB: $(cat web-kib.txt)" >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: web
+          path: web*
 
   summary:
     needs: [java, wordcraft]

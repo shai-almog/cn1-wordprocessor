@@ -1,7 +1,7 @@
 # Local native GUI measurement
 
 These helpers instrument **disposable source copies**, never the production app.
-Both builds are local; do not run them in CI. `prepare.py` is not idempotent:
+CI runs the same steps in the `macos` job of `.github/workflows/metrics.yml`; `collect.sh` runs one launch at a time and keeps launches that never reached ready under `failed/`. `prepare.py` is not idempotent:
 restore the original source before applying it again.
 
 1. Build production CN1 with `scripts/build-native.sh` (JDK 8, current CN1 Maven
