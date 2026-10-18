@@ -1,5 +1,7 @@
 package com.codenameone.wordprocessor;
 
+import com.codename1.security.Hash;
+import com.codename1.security.Hmac;
 import com.codename1.util.Base64;
 import com.codename1.xml.Element;
 import java.io.IOException;
@@ -20,6 +22,15 @@ import java.util.Random;
  * 2013+ writes. Older SHA-1 agile files and the legacy RC4/standard encryption are rejected with an IOException.
  */
 public final class OfficeCrypto {
+  private static final int HASH_SIZE = 64;
+
+  /** SHA-512 of the concatenated parts. */
+  static byte[] sha512(byte[]... parts) {
+    var h = Hash.create(Hash.SHA512);
+    for (byte[] p : parts) h.update(p);
+    return h.digest();
+  }
+
   public static final int DEFAULT_SPIN_COUNT = 100000;
   private static final int MAX_SPIN_COUNT = 10000000;
   private static final int SEGMENT = 4096;
@@ -59,14 +70,14 @@ public final class OfficeCrypto {
       pw[i * 2] = (byte) password.charAt(i);
       pw[i * 2 + 1] = (byte) (password.charAt(i) >> 8);
     }
-    byte[] h = Sha512.hash(salt, pw);
+    byte[] h = sha512(salt, pw);
     byte[] it = new byte[4];
     for (int i = 0; i < spin; i++) {
       it[0] = (byte) i;
       it[1] = (byte) (i >> 8);
       it[2] = (byte) (i >> 16);
       it[3] = (byte) (i >> 24);
-      h = Sha512.hash(it, h);
+      h = sha512(it, h);
     }
     return h;
   }
@@ -78,11 +89,11 @@ public final class OfficeCrypto {
   }
 
   private static byte[] deriveKey(byte[] hn, byte[] blockKey, int len) {
-    return fit(Sha512.hash(hn, blockKey), len);
+    return fit(sha512(hn, blockKey), len);
   }
 
   private static byte[] makeIv(byte[] salt, byte[] blockKey) {
-    return fit(blockKey == null ? salt : Sha512.hash(salt, blockKey), BLOCK);
+    return fit(blockKey == null ? salt : sha512(salt, blockKey), BLOCK);
   }
 
   private static byte[] padded(byte[] d) {
@@ -121,7 +132,7 @@ public final class OfficeCrypto {
     byte[] out = new byte[n];
     int pos = 0;
     for (int block = 0; pos < n; block++) {
-      byte[] mix = Sha512.hash(pool, le32(block + r.nextInt()));
+      byte[] mix = sha512(pool, le32(block + r.nextInt()));
       for (int i = 0; i < mix.length && pos < n; i++) out[pos++] = mix[i];
     }
     return out;
@@ -138,7 +149,7 @@ public final class OfficeCrypto {
     checkPassword(password);
     final int keyBytes = 32;
     byte[] keyDataSalt = random(16), passwordSalt = random(16), key = random(keyBytes);
-    byte[] verifier = random(16), hmacSalt = random(Sha512.SIZE);
+    byte[] verifier = random(16), hmacSalt = random(HASH_SIZE);
 
     int segs = (docx.length + SEGMENT - 1) / SEGMENT;
     byte[] stream = new byte[8 + (docx.length + BLOCK - 1) / BLOCK * BLOCK];
@@ -156,7 +167,7 @@ public final class OfficeCrypto {
     byte[] iv = makeIv(passwordSalt, null);
     byte[] encVerifierInput = Aes.cbcEncrypt(deriveKey(hn, BK_VERIFIER_INPUT, keyBytes), iv, padded(verifier));
     byte[] encVerifierHash =
-        Aes.cbcEncrypt(deriveKey(hn, BK_VERIFIER_VALUE, keyBytes), iv, padded(Sha512.hash(verifier)));
+        Aes.cbcEncrypt(deriveKey(hn, BK_VERIFIER_VALUE, keyBytes), iv, padded(sha512(verifier)));
     byte[] encKeyValue = Aes.cbcEncrypt(deriveKey(hn, BK_KEY_VALUE, keyBytes), iv, padded(key));
 
     byte[] encHmacKey = Aes.cbcEncrypt(key, makeIv(keyDataSalt, BK_HMAC_KEY), padded(hmacSalt));
@@ -308,16 +319,16 @@ public final class OfficeCrypto {
     byte[] input = head(Aes.cbcDecrypt(deriveKey(hn, BK_VERIFIER_INPUT, pwKeyBytes), iv,
         b64attr(ek, "encryptedVerifierHashInput")), pwSalt.length);
     byte[] value = head(Aes.cbcDecrypt(deriveKey(hn, BK_VERIFIER_VALUE, pwKeyBytes), iv,
-        b64attr(ek, "encryptedVerifierHashValue")), Sha512.SIZE);
-    if (!same(Sha512.hash(input), value)) throw new IOException("Wrong password");
+        b64attr(ek, "encryptedVerifierHashValue")), HASH_SIZE);
+    if (!same(sha512(input), value)) throw new IOException("Wrong password");
     byte[] key = head(Aes.cbcDecrypt(deriveKey(hn, BK_KEY_VALUE, pwKeyBytes), iv, b64attr(ek, "encryptedKeyValue")),
         dataKeyBytes);
 
     if (integrity == null) throw new IOException("The document has no integrity check");
     byte[] hmacKey = head(Aes.cbcDecrypt(key, makeIv(dataSalt, BK_HMAC_KEY), b64attr(integrity, "encryptedHmacKey")),
-        Sha512.SIZE);
+        HASH_SIZE);
     byte[] expected = head(
-        Aes.cbcDecrypt(key, makeIv(dataSalt, BK_HMAC_VALUE), b64attr(integrity, "encryptedHmacValue")), Sha512.SIZE);
+        Aes.cbcDecrypt(key, makeIv(dataSalt, BK_HMAC_VALUE), b64attr(integrity, "encryptedHmacValue")), HASH_SIZE);
     if (!same(Hmac.sha512(hmacKey, pkg), expected))
       throw new IOException("The document is damaged (its integrity check failed)");
 
@@ -349,7 +360,7 @@ public final class OfficeCrypto {
     if (number(e, "blockSize") != BLOCK) throw new IOException("Unsupported block size");
     int bits = number(e, "keyBits");
     if (bits != 128 && bits != 192 && bits != 256) throw new IOException("Unsupported AES key size");
-    if (number(e, "hashSize") != Sha512.SIZE) throw new IOException("hashSize does not match SHA512");
+    if (number(e, "hashSize") != HASH_SIZE) throw new IOException("hashSize does not match SHA512");
     if (b64attr(e, "saltValue").length != number(e, "saltSize")) throw new IOException("saltSize mismatch");
   }
 
