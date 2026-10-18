@@ -24,55 +24,24 @@
   },
   "artifacts": {
     "cn1": {
-      "executableBytes": 22229912,
-      "appBundleBytes": 27143197,
-      "sha256": "66efb697bac1556a32439589330058febaa262caf61019ce70f39d4f140d3c1f"
+      "executableBytes": 27675640,
+      "appBundleBytes": 33144966,
+      "sha256": "d4f790a99db660969cecbf1ee05e462fd6c69aae8b300eee9955b7b069f10dd0",
+      "sourceCommit": "391683f9c0417ce37bd11d4d76117eb3194232fa"
     },
     "wordcraft": {
       "executableBytes": 57402384,
-      "sha256": "30d2162b1d895bc78a04d6c5b748fb267093284ae71dd0a8f86773e45ad6aa3e",
       "appBundleBytes": 57515260,
+      "sha256": "30d2162b1d895bc78a04d6c5b748fb267093284ae71dd0a8f86773e45ad6aa3e",
       "bundleMethod": "Unsigned assembly from upstream packaging/macos/package.sh: production executable, icon, expanded Info.plist, PkgInfo; no optional craft-fonts configured."
     },
     "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
     "machine": "Mac16,5",
     "cpuCount": 16,
     "ramBytes": 68719476736,
-    "frameworkRevision": "d519cd4e6f",
     "wordcraftRevision": "159b84f54c74e9e82fb3109b758ae7dd6f4e3ab0",
-    "frameworkLocalChanges": [
-      {
-        "file": "CodenameOne/src/com/codename1/ui/Dialog.java",
-        "sha256": "f7e3a063906c7e1cd39c19881edb99e609541bd9303455b1e854bb2cb31aacf3"
-      },
-      {
-        "file": "Ports/MacPort/nativeSources/METALView.m",
-        "sha256": "4acaacbf2fa86de83e9b6ebfa7e0546cd750b9520b35cb93576e85e3c419d2f5"
-      },
-      {
-        "file": "Ports/MacPort/nativeSources/CN1AppKitTextInput.m",
-        "sha256": "e4d275d62f92cab822b9d802b8264df29d5ba74d257c5efd3b58661f8d445d29"
-      },
-      {
-        "file": "Ports/MacPort/nativeSources/CN1AppKitWindows.m",
-        "sha256": "30f91765acbee84c628e85c4a2c06645d20812a81cd94010dee95ace785a8b1e"
-      },
-      {
-        "file": "Ports/iOSPort/nativeSources/CodenameOne_GLViewController.m",
-        "sha256": "8d637e34aa820126560ca82a8fda60c4adf7edf45feefb0bdf3ae259cec76e41"
-      }
-    ],
-    "recordedAt": "2026-10-13T17:39:30.041184+00:00",
-    "instrumentedArtifacts": {
-      "cn1": {
-        "path": "/private/tmp/cn1-ribbon-benchmark/app/common/target/mac-native/Build/Products/Release/Main.app/Contents/MacOS/Main",
-        "sha256": "d776d2af71f198aad1190ae67417e8b93de6e93cde7b8ebca4b5faa38f67e2bb"
-      },
-      "wordcraft": {
-        "path": "/private/tmp/wordcraft-comparison/target/release/wordcraft",
-        "sha256": "30141943ed4fb545c739c4504705956c18925a12682f3729199862e0a977f2cb"
-      }
-    }
+    "frameworkRevision": "Codename One 7.0.278 (Maven Central)",
+    "cn1Revision": "74e08842538a72512ad78154e6db8de4c26ac8fa"
   },
   "startup": {
     "1": {
@@ -80,27 +49,27 @@
         "launches": 10,
         "successes": 10,
         "cpuReadyMs": {
-          "min": 108.6130142211914,
-          "median": 132.75015354156494,
-          "p95": 145.80297470092773,
-          "max": 145.80297470092773,
+          "min": 54.97384071350098,
+          "median": 78.73845100402832,
+          "p95": 258.55493545532227,
+          "max": 258.55493545532227,
           "n": 10
         },
         "idleRssBytes": {
-          "min": 104431616,
-          "median": 105021440.0,
-          "p95": 106168320,
-          "max": 106184704,
-          "n": 3630
+          "min": 125599744,
+          "median": 143425536.0,
+          "p95": 151322624,
+          "max": 151977984,
+          "n": 3394
         },
         "kernelPeakBytes": {
-          "min": 104841216,
-          "median": 105267200.0,
-          "p95": 106348544,
-          "max": 106348544,
+          "min": 141328384,
+          "median": 144236544.0,
+          "p95": 151977984,
+          "max": 151977984,
           "n": 10
         },
-        "sampledWholeRunMinBytes": 524288,
+        "sampledWholeRunMinBytes": 32768,
         "pages": [
           1,
           1,
@@ -118,27 +87,27 @@
         "launches": 10,
         "successes": 10,
         "cpuReadyMs": {
-          "min": 280.14087677001953,
-          "median": 346.06194496154785,
-          "p95": 394.9599266052246,
-          "max": 394.9599266052246,
+          "min": 242.79189109802246,
+          "median": 279.3703079223633,
+          "p95": 558.9392185211182,
+          "max": 558.9392185211182,
           "n": 10
         },
         "idleRssBytes": {
-          "min": 182501376,
-          "median": 183861248.0,
-          "p95": 185712640,
-          "max": 186056704,
-          "n": 3624
+          "min": 130351104,
+          "median": 184008704.0,
+          "p95": 195346432,
+          "max": 195903488,
+          "n": 3334
         },
         "kernelPeakBytes": {
-          "min": 197165056,
-          "median": 198549504.0,
-          "p95": 200884224,
-          "max": 200884224,
+          "min": 197427200,
+          "median": 198606848.0,
+          "p95": 206258176,
+          "max": 206258176,
           "n": 10
         },
-        "sampledWholeRunMinBytes": 409600,
+        "sampledWholeRunMinBytes": 557056,
         "pages": [
           1,
           1,
@@ -158,27 +127,27 @@
         "launches": 10,
         "successes": 10,
         "cpuReadyMs": {
-          "min": 124.42302703857422,
-          "median": 162.38081455230713,
-          "p95": 252.44593620300293,
-          "max": 252.44593620300293,
+          "min": 106.01687431335449,
+          "median": 144.07706260681152,
+          "p95": 174.61705207824707,
+          "max": 174.61705207824707,
           "n": 10
         },
         "idleRssBytes": {
-          "min": 136445952,
-          "median": 137035776,
-          "p95": 137478144,
-          "max": 137986048,
-          "n": 3637
+          "min": 159367168,
+          "median": 170835968,
+          "p95": 173441024,
+          "max": 174145536,
+          "n": 3155
         },
         "kernelPeakBytes": {
-          "min": 137019392,
-          "median": 137584640.0,
-          "p95": 138018816,
-          "max": 138018816,
+          "min": 170459136,
+          "median": 171057152.0,
+          "p95": 174145536,
+          "max": 174145536,
           "n": 10
         },
-        "sampledWholeRunMinBytes": 622592,
+        "sampledWholeRunMinBytes": 638976,
         "pages": [
           91,
           91,
@@ -196,27 +165,27 @@
         "launches": 10,
         "successes": 10,
         "cpuReadyMs": {
-          "min": 376.8491744995117,
-          "median": 395.688533782959,
-          "p95": 433.4430694580078,
-          "max": 433.4430694580078,
+          "min": 271.21710777282715,
+          "median": 290.0419235229492,
+          "p95": 349.3931293487549,
+          "max": 349.3931293487549,
           "n": 10
         },
         "idleRssBytes": {
-          "min": 235405312,
-          "median": 236584960.0,
-          "p95": 239796224,
-          "max": 240074752,
-          "n": 3636
+          "min": 173981696,
+          "median": 238288896.0,
+          "p95": 246300672,
+          "max": 246579200,
+          "n": 3148
         },
         "kernelPeakBytes": {
-          "min": 250593280,
-          "median": 251985920.0,
-          "p95": 255066112,
-          "max": 255066112,
+          "min": 250314752,
+          "median": 253763584.0,
+          "p95": 258113536,
+          "max": 258113536,
           "n": 10
         },
-        "sampledWholeRunMinBytes": 524288,
+        "sampledWholeRunMinBytes": 114688,
         "pages": [
           56,
           56,
@@ -236,27 +205,27 @@
         "launches": 10,
         "successes": 10,
         "cpuReadyMs": {
-          "min": 172.93310165405273,
-          "median": 237.6260757446289,
-          "p95": 275.7220268249512,
-          "max": 275.7220268249512,
+          "min": 197.0229148864746,
+          "median": 217.35703945159912,
+          "p95": 365.0221824645996,
+          "max": 365.0221824645996,
           "n": 10
         },
         "idleRssBytes": {
-          "min": 161103872,
-          "median": 161841152.0,
-          "p95": 162447360,
-          "max": 162463744,
-          "n": 3658
+          "min": 143671296,
+          "median": 206209024,
+          "p95": 218791936,
+          "max": 219234304,
+          "n": 3495
         },
         "kernelPeakBytes": {
-          "min": 161742848,
-          "median": 162398208.0,
-          "p95": 163053568,
-          "max": 163053568,
+          "min": 203276288,
+          "median": 208805888.0,
+          "p95": 220823552,
+          "max": 220823552,
           "n": 10
         },
-        "sampledWholeRunMinBytes": 458752,
+        "sampledWholeRunMinBytes": 114688,
         "pages": [
           345,
           345,
@@ -274,27 +243,27 @@
         "launches": 10,
         "successes": 10,
         "cpuReadyMs": {
-          "min": 496.9947338104248,
-          "median": 521.3025808334351,
-          "p95": 566.5900707244873,
-          "max": 566.5900707244873,
+          "min": 406.1620235443115,
+          "median": 480.7596206665039,
+          "p95": 675.7051944732666,
+          "max": 675.7051944732666,
           "n": 10
         },
         "idleRssBytes": {
-          "min": 336838656,
-          "median": 338788352,
-          "p95": 340328448,
-          "max": 340639744,
-          "n": 3649
+          "min": 160481280,
+          "median": 338575360,
+          "p95": 344440832,
+          "max": 348307456,
+          "n": 3495
         },
         "kernelPeakBytes": {
-          "min": 351846400,
-          "median": 353198080.0,
-          "p95": 355549184,
-          "max": 355549184,
+          "min": 351125504,
+          "median": 355983360.0,
+          "p95": 359792640,
+          "max": 359792640,
           "n": 10
         },
-        "sampledWholeRunMinBytes": 475136,
+        "sampledWholeRunMinBytes": 114688,
         "pages": [
           385,
           385,
@@ -315,127 +284,127 @@
       "successes": 3,
       "runs": 3,
       "cpuSeconds": {
-        "min": 1.261897,
-        "median": 1.275865,
-        "p95": 1.549966,
-        "max": 1.549966,
+        "min": 2.127818,
+        "median": 2.268607,
+        "p95": 2.3001899999999997,
+        "max": 2.3001899999999997,
         "n": 3
       },
       "wallSeconds": {
-        "min": 19.254934582859278,
-        "median": 19.31540449988097,
-        "p95": 19.334029040765017,
-        "max": 19.334029040765017,
+        "min": 17.4261638331227,
+        "median": 17.6113239582628,
+        "p95": 17.636968625243753,
+        "max": 17.636968625243753,
         "n": 3
       },
       "kernelPeakBytes": {
-        "min": 277839872,
-        "median": 289128448,
-        "p95": 289374208,
-        "max": 289374208,
+        "min": 244727808,
+        "median": 253181952,
+        "p95": 298795008,
+        "max": 298795008,
         "n": 3
       },
-      "sampledWholeRunMinBytes": 376832,
+      "sampledWholeRunMinBytes": 32768,
       "validatedDocx": 15,
       "operations": {
         "exportPdf": {
-          "min": 13.344,
-          "median": 14.509,
-          "p95": 16.32,
-          "max": 16.32,
+          "min": 6.406,
+          "median": 7.458,
+          "p95": 16.867,
+          "max": 16.867,
           "n": 9
         },
         "insert": {
-          "min": 0.711,
-          "median": 2.161,
-          "p95": 4.343,
-          "max": 5.586,
+          "min": 2.594,
+          "median": 3.1025,
+          "p95": 5.796,
+          "max": 9.97,
           "n": 150
         },
         "paste10000": {
-          "min": 1.842,
-          "median": 1.904,
-          "p95": 3.21,
-          "max": 3.21,
+          "min": 6.806,
+          "median": 7.119,
+          "p95": 7.39,
+          "max": 7.39,
           "n": 3
         },
         "reopenDocx": {
-          "min": 40.857,
-          "median": 43.089,
-          "p95": 64.889,
-          "max": 64.889,
+          "min": 41.097,
+          "median": 41.75,
+          "p95": 45.641,
+          "max": 45.641,
           "n": 15
         },
         "saveDocx": {
-          "min": 5.369,
-          "median": 6.061,
-          "p95": 16.201,
-          "max": 16.201,
+          "min": 4.579,
+          "median": 5.45,
+          "p95": 10.445,
+          "max": 10.445,
           "n": 15
         },
         "undo": {
-          "min": 0.705,
-          "median": 2.383,
-          "p95": 4.221,
-          "max": 12.846,
+          "min": 2.411,
+          "median": 2.9234999999999998,
+          "p95": 5.325,
+          "max": 22.213,
           "n": 150
         },
         "undoPaste": {
-          "min": 0.865,
-          "median": 0.904,
-          "p95": 2.466,
-          "max": 2.466,
+          "min": 3.556,
+          "median": 3.686,
+          "p95": 4.506,
+          "max": 4.506,
           "n": 3
         }
       },
       "commandToCpuPaint": {
         "exportPdf": {
-          "min": 14.755,
-          "median": 15.883,
-          "p95": 17.7,
-          "max": 17.7,
+          "min": 6.604,
+          "median": 7.751,
+          "p95": 17.08,
+          "max": 17.08,
           "n": 9
         },
         "insert": {
-          "min": 14.946,
-          "median": 17.439,
-          "p95": 18.886,
-          "max": 19.714,
+          "min": 2.786,
+          "median": 3.383,
+          "p95": 6.706,
+          "max": 15.82,
           "n": 150
         },
         "paste10000": {
-          "min": 16.372,
-          "median": 17.452,
-          "p95": 18.941,
-          "max": 18.941,
+          "min": 7.724,
+          "median": 7.952,
+          "p95": 8.288,
+          "max": 8.288,
           "n": 3
         },
         "reopenDocx": {
-          "min": 42.28,
-          "median": 44.485,
-          "p95": 66.295,
-          "max": 66.295,
+          "min": 41.587,
+          "median": 42.339,
+          "p95": 46.138,
+          "max": 46.138,
           "n": 15
         },
         "saveDocx": {
-          "min": 14.503,
-          "median": 16.759,
-          "p95": 18.179,
-          "max": 18.179,
+          "min": 4.735,
+          "median": 5.612,
+          "p95": 10.615,
+          "max": 10.615,
           "n": 15
         },
         "undo": {
-          "min": 3.789,
-          "median": 17.365499999999997,
-          "p95": 19.185,
-          "max": 19.837,
+          "min": 2.524,
+          "median": 3.101,
+          "p95": 5.684,
+          "max": 22.39,
           "n": 150
         },
         "undoPaste": {
-          "min": 15.657,
-          "median": 16.484,
-          "p95": 18.572,
-          "max": 18.572,
+          "min": 3.908,
+          "median": 4.066,
+          "p95": 4.887,
+          "max": 4.887,
           "n": 3
         }
       }
@@ -444,127 +413,127 @@
       "successes": 3,
       "runs": 3,
       "cpuSeconds": {
-        "min": 9.415769,
-        "median": 9.516466,
-        "p95": 9.589383000000002,
-        "max": 9.589383000000002,
+        "min": 8.750035,
+        "median": 9.107498,
+        "p95": 9.856969,
+        "max": 9.856969,
         "n": 3
       },
       "wallSeconds": {
-        "min": 17.040816999971867,
-        "median": 17.070987292099744,
-        "p95": 17.09510516701266,
-        "max": 17.09510516701266,
+        "min": 17.163578500039876,
+        "median": 17.231386833824217,
+        "p95": 17.34789470816031,
+        "max": 17.34789470816031,
         "n": 3
       },
       "kernelPeakBytes": {
-        "min": 300417024,
-        "median": 304791552,
-        "p95": 305168384,
-        "max": 305168384,
+        "min": 269762560,
+        "median": 278134784,
+        "p95": 283951104,
+        "max": 283951104,
         "n": 3
       },
-      "sampledWholeRunMinBytes": 655360,
+      "sampledWholeRunMinBytes": 622592,
       "validatedDocx": 15,
       "operations": {
         "exportPdf": {
-          "min": 251.96099999999998,
-          "median": 253.72616599999998,
-          "p95": 259.044,
-          "max": 259.044,
+          "min": 245.153125,
+          "median": 254.35687499999997,
+          "p95": 262.570167,
+          "max": 262.570167,
           "n": 9
         },
         "insert": {
-          "min": 0.07825,
-          "median": 0.097563,
-          "p95": 0.216333,
-          "max": 0.522458,
+          "min": 0.082125,
+          "median": 0.1090415,
+          "p95": 0.273667,
+          "max": 0.824542,
           "n": 150
         },
         "paste10000": {
-          "min": 0.102167,
-          "median": 0.103667,
-          "p95": 0.120542,
-          "max": 0.120542,
+          "min": 0.097,
+          "median": 0.10975,
+          "p95": 0.128708,
+          "max": 0.128708,
           "n": 3
         },
         "reopenDocx": {
-          "min": 6.719583,
-          "median": 7.008,
-          "p95": 12.282791,
-          "max": 12.282791,
+          "min": 6.609167,
+          "median": 7.945333000000001,
+          "p95": 12.316832999999999,
+          "max": 12.316832999999999,
           "n": 15
         },
         "saveDocx": {
-          "min": 7.476,
-          "median": 8.127875,
-          "p95": 12.205499999999999,
-          "max": 12.205499999999999,
+          "min": 7.60025,
+          "median": 9.050291,
+          "p95": 14.315833,
+          "max": 14.315833,
           "n": 15
         },
         "undo": {
-          "min": 0.024583,
-          "median": 0.038813,
-          "p95": 0.048667,
-          "max": 0.053542000000000006,
+          "min": 0.021124999999999998,
+          "median": 0.0399375,
+          "p95": 0.057833,
+          "max": 2.011708,
           "n": 150
         },
         "undoPaste": {
-          "min": 0.034041999999999996,
-          "median": 0.034917,
-          "p95": 0.054125,
-          "max": 0.054125,
+          "min": 0.035584,
+          "median": 0.0365,
+          "p95": 0.056083,
+          "max": 0.056083,
           "n": 3
         }
       },
       "commandToCpuPaint": {
         "exportPdf": {
-          "min": 252.29666699999999,
-          "median": 254.08641599999999,
-          "p95": 259.394666,
-          "max": 259.394666,
+          "min": 245.459,
+          "median": 254.683208,
+          "p95": 262.953667,
+          "max": 262.953667,
           "n": 9
         },
         "insert": {
-          "min": 11.11725,
-          "median": 12.2946665,
-          "p95": 13.689667,
-          "max": 20.934917000000002,
+          "min": 10.920875,
+          "median": 11.989749999999999,
+          "p95": 15.6045,
+          "max": 21.778833000000002,
           "n": 150
         },
         "paste10000": {
-          "min": 18.374499999999998,
-          "median": 18.403917,
-          "p95": 18.759833,
-          "max": 18.759833,
+          "min": 16.4195,
+          "median": 18.975334,
+          "p95": 21.615624999999998,
+          "max": 21.615624999999998,
           "n": 3
         },
         "reopenDocx": {
-          "min": 48.202041,
-          "median": 49.434792,
-          "p95": 60.789083,
-          "max": 60.789083,
+          "min": 47.717208,
+          "median": 51.714957999999996,
+          "p95": 70.573958,
+          "max": 70.573958,
           "n": 15
         },
         "saveDocx": {
-          "min": 7.867624999999999,
-          "median": 8.596334,
-          "p95": 12.666333,
-          "max": 12.666333,
+          "min": 8.005541,
+          "median": 9.564083,
+          "p95": 14.788375,
+          "max": 14.788375,
           "n": 15
         },
         "undo": {
-          "min": 10.887708,
-          "median": 12.0922715,
-          "p95": 13.165666,
-          "max": 14.364583,
+          "min": 10.717457999999999,
+          "median": 11.459208,
+          "p95": 14.921916,
+          "max": 16.195874999999997,
           "n": 150
         },
         "undoPaste": {
-          "min": 11.178749999999999,
-          "median": 12.059958,
-          "p95": 12.288084,
-          "max": 12.288084,
+          "min": 10.984084,
+          "median": 13.201708,
+          "p95": 14.28525,
+          "max": 14.28525,
           "n": 3
         }
       }

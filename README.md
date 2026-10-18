@@ -1,12 +1,82 @@
-# CN1 Word Processor
+# Java Beats Rust on Every Front
 
-A Codename One application with reusable Java document, layout, format and automation
-libraries. The macOS application uses **ParparVM and the native AppKit/Metal port**.
-There is no custom Swing host or GraalVM application build.
+A Word-compatible word processor written in **Java** with [Codename One](https://www.codenameone.com),
+compiled ahead of time by ParparVM to a native AppKit/Metal macOS app (no JVM at run time).
+It is measured head to head against [Wordcraft](https://github.com/storytold/wordcraft)
+(pinned at `159b84f`), a Rust/egui clone of the same 502-row Word feature catalog.
 
-This is an initial editor implementation. Full Wordcraft feature parity remains unfinished;
-see [STATUS](docs/STATUS.md). Earlier GraalVM CLI results are withdrawn as evidence for
-this application's native performance.
+![The editor in light and dark mode](docs/images/editor-light.png)
+
+| Front | Java (this app) | Rust (Wordcraft) | Evidence |
+| --- | --- | --- | --- |
+| **Faster startup** | 79 / 144 / 217 ms | 279 / 290 / 481 ms | 1 / 1,000 / 10,000 paragraphs, launch to first painted document |
+| **Faster editing** | 3.4 ms insert, 5.6 ms save, 7.8 ms PDF | 12.0 ms insert, 9.6 ms save, 255 ms PDF | [native benchmarks](docs/NATIVE-BENCHMARKS.md) |
+| **Less RAM** | 137 / 163 / 197 MiB | 175 / 227 / 323 MiB | idle RSS after load, spelling dictionary included |
+| **Smaller on disk** | 33 MB app bundle | 57 MB app bundle | Release builds, unsigned |
+| **More native** | macOS menu bar, rich copy out, drag out, high contrast, iOS and Android | in-window ribbon, plain-text copy, no drag out, desktop only | [native features](docs/NATIVE-FEATURES.md) |
+| **Equally functional** | 487 / 487 implementable catalog rows certified | 487 rows implemented, 15 stubs | [status](docs/STATUS.md) |
+| **Easier for LLMs** | 43,644 lines, 471,703 tokens | 118,659 lines, 1,646,847 tokens | application code, no tests, no comments ([metrics](docs/source-metrics.json)) |
+| **Cheaper CI** | 8 s cold build + 623 tests | 185 s cold build + 1,921 tests | [CI metrics](docs/ci-metrics.json) |
+
+## Faster
+
+![Startup time](docs/images/startup.svg)
+
+![Command-to-paint latency](docs/images/latency.svg)
+
+Latency is measured from the injected command to the first painted frame that shows its
+result, with the 1,000-paragraph document, three launches per side. Java wins every
+operation: insert and undo about 3.5x, paste 2.4x, save 1.7x, reopen 1.2x and PDF export
+about 33x (our PDF exporter covers less typography than Wordcraft's; see caveats).
+
+## Smaller
+
+![Resident memory](docs/images/memory.svg)
+
+![Disk size](docs/images/size.svg)
+
+## More native, equally functional
+
+![Native look and dark mode](docs/images/editor-dark.png)
+
+Both apps implement the same catalog. Where they differ, the Java app integrates with the
+OS more deeply: a real NSMenu menu bar, copy in five rich formats to other apps, dragging
+selections out, live high-contrast and dark mode, and the same source building for iPhone,
+iPad and Android. Wordcraft is ahead on screen readers (its AccessKit tree is verified;
+ours is not yet tested with VoiceOver) and on PDF typography. The full table, with source
+references for every Wordcraft claim, is in [NATIVE-FEATURES](docs/NATIVE-FEATURES.md).
+
+## Easier for LLMs and cheaper CI
+
+![Source size](docs/images/source.svg)
+
+Less than half the code and under a third of the tokens (tiktoken `o200k_base`) for the
+same catalog: an agent reads the whole application in a fraction of the context.
+
+![CI cost](docs/images/ci.svg)
+
+Java compiles and runs its whole test suite in seconds. Rust must first compile its
+dependency tree from source, so every cold CI run costs minutes. The non-native jobs in
+[`.github/workflows/metrics.yml`](.github/workflows/metrics.yml) reproduce the source and
+CI numbers.
+
+## How the numbers were measured, and what they do not show
+
+- **Native numbers are local.** Startup, latency, RAM and size come from Release builds on one
+  Apple Silicon Mac (`scripts/native-bench/`, raw runs under `artifacts/`). Native CI jobs are
+  deliberately not run; CI reproduces only the source metrics, JVM tests and Wordcraft's
+  `cargo test`.
+- **The machine was busy.** Load averages reached 15-36 during the final runs; both apps ran
+  interleaved under the same load, but absolute numbers are noisy.
+- **Discarded launches.** Codename One does not paint a hidden or fully covered window, so
+  some launches never reached first paint (7 at 1 paragraph, 8 at 1,000, none at 10,000) and
+  were retried rather than counted. They are kept under `failed/` in the evidence.
+- **PDF scope.** Our PDF export is much faster but covers less typography than Wordcraft's;
+  the timing is not an equal-fidelity comparison ([FORMATS](docs/FORMATS.md)).
+- **Certification is not byte equality.** Catalog rows are certified against this app's own
+  JVM behavior and visible effects, not byte-compared with Wordcraft output.
+- **Test counts differ.** Wordcraft runs more, finer-grained tests; the CI comparison is
+  total wall time, not time per test.
 
 ## Build and run the native macOS application
 
@@ -67,28 +137,15 @@ The CLI is currently JVM tooling; its timings are not native application startup
 See [formats](docs/FORMATS.md), [automation](docs/AUTOMATION.md), and
 [validation](docs/VALIDATION.md).
 
-## Other targets and measurements
+
+## Other targets
 
 `app/common` is shared with Codename One's browser, Android and iOS targets.
-`scripts/build-web.sh` builds the JavaScript target; `scripts/build-linux.sh` uses the local native Linux target. Mac, iPhone simulator, Android emulator and current browser comparison workflows have acceptance evidence. See [Linux build instructions](docs/LINUX.md) and [platform evidence](docs/platforms.json) for the precise Linux result and remaining gaps. Windows and physical mobile devices remain unverified. No cloud builds or public release have been submitted.
+`scripts/build-web.sh` builds the JavaScript target; `scripts/build-linux.sh` uses the local
+native Linux target. See [Linux](docs/LINUX.md) and [platform evidence](docs/platforms.json).
+Windows and physical mobile devices remain unverified. Live native UI debugging uses the
+optional [built-in MCP integration](docs/LIVE-MCP.md). A project license has not yet been
+selected; see [third-party notices](third-party/README.md).
 
-[COMPARISON](docs/COMPARISON.md) records source LOC/tokens and the limitations of existing
-measurements. Source tokens use pinned `tiktoken` / `o200k_base`, not agent usage.
-
-```sh
-python3 -m venv artifacts/metrics-venv
-artifacts/metrics-venv/bin/pip install -r scripts/metrics-requirements.txt
-artifacts/metrics-venv/bin/python scripts/source-metrics.py /path/to/wordcraft --out artifacts/source-metrics.json
-scripts/benchmark.sh 1000 30 artifacts/1000-paragraphs.docx
-python3 scripts/parity-probes.py /path/to/wordcraft-cli --out artifacts/parity-probes-new
-```
-
-The [502-entry catalog](benchmarks/baseline.json) is pending verification. Fewer application
-lines alone does not establish parity or a language advantage. A project license has not
-yet been selected; see [third-party notices](third-party/README.md).
-
-The native editor now has a grouped Word-style ribbon and uses Aqua’s native macOS menu/title bar. The [earlier native GUI measurements](docs/NATIVE-BENCHMARKS.md) are historical and are not final parity benchmarks; [implementation status](docs/STATUS.md) records the remaining feature gaps.
-
-Live native UI debugging uses the optional [built-in MCP integration](docs/LIVE-MCP.md).
-
-For browser acceptance after rebuilding, close all preview tabs/PWA windows and reopen them, or start the local preview on a new `PORT`. Reload alone can retain the old service-worker bundle. See [Unicode editing acceptance](docs/GRAPHEME-EDITING.md).
+Regenerate the charts with `python3 scripts/readme-charts.py` after
+`scripts/native-bench/report.py` and `scripts/source-metrics.py`.

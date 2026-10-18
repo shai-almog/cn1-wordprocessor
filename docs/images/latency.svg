@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="432" viewBox="0 0 760 432" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif">
+<style>text{fill:#1f2328}.muted{fill:#59636e}rect.bg{fill:#ffffff}@media (prefers-color-scheme:dark){text{fill:#e6edf3}.muted{fill:#9198a1}rect.bg{fill:#0d1117}}</style>
+<rect class="bg" width="760" height="432" rx="8"/>
+<text x="16" y="28" font-size="17" font-weight="600">Command to painted frame, 1,000-paragraph document</text>
+<text x="16" y="48" font-size="12" class="muted">milliseconds, median of 3 native runs · lower is better</text>
+<rect x="510" y="16" width="12" height="12" fill="#2f7ff0"/><text x="528" y="27" font-size="12">Java / Codename One</text>
+<rect x="510" y="34" width="12" height="12" fill="#e0663a"/><text x="528" y="45" font-size="12">Rust / Wordcraft</text>
+<text x="16" y="86" font-size="13">Type a character</text>
+<rect x="190" y="64" width="5.6" height="18" rx="3" fill="#2f7ff0"/>
+<text x="201.6" y="77" font-size="12">3.4</text>
+<rect x="190" y="84" width="19.8" height="18" rx="3" fill="#e0663a"/>
+<text x="215.8" y="97" font-size="12">12.0</text>
+<text x="744" y="86" font-size="12" font-weight="600" text-anchor="end" fill="#2f7ff0">3.5× better</text>
+<text x="16" y="140" font-size="13">Undo</text>
+<rect x="190" y="118" width="5.1" height="18" rx="3" fill="#2f7ff0"/>
+<text x="201.1" y="131" font-size="12">3.1</text>
+<rect x="190" y="138" width="18.9" height="18" rx="3" fill="#e0663a"/>
+<text x="214.9" y="151" font-size="12">11.5</text>
+<text x="744" y="140" font-size="12" font-weight="600" text-anchor="end" fill="#2f7ff0">3.7× better</text>
+<text x="16" y="194" font-size="13">Paste 10,000 chars</text>
+<rect x="190" y="172" width="13.1" height="18" rx="3" fill="#2f7ff0"/>
+<text x="209.1" y="185" font-size="12">8.0</text>
+<rect x="190" y="192" width="31.3" height="18" rx="3" fill="#e0663a"/>
+<text x="227.3" y="205" font-size="12">19.0</text>
+<text x="744" y="194" font-size="12" font-weight="600" text-anchor="end" fill="#2f7ff0">2.4× better</text>
+<text x="16" y="248" font-size="13">Save DOCX</text>
+<rect x="190" y="226" width="9.3" height="18" rx="3" fill="#2f7ff0"/>
+<text x="205.3" y="239" font-size="12">5.6</text>
+<rect x="190" y="246" width="15.8" height="18" rx="3" fill="#e0663a"/>
+<text x="211.8" y="259" font-size="12">9.6</text>
+<text x="744" y="248" font-size="12" font-weight="600" text-anchor="end" fill="#2f7ff0">1.7× better</text>
+<text x="16" y="302" font-size="13">Reopen DOCX</text>
+<rect x="190" y="280" width="69.8" height="18" rx="3" fill="#2f7ff0"/>
+<text x="265.8" y="293" font-size="12">42.3</text>
+<rect x="190" y="300" width="85.3" height="18" rx="3" fill="#e0663a"/>
+<text x="281.3" y="313" font-size="12">51.7</text>
+<text x="744" y="302" font-size="12" font-weight="600" text-anchor="end" fill="#2f7ff0">1.2× better</text>
+<text x="16" y="356" font-size="13">Export PDF</text>
+<rect x="190" y="334" width="12.8" height="18" rx="3" fill="#2f7ff0"/>
+<text x="208.8" y="347" font-size="12">7.8</text>
+<rect x="190" y="354" width="420.0" height="18" rx="3" fill="#e0663a"/>
+<text x="616.0" y="367" font-size="12">255</text>
+<text x="744" y="356" font-size="12" font-weight="600" text-anchor="end" fill="#2f7ff0">32.9× better</text>
+<text x="16" y="416" font-size="11" class="muted">Native macOS ARM64 release builds, same machine and fixture. Source: docs/native-benchmarks.json</text></svg>
