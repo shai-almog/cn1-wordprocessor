@@ -571,7 +571,7 @@ static final char COLUMN_BREAK = '\u000B';
       }
       parts.put(
           "word/document.xml",
-          documentXml(d, lists, tabs, links, comments, pictures, furniture).getBytes("UTF-8"));
+          ZipParts.utf8(documentXml(d, lists, tabs, links, comments, pictures, furniture)));
       if (source == null) {
         parts.put(
             "[Content_Types].xml",
@@ -633,7 +633,7 @@ static final char COLUMN_BREAK = '\u000B';
           .append(rpr)
           .append("</w:style>");
     }
-    parts.put("word/styles.xml", xml.append("</w:styles>").toString().getBytes("UTF-8"));
+    parts.put("word/styles.xml", ZipParts.utf8(xml.append("</w:styles>")));
     String path = "word/_rels/document.xml.rels",
         rels =
             parts.containsKey(path)
@@ -1124,7 +1124,30 @@ static final char COLUMN_BREAK = '\u000B';
     b.append(suffix).append("</w:p>");
   }
 
+  /**
+   * Run properties are written in full on every run, and a document has few distinct styles:
+   * reuse the markup per style. TextStyle is immutable with a cached hash.
+   */
+  private static final Map<TextStyle, String> RUN_PROPERTIES = new HashMap<TextStyle, String>();
+
   static void writeRunProperties(StringBuilder b, TextStyle s) {
+    String cached;
+    synchronized (RUN_PROPERTIES) {
+      cached = RUN_PROPERTIES.get(s);
+    }
+    if (cached == null) {
+      StringBuilder x = new StringBuilder(640);
+      buildRunProperties(x, s);
+      cached = x.toString();
+      synchronized (RUN_PROPERTIES) {
+        if (RUN_PROPERTIES.size() > 512) RUN_PROPERTIES.clear();
+        RUN_PROPERTIES.put(s, cached);
+      }
+    }
+    b.append(cached);
+  }
+
+  private static void buildRunProperties(StringBuilder b, TextStyle s) {
     b.append("<w:rPr><w:rFonts w:ascii=\"")
         .append(Xml.escape(s.font))
         .append("\" w:hAnsi=\"")
