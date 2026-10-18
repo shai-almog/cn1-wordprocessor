@@ -2324,20 +2324,29 @@ public class WordProcessor {
 
 
   private void mergeStartDialog() {
-    var type =
-        new ComboBox<String>("Letters", "Directory", "Envelopes", "Labels", "Emails", "Normal");
     var current = session.mergeData().kind;
-    for (int i = 0; i < type.getModel().getSize(); i++)
-      if (type.getModel().getItemAt(i).equalsIgnoreCase(current)) type.setSelectedIndex(i);
-    if (showDialog("Start mail merge", formRow("Document type", type), "Apply", "Cancel"))
-      mailing("start", Json.object("kind", type.getSelectedItem().toLowerCase()));
+    var args =
+        new Fields()
+            .choice(
+                "kind",
+                "Document type",
+                new String[] {"Letters", "Directory", "Envelopes", "Labels", "Emails", "Normal"},
+                new String[] {"letters", "directory", "envelopes", "labels", "emails", "normal"},
+                current == null ? null : current.toLowerCase())
+            .ask("Start mail merge", "Apply");
+    if (args != null) mailing("start", args);
   }
 
   private void recipientsDialog() {
-    var method =
-        new ComboBox<String>("Type or paste a list", "Open CSV, TSV or spreadsheet");
-    if (!showDialog("Select recipients", formRow("Source", method), "Continue", "Cancel")) return;
-    if (method.getSelectedIndex() == 0) {
+    var f =
+        new Fields()
+            .index(
+                "method",
+                "Source",
+                new String[] {"Type or paste a list", "Open CSV, TSV or spreadsheet"},
+                0);
+    if (f.ask("Select recipients", "Continue") == null) return;
+    if (f.idx("method") == 0) {
       editRecipientSourceDialog();
       return;
     }
@@ -2535,67 +2544,45 @@ public class WordProcessor {
   }
 
   private void editRecipientSourceDialog() {
-    var csv =
-        field(
-            session.mergeData().fields.isEmpty()
-                ? "First Name,Last Name,Address,City,State,PostalCode\n"
-                : session.mergeData().csv(),
-            10,
-            50);
-    if (showDialog(
-        "Edit recipient list",
-        BoxLayout.encloseY(
-            OfficeTheme.label(
-                "One recipient per row. Quote values containing commas.", 12, OfficeTheme.INK),
-            formRow("Recipient CSV", csv)),
-        "Apply",
-        "Cancel")) mailing("recipients", Json.object("csv", csv.getText()));
+    var data = session.mergeData();
+    var args =
+        new Fields()
+            .note("One recipient per row. Quote values containing commas.")
+            .text(
+                "csv",
+                "Recipient CSV",
+                data.fields.isEmpty()
+                    ? "First Name,Last Name,Address,City,State,PostalCode\n"
+                    : data.csv(),
+                10,
+                50)
+            .ask("Edit recipient list", "Apply");
+    if (args != null) mailing("recipients", args);
   }
 
-  private ComboBox<String> recipientFields() {
+  private String[] recipientFields() {
     if (session.mergeData().fields.isEmpty())
       throw new IllegalArgumentException("Select recipients first");
-    return new ComboBox<>(
-        session.mergeData().fields.toArray(new String[session.mergeData().fields.size()]));
+    return session.mergeData().fields.toArray(new String[session.mergeData().fields.size()]);
   }
 
   private void mergeFieldDialog() {
-    ComboBox<String> fields = recipientFields();
-    if (showDialog("Insert merge field", formRow("Field", fields), "Insert", "Cancel"))
-      mailing("insertField", Json.object("field", fields.getSelectedItem()));
+    var args =
+        new Fields().choice("field", "Field", recipientFields(), null).ask("Insert merge field", "Insert");
+    if (args != null) mailing("insertField", args);
   }
 
   private void mergeRuleDialog() {
-    ComboBox<String> rule = new ComboBox<String>("IF", "NEXT", "NEXTIF", "SKIPIF", "MERGEREC"),
-        fields = recipientFields(),
-        op = new ComboBox<String>("=", "<>", "<", ">", "<=", ">=");
-    EditField value = field(""), yes = field(""), no = field("");
-    if (showDialog(
-        "Merge rule",
-        BoxLayout.encloseY(
-            formRow("Rule", rule),
-            formRow("Field", fields),
-            formRow("Comparison", op),
-            formRow("Compare to", value),
-            formRow("If true", yes),
-            formRow("If false", no)),
-        "Insert",
-        "Cancel"))
-      mailing(
-          "rules",
-          Json.object(
-              "rule",
-              rule.getSelectedItem(),
-              "field",
-              fields.getSelectedItem(),
-              "operator",
-              op.getSelectedItem(),
-              "value",
-              value.getText(),
-              "then",
-              yes.getText(),
-              "else",
-              no.getText()));
+    var args =
+        new Fields()
+            .choice("rule", "Rule", new String[] {"IF", "NEXT", "NEXTIF", "SKIPIF", "MERGEREC"}, null)
+            .choice("field", "Field", recipientFields(), null)
+            .choice("operator", "Comparison", new String[] {"=", "<>", "<", ">", "<=", ">="}, null)
+            .text("value", "Compare to", "")
+            .text("then", "If true", "")
+            .text("else", "If false", "")
+            .ask("Merge rule", "Insert");
+    if (args != null) mailing("rules", args);
   }
 
   private void mergeMappingDialog() {
@@ -2620,9 +2607,8 @@ public class WordProcessor {
   }
 
   private void findRecipientDialog() {
-    var text = field("");
-    if (showDialog("Find recipient", formRow("Find text", text), "Find", "Cancel"))
-      mailing("findRecipient", Json.object("text", text.getText()));
+    var args = new Fields().text("text", "Find text", "").ask("Find recipient", "Find");
+    if (args != null) mailing("findRecipient", args);
   }
 
   private void mergeErrorsDialog() {
@@ -2637,25 +2623,16 @@ public class WordProcessor {
   }
 
   private void finishMergeDialog() {
-    EditField from = field("1"), to = field("" + session.mergeData().rows.size());
-    if (showDialog(
-        "Finish merge",
-        BoxLayout.encloseY(
-            OfficeTheme.label(
-                "Create an editable merged document. Undo restores the template.",
-                12,
-                OfficeTheme.INK),
-            formRow("First recipient", from),
-            formRow("Last recipient", to)),
-        "Merge",
-        "Cancel")) {
-      mailing(
-          "finish",
-          Json.object(
-              "from", Integer.parseInt(from.getText()), "to", Integer.parseInt(to.getText())));
-      forgetFile();
-      source = null;
-    }
+    var args =
+        new Fields()
+            .note("Create an editable merged document. Undo restores the template.")
+            .number("from", "First recipient", 1)
+            .number("to", "Last recipient", session.mergeData().rows.size())
+            .ask("Finish merge", "Merge");
+    if (args == null) return;
+    mailing("finish", args);
+    forgetFile();
+    source = null;
   }
 
   private CitationSource sourceDialog(CitationSource original) {
@@ -2718,19 +2695,19 @@ public class WordProcessor {
     if (sources.isEmpty()) labels[0] = "No sources";
     for (int i = 0; i < sources.size(); i++)
       labels[i] = sources.get(i).tag() + " \u2014 " + sources.get(i).get("title");
-    var source = new ComboBox<String>(labels);
-    var action =
-        new ComboBox<String>(
-            sources.isEmpty()
-                ? new String[] {"New source"}
-                : new String[] {"Edit source", "New source", "Delete source"});
-    if (!showDialog(
-        "Manage sources",
-        BoxLayout.encloseY(formRow("Source", source), formRow("Action", action)),
-        "Continue",
-        "Cancel")) return;
-    if ("Delete source".equals(action.getSelectedItem())) {
-      var selected = sources.get(source.getSelectedIndex());
+    var f =
+        new Fields()
+            .index("source", "Source", labels, 0)
+            .choice(
+                "action",
+                "Action",
+                sources.isEmpty()
+                    ? new String[] {"New source"}
+                    : new String[] {"Edit source", "New source", "Delete source"},
+                null);
+    if (f.ask("Manage sources", "Continue") == null) return;
+    if ("Delete source".equals(f.str("action"))) {
+      var selected = sources.get(f.idx("source"));
       if (showDialog(
           "Delete source",
           new Label("Existing citations will show a missing-source message."),
@@ -2741,10 +2718,7 @@ public class WordProcessor {
       }
     } else {
       var editedSource =
-          sourceDialog(
-              "New source".equals(action.getSelectedItem())
-                  ? null
-                  : sources.get(source.getSelectedIndex()));
+          sourceDialog("New source".equals(f.str("action")) ? null : sources.get(f.idx("source")));
       if (editedSource != null) {
         Citations.source(session, editedSource);
         edited();
@@ -2760,72 +2734,63 @@ public class WordProcessor {
     choices[0] = "Add new source";
     for (int i = 0; i < sources.size(); i++)
       choices[i + 1] = sources.get(i).tag() + " \u2014 " + sources.get(i).get("title");
-    var source = new ComboBox<String>(choices);
-    if (!sources.isEmpty()) source.setSelectedIndex(1);
-    var pages = field("");
-    if (!showDialog(
-        "Insert citation",
-        BoxLayout.encloseY(formRow("Source", source), formRow("Citation pages", pages)),
-        "Insert",
-        "Cancel")) return;
-    CitationSource created = source.getSelectedIndex() == 0 ? sourceDialog(null) : null;
-    if (source.getSelectedIndex() == 0 && created == null) return;
+    var f =
+        new Fields()
+            .index("source", "Source", choices, sources.isEmpty() ? 0 : 1)
+            .text("pages", "Citation pages", "");
+    if (f.ask("Insert citation", "Insert") == null) return;
+    int index = f.idx("source");
+    CitationSource created = index == 0 ? sourceDialog(null) : null;
+    if (index == 0 && created == null) return;
     Citations.insert(
-        session,
-        created == null ? sources.get(source.getSelectedIndex() - 1).tag() : created.tag(),
-        created,
-        pages.getText());
+        session, created == null ? sources.get(index - 1).tag() : created.tag(), created, f.str("pages"));
     edited();
   }
 
   private void citationStyleDialog() {
-    var style = new ComboBox<String>(CitationStyles.NAMES);
-    style.setSelectedItem(session.document().bibliography.style);
-    if (showDialog("Citation style", formRow("Style", style), "Apply", "Cancel")) {
-      Citations.style(session, style.getSelectedItem());
-      edited();
-    }
+    var f =
+        new Fields()
+            .choice("style", "Style", CitationStyles.NAMES, session.document().bibliography.style);
+    if (f.ask("Citation style", "Apply") == null) return;
+    Citations.style(session, f.str("style"));
+    edited();
   }
 
   private void bibliographyDialog() {
     int[] range = Citations.range(session.document());
     var title =
-        field(
-            range == null
-                ? CitationStyles.title(CitationStyles.index(session.document().bibliography.style))
-                : session.document().paragraph(range[0]).text.plainText());
-    if (showDialog("Bibliography", formRow("Title", title), "Apply", "Cancel")) {
-      Citations.bibliography(session, title.getText());
-      edited();
-    }
+        range == null
+            ? CitationStyles.title(CitationStyles.index(session.document().bibliography.style))
+            : session.document().paragraph(range[0]).text.plainText();
+    var f = new Fields().text("title", "Title", title);
+    if (f.ask("Bibliography", "Apply") == null) return;
+    Citations.bibliography(session, f.str("title"));
+    edited();
   }
 
   private void markAuthorityDialog() {
     editor.stopInput();
-    var entry = field(session.selectedText());
-    if (showDialog("Mark citation", formRow("Citation", entry), "Mark", "Cancel")) {
-      TableAuthorities.mark(session, entry.getText());
-      edited();
-    }
+    var f = new Fields().text("entry", "Citation", session.selectedText());
+    if (f.ask("Mark citation", "Mark") == null) return;
+    TableAuthorities.mark(session, f.str("entry"));
+    edited();
   }
 
   private void authoritiesDialog() {
     editor.stopInput();
     DocumentIndex.Options old = TableAuthorities.options(session.document());
-    var title = field(old.title);
-    String[] leaders = {"none", "dot", "hyphen", "underscore", "middleDot"};
-    var leader =
-        new ComboBox<String>("None", "Dots", "Hyphens", "Underscores", "Middle dots");
-    leader.setSelectedIndex(Arrays.asList(leaders).indexOf(old.leader));
-    if (showDialog(
-        "Table of authorities",
-        BoxLayout.encloseY(formRow("Title", title), formRow("Tab leader", leader)),
-        "Apply",
-        "Cancel")) {
-      TableAuthorities.insert(
-          session, title.getText(), leaders[leader.getSelectedIndex()], editor::printLayout);
-      edited();
-    }
+    var f =
+        new Fields()
+            .text("title", "Title", old.title)
+            .choice(
+                "leader",
+                "Tab leader",
+                new String[] {"None", "Dots", "Hyphens", "Underscores", "Middle dots"},
+                new String[] {"none", "dot", "hyphen", "underscore", "middleDot"},
+                old.leader);
+    if (f.ask("Table of authorities", "Apply") == null) return;
+    TableAuthorities.insert(session, f.str("title"), f.str("leader"), editor::printLayout);
+    edited();
   }
 
   private CheckBox check(String text, boolean selected) {
@@ -2880,12 +2845,10 @@ public class WordProcessor {
 
 
   private void removeFiguresDialog() {
-    var label = field("Figure");
-    if (showDialog(
-        "Remove table of figures", formRow("Caption label", label), "Remove", "Cancel")) {
-      TableContents.remove(session, label.getText().trim());
-      edited();
-    }
+    var f = new Fields().text("label", "Caption label", "Figure");
+    if (f.ask("Remove table of figures", "Remove") == null) return;
+    TableContents.remove(session, f.str("label").trim());
+    edited();
   }
 
   private void contentsDialog() {
@@ -2982,43 +2945,34 @@ public class WordProcessor {
   }
 
   private void outlineDialog() {
-    var level =
-        new ComboBox<String>(
-            "Do not show",
-            "Level 1",
-            "Level 2",
-            "Level 3",
-            "Level 4",
-            "Level 5",
-            "Level 6",
-            "Level 7",
-            "Level 8",
-            "Level 9");
     var p = session.editingDocument().paragraph(session.selection().block);
-    level.setSelectedIndex(
-        p.format.outlineLevel >= 0 ? p.format.outlineLevel : SequenceFields.headingLevel(p.style));
-    if (showDialog("Add text to contents", formRow("Outline level", level), "Apply", "Cancel")) {
-      session.paragraph("outlineLevel", "" + level.getSelectedIndex());
-      edited();
-    }
+    var f =
+        new Fields()
+            .index(
+                "level",
+                "Outline level",
+                new String[] {
+                  "Do not show", "Level 1", "Level 2", "Level 3", "Level 4", "Level 5", "Level 6",
+                  "Level 7", "Level 8", "Level 9"
+                },
+                p.format.outlineLevel >= 0 ? p.format.outlineLevel : SequenceFields.headingLevel(p.style));
+    if (f.ask("Add text to contents", "Apply") == null) return;
+    session.paragraph("outlineLevel", "" + f.idx("level"));
+    edited();
   }
 
   private void markContentsDialog() {
-    EditField text = field(session.selectedText()), identifier = field("C");
-    var level = new ComboBox<String>("1", "2", "3", "4", "5", "6", "7", "8", "9");
-    if (showDialog(
-        "Mark contents entry",
-        BoxLayout.encloseY(
-            formRow("Entry text", text),
-            formRow("Entry level", level),
-            formRow("Identifier", identifier)),
-        "Mark",
-        "Cancel")) {
-      TableContents.markEntry(
-          session, text.getText(), level.getSelectedIndex() + 1, identifier.getText());
-      edited();
-    }
+    var f =
+        new Fields()
+            .text("text", "Entry text", session.selectedText())
+            .index("level", "Entry level", LEVELS, 0)
+            .text("identifier", "Identifier", "C");
+    if (f.ask("Mark contents entry", "Mark") == null) return;
+    TableContents.markEntry(session, f.str("text"), f.idx("level") + 1, f.str("identifier"));
+    edited();
   }
+
+  private static final String[] LEVELS = {"1", "2", "3", "4", "5", "6", "7", "8", "9"};
 
   private void bookmarkDialog() {
     editor.stopInput();
@@ -3152,53 +3106,37 @@ public class WordProcessor {
 
   private void captionDialog() {
     editor.stopInput();
-    EditField label = field("Figure"), text = field("");
-    label.setAccessibilityText("Caption label");
-    text.setAccessibilityText("Caption text");
-    var position = new ComboBox<String>("Below selected item", "Above selected item");
-    var format =
-        new ComboBox<String>("1, 2, 3", "a, b, c", "A, B, C", "i, ii, iii", "I, II, III");
-    var chapter =
-        new ComboBox<String>(
-            "No chapter number",
-            "Heading 1",
-            "Heading 2",
-            "Heading 3",
-            "Heading 4",
-            "Heading 5",
-            "Heading 6",
-            "Heading 7",
-            "Heading 8",
-            "Heading 9");
-    var separator = new ComboBox<String>("-", ".", ":", "\u2014", "\u2013");
-    var exclude = new CheckBox("Exclude label from caption");
-    Container body =
-        BoxLayout.encloseY(
-            new Label("Label"),
-            label,
-            new Label("Caption text"),
-            text,
-            new Label("Position"),
-            position,
-            new Label("Number format"),
-            format,
-            exclude,
-            new Label("Chapter numbering"),
-            chapter,
-            new Label("Separator"),
-            separator);
-    body.setScrollableY(true);
-    if (OfficeTheme.mobile()) body.setPreferredH(Display.getInstance().getDisplayHeight() / 2);
-    if (!showDialog("Insert Caption", body, "Insert", "Cancel")) return;
+    var f =
+        new Fields()
+            .text("label", "Label", "Figure")
+            .text("text", "Caption text", "")
+            .index("position", "Position", new String[] {"Below selected item", "Above selected item"}, 0)
+            .index(
+                "format",
+                "Number format",
+                new String[] {"1, 2, 3", "a, b, c", "A, B, C", "i, ii, iii", "I, II, III"},
+                0)
+            .check("exclude", "Exclude label from caption", false)
+            .index(
+                "chapter",
+                "Chapter numbering",
+                new String[] {
+                  "No chapter number", "Heading 1", "Heading 2", "Heading 3", "Heading 4",
+                  "Heading 5", "Heading 6", "Heading 7", "Heading 8", "Heading 9"
+                },
+                0)
+            .choice("separator", "Separator", new String[] {"-", ".", ":", "\u2014", "\u2013"}, null);
+    f.body.setScrollableY(true);
+    if (OfficeTheme.mobile()) f.body.setPreferredH(Display.getInstance().getDisplayHeight() / 2);
+    if (f.ask("Insert Caption", "Insert") == null) return;
     session.insertCaption(
-        label.getText(),
-        text.getText(),
-        position.getSelectedIndex() == 1,
-        new String[] {"ARABIC", "alphabetic", "ALPHABETIC", "roman", "ROMAN"}
-            [format.getSelectedIndex()],
-        exclude.isSelected(),
-        chapter.getSelectedIndex(),
-        separator.getSelectedItem());
+        f.str("label"),
+        f.str("text"),
+        f.idx("position") == 1,
+        new String[] {"ARABIC", "alphabetic", "ALPHABETIC", "roman", "ROMAN"}[f.idx("format")],
+        f.flag("exclude"),
+        f.idx("chapter"),
+        f.str("separator"));
     edited();
   }
 
@@ -5228,6 +5166,19 @@ public class WordProcessor {
       body.add(formRow(label, box));
       values.put(key, () -> keys[box.getSelectedIndex()]);
       return this;
+    }
+
+    /** A choice yielding the selected index as an Integer. */
+    Fields index(String key, String label, String[] items, int selected) {
+      var box = new ComboBox<String>(items);
+      box.setSelectedIndex(selected);
+      body.add(formRow(label, box));
+      values.put(key, box::getSelectedIndex);
+      return this;
+    }
+
+    int idx(String key) {
+      return (Integer) get(key);
     }
 
     Fields note(String text) {
