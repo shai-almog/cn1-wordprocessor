@@ -226,4 +226,20 @@ public class OfficeCommandsTest {
     run(s, "file.encrypt", "password", "");
     assertFalse(OfficeCrypto.isEncrypted(com.codename1.util.Base64.decode(((String) ((Map<?, ?>) run(s, "file.share")).get("base64")).getBytes("UTF-8"))));
   }
+
+  @Test
+  public void insertTextFromEncryptedFileNeedsThePassword() {
+    var src = new Session(Document.empty());
+    src.replace("locked words");
+    run(src, "file.encrypt", "password", "pa55");
+    String data = (String) ((Map<?, ?>) run(src, "file.share")).get("base64");
+    var s = new Session(Document.empty());
+    try {
+      run(s, "insert.textFromFile", "data", data, "format", "docx");
+      fail("an encrypted file needs a password");
+    } catch (IllegalArgumentException expected) {
+    }
+    run(s, "insert.textFromFile", "data", data, "format", "docx", "password", "pa55");
+    assertTrue(s.document().plainText().contains("locked words"));
+  }
 }

@@ -331,14 +331,20 @@ final class WorkflowCommands implements Commands.Extension {
         WorkflowCommands::coverPage);
     gallery(c, "insert.quickParts", "quickPart.", "Quick Parts gallery: save the selection, insert, list or delete an entry");
     gallery(c, "insert.autoText", "autoText.", "AutoText gallery: save the selection, insert, list or delete an entry");
-    c.edit("insert.textFromFile", "data:string,format:string",
-        "Insert Text from File: base64 DOCX, or RTF/HTML/Markdown/plain/native XML text, at the caret",
+    c.edit("insert.textFromFile", "data:string,format:string,password?:string",
+        "Insert Text from File: base64 DOCX (password for an encrypted one), or RTF/HTML/Markdown/plain/native XML text, at the caret",
         (s, a) -> {
           String format = Commands.str(a, "format"), data = Commands.str(a, "data");
           Document doc;
           try {
-            if ("docx".equals(format))
-              doc = Docx.read(new ByteArrayInputStream(com.codename1.util.Base64.decode(data.getBytes("UTF-8")))).document;
+            if ("docx".equals(format)) {
+              byte[] bytes = com.codename1.util.Base64.decode(data.getBytes("UTF-8"));
+              if (OfficeCrypto.isEncrypted(bytes)) {
+                if (!a.containsKey("password")) throw new IllegalArgumentException("The document is encrypted; supply its password");
+                bytes = OfficeCrypto.decrypt(bytes, Commands.str(a, "password"));
+              }
+              doc = Docx.read(new ByteArrayInputStream(bytes)).document;
+            }
             else if ("native".equals(format)) doc = DocumentXml.read(data);
             else if ("rtf".equals(format)) doc = TextFormats.read(data, com.codename1.ui.RichTextFormat.RTF);
             else if ("html".equals(format)) doc = TextFormats.read(data, com.codename1.ui.RichTextFormat.HTML);

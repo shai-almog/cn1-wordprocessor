@@ -8,8 +8,7 @@ The approved target is a standalone application and reusable Java libraries, tar
 - `build.yml` packages every platform and `release.yml` publishes them, but neither has run in CI yet.
 - Linux and Windows packages have not been run on a desktop.
 - Apple packages are unsigned.
-- The iOS-simulator, Android and web packages were built locally before the crypto, JSON and theme changes.
-- On the native Mac build (ParparVM), an encrypted DOCX produced through `file.share` decrypts in the independent `msoffcrypto-tool`, and its HMAC integrity check passes. Opening an encrypted file natively, and encryption on the other targets, are unchecked.
+- Encrypted DOCX interop passes on the native Mac build, the iOS simulator and the Android emulator (API 34), checked by `scripts/live-crypto-check.py`. In each case the app encrypts and `msoffcrypto-tool` decrypts it with HMAC integrity verified; then `msoffcrypto-tool` encrypts and the app decrypts it through Insert Text from File; a wrong password is rejected. The web build has no live debug channel and is unchecked. The Open dialog's password prompt was not driven.
 - Final native benchmarks come from CI (`metrics.yml`); the local runs after the zip change were discarded because the machine was under heavy load.
 
 **Native catalog certification (2026-10-17).** All 487 implementable Wordcraft catalog rows are `certified` in [the matrix](acceptance-matrix.json). The remaining 15 are `reference-stub`. Evidence is in [native-certification.json](native-certification.json), produced by `scripts/native-certify.py` and `scripts/certify-matrix.py` against the Mac native ParparVM app over the live MCP. It covers 466 commands:
