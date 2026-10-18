@@ -39,7 +39,7 @@ public final class Cli {
       case "commands":
         for (Commands.Descriptor d : DocumentFiles.commands().descriptors())
           System.out.println(
-              Json.write(
+              com.codename1.io.JSONParser.toJson(
                   Json.object(
                       "id", d.id, "description", d.description, "inputSchema", d.schema())));
         return;
@@ -54,7 +54,7 @@ public final class Cli {
         System.out.println(
             "text".equals(args[0])
                 ? opened.document.plainText()
-                : Json.write(
+                : com.codename1.io.JSONParser.toJson(
                     Json.object("document", Commands.inspect(new Session(opened.document)), "warnings", opened.warnings)));
         return;
       case "convert":
@@ -88,7 +88,7 @@ public final class Cli {
         var preview = new Macros(DocumentFiles.commands()).preview(session, macro, params, null);
         if (has(args, "--preview")) {
           System.out.println(
-              Json.write(
+              com.codename1.io.JSONParser.toJson(
                   Json.object(
                       "before",
                       preview.before,

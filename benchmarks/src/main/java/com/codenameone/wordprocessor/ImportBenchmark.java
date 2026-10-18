@@ -19,6 +19,6 @@ public final class ImportBenchmark {
       if (i >= 0) samples.add(elapsed / 1000000.0);
     }
     Files.write(Paths.get(args[3]), text.getBytes("UTF-8"));
-    System.out.println(Json.write(Json.object("samplesMs", samples)));
+    System.out.println(com.codename1.io.JSONParser.toJson(Json.object("samplesMs", samples)));
   }
 }

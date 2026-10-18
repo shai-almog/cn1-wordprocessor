@@ -347,7 +347,7 @@ final class OfficeCommands implements Commands.Extension {
             if (steps == null) throw new IllegalStateException("Not recording");
             String name = a.containsKey("name") ? Commands.str(a, "name") : "Macro" + (macros(s).size() + 1);
             if (name.isEmpty() || name.indexOf(' ') >= 0) throw new IllegalArgumentException("Macro names have no spaces");
-            String json = Json.write(Json.object("version", 1, "steps", steps));
+            String json = com.codename1.io.JSONParser.toJson(Json.object("version", 1, "steps", steps));
             s.transact(x -> x.documentProperties(x.document().properties.withSetting("macro." + name, json)));
             return Json.object("recording", false, "name", name, "steps", steps.size());
           }

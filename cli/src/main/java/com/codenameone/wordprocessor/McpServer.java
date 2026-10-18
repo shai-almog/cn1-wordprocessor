@@ -32,7 +32,7 @@ public final class McpServer {
         reply = error(null, -32700, "Invalid JSON request");
       }
       if (reply != null) {
-        writer.write(Json.write(reply));
+        writer.write(com.codename1.io.JSONParser.toJson(reply));
         writer.write('\n');
         writer.flush();
       }
@@ -94,7 +94,7 @@ public final class McpServer {
           id,
           Json.object(
               "content",
-              Arrays.asList(Json.object("type", "text", "text", Json.write(value))),
+              Arrays.asList(Json.object("type", "text", "text", com.codename1.io.JSONParser.toJson(value))),
               "isError",
               false));
     } catch (Exception ex) {

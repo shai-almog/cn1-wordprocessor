@@ -101,7 +101,7 @@ public final class Benchmark {
             false,
             "competitorCompared",
             false);
-    System.out.println(Json.write(result));
+    System.out.println(com.codename1.io.JSONParser.toJson(result));
     if (args.length > 2) {
       try (var out = new FileOutputStream(args[2])) {
         out.write(bytes);

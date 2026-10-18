@@ -109,7 +109,7 @@ public class WordProcessor {
     AppOptions.install(
         values -> {
           try (var out = storage.createOutputStream("wordprocessor-options.json")) {
-            out.write(Json.write(new LinkedHashMap<String, Object>(values)).getBytes("UTF-8"));
+            out.write(com.codename1.io.JSONParser.toJson(new LinkedHashMap<String, Object>(values)).getBytes("UTF-8"));
           } catch (IOException ex) {
             Log.e(ex);
           }
@@ -3292,7 +3292,7 @@ public class WordProcessor {
                     () ->
                         showText(
                             "Writing checks",
-                            Json.write(commands.execute(session, "quality.inspect"))),
+                            com.codename1.io.JSONParser.toJson(commands.execute(session, "quality.inspect"))),
                     true),
                 iconButton(
                     "Word count",
@@ -6305,7 +6305,7 @@ public class WordProcessor {
               var result =
                   commands.execute(session, command.getText(), Json.parse(args.getText()));
               edited();
-              if (result != null) showText("Result", Json.write(result));
+              if (result != null) showText("Result", com.codename1.io.JSONParser.toJson(result));
             } catch (IOException ex) {
               throw new IllegalArgumentException(ex.getMessage());
             }

@@ -129,7 +129,7 @@ public class AutomationTest {
   @Test
   public void jsonEscapesControlsAndUnicode() throws Exception {
     var value = "line\n\t\"\\ 😀";
-    assertEquals(value, Json.parse(Json.write(Json.object("value", value))).get("value"));
+    assertEquals(value, Json.parse(com.codename1.io.JSONParser.toJson(Json.object("value", value))).get("value"));
   }
 
   @Test

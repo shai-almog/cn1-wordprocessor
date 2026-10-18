@@ -34,7 +34,7 @@ public class ReplayRecorder extends RunListener {
               var rec = new LinkedHashMap<String, Object>();
               rec.put("test", test);
               rec.put("command", id);
-              rec.put("args", Json.parse(Json.write(args)));
+              rec.put("args", Json.parse(com.codename1.io.JSONParser.toJson(args)));
               rec.put("before", DocumentXml.write(s.document()));
               rec.put("state", state(s));
               return rec;
@@ -50,7 +50,7 @@ public class ReplayRecorder extends RunListener {
             try {
               rec.put("after", DocumentXml.write(s.document()));
               rec.put("stateAfter", state(s));
-              out.write(Json.write(rec));
+              out.write(com.codename1.io.JSONParser.toJson(rec));
               out.write('\n');
               var n = counts.get(id);
               counts.put(id, n == null ? 1 : n + 1);

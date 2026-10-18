@@ -98,7 +98,7 @@ final class WordMcp {
               for (Commands.Descriptor d : commands.descriptors())
                 list.add(
                     Json.object("id", d.id, "description", d.description, "arguments", d.schema()));
-              return Json.write(list);
+              return com.codename1.io.JSONParser.toJson(list);
             }));
     MCP.addTool(
         new Tool(
@@ -161,7 +161,7 @@ final class WordMcp {
     if (Display.getInstance().isEdt()) run.run();
     else Display.getInstance().callSeriallyAndWait(run);
     if (error[0] != null) throw error[0];
-    return Json.write(result[0]);
+    return com.codename1.io.JSONParser.toJson(result[0]);
   }
 
   static void stop() {
