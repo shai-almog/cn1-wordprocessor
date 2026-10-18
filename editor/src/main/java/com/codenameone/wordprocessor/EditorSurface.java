@@ -1043,6 +1043,31 @@ public final class EditorSurface extends Container
     repaint();
   }
 
+  private boolean wakePending;
+
+  @Override
+  public void repaint() {
+    super.repaint();
+    paintNextCycle();
+  }
+
+  /**
+   * The EDT runs serial calls after it paints and then sleeps a frame interval, so an edit
+   * delivered through callSerially (native text input, undo from a menu, a file load) waited
+   * up to 15 ms before anything showed it. Skip exactly one idle sleep: the clearing call is
+   * queued behind this one, so it runs after the next paint and the loop never spins.
+   */
+  private void paintNextCycle() {
+    if (wakePending || !Display.isInitialized()) return;
+    wakePending = true;
+    final Display d = Display.getInstance();
+    d.setNoSleep(true);
+    d.callSerially(() -> {
+      wakePending = false;
+      d.setNoSleep(false);
+    });
+  }
+
   private Object[] sentInput;
 
   /**
@@ -1358,9 +1383,7 @@ public final class EditorSurface extends Container
             int a = Math.max(issue.start, line.start), b = Math.min(issue.end, line.end);
             if (a >= b) continue;
             int x0 = lx + Math.round(offsetX(line, a) * scale), x1 = lx + Math.round(offsetX(line, b) * scale);
-            g.setColor("spelling".equals(issue.kind) ? 0xd13438 : 0x2b579a);
-            for (int wx = x0; wx < x1; wx += 2)
-              g.drawLine(wx, base + (wx - x0) / 2 % 2, Math.min(x1, wx + 2), base + ((wx - x0) / 2 + 1) % 2);
+            squiggle(g, x0, x1, base, "spelling".equals(issue.kind) ? 0xd13438 : 0x2b579a);
           }
         }
         boolean revised = false;
@@ -2040,13 +2063,38 @@ public final class EditorSurface extends Container
     fileDropHandler = handler;
   }
 
+  private static final int SQUIGGLE = 32;
+  private final Map<Integer, Image> squiggles = new HashMap<Integer, Image>();
+
+  /**
+   * Proofing wave from x0 to x1 on base. A per-segment drawLine became thousands of separate
+   * Metal draws per frame on a text full of flagged words; a cached tile is one per 32px.
+   */
+  private void squiggle(Graphics g, int x0, int x1, int base, int color) {
+    Image tile = squiggles.get(color);
+    if (tile == null) {
+      tile = Image.createImage(SQUIGGLE, 2, 0);
+      Graphics tg = tile.getGraphics();
+      tg.setColor(color);
+      for (int wx = 0; wx < SQUIGGLE; wx += 2)
+        tg.drawLine(wx, wx / 2 % 2, wx + 2, (wx / 2 + 1) % 2);
+      squiggles.put(color, tile);
+    }
+    g.pushClip();
+    g.clipRect(x0, base, x1 - x0, 2);
+    for (int wx = x0; wx < x1; wx += SQUIGGLE) g.drawImage(tile, wx, base);
+    g.popClip();
+  }
+
   public void clipboard(String action) {
     session.breakTypingGroup();
     finishComposing();
     try {
-      if ("paste".equals(action)) {
-        ClipboardContent data = Display.getInstance().getClipboardContent();
-        if (!importContent(data)) {
+      if ("paste".equals(action) || "pasteText".equals(action)) {
+        // pasteText is Word's Keep Text Only: skip the rich importers.
+        ClipboardContent data =
+            "paste".equals(action) ? Display.getInstance().getClipboardContent() : null;
+        if (data == null || !importContent(data)) {
           Object plain = Display.getInstance().getPasteDataFromClipboard();
           if (plain instanceof String) {
             session.pasteText((String) plain);

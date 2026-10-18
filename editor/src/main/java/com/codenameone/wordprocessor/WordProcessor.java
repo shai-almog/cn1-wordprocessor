@@ -477,7 +477,8 @@ public class WordProcessor {
     autoLabel.getAllStyles().setMargin(0, 0, 0, OfficeTheme.px(6));
     Button more = iconButton("", FontImage.MATERIAL_MORE_HORIZ, this::quickAccessMore, false);
     more.setAccessibilityText("More Quick Access commands");
-    header.add(BorderLayout.WEST, OfficeTheme.row(auto, save, quickUndo, quickRedo, more));
+    header.add(BorderLayout.WEST,
+        OfficeTheme.row(auto, save, split(quickUndo, "Undo history", this::undoHistory), quickRedo, more));
     documentTitle = button(session.document().title + " \u25be", this::rename);
     documentTitle.setAccessibilityText("Document name");
     documentTitle.getAllStyles().setFont(OfficeTheme.font(12, true));
@@ -899,7 +900,8 @@ public class WordProcessor {
     editor.addPointerReleasedListener(e -> applyPaintStyle());
     Container clipboard =
         OfficeTheme.row(
-            iconButton("Paste", FontImage.MATERIAL_CONTENT_PASTE, () -> clipboard("paste"), true),
+            split(iconButton("Paste", FontImage.MATERIAL_CONTENT_PASTE, () -> clipboard("paste"), true),
+                "Paste options", this::pasteOptions),
             leftColumn(
                 iconButton("Cut", FontImage.MATERIAL_CONTENT_CUT, () -> clipboard("cut"), false),
                 iconButton("Copy", FontImage.MATERIAL_CONTENT_COPY, () -> clipboard("copy"), false),
@@ -4954,6 +4956,26 @@ public class WordProcessor {
     }
   }
 
+  private void pasteOptions() {
+    ComboBox<String> pick =
+        new ComboBox<String>("Keep Source Formatting", "Keep Text Only", "Office Clipboard...");
+    if (!showDialog("Paste Options", pick, "Paste", "Cancel")) return;
+    int i = pick.getSelectedIndex();
+    if (i == 2) officeClipboard();
+    else clipboard(i == 0 ? "paste" : "pasteText");
+  }
+
+  /** Title-bar undo history: undoes the chosen number of steps at once. */
+  private void undoHistory() {
+    int depth = session.undoDepth();
+    if (depth == 0) return;
+    String[] steps = new String[Math.min(depth, 20)];
+    for (int i = 0; i < steps.length; i++) steps[i] = i == 0 ? "Undo 1 action" : "Undo " + (i + 1) + " actions";
+    ComboBox<String> pick = new ComboBox<String>(steps);
+    if (!showDialog("Undo", pick, "Undo", "Cancel")) return;
+    for (int i = 0; i <= pick.getSelectedIndex(); i++) run("edit.undo", Json.object());
+  }
+
   private void underlineStyles() {
     String[] styles = {"single", "double", "thick", "dotted", "dash", "dotDash", "wave", "none"};
     String[] names = {"Single", "Double", "Thick", "Dotted", "Dashed", "Dot-dash", "Wave", "None"};
@@ -5670,8 +5692,8 @@ public class WordProcessor {
     editor.revealSelection();
     updateOutline();
     updateStatus();
-    if (ruler != null) ruler.repaint();
-    if (verticalRuler != null) verticalRuler.repaint();
+    if (ruler != null) ruler.sync();
+    if (verticalRuler != null) verticalRuler.sync();
     Display.getInstance()
         .callSerially(
             () -> {
@@ -5712,8 +5734,8 @@ public class WordProcessor {
     }
     syncingControls = true;
     // The indent markers follow the caret paragraph.
-    if (ruler != null) ruler.repaint();
-    if (verticalRuler != null) verticalRuler.repaint();
+    if (ruler != null) ruler.sync();
+    if (verticalRuler != null) verticalRuler.sync();
     if (language != null) {
       String tag = session.activeStyle().characters.lang;
       String name = tag == null || tag.isEmpty() ? "English (United States)" : languageName(tag);

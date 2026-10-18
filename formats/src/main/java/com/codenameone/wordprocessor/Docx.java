@@ -298,8 +298,7 @@ static final char COLUMN_BREAK = '\u000B';
     boolean pageBreak = false, keep = false;
     int listLevel = 0, listStart = 0;
     String listFormat = "decimal", listId = "";
-    ParagraphFormat layout =
-        ParagraphFormat.DEFAULT.with("tabInterval", String.valueOf(styles.tabInterval));
+    ParagraphFormat layout = styles.baseFormat();
     Element props = Xml.child(e, "pPr");
     if (props != null && Xml.child(props, "pStyle") != null)
       style = Xml.attr(Xml.child(props, "pStyle"), "val", style);
@@ -602,6 +601,8 @@ static final char COLUMN_BREAK = '\u000B';
       DocxProperties.write(parts, d.properties);
     }
     ZipOutputStream zip = new ZipOutputStream(out);
+    // Fastest deflate: XML compresses well at any level, and save latency is user-visible.
+    zip.setLevel(1);
     for (Map.Entry<String, byte[]> e : parts.entrySet()) {
       ZipEntry z = new ZipEntry(e.getKey());
       z.setTime(0);

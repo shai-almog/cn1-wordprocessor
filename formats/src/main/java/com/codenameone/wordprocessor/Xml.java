@@ -8,7 +8,55 @@ import java.util.*;
 public final class Xml {
   private Xml() {}
 
+  /**
+   * Parsed element with unsynchronized attributes. Element keeps attributes in a Hashtable;
+   * on ParparVM every Hashtable owns a monitor that the collector tears down under a global
+   * lock, which made attribute storage the largest cost of opening a document natively.
+   */
+  static final class Node extends Element {
+    HashMap<String, String> attrs;
+    /** Tag without its namespace prefix, pooled at parse time. */
+    String local;
+
+    Node(String tag, String local) {
+      super(tag);
+      this.local = local;
+    }
+
+    public int setAttribute(String name, String value) {
+      if (attrs == null) attrs = new HashMap<String, String>(4);
+      attrs.put(name, value);
+      return -1;
+    }
+
+    public String getAttribute(String name) {
+      if (attrs == null) return null;
+      String v = attrs.get(name);
+      return v != null ? v : attrs.get(name.toLowerCase());
+    }
+
+    public void removeAttribute(String name) {
+      if (attrs != null) attrs.remove(name);
+    }
+
+    public Hashtable getAttributes() {
+      return attrs == null ? null : new Hashtable(attrs);
+    }
+  }
+
+  /** The attributes of e without copying, or null. */
+  static Map attributes(Element e) {
+    return e instanceof Node ? ((Node) e).attrs : e.getAttributes();
+  }
+
   public static String escape(String s) {
+    // Most values need no escaping; String.replace compiles a pattern per call on some VMs.
+    boolean plain = true;
+    for (int i = 0; i < s.length() && plain; i++) {
+      char c = s.charAt(i);
+      plain = c != '&' && c != '<' && c != '>' && c != '"' && c != '\'';
+    }
+    if (plain) return s;
     return s.replace("&", "&amp;")
         .replace("<", "&lt;")
         .replace(">", "&gt;")
@@ -33,10 +81,10 @@ public final class Xml {
       return;
     }
     out.append('<').append(element.getTagName());
-    java.util.Hashtable attributes = element.getAttributes();
+    Map attributes = attributes(element);
     if (attributes != null)
-      for (java.util.Enumeration names = attributes.keys(); names.hasMoreElements(); ) {
-        String name = (String) names.nextElement();
+      for (Object key : attributes.keySet()) {
+        String name = (String) key;
         out.append(' ')
             .append(name)
             .append("=\"")
@@ -98,7 +146,24 @@ public final class Xml {
             || c > 127 && Character.isDigit(c)) pos++;
         else break;
       }
-      return s.substring(start, pos);
+      return shared(start, pos);
+    }
+
+    /** Pool of short strings: names and small values repeat thousands of times per part. */
+    private final String[] pool = new String[1024];
+
+    String shared(int start, int end) {
+      int len = end - start;
+      if (len > 24) return s.substring(start, end);
+      int h = len;
+      for (int i = start; i < end; i++) h = 31 * h + s.charAt(i);
+      int slot = (h ^ (h >>> 16)) & (pool.length - 1);
+      String cached = pool[slot];
+      if (cached != null && cached.length() == len && s.regionMatches(start, cached, 0, len))
+        return cached;
+      String v = s.substring(start, end);
+      pool[slot] = v;
+      return v;
     }
 
     void expect(char c) throws IOException {
@@ -128,8 +193,10 @@ public final class Xml {
       if (depth > 256 || ++count > 500000) throw error("XML complexity limit exceeded");
       if (s.startsWith("<!", pos)) throw error("DTD and entity declarations are not supported");
       expect('<');
+      int nameStart = pos;
       String tag = name();
-      Element e = new Element(tag);
+      int colon = tag.indexOf(':');
+      Element e = new Node(tag, colon < 0 ? tag : shared(nameStart + colon + 1, pos));
       while (true) {
         whitespace();
         if (s.startsWith("/>", pos)) {
@@ -141,7 +208,8 @@ public final class Xml {
           break;
         }
         String key = name();
-        if (e.getAttribute(key) != null) throw error("Duplicate attribute");
+        HashMap<String, String> seen = ((Node) e).attrs;
+        if (seen != null && seen.containsKey(key)) throw error("Duplicate attribute");
         whitespace();
         expect('=');
         whitespace();
@@ -150,7 +218,7 @@ public final class Xml {
         if (quote != '\"' && quote != '\'') throw error("Unquoted attribute");
         int end = s.indexOf(quote, pos);
         if (end < 0) throw error("Unterminated attribute");
-        String raw = s.substring(pos, end);
+        String raw = shared(pos, end);
         if (raw.indexOf('<') >= 0) throw error("Invalid attribute value");
         e.setAttribute(key, decode(raw));
         pos = end + 1;
@@ -225,6 +293,7 @@ public final class Xml {
   }
 
   public static String local(Element e) {
+    if (e instanceof Node) return ((Node) e).local;
     String n = e.getTagName();
     int i = n.indexOf(':');
     return i < 0 ? n : n.substring(i + 1);
@@ -233,7 +302,7 @@ public final class Xml {
   public static String attr(Element e, String name, String fallback) {
     // Exact lookups: Element.getAttribute lower-cases the name on every call, which made
     // attribute reads the largest cost of opening a document. OOXML names are case-exact.
-    java.util.Hashtable attributes = e.getAttributes();
+    Map attributes = attributes(e);
     if (attributes == null) return fallback;
     String v = (String) attributes.get(name);
     if (v == null) v = (String) attributes.get("w:" + name);

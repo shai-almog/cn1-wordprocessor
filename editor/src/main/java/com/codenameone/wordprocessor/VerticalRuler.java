@@ -31,6 +31,17 @@ final class VerticalRuler extends Component {
     return editor.getAbsoluteY() - getAbsoluteY() + getY() + editor.pageTop();
   }
 
+  private Object[] shown;
+
+  /** Repaints only when the page geometry or its position changed; edits rarely move it. */
+  void sync() {
+    PageSpec p = session.activeSection().raw.page;
+    Object[] now = {p.width, p.height, p.top, p.bottom, editor.pixelsPerPoint(), origin()};
+    if (java.util.Arrays.equals(now, shown)) return;
+    shown = now;
+    repaint();
+  }
+
   public void paint(Graphics g) {
     super.paint(g);
     PageSpec p = session.activeSection().raw.page;

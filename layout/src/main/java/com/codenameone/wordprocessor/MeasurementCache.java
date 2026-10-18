@@ -26,12 +26,19 @@ final class MeasurementCache implements LayoutEngine.Metrics {
     this.delegate = delegate;
   }
 
+  private TextStyle lastStyle;
+  private Values lastValues;
+
   private Values values(TextStyle style) {
+    // Consecutive clusters of a run share one style object; skip the map for them.
+    if (style == lastStyle) return lastValues;
     Values v = styles.get(style);
     if (v == null) {
       v = new Values();
       styles.put(style, v);
     }
+    lastStyle = style;
+    lastValues = v;
     return v;
   }
 
@@ -63,6 +70,8 @@ final class MeasurementCache implements LayoutEngine.Metrics {
   }
 
   void clear() {
+    lastStyle = null;
+    lastValues = null;
     styles.clear();
   }
 }

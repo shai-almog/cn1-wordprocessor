@@ -15,7 +15,8 @@ f=editor/'EditorSurface.java';s=f.read_text()
 # Readiness is the end of the editor's document paint method.
 i=s.index('  public void paint(Graphics g) {')
 end=s.index('\n  }',i)
-s=s[:end]+'\n    NativeBenchmark.painted();'+s[end:];f.write_text(s)
+s=s[:end]+'\n    NativeBenchmark.painted();'+s[end:]
+s=s.replace('  public void paint(Graphics g) {','  public void paint(Graphics g) {\n    NativeBenchmark.paintBegin();',1);f.write_text(s)
 if a.wordcraft is None: raise SystemExit(0)
 f=a.wordcraft/'apps/wordcraft/src/main.rs';s=f.read_text().replace('mod animations;','mod animations;\nmod native_benchmark;');s=s.replace('self.0.logic(ctx);','self.0.logic(ctx);\n        native_benchmark::tick(&mut self.0, ctx);',1).replace('self.0.ui(ui);','self.0.ui(ui);\n        native_benchmark::painted(&mut self.0, ui.ctx());',1)
 s=s.replace('.with_inner_size([1440.0, 920.0])','.with_inner_size([1024.0, 685.0])')

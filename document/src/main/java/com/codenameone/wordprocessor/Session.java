@@ -2695,6 +2695,10 @@ public final class Session {
         });
   }
 
+  public int undoDepth() {
+    return undo.size();
+  }
+
   public boolean canUndo() {
     return !undo.isEmpty();
   }

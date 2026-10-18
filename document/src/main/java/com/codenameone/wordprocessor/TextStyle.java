@@ -229,9 +229,16 @@ public final class TextStyle {
   }
 
   public boolean equals(Object o) {
+    if (this == o) return true;
     if (!(o instanceof TextStyle)) return false;
     TextStyle t = (TextStyle) o;
-    return (formatRevision == null
+    // Cheap fields first: layout looks styles up per cluster, mostly against equal styles.
+    return hashCode() == t.hashCode()
+        && size == t.size
+        && color == t.color
+        && bold == t.bold
+        && italic == t.italic
+        && (formatRevision == null
             ? t.formatRevision == null
             : formatRevision.equals(t.formatRevision))
         && (previousStyle == null ? t.previousStyle == null : previousStyle.equals(t.previousStyle))
@@ -249,7 +256,15 @@ public final class TextStyle {
         && strike == t.strike;
   }
 
+  private int hash;
+
   public int hashCode() {
+    int h = hash;
+    if (h == 0) hash = h = computeHash();
+    return h;
+  }
+
+  private int computeHash() {
     return characters.hashCode()
         + font.hashCode() * 31
         + Float.floatToIntBits(size)

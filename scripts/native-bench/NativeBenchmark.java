@@ -1,7 +1,6 @@
 package com.codenameone.wordprocessor;
 
 import com.codename1.ui.Form;
-import com.codename1.ui.util.UITimer;
 import java.io.*;
 
 /** Opt-in benchmark instrumentation, applied only to an isolated build by prepare.py. */
@@ -15,10 +14,10 @@ final class NativeBenchmark {
   final String original;
   long readyAt, last;
   int step;
-  boolean ready, done, waiting;
+  boolean ready, waiting;
+  volatile boolean done;
   String operation;
   long operationStart;
-  UITimer timer;
 
   static Document load() {
     if (input == null) return null;
@@ -41,8 +40,23 @@ final class NativeBenchmark {
     changed = c;
     original = s.document().plainText();
     current = this;
-    timer = new UITimer(() -> tick());
-    timer.schedule(25, true, f);
+    // Operations are posted the way input arrives: from another thread, waking the EDT, so
+    // they run in the loop iteration that paints them. A UITimer runs after paint and a
+    // callSerially posted from the EDT is not a wake-up, so either adds a full idle sleep
+    // that real keystrokes never pay. This matches the Wordcraft harness, which runs each
+    // command inside the frame that paints it.
+    Thread input = new Thread(() -> {
+      while (!done) {
+        try {
+          Thread.sleep(25);
+        } catch (InterruptedException ex) {
+          return;
+        }
+        com.codename1.ui.Display.getInstance().callSerially(() -> tick());
+      }
+    });
+    input.setDaemon(true);
+    input.start();
   }
 
   static void emit(String event, Object... values) {
@@ -50,6 +64,12 @@ final class NativeBenchmark {
         Json.object("event", event, "wallMs", System.currentTimeMillis());
     for (int i = 0; i < values.length; i += 2) row.put((String) values[i], values[i + 1]);
     System.out.println("NATIVE_BENCH " + Json.write(row));
+  }
+
+  static long paintStart, operationEnd;
+
+  static void paintBegin() {
+    paintStart = System.nanoTime();
   }
 
   static void painted() {
@@ -61,7 +81,9 @@ final class NativeBenchmark {
       emit("ready", "pages", b.editor.layout().pages.size(), "characters", b.original.length());
     }
     if (b.waiting) {
-      emit("paint", "operation", b.operation, "ms", (System.nanoTime() - b.operationStart) / 1e6);
+      long now = System.nanoTime();
+      emit("paint", "operation", b.operation, "ms", (now - b.operationStart) / 1e6,
+          "untilPaintMs", (paintStart - operationEnd) / 1e6, "editorPaintMs", (now - paintStart) / 1e6);
       b.waiting = false;
       b.last = System.currentTimeMillis();
     }
@@ -113,11 +135,18 @@ final class NativeBenchmark {
         emit("operationStart", "operation", operation);
         try (InputStream bytes = new FileInputStream(out + "/saved-102.docx")) {
           Document document = Docx.read(bytes).document;
+          long read = System.nanoTime();
           if (!original.equals(document.plainText()))
             throw new IllegalStateException("DOCX text mismatch");
+          long verified = System.nanoTime();
           session.loadDocument(document);
+          long loaded = System.nanoTime();
           changed.run();
+          long notified = System.nanoTime();
           editor.refresh();
+          emit("reopenSplit", "read", (read - operationStart) / 1e6, "verify", (verified - read) / 1e6,
+              "load", (loaded - verified) / 1e6, "changed", (notified - loaded) / 1e6,
+              "refresh", (System.nanoTime() - notified) / 1e6);
         }
       } else if (step < 115) {
         operation = "exportPdf";
@@ -133,16 +162,15 @@ final class NativeBenchmark {
           throw new IllegalStateException("Undo text mismatch");
         emit("done", "textRestored", true, "pages", editor.layout().pages.size());
         done = true;
-        timer.cancel();
         return;
       }
-      emit("operation", "operation", operation, "ms", (System.nanoTime() - operationStart) / 1e6);
+      operationEnd = System.nanoTime();
+      emit("operation", "operation", operation, "ms", (operationEnd - operationStart) / 1e6);
       waiting = true;
       step++;
     } catch (Throwable e) {
       emit("error", "message", e.toString());
       done = true;
-      timer.cancel();
     }
   }
 }

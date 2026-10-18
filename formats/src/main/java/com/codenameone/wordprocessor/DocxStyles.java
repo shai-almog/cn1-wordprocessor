@@ -93,6 +93,17 @@ final class DocxStyles {
   // style; resolving it per run dominated opening large documents.
   private final java.util.Map<String, TextStyle> resolved = new java.util.HashMap<String, TextStyle>();
 
+  private ParagraphFormat baseFormat;
+
+  /** The default paragraph format with this document's tab interval, built once. */
+  ParagraphFormat baseFormat() {
+    if (baseFormat == null)
+      baseFormat = ParagraphFormat.DEFAULT.with("tabInterval", String.valueOf(tabInterval));
+    return baseFormat;
+  }
+
+  private final Map<String, TextStyle> runs = new HashMap<String, TextStyle>();
+
   TextStyle text(String paragraphStyle, Element direct) {
     Element characterStyle = direct == null ? null : Xml.child(direct, "rStyle");
     String character = characterStyle == null ? null : Xml.attr(characterStyle, "val", "");
@@ -105,8 +116,20 @@ final class DocxStyles {
         for (Element s : chain(character)) result = apply(result, Xml.child(s, "rPr"), true);
       resolved.put(key, result);
     }
-    TextStyle current = apply(result, direct, false);
     Element change = direct == null ? null : Xml.child(direct, "rPrChange");
+    TextStyle current;
+    if (direct == null) current = result;
+    else if (change != null) current = apply(result, direct, false);
+    else {
+      // Runs repeat a handful of direct formats; reuse one style object per distinct rPr.
+      String runKey = key + "\u0001" + Xml.write(direct);
+      current = runs.get(runKey);
+      if (current == null) {
+        current = apply(result, direct, false);
+        if (runs.size() > 4096) runs.clear();
+        runs.put(runKey, current);
+      }
+    }
     if (change != null) {
       TextStyle before = apply(result, Xml.child(change, "rPr"), false);
       current =

@@ -43,6 +43,23 @@ final class PageRuler extends Component {
     return OfficeTheme.px(16);
   }
 
+  private Object[] shown;
+
+  /** Repaints only when the margins, the caret paragraph's indents or the page moved. */
+  void sync() {
+    PageSpec p = session.activeSection().raw.page;
+    Paragraph para = paragraph();
+    Object[] now = {
+      p.width, p.left, p.right, editor.pixelsPerPoint(),
+      editor.getAbsoluteX() - getAbsoluteX() + editor.pageLeft(),
+      para == null ? null : para.indent, para == null ? null : para.format.firstIndent,
+      para == null ? null : para.format.rightIndent
+    };
+    if (java.util.Arrays.equals(now, shown)) return;
+    shown = now;
+    repaint();
+  }
+
   public void paint(Graphics g) {
     super.paint(g);
     PageSpec p = session.activeSection().raw.page;

@@ -27,6 +27,9 @@ public final class Graphemes {
   public static boolean isBoundary(RichText text, int offset) {
     check(text, offset);
     if (offset == 0 || offset == text.length()) return true;
+    char l = text.charAt(offset - 1), r = text.charAt(offset);
+    // Below U+0300 nothing extends, joins or prepends: only CR LF stays together.
+    if (l < 0x300 && r < 0x300) return l != '\r' || r != '\n';
     if (Character.isLowSurrogate(text.charAt(offset))
         && Character.isHighSurrogate(text.charAt(offset - 1))) return false;
     int before = prior(text, offset), left = codePoint(text, before), right = codePoint(text, offset);
