@@ -231,10 +231,14 @@ public final class Xml {
   }
 
   public static String attr(Element e, String name, String fallback) {
-    String v = e.getAttribute(name);
-    if (v == null) v = e.getAttribute("w:" + name);
-    if (v == null && e.getAttributes() != null)
-      for (Object key : e.getAttributes().keySet()) {
+    // Exact lookups: Element.getAttribute lower-cases the name on every call, which made
+    // attribute reads the largest cost of opening a document. OOXML names are case-exact.
+    java.util.Hashtable attributes = e.getAttributes();
+    if (attributes == null) return fallback;
+    String v = (String) attributes.get(name);
+    if (v == null) v = (String) attributes.get("w:" + name);
+    if (v == null)
+      for (Object key : attributes.keySet()) {
         String k = (String) key;
         if (k.endsWith(":" + name)) {
           v = e.getAttribute(k);

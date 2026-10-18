@@ -97,14 +97,19 @@ final class OfficeCommands implements Commands.Extension {
   }
 
   /** The document as displayed: ink hidden when Hide Ink is on. */
+  private static boolean isInk(Block b) {
+    return b instanceof Picture && ((Picture) b).drawing != null && "ink".equals(((Picture) b).drawing.kind);
+  }
+
   public static Document shown(Document d) {
     if (!AppOptions.flag("hideInk")) return d;
+    // Scan first: rebuilding the block sequence on every edit when there is no ink costs a
+    // full copy per keystroke in large documents.
+    boolean ink = false;
+    for (Block b : d.blocks) if (isInk(b)) ink = true;
+    if (!ink) return d;
     Sequence<Block> out = new Sequence<Block>();
-    boolean removed = false;
-    for (Block b : d.blocks)
-      if (b instanceof Picture && ((Picture) b).drawing != null && "ink".equals(((Picture) b).drawing.kind)) removed = true;
-      else out = out.append(b);
-    if (!removed) return d;
+    for (Block b : d.blocks) if (!isInk(b)) out = out.append(b);
     if (out.size() == 0) out = out.append(new Paragraph("ink-hidden", new RichText()));
     return d.blocks(out, d.nextId);
   }

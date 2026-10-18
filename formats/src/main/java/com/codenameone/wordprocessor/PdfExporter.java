@@ -163,8 +163,17 @@ public final class PdfExporter {
     content.append(" Q\n");
   }
 
+  // Reused so repeated exports of an unchanged (or slightly edited) document keep the
+  // per-paragraph measurement cache instead of re-measuring every line.
+  private static LayoutEngine headless;
+
   public static byte[] write(Document document) throws IOException {
-    return write(document.page, new LayoutEngine(new PdfMetrics()).layout(document, 0));
+    LayoutEngine.Result layout;
+    synchronized (PdfExporter.class) {
+      if (headless == null) headless = new LayoutEngine(new PdfMetrics());
+      layout = headless.layout(document, 0);
+    }
+    return write(document.page, layout);
   }
 
   /** Paginate and embed with the same font instances, loading each face at most once per export. */

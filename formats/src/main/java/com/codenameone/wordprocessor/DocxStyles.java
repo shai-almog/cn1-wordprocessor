@@ -89,14 +89,21 @@ final class DocxStyles {
     return result;
   }
 
+  // Style-chain resolution is the same for every run sharing a paragraph and character
+  // style; resolving it per run dominated opening large documents.
+  private final java.util.Map<String, TextStyle> resolved = new java.util.HashMap<String, TextStyle>();
+
   TextStyle text(String paragraphStyle, Element direct) {
-    TextStyle result = apply(TextStyle.DEFAULT, runDefaults, false);
-    for (Element s : chain(paragraphStyle)) result = apply(result, Xml.child(s, "rPr"), true);
-    if (direct != null) {
-      Element characterStyle = Xml.child(direct, "rStyle");
-      if (characterStyle != null)
-        for (Element s : chain(Xml.attr(characterStyle, "val", "")))
-          result = apply(result, Xml.child(s, "rPr"), true);
+    Element characterStyle = direct == null ? null : Xml.child(direct, "rStyle");
+    String character = characterStyle == null ? null : Xml.attr(characterStyle, "val", "");
+    String key = paragraphStyle + "\u0000" + character;
+    TextStyle result = resolved.get(key);
+    if (result == null) {
+      result = apply(TextStyle.DEFAULT, runDefaults, false);
+      for (Element s : chain(paragraphStyle)) result = apply(result, Xml.child(s, "rPr"), true);
+      if (character != null)
+        for (Element s : chain(character)) result = apply(result, Xml.child(s, "rPr"), true);
+      resolved.put(key, result);
     }
     TextStyle current = apply(result, direct, false);
     Element change = direct == null ? null : Xml.child(direct, "rPrChange");

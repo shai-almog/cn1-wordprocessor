@@ -578,6 +578,9 @@ public final class EditorSurface extends Container
     return markup;
   }
 
+  private String numeralMode;
+  private Map<Paragraph, Paragraph> numeralViews = new HashMap<Paragraph, Paragraph>();
+
   private Document shown() {
     Document d = session.document();
     if (!"all".equals(markup)) {
@@ -589,19 +592,38 @@ public final class EditorSurface extends Container
     // layout engine's per-paragraph measurement cache (keyed by identity) on each edit.
     String numeral = AppOptions.get("numeral");
     if (numeral != null && !numeral.isEmpty() && !"arabic".equals(numeral) && !"system".equals(numeral)) {
+      // Each shaped copy is memoized per source paragraph (identity) so unchanged paragraphs
+      // keep the same object across edits and stay in the layout cache; a mode change drops it.
+      if (!numeral.equals(numeralMode)) {
+        numeralMode = numeral;
+        numeralViews = new HashMap<Paragraph, Paragraph>();
+      }
+      Map<Paragraph, Paragraph> views = new HashMap<Paragraph, Paragraph>();
       Sequence<Block> blocks = new Sequence<Block>();
+      boolean changed = false;
       for (Block b : d.blocks) {
         if (b instanceof Paragraph) {
-          final boolean rtl = ((Paragraph) b).format.rtl;
           Paragraph p = (Paragraph) b;
-          String text = p.text.toString();
-          boolean digits = false;
-          for (int i = 0; i < text.length() && !digits; i++) digits = text.charAt(i) >= '0' && text.charAt(i) <= '9';
-          if (digits) b = p.text(p.text.mapText(t -> AppOptions.numerals(t, rtl)));
+          Paragraph view = numeralViews.get(p);
+          if (view == null) {
+            view = p;
+            final boolean rtl = p.format.rtl;
+            String text = p.text.toString();
+            boolean digits = false;
+            for (int i = 0; i < text.length() && !digits; i++) digits = text.charAt(i) >= '0' && text.charAt(i) <= '9';
+            if (digits) {
+              RichText mapped = p.text.mapText(t -> AppOptions.numerals(t, rtl));
+              if (!mapped.toString().equals(text)) view = p.text(mapped);
+            }
+          }
+          views.put(p, view);
+          changed |= view != p;
+          b = view;
         }
         blocks = blocks.append(b);
       }
-      d = d.blocks(blocks, d.nextId);
+      numeralViews = views;
+      if (changed) d = d.blocks(blocks, d.nextId);
     }
     return outline == null ? d : outline.apply(d);
   }
@@ -1017,8 +1039,29 @@ public final class EditorSurface extends Container
   public void refresh() {
     revalidateView();
     accessibilityChanged();
-    if (input != null) host.updateTextInputState(input, getEditingState());
+    syncInput();
     repaint();
+  }
+
+  private Object[] sentInput;
+
+  /**
+   * The state carries the whole document text and its geometry measures every visible
+   * grapheme. An edit asks several times (the editor, the host's change handler, the form
+   * relayout), so skip the copies when nothing it reports has moved.
+   */
+  private void syncInput() {
+    if (input == null) return;
+    Selection x = session.selection();
+    Object[] key = {
+      input, session.editingDocument(), x, Integer.valueOf(composingStart), Integer.valueOf(composingEnd),
+      Integer.valueOf(getScrollX()), Integer.valueOf(getScrollY()), Float.valueOf(zoom),
+      Integer.valueOf(getAbsoluteX()), Integer.valueOf(getAbsoluteY()), Integer.valueOf(getWidth()),
+      Integer.valueOf(getHeight()), layout()
+    };
+    if (Arrays.equals(key, sentInput)) return;
+    sentInput = key;
+    host.updateTextInputState(input, getEditingState());
   }
 
   private void revalidateView() {
@@ -1492,11 +1535,32 @@ public final class EditorSurface extends Container
       if (offset <= s.end) {
         if (offset == s.end) return s.x + s.width;
         if ("\t".equals(s.text)) return s.x + (offset > s.start ? s.width : 0);
-        return s.x
-            + CharacterMetrics.width(
-                fontMetrics, s.text.substring(0, Math.max(0, offset - s.start)), s.style);
+        return s.x + prefixWidth(s.text.substring(0, Math.max(0, offset - s.start)), s.style);
       }
     return line.width;
+  }
+
+  // Caret, selection and the text-input geometry measure every grapheme prefix of the visible
+  // lines, several times per edit; unchanged lines hit this cache across edits.
+  private final Map<TextStyle, Map<String, Float>> prefixWidths = new HashMap<TextStyle, Map<String, Float>>();
+  private int prefixEntries;
+
+  private float prefixWidth(String prefix, TextStyle style) {
+    if (prefix.isEmpty()) return 0;
+    Map<String, Float> widths = prefixWidths.get(style);
+    if (widths == null) prefixWidths.put(style, widths = new HashMap<String, Float>());
+    Float w = widths.get(prefix);
+    if (w == null) {
+      if (prefixEntries > 50000) {
+        prefixWidths.clear();
+        prefixEntries = 0;
+        prefixWidths.put(style, widths = new HashMap<String, Float>());
+      }
+      w = Float.valueOf(CharacterMetrics.width(fontMetrics, prefix, style));
+      widths.put(prefix, w);
+      prefixEntries++;
+    }
+    return w.floatValue();
   }
 
   private LayoutEngine.Line lineAt(int absX, int absY) {
@@ -1925,7 +1989,7 @@ public final class EditorSurface extends Container
   @Override
   protected void laidOut() {
     super.laidOut();
-    if (input != null) host.updateTextInputState(input, getEditingState());
+    syncInput();
   }
 
   @Override
