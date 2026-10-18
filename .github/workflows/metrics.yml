@@ -1,0 +1,112 @@
+# Public, reproducible evidence for the README's non-native claims: source size/tokens,
+# test-suite cost and JVM engine measurements, for this project and for Wordcraft at the
+# pinned revision, on the same runner image. Native GUI latency, RAM and bundle size are
+# measured locally (scripts/native-bench); native jobs are deliberately not run in CI.
+name: metrics
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+env:
+  WORDCRAFT_REPO: https://github.com/storytold/wordcraft
+  WORDCRAFT_REV: 159b84f54c74e9e82fb3109b758ae7dd6f4e3ab0
+
+jobs:
+  java:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '8'
+      - name: Build and test (timed, cold Maven repository)
+        run: |
+          export WORDPROCESSOR_MAVEN_REPO="$PWD/.local/maven-repository"
+          start=$(date +%s)
+          mvn -B -ntp -Dmaven.repo.local="$WORDPROCESSOR_MAVEN_REPO" \
+            -pl document,layout,formats,automation,editor,cli,benchmarks -am install | tee build.log
+          echo "$(( $(date +%s) - start ))" > java-build-test-seconds.txt
+      - name: Test only (timed, compiled)
+        run: |
+          export WORDPROCESSOR_MAVEN_REPO="$PWD/.local/maven-repository"
+          start=$(date +%s)
+          mvn -B -ntp -o -Dmaven.repo.local="$WORDPROCESSOR_MAVEN_REPO" \
+            -pl document,layout,formats,automation,editor,cli,benchmarks surefire:test | tee test.log
+          echo "$(( $(date +%s) - start ))" > java-test-seconds.txt
+          grep -h 'Tests run:' test.log | grep -v ' in ' | awk -F'[:,]' '{s+=$2} END{print s}' > java-tests.txt
+      - name: JVM engine benchmark
+        run: |
+          export WORDPROCESSOR_MAVEN_REPO="$PWD/.local/maven-repository"
+          mvn -B -ntp -o -Dmaven.repo.local="$WORDPROCESSOR_MAVEN_REPO" -f cli/pom.xml \
+            org.apache.maven.plugins:maven-dependency-plugin:3.6.1:build-classpath \
+            -DincludeScope=runtime -Dmdep.outputFile=target/runtime-classpath.txt
+          scripts/benchmark.sh | tee java-benchmark.txt
+      - name: Source metrics against pinned Wordcraft
+        run: |
+          git clone -q "$WORDCRAFT_REPO" wordcraft-src
+          git -C wordcraft-src checkout -q "$WORDCRAFT_REV"
+          sudo apt-get install -y -qq cloc
+          python3 -m pip install -q -r scripts/metrics-requirements.txt
+          python3 scripts/source-metrics.py wordcraft-src --out source-metrics.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: java-metrics
+          path: |
+            java-*.txt
+            source-metrics.json
+
+  wordcraft:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout pinned Wordcraft
+        run: |
+          git clone -q "$WORDCRAFT_REPO" .
+          git checkout -q "$WORDCRAFT_REV"
+      - name: System libraries
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq libxkbcommon-dev libwayland-dev libx11-dev libxcursor-dev \
+            libxrandr-dev libxi-dev libgl1-mesa-dev libgtk-3-dev libfontconfig1-dev
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Build tests (timed, cold)
+        run: |
+          start=$(date +%s)
+          cargo test --workspace --locked --no-run
+          echo "$(( $(date +%s) - start ))" > rust-build-test-seconds.txt
+      - name: Run tests (timed, compiled)
+        run: |
+          start=$(date +%s)
+          cargo test --workspace --locked 2>&1 | tee test.log || true
+          echo "$(( $(date +%s) - start ))" > rust-test-seconds.txt
+          grep -h '^test result' test.log | awk '{p+=$4} END{print p}' > rust-tests.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wordcraft-metrics
+          path: rust-*.txt
+
+  summary:
+    needs: [java, wordcraft]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/download-artifact@v4
+      - name: Comparison table
+        run: |
+          r() { cat "$1" 2>/dev/null || echo n/a; }
+          python3 - >> "$GITHUB_STEP_SUMMARY" <<'EOF'
+          import json
+          m = json.load(open('java-metrics/source-metrics.json'))
+          j, w = m['cn1Java']['groups']['application'], m['wordcraftRust']['groups']['application']
+          print('| Metric | CN1 / Java | Wordcraft / Rust |')
+          print('| --- | ---: | ---: |')
+          print(f"| Application code lines (no tests, no comments) | {j['prunedLoc']['code']:,} | {w['prunedLoc']['code']:,} |")
+          print(f"| Application tokens (o200k_base, tests pruned) | {j['testPrunedTokens']:,} | {w['testPrunedTokens']:,} |")
+          EOF
+          {
+            echo "| Cold build + tests (s) | $(r java-metrics/java-build-test-seconds.txt) | $(r wordcraft-metrics/rust-build-test-seconds.txt) (build only) |"
+            echo "| Test run, compiled (s) | $(r java-metrics/java-test-seconds.txt) | $(r wordcraft-metrics/rust-test-seconds.txt) |"
+            echo "| Tests executed | $(r java-metrics/java-tests.txt) | $(r wordcraft-metrics/rust-tests.txt) |"
+          } >> "$GITHUB_STEP_SUMMARY"

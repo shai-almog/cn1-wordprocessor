@@ -13,6 +13,19 @@ public class Main extends com.codename1.system.Lifecycle {
 
   public void init(Object context) {
     // The native stub constructs Main before Display.init(); create UI only here.
+    // ParparVM's deflater is translated Java; the system zlib saves DOCX several times faster.
+    final NativeZip zip = NativeLookup.create(NativeZip.class);
+    if (zip != null && zip.isSupported())
+      com.codenameone.wordprocessor.ZipParts.codec =
+          new com.codenameone.wordprocessor.ZipParts.Codec() {
+            public byte[] deflate(byte[] data) {
+              return zip.deflate(data);
+            }
+
+            public int crc32(byte[] data) {
+              return zip.crc32(data);
+            }
+          };
     app = new WordProcessor();
     app.init(context);
     app.setFiles(

@@ -602,18 +602,7 @@ static final char COLUMN_BREAK = '\u000B';
       BibliographyFormats.write(parts, d.bibliography);
       DocxProperties.write(parts, d.properties);
     }
-    ZipOutputStream zip = new ZipOutputStream(out);
-    // Fastest deflate: XML compresses well at any level, and save latency is user-visible.
-    zip.setLevel(1);
-    for (Map.Entry<String, byte[]> e : parts.entrySet()) {
-      ZipEntry z = new ZipEntry(e.getKey());
-      z.setTime(0);
-      zip.putNextEntry(z);
-      zip.write(e.getValue());
-      zip.closeEntry();
-    }
-    zip.finish();
-    zip.flush();
+    ZipParts.write(parts, out);
   }
 
   private static void writeStyles(
