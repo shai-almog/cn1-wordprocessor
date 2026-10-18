@@ -1,0 +1,83 @@
+# Builds and tests on the JVM, then builds the native application for every supported platform
+# from the same source and uploads each one as a ready-to-run artifact. release.yml reuses it.
+name: build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      version:
+        type: string
+        default: dev
+
+env:
+  VERSION: ${{ inputs.version || 'dev' }}
+  WORDPROCESSOR_MAVEN_REPO: ${{ github.workspace }}/.local/maven-repository
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: '17' }
+      - uses: actions/cache@v4
+        with:
+          path: .local/maven-repository
+          key: m2-${{ runner.os }}-${{ hashFiles('**/pom.xml') }}
+      - run: scripts/build.sh
+
+  native:
+    needs: test
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { platform: mac, os: macos-15, build: scripts/build-native.sh -DskipTests }
+          - { platform: ios, os: macos-15, build: scripts/build-ios.sh -DskipTests }
+          - { platform: android, os: ubuntu-24.04, build: scripts/build-android.sh -DskipTests }
+          - { platform: web, os: ubuntu-24.04, build: scripts/build-web.sh }
+          - { platform: linux, os: ubuntu-24.04, build: scripts/build-linux.sh -DskipTests }
+          - { platform: linux, os: ubuntu-24.04-arm, build: scripts/build-linux.sh -DskipTests }
+          - { platform: windows, os: windows-latest, arch: x64, build: scripts/build-windows.sh -DskipTests }
+          - { platform: windows, os: windows-latest, arch: arm64, build: scripts/build-windows.sh -DskipTests }
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    env:
+      WINDOWS_ARCH: ${{ matrix.arch }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: '17' }
+      - uses: actions/cache@v4
+        with:
+          path: .local/maven-repository
+          key: m2-${{ runner.os }}-${{ hashFiles('**/pom.xml') }}
+      - name: Linux toolchain (GTK3, CMake, clang)
+        if: matrix.platform == 'linux'
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q clang cmake ninja-build libgtk-3-dev libcairo2-dev \
+            libpango1.0-dev libfontconfig1-dev libfreetype-dev libcurl4-openssl-dev libssl-dev \
+            libwebkit2gtk-4.1-dev libsecret-1-dev libnotify-dev libepoxy-dev
+      - name: Android toolchain
+        if: matrix.platform == 'android'
+        run: echo "JAVA17_HOME=$JAVA_HOME" >> "$GITHUB_ENV"
+      - name: Visual Studio environment
+        if: matrix.platform == 'windows'
+        uses: ilammy/msvc-dev-cmd@v1
+        with: { arch: amd64 }
+      - name: Build
+        run: ${{ matrix.build }}
+      - name: Package
+        run: scripts/dist.sh ${{ matrix.platform }} "$VERSION"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wordprocessor-${{ matrix.platform }}-${{ matrix.arch || runner.arch }}
+          path: dist/*
+          if-no-files-found: error

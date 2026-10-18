@@ -2,7 +2,6 @@
 # Standard local Maven / ParparVM Linux target. Requires a Linux build host.
 set -euo pipefail
 cd "${BASH_SOURCE[0]%/*}/.."
-if [[ -n "${CI:-}" ]]; then echo 'Native builds/tests are local only.' >&2; exit 1; fi
 if [[ "$(uname -s)" != Linux ]]; then echo 'Run this script on Linux (or in an isolated Linux container).' >&2; exit 1; fi
 export PATH="${JAVA_HOME:+$JAVA_HOME/bin:}$PATH"
 source scripts/maven-env.sh

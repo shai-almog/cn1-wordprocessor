@@ -1,0 +1,26 @@
+# Push a tag such as v1.2.0 to build every platform and publish them as one GitHub release:
+# macOS .dmg, iOS simulator app and unsigned .ipa, Android .apk, web bundle, Linux x64/arm64
+# and Windows x64/arm64.
+name: release
+
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  build:
+    uses: ./.github/workflows/build.yml
+    with:
+      version: ${{ github.ref_name }}
+
+  publish:
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with: { path: dist, pattern: wordprocessor-*, merge-multiple: true }
+      - run: gh release create "$GITHUB_REF_NAME" dist/* --repo "$GITHUB_REPOSITORY" --title "$GITHUB_REF_NAME" --generate-notes
+        env:
+          GH_TOKEN: ${{ github.token }}

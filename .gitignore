@@ -10,3 +10,4 @@ __pycache__/
 
 # Local Android build signing material
 /app/common/androidCerts/
+dist/
