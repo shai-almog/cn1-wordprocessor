@@ -72,52 +72,45 @@ public class Main extends com.codename1.system.Lifecycle {
 
           public void save(
               String name, String existingPath, byte[] bytes, WordProcessor.SaveCallback callback) {
-            if (Display.getInstance().downloadBytesAsFile(name, bytes)) {
-              callback.saved(true, null, "download offered: " + name);
-              return;
-            }
             Display.getInstance()
                 .scheduleBackgroundTask(
                     () -> {
-                      try {
-                        NativeFiles chooser = NativeLookup.create(NativeFiles.class);
-                        boolean nativeSave = chooser != null && chooser.isSupported();
-                        String selected = existingPath;
-                        if (nativeSave && selected == null) selected = chooser.chooseSaveFile(name);
-                        if (nativeSave && selected == null) {
-                          Display.getInstance()
-                              .callSerially(() -> callback.saved(false, null, null));
+                      NativeFiles dialog = NativeLookup.create(NativeFiles.class);
+                      if (dialog != null && dialog.isSupported()) {
+                        // Save rewrites the chosen location; a location that can no longer be
+                        // written (moved, or exported outside the iOS sandbox) asks again.
+                        if (existingPath != null && dialog.writeFile(existingPath, bytes) == null) {
+                          done(callback, true, existingPath, existingPath);
                           return;
                         }
-                        final String path =
-                            nativeSave
-                                ? selected
-                                : FileSystemStorage.getInstance().getAppHomePath() + name;
-                        if (nativeSave) {
-                          String error = chooser.writeFile(path, bytes);
-                          if (error != null) throw new IOException(error);
-                        } else
-                          try (OutputStream out =
-                              FileSystemStorage.getInstance().openOutputStream(path)) {
-                            out.write(bytes);
-                          }
-                        Display.getInstance()
-                            .callSerially(
-                                () -> {
-                                  callback.saved(
-                                      true,
-                                      nativeSave ? path : null,
-                                      nativeSave ? path : "local export: " + name);
-                                  if (!nativeSave)
-                                    Display.getInstance().share(path, null, mime(name));
-                                });
-                      } catch (IOException ex) {
-                        Display.getInstance()
-                            .callSerially(() -> callback.saved(false, null, ex.getMessage()));
+                        String location = dialog.saveAs(name, mime(name), bytes);
+                        if (location == null) done(callback, false, null, null);
+                        else if (location.startsWith("error:"))
+                          done(callback, false, null, location.substring(6));
+                        else done(callback, true, location, location);
+                        return;
                       }
+                      // No Save dialog (e.g. a browser without the File System Access API).
+                      if (Display.getInstance().downloadBytesAsFile(name, bytes)) {
+                        done(callback, true, null, "download offered: " + name);
+                        return;
+                      }
+                      String path = FileSystemStorage.getInstance().getAppHomePath() + name;
+                      try (OutputStream out = FileSystemStorage.getInstance().openOutputStream(path)) {
+                        out.write(bytes);
+                      } catch (IOException ex) {
+                        done(callback, false, null, ex.getMessage());
+                        return;
+                      }
+                      done(callback, true, null, "local export: " + name);
+                      Display.getInstance().callSerially(() -> Display.getInstance().share(path, null, mime(name)));
                     });
           }
         });
+  }
+
+  private static void done(WordProcessor.SaveCallback callback, boolean ok, String path, String message) {
+    Display.getInstance().callSerially(() -> callback.saved(ok, path, message));
   }
 
   private static String mime(String name) {
