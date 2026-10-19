@@ -16,6 +16,11 @@ case "$(uname -s)" in
   *) echo "Unsupported OS $(uname -s)" >&2; exit 1 ;;
 esac
 export WORDPROCESSOR_MAVEN_REPO="$PWD/.local/maven-repository"
+if [[ $os == windows ]]; then
+  # Git Bash's /usr/bin/link (coreutils) shadows MSVC's link.exe; point Cargo at the real one.
+  CARGO_TARGET_X86_64_PC_WINDOWS_MSVC_LINKER=$(where.exe link.exe | tr -d '\r' | grep -i msvc | head -1)
+  export CARGO_TARGET_X86_64_PC_WINDOWS_MSVC_LINKER
+fi
 
 cn1_exe() { # the native executable under $1
   case $os in
@@ -24,7 +29,7 @@ cn1_exe() { # the native executable under $1
     windows) find "$1/common/target" -name Main.exe | head -1 ;;
   esac
 }
-wc_exe() { ls "$1/target/release/wordcraft" "$1/target/release/wordcraft.exe" 2>/dev/null | head -1; }
+wc_exe() { for f in "$1/target/release/wordcraft" "$1/target/release/wordcraft.exe"; do [[ -f $f ]] && echo "$f"; done; return 0; }
 
 # Fixtures first: the Linux build cleans common/target, which holds the JVM generator.
 scripts/build.sh -DskipTests
