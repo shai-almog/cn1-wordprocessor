@@ -605,6 +605,9 @@ static final char COLUMN_BREAK = '\u000B';
   private static void writeStyles(
       Document d, Map<String, byte[]> parts, DocxLists lists, DocxTabs tabs, DocxLinks links)
       throws IOException {
+    // Style definitions are the base that body paragraphs omit against: write them in full.
+    var styles = links.styles;
+    links.styles = null;
     var xml = new StringBuilder("<w:styles xmlns:w=\"").append(W).append("\">");
     var comments = new DocxComments(Document.empty());
     for (ParagraphStyle style : d.styles.values()) {
@@ -630,6 +633,7 @@ static final char COLUMN_BREAK = '\u000B';
           .append(rpr)
           .append("</w:style>");
     }
+    links.styles = styles;
     parts.put("word/styles.xml", ZipParts.utf8(xml.append("</w:styles>")));
     String path = "word/_rels/document.xml.rels",
         rels =
@@ -1056,6 +1060,7 @@ static final char COLUMN_BREAK = '\u000B';
           .with("before", "0").with("after", "0"), lists, tabs, links, comments, "", "", "");
       p = p.text(p.text.slice(skip, p.text.length())).with("dropCap", "");
     }
+    int properties = b.length() + "<w:p><w:pPr>".length();
     b.append("<w:p><w:pPr><w:pStyle w:val=\"")
         .append(Xml.escape(p.style))
         .append("\"/><w:jc w:val=\"")
@@ -1122,6 +1127,7 @@ static final char COLUMN_BREAK = '\u000B';
       b.append(content.substring(content.indexOf("<w:pPr>"), content.lastIndexOf("</w:pPr>") + 8));
       b.append("</w:pPrChange>");
     }
+    omitInherited(b, properties, p.style, lists, tabs, links);
     b.append(section).append("</w:pPr>");
     if (p.format.columnBreak) b.append("<w:r><w:br w:type=\"column\"/></w:r>");
     b.append(prefix);
@@ -1131,6 +1137,78 @@ static final char COLUMN_BREAK = '\u000B';
     comments.content(b, p, links);
     links.base = outer;
     b.append(suffix).append("</w:p>");
+  }
+
+  private static final java.util.Set<String> INHERITABLE = new java.util.HashSet<>();
+
+  static {
+    INHERITABLE.addAll(java.util.Arrays.asList("jc", "spacing", "ind", "keepLines", "widowControl"));
+    INHERITABLE.addAll(ParagraphFormat.ASIAN);
+  }
+
+  /**
+   * Drops direct paragraph properties the paragraph style already writes identically. The
+   * reader applies the style's pPr children and then the direct ones, element by element, so
+   * an identical direct element changes nothing. Only simple self-closing elements qualify.
+   */
+  private static void omitInherited(
+      StringBuilder b, int start, String styleId, DocxLists lists, DocxTabs tabs, DocxLinks links) {
+    if (links.styles == null || !links.styles.containsKey(styleId)) return;
+    var inherited = links.inherited.get(styleId);
+    if (inherited == null) {
+      var styles = links.styles;
+      links.styles = null;
+      var own = new StringBuilder();
+      writeParagraph(
+          own, styles.get(styleId).paragraph, lists, tabs.withoutStyles(), links,
+          new DocxComments(Document.empty()));
+      links.styles = styles;
+      inherited = new java.util.HashSet<String>();
+      var text = own.toString();
+      int from = text.indexOf("<w:pPr>") + 7, end = text.indexOf("</w:pPr>");
+      for (int[] e = new int[2]; next(text, from, end, e); from = e[1])
+        if (e[0] < 0) inherited.add(text.substring(-e[0] - 1, e[1]));
+      links.inherited.put(styleId, inherited);
+    }
+    if (inherited.isEmpty()) return;
+    var chars = new char[b.length() - start];
+    b.getChars(start, b.length(), chars, 0);
+    var region = new String(chars);
+    var kept = new StringBuilder(region.length());
+    int from = 0;
+    for (int[] e = new int[2]; next(region, from, region.length(), e); from = e[1]) {
+      int at = e[0] < 0 ? -e[0] - 1 : e[0];
+      var element = region.substring(at, e[1]);
+      if (e[0] >= 0 || !inherited.contains(element)) kept.append(element);
+    }
+    if (from != region.length()) return; // not plain elements: leave untouched
+    b.setLength(start);
+    b.append(kept);
+  }
+
+  /**
+   * Finds the top-level element starting at {@code from} (before {@code end}). Sets e[1] to its
+   * end, and e[0] to its start, or to -start-1 when it is a self-closing inheritable element.
+   */
+  private static boolean next(String b, int from, int end, int[] e) {
+    if (from >= end || b.charAt(from) != '<') return false;
+    int nameEnd = from + 1;
+    while (nameEnd < end && " />".indexOf(b.charAt(nameEnd)) < 0) nameEnd++;
+    String name = b.substring(from + 1, nameEnd);
+    int close = from;
+    while (close < end && b.charAt(close) != '>') close++;
+    if (close >= end) return false;
+    if (b.charAt(close - 1) == '/') {
+      e[0] = name.startsWith("w:") && INHERITABLE.contains(name.substring(2)) ? -from - 1 : from;
+      e[1] = close + 1;
+      return true;
+    }
+    String closing = "</" + name + ">";
+    int at = b.indexOf(closing, close);
+    if (at < 0 || at + closing.length() > end) return false;
+    e[0] = from;
+    e[1] = at + closing.length();
+    return true;
   }
 
   /**

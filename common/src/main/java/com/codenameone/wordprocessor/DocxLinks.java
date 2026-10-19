@@ -10,6 +10,8 @@ final class DocxLinks {
   /** Paragraph styles written to styles.xml, and the run base of the paragraph being written. */
   Map<String, ParagraphStyle> styles;
   TextStyle base;
+  /** Per paragraph style: the simple pPr elements its styles.xml entry writes. */
+  final Map<String, Set<String>> inherited = new HashMap<>();
   private static final String PATH = "word/_rels/document.xml.rels";
   private static final String NS = "http://schemas.openxmlformats.org/package/2006/relationships";
   private static final String TYPE =

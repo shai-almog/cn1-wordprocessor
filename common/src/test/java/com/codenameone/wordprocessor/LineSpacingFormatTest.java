@@ -81,7 +81,12 @@ public class LineSpacingFormatTest {
     s.defineStyle(
         new ParagraphStyle("Normal", "Normal", s.document().paragraph(0), TextStyle.DEFAULT));
     var data =
-        replace(docx(s.document()), "word/document.xml", "w:line=\"480\" w:lineRule=\"exact\"", "");
+        // Spacing equal to the style's is inherited, not written; add a before/after-only override.
+        replace(
+            docx(s.document()),
+            "word/document.xml",
+            "<w:pStyle w:val=\"Normal\"/>",
+            "<w:pStyle w:val=\"Normal\"/><w:spacing w:before=\"0\" w:after=\"0\"/>");
     var p = read(data).document.paragraph(0);
     assertEquals("exact", p.format.lineRule);
     assertEquals(24, p.lineSpacing, 0);
