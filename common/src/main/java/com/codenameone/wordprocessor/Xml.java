@@ -156,26 +156,80 @@ public final class Xml {
     if (bytes.length > 1
         && ((bytes[0] & 255) == 255 && (bytes[1] & 255) == 254
             || (bytes[0] & 255) == 254 && (bytes[1] & 255) == 255)) encoding = "UTF-16";
-    return parse(new String(bytes, encoding));
+    if (!"UTF-8".equals(encoding)) return parse(new String(bytes, encoding));
+    if (bytes.length > 32 * 1024 * 1024) throw new IOException("XML part exceeds 32 MiB");
+    // Decoded straight into the reader's buffer: ParparVM's String(byte[], "UTF-8") decodes
+    // through generic charset code, and the reader then copied the String to a char[] again.
+    char[] chars = new char[bytes.length];
+    int n = 0;
+    for (int i = 0; i < bytes.length; ) {
+      int b = bytes[i];
+      if (b >= 0) {
+        chars[n++] = (char) b;
+        i++;
+        continue;
+      }
+      b &= 0xff;
+      int need = b >= 0xf0 && b < 0xf5 ? 3 : b >= 0xe0 ? 2 : b >= 0xc2 && b < 0xe0 ? 1 : -1;
+      if (b >= 0xf5) need = -1;
+      int cp = need == 3 ? b & 7 : need == 2 ? b & 15 : b & 31;
+      int j = i + 1;
+      for (int k = 0; k < need; k++, j++) {
+        if (j >= bytes.length || (bytes[j] & 0xc0) != 0x80) {
+          need = -1;
+          break;
+        }
+        cp = cp << 6 | bytes[j] & 0x3f;
+      }
+      if (need == 2 && cp >= 0xd800 && cp <= 0xdfff) {
+        chars[n++] = '\ufffd'; // an encoded surrogate is one malformed sequence, as in the JDK
+        i = j;
+      } else if (need < 0
+          || need == 2 && cp < 0x800
+          || need == 3 && (cp < 0x10000 || cp > 0x10ffff)) {
+        chars[n++] = '\ufffd'; // malformed: one replacement per bad lead byte
+        i++;
+      } else if (cp >= 0x10000) {
+        chars[n++] = (char) (0xd7c0 + (cp >> 10));
+        chars[n++] = (char) (0xdc00 | cp & 0x3ff);
+        i = j;
+      } else {
+        chars[n++] = (char) cp;
+        i = j;
+      }
+    }
+    return new Reader(chars, n).read();
   }
 
   public static Element parse(String text) throws IOException {
     if (text.length() > 32 * 1024 * 1024) throw new IOException("XML part exceeds 32 MiB");
-    return new Reader(text).read();
+    return new Reader(text.toCharArray(), text.length()).read();
   }
 
   private static final class Reader {
-    final String s;
     // The hot loops index this copy directly: String.charAt is a checked call per character
     // on ParparVM, and a part is scanned character by character.
     final char[] c;
     final int n;
     int pos, count;
 
-    Reader(String s) {
-      this.s = s;
-      c = s.toCharArray();
-      n = c.length;
+    Reader(char[] c, int n) {
+      this.c = c;
+      this.n = n;
+    }
+
+    /** Whether t occurs at {@code at}. */
+    boolean starts(String t, int at) {
+      if (at < 0 || at + t.length() > n) return false;
+      for (int i = 0; i < t.length(); i++) if (c[at + i] != t.charAt(i)) return false;
+      return true;
+    }
+
+    /** The index of t at or after {@code from}, or -1. */
+    int find(String t, int from) {
+      char first = t.charAt(0);
+      for (int i = from, last = n - t.length(); i <= last; i++) if (c[i] == first && starts(t, i)) return i;
+      return -1;
     }
 
     IOException error(String m) {
@@ -223,7 +277,7 @@ public final class Xml {
 
     String shared(int start, int end) {
       int len = end - start;
-      if (len > 24) return s.substring(start, end);
+      if (len > 24) return new String(c, start, len);
       int h = len;
       for (int i = start; i < end; i++) h = 31 * h + c[i];
       int slot = (h ^ (h >>> 16)) & (pool.length - 1);
@@ -250,21 +304,21 @@ public final class Xml {
 
     boolean skip(String begin, String end) throws IOException {
       // Every construct skipped here starts with '<' and a second character that a tag lacks.
-      if (!at(begin.charAt(0), begin.charAt(1)) || !s.startsWith(begin, pos)) return false;
-      int finish = s.indexOf(end, pos + begin.length());
+      if (!at(begin.charAt(0), begin.charAt(1)) || !starts(begin, pos)) return false;
+      int finish = find(end, pos + begin.length());
       if (finish < 0) throw error("Unterminated XML declaration/comment");
       pos = finish + end.length();
       return true;
     }
 
     Element read() throws IOException {
-      if (s.startsWith("\ufeff")) pos++;
+      if (n > 0 && c[0] == '\ufeff') pos++;
       whitespace();
       while (skip("<?", "?>") || skip("<!--", "-->")) whitespace();
       var root = element(0);
       whitespace();
       while (skip("<!--", "-->")) whitespace();
-      if (pos != s.length()) throw error("Trailing XML content");
+      if (pos != n) throw error("Trailing XML content");
       return root;
     }
 
@@ -310,10 +364,10 @@ public final class Xml {
           return e;
         }
         if (skip("<!--", "-->")) continue;
-        if (at('<', '!') && s.startsWith("<![CDATA[", pos)) {
-          int end = s.indexOf("]]>", pos + 9);
+        if (at('<', '!') && starts("<![CDATA[", pos)) {
+          int end = find("]]>", pos + 9);
           if (end < 0) throw error("Unterminated CDATA");
-          e.addChild(new Element(s.substring(pos + 9, end), true));
+          e.addChild(new Element(new String(c, pos + 9, end - pos - 9), true));
           pos = end + 3;
           continue;
         }

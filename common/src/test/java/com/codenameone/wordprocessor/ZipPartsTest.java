@@ -66,6 +66,19 @@ public class ZipPartsTest {
   }
 
   @Test
+  public void xmlDecodesUtf8LikeTheJdk() throws IOException {
+    String text = "a\u00e9\u4e2d\ud83d\ude00z";
+    byte[] good = ("<r v=\"" + text + "\">" + text + "</r>").getBytes("UTF-8");
+    var e = Xml.parse(good);
+    assertEquals(text, e.getAttribute("v"));
+    assertEquals(text, ((com.codename1.xml.Element) e.getChildAt(0)).getText());
+    byte[] bad = {'<', 'r', '>', (byte) 0xc3, 'x', (byte) 0xed, (byte) 0xa0, (byte) 0x80, '<', '/', 'r', '>'};
+    assertEquals(
+        new String(bad, "UTF-8").replace("<r>", "").replace("</r>", ""),
+        ((com.codename1.xml.Element) Xml.parse(bad).getChildAt(0)).getText());
+  }
+
+  @Test
   public void writtenArchivesReadBackAndOpenWithJavaUtilZip() throws IOException {
     var parts = new LinkedHashMap<String, byte[]>();
     parts.put("word/document.xml", ZipParts.utf8("<w:document>" + "text ".repeat(5000) + "</w:document>"));
