@@ -27,6 +27,8 @@ import glob, json, sys
 out = sys.argv[1]; results = []; meta = None
 for f in sorted(glob.glob(out + '/runs/*/results.json')):
     d = json.load(open(f)); meta = meta or d; results += d['results']
+if meta is None:
+    sys.exit(out + ': no launch completed; see the logs under ' + out + '/failed')
 meta['results'] = results
 json.dump(meta, open(out + '/results.json', 'w'))
 print(out, {s: sum(r['side'] == s for r in results) for s in ('cn1', 'wordcraft')},

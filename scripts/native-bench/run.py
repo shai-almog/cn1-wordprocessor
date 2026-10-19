@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fresh native GUI processes, kernel RSS, and completed-document CPU paint markers. Local only."""
+"""Fresh native GUI processes, kernel RSS, and completed-document CPU paint markers. Final numbers come from the metrics workflow."""
 import argparse,ctypes,hashlib,json,os,platform,signal,statistics,subprocess,time,zipfile
 from pathlib import Path
 import xml.etree.ElementTree as ET
@@ -77,7 +77,6 @@ def run(side,exe,fixture,root,workload):
     return result
 if __name__=='__main__':
     a=argparse.ArgumentParser();a.add_argument('--cn1',type=Path,required=True);a.add_argument('--wordcraft',type=Path,required=True);a.add_argument('--fixture',type=Path,required=True);a.add_argument('--out',type=Path,required=True);a.add_argument('--runs',type=int,default=1);a.add_argument('--workload',action='store_true');a.add_argument('--side',choices=['cn1','wordcraft','both'],default='both');v=a.parse_args()
-    if os.environ.get('CI'):raise SystemExit('Local only')
     results=[]
     for i in range(v.runs):
         order=['cn1','wordcraft'] if i%2==0 else ['wordcraft','cn1']
