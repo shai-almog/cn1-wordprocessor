@@ -499,6 +499,15 @@ public final class Session {
    * Rejects edits a protected document does not allow. Changing the protection mode itself is
    * always allowed (there is no password support), so it is the one way out.
    */
+  /**
+   * Accepting or rejecting removes the record that "tracked changes" protection exists to
+   * keep, so a document protected that way cannot resolve revisions until protection is off.
+   */
+  private void requireReviewAllowed() {
+    if ("trackedChanges".equals(document.properties.protection))
+      throw new IllegalStateException("Protected: tracked changes cannot be accepted or rejected");
+  }
+
   private void enforceProtection(Document b) {
     var mode = b.properties.protection;
     if ("none".equals(mode) || !mode.equals(document.properties.protection)) return;
@@ -889,6 +898,7 @@ public final class Session {
   }
 
   public void resolveRevision(final String id, final boolean accept) {
+    requireReviewAllowed();
     if (id != null) {
       boolean found = false;
       for (Revisions.Change change : Revisions.list(document()))
@@ -906,6 +916,7 @@ public final class Session {
   }
 
   public void resolveSelectedRevisions(final boolean accept) {
+    requireReviewAllowed();
     var range = selection;
     boolean properties = !range.collapsed(), mark = false;
     if (range.collapsed()) {

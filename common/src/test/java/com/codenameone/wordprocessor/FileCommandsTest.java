@@ -50,6 +50,17 @@ public class FileCommandsTest {
       fail("tracked-changes protection allowed turning tracking off");
     } catch (IllegalStateException expected) {
     }
+    s.select(0, 4, 4);
+    s.replace(" tracked");
+    int revisions = Revisions.list(s.document()).size();
+    assertTrue(revisions > 0);
+    for (String review : new String[] {"review.acceptAll", "review.rejectAll", "review.accept", "review.reject"})
+      try {
+        run(s, review);
+        fail(review + " resolved revisions under tracked-changes protection");
+      } catch (IllegalStateException expected) {
+      }
+    assertEquals(revisions, Revisions.list(s.document()).size());
     run(s, "file.protect", "mode", "none");
     s.trackChanges(false);
     assertFalse(s.document().trackChanges);
