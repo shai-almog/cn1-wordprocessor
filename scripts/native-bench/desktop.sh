@@ -53,7 +53,7 @@ python3 scripts/native-bench/sizes.py "$os" "$(cn1_exe .)" "$(wc_exe "$tmp/wordc
 
 # Instrumented copies (prepare.py), built the same way.
 rsync -a --exclude target --exclude .git --exclude .local --exclude artifacts ./ "$tmp/cn1-bench/" 2>/dev/null \
-  || { mkdir -p "$tmp/cn1-bench"; tar --exclude=./target --exclude=./.git --exclude=./.local --exclude=./artifacts -cf - . | tar -C "$tmp/cn1-bench" -xf -; }
+  || { mkdir -p "$tmp/cn1-bench"; tar --exclude=target --exclude=./.git --exclude=./.local --exclude=./artifacts -cf - . | tar -C "$tmp/cn1-bench" -xf -; }
 cp -R "$tmp/wordcraft" "$tmp/wordcraft-bench"
 python3 scripts/native-bench/prepare.py "$tmp/cn1-bench" "$tmp/wordcraft-bench"
 (cd "$tmp/cn1-bench" && WORDPROCESSOR_MAVEN_REPO="$WORDPROCESSOR_MAVEN_REPO" $build -DskipTests)
