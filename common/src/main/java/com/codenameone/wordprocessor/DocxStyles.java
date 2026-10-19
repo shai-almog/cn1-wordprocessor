@@ -23,7 +23,7 @@ final class DocxStyles {
       Element stop = Xml.child(Xml.parse(settings), "defaultTabStop");
       if (stop != null) {
         try {
-          interval = Float.parseFloat(Xml.attr(stop, "val", "720")) / 20f;
+          interval = Xml.number(Xml.attr(stop, "val", "720")) / 20f;
           ParagraphFormat.DEFAULT.with("tabInterval", String.valueOf(interval));
         } catch (IllegalArgumentException invalid) {
           warnings.add("Invalid document default tab interval");

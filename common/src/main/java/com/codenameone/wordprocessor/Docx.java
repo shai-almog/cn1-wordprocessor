@@ -3,14 +3,10 @@ package com.codenameone.wordprocessor;
 import com.codename1.xml.Element;
 import java.io.*;
 import java.util.*;
-import java.util.zip.*;
 
 /** Explicitly bounded DOCX subset. Lossy edits require the caller to opt in. */
 public final class Docx {
   private static final String W = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
-  private static final int MAX_ENTRY = 32 * 1024 * 1024,
-      MAX_TOTAL = 128 * 1024 * 1024,
-      MAX_ENTRIES = 4096;
 
   public static final class Opened {
     public final Document document;
@@ -27,31 +23,7 @@ public final class Docx {
   private Docx() {}
 
   public static Opened read(InputStream input) throws IOException {
-    var parts = new LinkedHashMap<String, byte[]>();
-    var zip = new ZipInputStream(input);
-    ZipEntry entry;
-    int total = 0, count = 0;
-    while ((entry = zip.getNextEntry()) != null) {
-      if (++count > MAX_ENTRIES) throw new IOException("Too many package entries");
-      var name = entry.getName();
-      if (name.startsWith("/")
-          || name.contains("..")
-          || name.contains("\\")
-          || parts.containsKey(name)) throw new IOException("Invalid or duplicate package path");
-      if (entry.isDirectory()) continue;
-      long size = entry.getSize();
-      var out =
-          new ByteArrayOutputStream(size > 0 && size <= MAX_ENTRY ? (int) size : 8192);
-      byte[] buf = new byte[8192];
-      int n;
-      while ((n = zip.read(buf)) != -1) {
-        total += n;
-        if (out.size() + n > MAX_ENTRY || total > MAX_TOTAL)
-          throw new IOException("DOCX package exceeds size limit");
-        out.write(buf, 0, n);
-      }
-      parts.put(name, out.toByteArray());
-    }
+    var parts = ZipParts.read(input);
     var main = parts.get("word/document.xml");
     if (main == null) throw new IOException("Missing word/document.xml");
     Element root = Xml.parse(main);
@@ -271,7 +243,8 @@ static final char COLUMN_BREAK = '\u000B';
   static final String COLUMN_BREAK_TEXT = String.valueOf(COLUMN_BREAK);
 
   private static float twips(Element e, String key, int fallback) {
-    return Float.parseFloat(Xml.attr(e, key, Integer.toString(fallback))) / 20f;
+    String v = Xml.attr(e, key, null);
+    return (v == null ? fallback : Xml.number(v)) / 20f;
   }
 
   static Paragraph paragraph(
@@ -327,7 +300,7 @@ static final char COLUMN_BREAK = '\u000B';
         line =
             Math.max(
                 .06f,
-                Float.parseFloat(Xml.attr(p, "line", "" + stored))
+                Xml.number(Xml.attr(p, "line", "" + stored))
                     / ("auto".equals(rule) ? 240f : 20f));
         layout = layout.with("lineRule", rule);
       } else if ("ind".equals(kind)) {

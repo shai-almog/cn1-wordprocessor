@@ -217,6 +217,9 @@ public final class Xml {
 
     /** Pool of short strings: names and small values repeat thousands of times per part. */
     private final String[] pool = new String[1024];
+    // Each pooled string's characters, compared against the buffer directly: String methods
+    // (regionMatches, charAt) are checked calls per character on ParparVM.
+    private final char[][] poolChars = new char[1024][];
 
     String shared(int start, int end) {
       int len = end - start;
@@ -224,20 +227,30 @@ public final class Xml {
       int h = len;
       for (int i = start; i < end; i++) h = 31 * h + c[i];
       int slot = (h ^ (h >>> 16)) & (pool.length - 1);
-      var cached = pool[slot];
-      if (cached != null && cached.length() == len && s.regionMatches(start, cached, 0, len))
-        return cached;
+      char[] chars = poolChars[slot];
+      if (chars != null && chars.length == len) {
+        int i = 0;
+        while (i < len && chars[i] == c[start + i]) i++;
+        if (i == len) return pool[slot];
+      }
       var v = new String(c, start, len);
       pool[slot] = v;
+      poolChars[slot] = java.util.Arrays.copyOfRange(c, start, end);
       return v;
     }
 
-    void expect(char c) throws IOException {
-      if (pos >= s.length() || s.charAt(pos++) != c) throw error("Expected " + c);
+    void expect(char ch) throws IOException {
+      if (pos >= n || c[pos++] != ch) throw error("Expected " + ch);
+    }
+
+    /** Whether the buffer holds a, b at pos. */
+    boolean at(char a, char b) {
+      return pos + 1 < n && c[pos] == a && c[pos + 1] == b;
     }
 
     boolean skip(String begin, String end) throws IOException {
-      if (!s.startsWith(begin, pos)) return false;
+      // Every construct skipped here starts with '<' and a second character that a tag lacks.
+      if (!at(begin.charAt(0), begin.charAt(1)) || !s.startsWith(begin, pos)) return false;
       int finish = s.indexOf(end, pos + begin.length());
       if (finish < 0) throw error("Unterminated XML declaration/comment");
       pos = finish + end.length();
@@ -257,7 +270,7 @@ public final class Xml {
 
     Element element(int depth) throws IOException {
       if (depth > 256 || ++count > 500000) throw error("XML complexity limit exceeded");
-      if (s.startsWith("<!", pos)) throw error("DTD and entity declarations are not supported");
+      if (at('<', '!')) throw error("DTD and entity declarations are not supported");
       expect('<');
       int nameStart = pos;
       var tag = name();
@@ -265,11 +278,11 @@ public final class Xml {
       var e = new Node(tag, colon < 0 ? tag : shared(nameStart + colon + 1, pos));
       while (true) {
         whitespace();
-        if (s.startsWith("/>", pos)) {
+        if (at('/', '>')) {
           pos += 2;
           return e;
         }
-        if (pos < s.length() && s.charAt(pos) == '>') {
+        if (pos < n && c[pos] == '>') {
           pos++;
           break;
         }
@@ -278,8 +291,8 @@ public final class Xml {
         whitespace();
         expect('=');
         whitespace();
-        if (pos >= s.length()) throw error("Missing attribute value");
-        char quote = s.charAt(pos++);
+        if (pos >= n) throw error("Missing attribute value");
+        char quote = c[pos++];
         if (quote != '\"' && quote != '\'') throw error("Unquoted attribute");
         int end = pos;
         while (end < n && c[end] != quote) end++;
@@ -287,8 +300,8 @@ public final class Xml {
         e.setAttribute(key, value(pos, end, true));
         pos = end + 1;
       }
-      while (pos < s.length()) {
-        if (s.startsWith("</", pos)) {
+      while (pos < n) {
+        if (at('<', '/')) {
           pos += 2;
           var close = name();
           whitespace();
@@ -297,7 +310,7 @@ public final class Xml {
           return e;
         }
         if (skip("<!--", "-->")) continue;
-        if (s.startsWith("<![CDATA[", pos)) {
+        if (at('<', '!') && s.startsWith("<![CDATA[", pos)) {
           int end = s.indexOf("]]>", pos + 9);
           if (end < 0) throw error("Unterminated CDATA");
           e.addChild(new Element(s.substring(pos + 9, end), true));
@@ -379,6 +392,22 @@ public final class Xml {
     var n = e.getTagName();
     int i = n.indexOf(':');
     return i < 0 ? n : n.substring(i + 1);
+  }
+
+  /**
+   * Float.parseFloat with a fast path for the plain integers nearly every OOXML measurement
+   * is: ParparVM's general float parser was a tenth of the time spent opening a DOCX.
+   */
+  public static float number(String v) {
+    int n = v.length(), i = n > 0 && v.charAt(0) == '-' ? 1 : 0;
+    if (i == n || n - i > 9) return Float.parseFloat(v);
+    int value = 0;
+    for (int j = i; j < n; j++) {
+      char ch = v.charAt(j);
+      if (ch < '0' || ch > '9') return Float.parseFloat(v);
+      value = value * 10 + (ch - '0');
+    }
+    return i == 1 ? -value : value;
   }
 
   public static String attr(Element e, String name, String fallback) {

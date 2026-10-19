@@ -63,8 +63,8 @@ final class DocxPictures {
               Picture.drawing(
                   "i" + id[0]++,
                   drawing,
-                  Math.max(1, Float.parseFloat(Xml.attr(extent0, "cx", "0")) / 12700f),
-                  Math.max(1, Float.parseFloat(Xml.attr(extent0, "cy", "0")) / 12700f),
+                  Math.max(1, Xml.number(Xml.attr(extent0, "cx", "0")) / 12700f),
+                  Math.max(1, Xml.number(Xml.attr(extent0, "cy", "0")) / 12700f),
                   props0 == null ? "" : Xml.attr(props0, "descr", ""),
                   "left"));
           return;
@@ -81,8 +81,8 @@ final class DocxPictures {
             new Picture(
                 "i" + id[0]++,
                 data,
-                Float.parseFloat(Xml.attr(extent, "cx", "0")) / 12700f,
-                Float.parseFloat(Xml.attr(extent, "cy", "0")) / 12700f,
+                Xml.number(Xml.attr(extent, "cx", "0")) / 12700f,
+                Xml.number(Xml.attr(extent, "cy", "0")) / 12700f,
                 props == null ? "" : Xml.attr(props, "descr", Xml.attr(props, "name", "")),
                 "left",
                 look));
@@ -106,7 +106,7 @@ final class DocxPictures {
     if (crop != null) {
       String[] keys = {"l", "t", "r", "b"};
       for (int i = 0; i < 4; i++)
-        edges[i] = Math.max(0, Float.parseFloat(Xml.attr(crop, keys[i], "0")) / 100000f);
+        edges[i] = Math.max(0, Xml.number(Xml.attr(crop, keys[i], "0")) / 100000f);
     }
     int color = -1;
     float width = 0;
@@ -114,24 +114,24 @@ final class DocxPictures {
       Element rgb = descendant(line, "srgbClr");
       if (rgb != null) {
         color = Integer.parseInt(Xml.attr(rgb, "val", "000000"), 16);
-        width = Float.parseFloat(Xml.attr(line, "w", "9525")) / 12700f;
+        width = Xml.number(Xml.attr(line, "w", "9525")) / 12700f;
       } else if (descendant(line, "solidFill") != null) {
         color = 0;
-        width = Float.parseFloat(Xml.attr(line, "w", "9525")) / 12700f;
+        width = Xml.number(Xml.attr(line, "w", "9525")) / 12700f;
         warnings.add("Picture border theme color converted to black");
       }
     }
     int rotation =
         transform == null
             ? 0
-            : Math.round(Float.parseFloat(Xml.attr(transform, "rot", "0")) / 60000f);
+            : Math.round(Xml.number(Xml.attr(transform, "rot", "0")) / 60000f);
     try {
       // Blip effects: a:lum (brightness/contrast), a:alphaModFix, a:grayscl and a:biLevel.
       Element blip = descendant(container, "blip");
       if (blip != null) {
         Element lum = Xml.child(blip, "lum"), alpha = Xml.child(blip, "alphaModFix");
-        int bright = lum == null ? 0 : Math.round(Float.parseFloat(Xml.attr(lum, "bright", "0")) / 1000f);
-        int contrast = lum == null ? 0 : Math.round(Float.parseFloat(Xml.attr(lum, "contrast", "0")) / 1000f);
+        int bright = lum == null ? 0 : Math.round(Xml.number(Xml.attr(lum, "bright", "0")) / 1000f);
+        int contrast = lum == null ? 0 : Math.round(Xml.number(Xml.attr(lum, "contrast", "0")) / 1000f);
         String mode =
             Xml.child(blip, "grayscl") != null
                 ? "grayscale"
@@ -140,7 +140,7 @@ final class DocxPictures {
                     : bright == 70 && contrast == -70 ? "washout" : "color";
         if ("washout".equals(mode)) bright = contrast = 0;
         int transparency =
-            alpha == null ? 0 : 100 - Math.round(Float.parseFloat(Xml.attr(alpha, "amt", "100000")) / 1000f);
+            alpha == null ? 0 : 100 - Math.round(Xml.number(Xml.attr(alpha, "amt", "100000")) / 1000f);
         var base =
             new Picture.Look(edges[0], edges[1], edges[2], edges[3], color, Math.min(72, width), rotation,
                 transform != null && "1".equals(Xml.attr(transform, "flipH", "0")),

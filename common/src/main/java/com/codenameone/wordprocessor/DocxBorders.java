@@ -33,8 +33,8 @@ final class DocxBorders {
       warnings.add("Paragraph border style " + val + " shown as " + style);
     }
     String color = Xml.attr(e, "color", "auto");
-    float width = Math.min(12, Math.max(.25f, Float.parseFloat(Xml.attr(e, "sz", "4")) / 8f));
-    float space = Math.min(31, Math.max(0, Float.parseFloat(Xml.attr(e, "space", "0"))));
+    float width = Math.min(12, Math.max(.25f, Xml.number(Xml.attr(e, "sz", "4")) / 8f));
+    float space = Math.min(31, Math.max(0, Xml.number(Xml.attr(e, "space", "0"))));
     return new ParagraphBorders.Side(
         width, "auto".equals(color) || color.length() != 6 ? 0 : Integer.parseInt(color, 16), space, style);
   }

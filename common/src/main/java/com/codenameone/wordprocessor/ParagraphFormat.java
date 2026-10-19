@@ -134,7 +134,80 @@ public final class ParagraphFormat {
       boolean rtl,
       String asianOff,
       String dropCap) {
-    this.dropCap = dropCap(dropCap);
+    this(
+        layout(right, first, tab),
+        first,
+        tab,
+        keep,
+        widow,
+        TabStop.normalized(tabs),
+        outline(outlineLevel),
+        lineRule(lineRule),
+        columnBreak,
+        shading(borders, shading),
+        rtl,
+        asianOptions(asianOff),
+        dropCap(dropCap),
+        borders);
+  }
+
+  /** Already validated values: {@link #with} checks only the property it changes. */
+  private ParagraphFormat(
+      float right,
+      float first,
+      float tab,
+      boolean keep,
+      boolean widow,
+      java.util.List<TabStop> tabs,
+      int outlineLevel,
+      String lineRule,
+      boolean columnBreak,
+      int shading,
+      boolean rtl,
+      String asianOff,
+      String dropCap,
+      ParagraphBorders borders) {
+    rightIndent = right;
+    firstIndent = first;
+    tabInterval = tab;
+    keepLines = keep;
+    widowControl = widow;
+    this.tabs = tabs;
+    this.outlineLevel = outlineLevel;
+    this.lineRule = lineRule;
+    this.columnBreak = columnBreak;
+    this.shading = shading;
+    this.rtl = rtl;
+    this.asianOff = asianOff;
+    this.dropCap = dropCap;
+    this.borders = borders;
+  }
+
+  private static float layout(float right, float first, float tab) {
+    if (!finite(right) || !finite(first) || !finite(tab) || right < 0 || tab <= 0 || tab > 1000)
+      throw new IllegalArgumentException("Invalid paragraph layout");
+    return right;
+  }
+
+  private static int outline(int level) {
+    if (level < -1 || level > 9) throw new IllegalArgumentException("Invalid outline level");
+    return level;
+  }
+
+  private static String lineRule(String rule) {
+    if (!"auto".equals(rule) && !"exact".equals(rule) && !"atLeast".equals(rule))
+      throw new IllegalArgumentException("Invalid line spacing rule");
+    return rule;
+  }
+
+  private static int shading(ParagraphBorders borders, int shading) {
+    if (borders == null || shading < -1 || shading > 0xffffff)
+      throw new IllegalArgumentException("Invalid paragraph borders or shading");
+    return shading;
+  }
+
+  private static String asianOptions(String asianOff) {
+    if (asianOff.isEmpty()) return "";
     var off = new StringBuilder();
     for (String a : ASIAN)
       if (("," + asianOff + ",").contains("," + a + ","))
@@ -142,27 +215,7 @@ public final class ParagraphFormat {
     for (String a : TextUtil.split(asianOff, ','))
       if (!a.trim().isEmpty() && !ASIAN.contains(a.trim()))
         throw new IllegalArgumentException("Unknown Asian typography option: " + a);
-    this.rtl = rtl;
-    this.asianOff = off.toString();
-    if (borders == null || shading < -1 || shading > 0xffffff)
-      throw new IllegalArgumentException("Invalid paragraph borders or shading");
-    this.borders = borders;
-    this.shading = shading;
-    this.columnBreak = columnBreak;
-    if (!java.util.Arrays.asList("auto", "exact", "atLeast").contains(lineRule))
-      throw new IllegalArgumentException("Invalid line spacing rule");
-    this.lineRule = lineRule;
-    if (outlineLevel < -1 || outlineLevel > 9)
-      throw new IllegalArgumentException("Invalid outline level");
-    this.outlineLevel = outlineLevel;
-    this.tabs = TabStop.normalized(tabs);
-    if (!finite(right) || !finite(first) || !finite(tab) || right < 0 || tab <= 0 || tab > 1000)
-      throw new IllegalArgumentException("Invalid paragraph layout");
-    rightIndent = right;
-    firstIndent = first;
-    tabInterval = tab;
-    keepLines = keep;
-    widowControl = widow;
+    return off.toString();
   }
 
   private static boolean finite(float f) {
@@ -170,21 +223,33 @@ public final class ParagraphFormat {
   }
 
   public ParagraphFormat with(String key, String value) {
+    // Every other field is already valid, so only the changed one is parsed and checked.
+    float right = rightIndent, first = firstIndent, tab = tabInterval;
+    boolean keep = keepLines, widow = widowControl, column = columnBreak, bidi = rtl;
+    var stops = tabs;
+    int outline = outlineLevel, shade = shading;
+    String rule = lineRule, asian = asianOff, drop = dropCap;
+    var edges = borders;
+    switch (key) {
+      case "rightIndent": right = Float.parseFloat(value); break;
+      case "firstIndent": first = Float.parseFloat(value); break;
+      case "tabInterval": tab = Float.parseFloat(value); break;
+      case "keepLines": keep = Boolean.parseBoolean(value); break;
+      case "widowControl": widow = Boolean.parseBoolean(value); break;
+      case "tabs": stops = TabStop.normalized(TabStop.decode(value)); break;
+      case "outlineLevel": outline = outline(Integer.parseInt(value)); break;
+      case "lineRule": rule = lineRule(value); break;
+      case "columnBreak": column = Boolean.parseBoolean(value); break;
+      case "borders": edges = ParagraphBorders.decode(value); shading(edges, shade); break;
+      case "shading": shade = shading(edges, value.isEmpty() ? -1 : Integer.parseInt(value, 16)); break;
+      case "rtl": bidi = Boolean.parseBoolean(value); break;
+      case "asianOff": asian = asianOptions(value); break;
+      case "dropCap": drop = dropCap(value); break;
+      default: return this;
+    }
+    layout(right, first, tab);
     return new ParagraphFormat(
-        "rightIndent".equals(key) ? Float.parseFloat(value) : rightIndent,
-        "firstIndent".equals(key) ? Float.parseFloat(value) : firstIndent,
-        "tabInterval".equals(key) ? Float.parseFloat(value) : tabInterval,
-        "keepLines".equals(key) ? Boolean.parseBoolean(value) : keepLines,
-        "widowControl".equals(key) ? Boolean.parseBoolean(value) : widowControl,
-        "tabs".equals(key) ? TabStop.decode(value) : tabs,
-        "outlineLevel".equals(key) ? Integer.parseInt(value) : outlineLevel,
-        "lineRule".equals(key) ? value : lineRule,
-        "columnBreak".equals(key) ? Boolean.parseBoolean(value) : columnBreak,
-        "borders".equals(key) ? ParagraphBorders.decode(value) : borders,
-        "shading".equals(key) ? (value.isEmpty() ? -1 : Integer.parseInt(value, 16)) : shading,
-        "rtl".equals(key) ? Boolean.parseBoolean(value) : rtl,
-        "asianOff".equals(key) ? value : asianOff,
-        "dropCap".equals(key) ? value : dropCap);
+        right, first, tab, keep, widow, stops, outline, rule, column, shade, bidi, asian, drop, edges);
   }
 
   /** Validates and normalizes a drop cap specification. */

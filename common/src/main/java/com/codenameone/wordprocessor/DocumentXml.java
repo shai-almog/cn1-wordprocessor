@@ -593,7 +593,7 @@ public final class DocumentXml {
   }
 
   private static float f(Element e, String k) {
-    return Float.parseFloat(Xml.attr(e, k, "0"));
+    return Xml.number(Xml.attr(e, k, "0"));
   }
 
   private static boolean flag(Element e, String k) {
@@ -613,7 +613,7 @@ public final class DocumentXml {
       var s =
           new TextStyle(
                   Xml.attr(r, "font", "Serif"),
-                  Float.parseFloat(Xml.attr(r, "size", "12")),
+                  Xml.number(Xml.attr(r, "size", "12")),
                   Integer.parseInt(Xml.attr(r, "color", "202833"), 16),
                   flag(r, "bold"),
                   flag(r, "italic"),
@@ -665,7 +665,7 @@ public final class DocumentXml {
                 f(e, "before"),
                 f(e, "after"),
                 f(e, "indent"),
-                Float.parseFloat(Xml.attr(e, "spacing", "1.2")),
+                Xml.number(Xml.attr(e, "spacing", "1.2")),
                 flag(e, "pageBreak"),
                 flag(e, "keepNext"),
                 Integer.parseInt(Xml.attr(e, "listLevel", "0")),
@@ -674,7 +674,7 @@ public final class DocumentXml {
                 new ParagraphFormat(
                     f(e, "rightIndent"),
                     f(e, "firstIndent"),
-                    Float.parseFloat(Xml.attr(e, "tabInterval", "36")),
+                    Xml.number(Xml.attr(e, "tabInterval", "36")),
                     flag(e, "keepLines"),
                     Boolean.parseBoolean(Xml.attr(e, "widowControl", "true")),
                     TabStop.decode(Xml.attr(e, "tabs", "")),
@@ -758,13 +758,13 @@ public final class DocumentXml {
     var cols = Xml.children(e, "col");
     float[] widths = new float[cols.size() * 2];
     for (int i = 0; i < cols.size(); i++) {
-      widths[i * 2] = Float.parseFloat(Xml.attr(cols.get(i), "width", "0"));
-      widths[i * 2 + 1] = Float.parseFloat(Xml.attr(cols.get(i), "space", "0"));
+      widths[i * 2] = Xml.number(Xml.attr(cols.get(i), "width", "0"));
+      widths[i * 2 + 1] = Xml.number(Xml.attr(cols.get(i), "space", "0"));
     }
     try {
       return new Columns(
           Integer.parseInt(Xml.attr(e, "count", "1")),
-          Float.parseFloat(Xml.attr(e, "space", "36")),
+          Xml.number(Xml.attr(e, "space", "36")),
           Boolean.parseBoolean(Xml.attr(e, "separator", "false")),
           widths);
     } catch (IllegalArgumentException ex) {

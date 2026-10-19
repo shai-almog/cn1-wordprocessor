@@ -230,7 +230,7 @@ final class DocxDrawings {
         Element lclr = lsolid == null ? null : Xml.child(lsolid, "srgbClr");
         if (lclr != null) d = d.with("line", Xml.attr(lclr, "val", ""));
         if (!Xml.attr(ln, "w", "").isEmpty())
-          d = d.with("lineWidth", String.valueOf(Float.parseFloat(Xml.attr(ln, "w", "12700")) / 12700f));
+          d = d.with("lineWidth", String.valueOf(Xml.number(Xml.attr(ln, "w", "12700")) / 12700f));
       }
     }
     Element content = DocxPictures.descendant(wsp, "txbxContent");
@@ -241,7 +241,7 @@ final class DocxDrawings {
         if (text.length() > 0) text.append('\n');
         collectText(para, text);
         Element sz = DocxPictures.descendant(para, "sz"), color = DocxPictures.descendant(para, "color");
-        if (sz != null) d = d.with("fontSize", String.valueOf(Float.parseFloat(Xml.attr(sz, "val", "22")) / 2));
+        if (sz != null) d = d.with("fontSize", String.valueOf(Xml.number(Xml.attr(sz, "val", "22")) / 2));
         if (color != null && Xml.attr(color, "val", "").length() == 6) d = d.with("textColor", Xml.attr(color, "val", ""));
         if (DocxPictures.descendant(para, "b") != null) d = d.with("bold", "true");
         Element jc = DocxPictures.descendant(para, "jc");

@@ -482,7 +482,7 @@ final class TableFormats {
   }
 
   private static float number(Element e, String key, float fallback) {
-    return Float.parseFloat(Xml.attr(e, key, Float.toString(fallback)));
+    return Xml.number(Xml.attr(e, key, Float.toString(fallback)));
   }
 
   private static int color(Element e, String key, int fallback) {

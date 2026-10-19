@@ -107,7 +107,7 @@ final class RevisionFormats {
         prefix,
         new TextStyle(
             Xml.attr(e, prefix + "font", "Serif"),
-            Float.parseFloat(Xml.attr(e, prefix + "size", "12")),
+            Xml.number(Xml.attr(e, prefix + "size", "12")),
             Integer.parseInt(Xml.attr(e, prefix + "color", "202833"), 16),
             Boolean.parseBoolean(Xml.attr(e, prefix + "bold", "false")),
             Boolean.parseBoolean(Xml.attr(e, prefix + "italic", "false")),

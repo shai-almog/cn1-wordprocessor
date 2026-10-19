@@ -122,8 +122,8 @@ final class DocxFurniture {
     float header = 18, footer = 18;
     try {
       if (margin != null) {
-        header = Float.parseFloat(Xml.attr(margin, "header", "360")) / 20;
-        footer = Float.parseFloat(Xml.attr(margin, "footer", "360")) / 20;
+        header = Xml.number(Xml.attr(margin, "header", "360")) / 20;
+        footer = Xml.number(Xml.attr(margin, "footer", "360")) / 20;
       }
     } catch (RuntimeException ex) {
       warnings.add("Invalid header/footer distance");
