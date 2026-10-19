@@ -27,11 +27,31 @@ public class NativeFilesImpl {
   }
 
   public String writeFile(String location, byte[] data) {
+    // A temporary sibling moved over the target: a failed save leaves the old document intact.
+    java.nio.file.Path target = new File(location).toPath().toAbsolutePath(), temp = null;
     try {
-      Files.write(new File(location).toPath(), data);
+      temp = Files.createTempFile(target.getParent(), target.getFileName() + ".", ".tmp");
+      try (java.nio.channels.FileChannel out =
+          java.nio.channels.FileChannel.open(temp, java.nio.file.StandardOpenOption.WRITE)) {
+        java.nio.ByteBuffer buffer = java.nio.ByteBuffer.wrap(data);
+        while (buffer.hasRemaining()) out.write(buffer);
+        out.force(true);
+      }
+      try {
+        Files.move(temp, target, java.nio.file.StandardCopyOption.REPLACE_EXISTING,
+            java.nio.file.StandardCopyOption.ATOMIC_MOVE);
+      } catch (java.nio.file.AtomicMoveNotSupportedException notAtomic) {
+        Files.move(temp, target, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+      }
       return null;
     } catch (Exception e) {
-      return e.getMessage();
+      if (temp != null)
+        try {
+          Files.deleteIfExists(temp);
+        } catch (Exception ignored) {
+          // best effort
+        }
+      return e.getMessage() == null ? e.toString() : e.getMessage();
     }
   }
 

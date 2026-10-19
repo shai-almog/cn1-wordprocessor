@@ -38,8 +38,37 @@ public class NativeFilesImpl {
   }
 
   public String writeFile(String location, byte[] data) {
+    // Document providers cannot replace a file atomically, and "wt" truncates before writing.
+    // So the current contents are kept first; if the new write fails they are written back,
+    // and if even that fails the copy stays in app storage as a recoverable previous version.
+    android.content.ContentResolver resolver = AndroidNativeUtil.getContext().getContentResolver();
+    Uri uri = Uri.parse(location);
+    byte[] previous = null;
+    try (java.io.InputStream in = resolver.openInputStream(uri)) {
+      if (in != null) {
+        java.io.ByteArrayOutputStream copy = new java.io.ByteArrayOutputStream();
+        byte[] buffer = new byte[64 * 1024];
+        for (int n; (n = in.read(buffer)) != -1; ) copy.write(buffer, 0, n);
+        previous = copy.toByteArray();
+      }
+    } catch (Exception newFile) {
+      // nothing to preserve
+    }
+    String error = write(resolver, uri, data);
+    if (error == null || previous == null) return error;
+    if (write(resolver, uri, previous) == null) return error + " (the previous version was restored)";
+    java.io.File kept = new java.io.File(AndroidNativeUtil.getContext().getFilesDir(), "previous-version.bin");
+    try (OutputStream out = new java.io.FileOutputStream(kept)) {
+      out.write(previous);
+      return error + " (the previous version was kept in app storage)";
+    } catch (Exception lost) {
+      return error;
+    }
+  }
+
+  private static String write(android.content.ContentResolver resolver, Uri uri, byte[] data) {
     // "wt" truncates: a shorter document must not leave the old file's tail behind.
-    try (OutputStream out = AndroidNativeUtil.getContext().getContentResolver().openOutputStream(Uri.parse(location), "wt")) {
+    try (OutputStream out = resolver.openOutputStream(uri, "wt")) {
       if (out == null) return "The document provider refused the file";
       out.write(data);
       return null;

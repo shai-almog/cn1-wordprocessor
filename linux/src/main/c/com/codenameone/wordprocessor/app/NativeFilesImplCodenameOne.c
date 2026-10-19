@@ -5,6 +5,10 @@
 #include "cn1_linux_gfx.h"
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
+#include <errno.h>
+#include <unistd.h>
+#include <sys/stat.h>
 
 typedef struct { const char* name; char* chosen; } CN1WordSave;
 
@@ -19,15 +23,45 @@ static void cn1WordSaveDialog(void* p) {
     gtk_widget_destroy(dialog);
 }
 
+/* Writes a temporary sibling, flushes it to disk and renames it over the target, so a failed
+ * or interrupted save leaves the previous document intact (rename is atomic on POSIX). */
 static const char* cn1WordWrite(const char* path, JAVA_OBJECT data) {
-    FILE* f = fopen(path, "wb");
     size_t length = (size_t) (*(JAVA_ARRAY) data).length;
-    if (f == NULL) return "The file could not be opened for writing";
-    if (fwrite(CN1_ARRAY_DATA(data), 1, length, f) != length) {
-        fclose(f);
-        return "The file could not be written";
+    size_t pathLength = strlen(path);
+    char* temp = malloc(pathLength + 16);
+    int fd;
+    const char* error = NULL;
+    if (temp == NULL) return "Out of memory";
+    snprintf(temp, pathLength + 16, "%s.XXXXXX", path);
+    fd = mkstemp(temp);
+    if (fd < 0) {
+        free(temp);
+        return "The file could not be opened for writing";
     }
-    return fclose(f) == 0 ? NULL : "The file could not be written";
+    {
+        struct stat existing;
+        /* Keep the document's permissions; mkstemp creates 0600. */
+        fchmod(fd, stat(path, &existing) == 0 ? (existing.st_mode & 07777) : 0644);
+    }
+    {
+        const char* bytes = (const char*) CN1_ARRAY_DATA(data);
+        size_t written = 0;
+        while (written < length) {
+            ssize_t n = write(fd, bytes + written, length - written);
+            if (n < 0 && errno == EINTR) continue;
+            if (n <= 0) {
+                error = "The file could not be written";
+                break;
+            }
+            written += (size_t) n;
+        }
+    }
+    if (error == NULL && fsync(fd) != 0) error = "The file could not be written";
+    if (close(fd) != 0 && error == NULL) error = "The file could not be written";
+    if (error == NULL && rename(temp, path) != 0) error = "The file could not be replaced";
+    if (error != NULL) unlink(temp);
+    free(temp);
+    return error;
 }
 
 JAVA_OBJECT com_codenameone_wordprocessor_app_NativeFilesImplCodenameOne_saveAs___java_lang_String_java_lang_String_byte_1ARRAY_R_java_lang_String(CODENAME_ONE_THREAD_STATE, JAVA_OBJECT name, JAVA_OBJECT mime, JAVA_OBJECT data) {

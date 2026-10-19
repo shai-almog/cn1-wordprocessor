@@ -23,13 +23,33 @@ static JAVA_OBJECT cn1WordJavaString(CODENAME_ONE_THREAD_STATE, const char* pref
     return result;
 }
 
+/* Writes a temporary sibling, flushes it and swaps it in, so a failed or interrupted save
+ * leaves the previous document intact. ReplaceFileW keeps the original's attributes and
+ * security; a new document is moved into place. */
 static const WCHAR* cn1WordWrite(const WCHAR* path, JAVA_OBJECT data) {
     DWORD length = (DWORD) (*(JAVA_ARRAY) data).length, written = 0;
-    BOOL ok;
-    HANDLE file = CreateFileW(path, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
-    if (file == INVALID_HANDLE_VALUE) return L"The file could not be opened for writing";
-    ok = WriteFile(file, CN1_ARRAY_DATA(data), length, &written, NULL) && written == length;
-    return CloseHandle(file) && ok ? NULL : L"The file could not be written";
+    size_t pathLength = wcslen(path);
+    WCHAR* temp = (WCHAR*) malloc((pathLength + 16) * sizeof(WCHAR));
+    const WCHAR* error = NULL;
+    HANDLE file;
+    if (temp == NULL) return L"Out of memory";
+    swprintf(temp, pathLength + 16, L"%ls.%lu.tmp", path, (unsigned long) GetCurrentProcessId());
+    file = CreateFileW(temp, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+    if (file == INVALID_HANDLE_VALUE) {
+        free(temp);
+        return L"The file could not be opened for writing";
+    }
+    if (!WriteFile(file, CN1_ARRAY_DATA(data), length, &written, NULL) || written != length
+            || !FlushFileBuffers(file)) error = L"The file could not be written";
+    if (!CloseHandle(file) && error == NULL) error = L"The file could not be written";
+    if (error == NULL
+            && !(GetFileAttributesW(path) != INVALID_FILE_ATTRIBUTES
+                ? ReplaceFileW(path, temp, NULL, REPLACEFILE_IGNORE_MERGE_ERRORS, NULL, NULL)
+                : MoveFileExW(temp, path, MOVEFILE_WRITE_THROUGH)))
+        error = L"The file could not be replaced";
+    if (error != NULL) DeleteFileW(temp);
+    free(temp);
+    return error;
 }
 
 JAVA_OBJECT com_codenameone_wordprocessor_app_NativeFilesImplCodenameOne_saveAs___java_lang_String_java_lang_String_byte_1ARRAY_R_java_lang_String(CODENAME_ONE_THREAD_STATE, JAVA_OBJECT name, JAVA_OBJECT mime, JAVA_OBJECT data) {
