@@ -6376,13 +6376,15 @@ public class WordProcessor {
     final var snapshot = session.document();
     final long revision = session.revision();
     final var original = source;
+    final boolean protectedDocument = OfficeCommands.password(session) != null;
     saving = true;
     Display.getInstance()
         .scheduleBackgroundTask(
             () -> {
               String error = null;
               try {
-                recovery.save(snapshot, original, revision);
+                if (protectedDocument) recovery.forget();
+                else recovery.save(snapshot, original, revision);
               } catch (IOException ex) {
                 error = ex.getMessage();
               }
@@ -6680,7 +6682,8 @@ public class WordProcessor {
     if (session != null)
       try {
         editor.finishComposing();
-        recovery.save(session.document(), source, session.revision());
+        if (OfficeCommands.password(session) != null) recovery.forget();
+        else recovery.save(session.document(), source, session.revision());
       } catch (IOException e) {
         Log.e(e);
       }

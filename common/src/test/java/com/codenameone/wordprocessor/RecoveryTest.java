@@ -31,6 +31,29 @@ public class RecoveryTest {
   }
 
   @Test
+  public void forgetLeavesNothingRecoverable() throws Exception {
+    final var data = new HashMap<String, byte[]>();
+    var b =
+        new RecoveryStore.Backend() {
+          public byte[] read(String k) {
+            return data.get(k);
+          }
+
+          public void write(String k, byte[] bytes) {
+            data.put(k, bytes);
+          }
+        };
+    var store = new RecoveryStore(b);
+    var s = new Session(Document.empty());
+    s.replace("secret");
+    store.save(s.document());
+    store.save(s.document());
+    store.forget();
+    assertNull(new RecoveryStore(b).recover());
+    for (byte[] slot : data.values()) assertEquals(0, slot.length);
+  }
+
+  @Test
   public void checksumDetectsCorruption() throws Exception {
     final var data = new HashMap<String, byte[]>();
     var store =

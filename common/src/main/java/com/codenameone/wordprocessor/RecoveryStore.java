@@ -101,6 +101,16 @@ public final class RecoveryStore {
     return best.document;
   }
 
+  /**
+   * Overwrites both slots with nothing. Used instead of {@link #save} for password-protected
+   * documents: recovery is stored unencrypted, so a protected document must never reach it.
+   */
+  public synchronized void forget() throws IOException {
+    backend.write("wordprocessor-recovery-0", new byte[0]);
+    backend.write("wordprocessor-recovery-1", new byte[0]);
+    recoveredSource = null;
+  }
+
   public void save(Document doc) throws IOException {
     save(doc, null);
   }
