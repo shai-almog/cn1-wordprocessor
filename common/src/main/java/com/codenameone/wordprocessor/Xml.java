@@ -161,44 +161,70 @@ public final class Xml {
     // Decoded straight into the reader's buffer: ParparVM's String(byte[], "UTF-8") decodes
     // through generic charset code, and the reader then copied the String to a char[] again.
     char[] chars = new char[bytes.length];
-    int n = 0;
-    for (int i = 0; i < bytes.length; ) {
+    int n = decodeUtf8(bytes, chars);
+    return new Reader(chars, n).read();
+  }
+
+  /**
+   * Decodes UTF-8 into {@code out} (at least bytes.length long) and returns the char count.
+   * Malformed input becomes U+FFFD exactly as the JDK decoder replaces it: one replacement per
+   * maximal invalid prefix (Unicode's "maximal subpart" rule), the next byte decoded afresh.
+   */
+  static int decodeUtf8(byte[] bytes, char[] out) {
+    int n = 0, length = bytes.length;
+    for (int i = 0; i < length; ) {
       int b = bytes[i];
       if (b >= 0) {
-        chars[n++] = (char) b;
+        out[n++] = (char) b;
         i++;
         continue;
       }
       b &= 0xff;
-      int need = b >= 0xf0 && b < 0xf5 ? 3 : b >= 0xe0 ? 2 : b >= 0xc2 && b < 0xe0 ? 1 : -1;
-      if (b >= 0xf5) need = -1;
-      int cp = need == 3 ? b & 7 : need == 2 ? b & 15 : b & 31;
+      int need, low = 0x80, high = 0xbf, cp;
+      if (b >= 0xc2 && b <= 0xdf) {
+        need = 1;
+        cp = b & 0x1f;
+      } else if (b >= 0xe0 && b <= 0xef) {
+        need = 2;
+        cp = b & 0x0f;
+        if (b == 0xe0) low = 0xa0; // 0xed keeps the full range: see the surrogate case below
+      } else if (b >= 0xf0 && b <= 0xf4) {
+        need = 3;
+        cp = b & 0x07;
+        if (b == 0xf0) low = 0x90;
+        else if (b == 0xf4) high = 0x8f;
+      } else {
+        out[n++] = '\ufffd';
+        i++;
+        continue;
+      }
       int j = i + 1;
+      boolean ok = true;
       for (int k = 0; k < need; k++, j++) {
-        if (j >= bytes.length || (bytes[j] & 0xc0) != 0x80) {
-          need = -1;
+        int c = j < length ? bytes[j] & 0xff : -1;
+        // Only the first continuation byte has the narrowed range.
+        if (c < (k == 0 ? low : 0x80) || c > (k == 0 ? high : 0xbf)) {
+          ok = false;
           break;
         }
-        cp = cp << 6 | bytes[j] & 0x3f;
+        cp = cp << 6 | c & 0x3f;
       }
-      if (need == 2 && cp >= 0xd800 && cp <= 0xdfff) {
-        chars[n++] = '\ufffd'; // an encoded surrogate is one malformed sequence, as in the JDK
+      if (!ok) {
+        out[n++] = '\ufffd';
         i = j;
-      } else if (need < 0
-          || need == 2 && cp < 0x800
-          || need == 3 && (cp < 0x10000 || cp > 0x10ffff)) {
-        chars[n++] = '\ufffd'; // malformed: one replacement per bad lead byte
-        i++;
+      } else if (cp >= 0xd800 && cp <= 0xdfff) {
+        out[n++] = '\ufffd'; // JDK 17 replaces a whole encoded surrogate with one character
+        i = j;
       } else if (cp >= 0x10000) {
-        chars[n++] = (char) (0xd7c0 + (cp >> 10));
-        chars[n++] = (char) (0xdc00 | cp & 0x3ff);
+        out[n++] = (char) (0xd7c0 + (cp >> 10));
+        out[n++] = (char) (0xdc00 | cp & 0x3ff);
         i = j;
       } else {
-        chars[n++] = (char) cp;
+        out[n++] = (char) cp;
         i = j;
       }
     }
-    return new Reader(chars, n).read();
+    return n;
   }
 
   public static Element parse(String text) throws IOException {

@@ -79,6 +79,28 @@ public class ZipPartsTest {
   }
 
   @Test
+  public void utf8DecodingMatchesTheJdkOnRandomAndMalformedInput() throws IOException {
+    var random = new Random(13);
+    byte[][] fixed = {
+      {(byte) 0xe2, (byte) 0x82, 'x'}, {(byte) 0xe0, (byte) 0x80, (byte) 0x80}, {(byte) 0xed, (byte) 0xa0, (byte) 0x80},
+      {(byte) 0xf4, (byte) 0x90, (byte) 0x80, (byte) 0x80}, {(byte) 0xf0, (byte) 0x9f, (byte) 0x98}, {(byte) 0xc0, (byte) 0xaf},
+      {(byte) 0xf5}, {(byte) 0x80}, {(byte) 0xf0, (byte) 0x9f, (byte) 0x98, (byte) 0x80}
+    };
+    for (int round = 0; round < 20000 + fixed.length; round++) {
+      byte[] b;
+      if (round < fixed.length) b = fixed[round];
+      else {
+        b = new byte[random.nextInt(12)];
+        for (int i = 0; i < b.length; i++)
+          b[i] = (byte) (random.nextBoolean() ? 0x80 + random.nextInt(0x80) : random.nextInt(256));
+      }
+      char[] out = new char[b.length];
+      String ours = new String(out, 0, Xml.decodeUtf8(b, out));
+      assertEquals(java.util.Arrays.toString(b), new String(b, "UTF-8"), ours);
+    }
+  }
+
+  @Test
   public void writtenArchivesReadBackAndOpenWithJavaUtilZip() throws IOException {
     var parts = new LinkedHashMap<String, byte[]>();
     parts.put("word/document.xml", ZipParts.utf8("<w:document>" + "text ".repeat(5000) + "</w:document>"));
