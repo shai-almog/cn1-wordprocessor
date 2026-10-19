@@ -354,12 +354,15 @@ text, and the PDF lightens it instead of using transparency. Header/footer comma
 - `file.properties` keeps title, author, subject, keywords, description, category, company and
   manager. They round-trip through `docProps/core.xml` and `docProps/app.xml` and native XML.
 - `file.protect` sets `readOnly`, `comments` or `trackedChanges`. `Session.transact` rejects
-  disallowed edits, and the editor drops text input under read-only or comments-only protection.
+  disallowed edits (under `trackedChanges` that includes accepting or rejecting revisions), and the editor drops text input under read-only or comments-only protection.
   DOCX uses `w:documentProtection` with enforcement. **Limitation:** there are no passwords.
   Changing the mode is always allowed, and a protection hash read from Word is dropped (with a
   warning).
 - `file.inspect` reports comments, revisions, hidden text, properties, headers/footers, bookmarks
-  and watermark. It can remove comments, hidden text and properties. Revisions are reported, not
+  and watermark. It can remove comments, hidden text and properties. Revisions and hidden text
+  are counted and removed in body paragraphs, table cells, notes and headers/footers. Once
+  anything is removed, saves and recovery stop embedding the originally opened DOCX package, so
+  unmodeled parts of that package are not preserved for the sanitized document. Revisions are reported, not
   removed.
 - `file.accessibility` checks for:
   - pictures without alt text;

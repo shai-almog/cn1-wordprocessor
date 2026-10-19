@@ -51,6 +51,7 @@ final class FileCommands implements Commands.Extension {
           List<Object> remove =
               a.containsKey("remove") ? (List<Object>) a.get("remove") : Collections.emptyList();
           var before = inspect(s.document());
+          var start = s.document();
           var d = s.document();
           if (remove.contains("comments")) d = d.comments(Collections.<ReviewComment>emptyList());
           if (remove.contains("properties"))
@@ -61,6 +62,10 @@ final class FileCommands implements Commands.Extension {
             s.selectRange(keep.anchorBlock, keep.anchor, keep.block, keep.caret);
           }
           if (remove.contains("hidden")) removeHidden(s);
+          if (s.document() != start)
+            synchronized (INSPECTED) {
+              INSPECTED.put(s, Boolean.TRUE);
+            }
           return Json.object("found", before, "after", inspect(s.document()));
         });
     c.query("file.accessibility", "",
@@ -98,6 +103,18 @@ final class FileCommands implements Commands.Extension {
     var out = Json.object("protection", p.protection);
     for (String key : DocumentProperties.KEYS) out.put(key, p.get(key));
     return out;
+  }
+
+  private static final SessionMap<Boolean> INSPECTED = SessionMap.forDocument();
+
+  /**
+   * True once the document inspector removed content from this document. The original package
+   * still holds what was removed, so saves and recovery must stop carrying it.
+   */
+  public static boolean inspected(Session s) {
+    synchronized (INSPECTED) {
+      return INSPECTED.containsKey(s);
+    }
   }
 
   private static Map<String, Object> inspect(Document d) {

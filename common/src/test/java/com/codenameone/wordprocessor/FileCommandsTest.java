@@ -84,6 +84,9 @@ public class FileCommandsTest {
     assertEquals(0, after.get("hiddenCharacters"));
     assertEquals(0, after.get("properties"));
     assertEquals("Visible ", s.document().plainText());
+    assertTrue("saves stop carrying the original package", FileCommands.inspected(s));
+    s.loadDocument(Document.empty());
+    assertFalse(FileCommands.inspected(s));
   }
 
   @Test

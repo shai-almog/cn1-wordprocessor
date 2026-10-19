@@ -6375,7 +6375,7 @@ public class WordProcessor {
         || System.currentTimeMillis() - lastEdit < 1000) return;
     final var snapshot = session.document();
     final long revision = session.revision();
-    final var original = source;
+    final var original = packageSource();
     final boolean protectedDocument = OfficeCommands.password(session) != null;
     saving = true;
     Display.getInstance()
@@ -6564,6 +6564,7 @@ public class WordProcessor {
     editor.finishComposing();
     editor.stopInput();
     final var snapshot = session.document();
+    final var pkg = packageSource();
     final int epoch = documentEpoch;
     safe(
         () -> {
@@ -6571,7 +6572,7 @@ public class WordProcessor {
             byte[] bytes;
             if ("docx".equals(format)) {
               boolean allow = false;
-              var losses = Docx.conversionWarnings(snapshot, source);
+              var losses = Docx.conversionWarnings(snapshot, pkg);
               if (!losses.isEmpty()) {
                 allow =
                     showDialog(
@@ -6585,13 +6586,13 @@ public class WordProcessor {
                 if (!allow) return;
               }
               var out = new ByteArrayOutputStream();
-              Docx.write(snapshot, source, out, allow);
+              Docx.write(snapshot, pkg, out, allow);
               bytes = out.toByteArray();
               String password = OfficeCommands.password(session);
               if (password != null) bytes = OfficeCrypto.encrypt(bytes, password);
             } else if ("pdf".equals(format))
               bytes = PdfExporter.write(snapshot.page, editor.printLayout(), DocumentFonts.PDF);
-            else if ("cn1doc".equals(format)) bytes = ProjectFile.write(snapshot, source);
+            else if ("cn1doc".equals(format)) bytes = ProjectFile.write(snapshot, pkg);
             else {
               RichTextFormat type =
                   "md".equals(format)
@@ -6677,13 +6678,18 @@ public class WordProcessor {
     }
   }
 
+  /** The opened package to preserve on save, or null once the inspector sanitized the document. */
+  private Docx.Opened packageSource() {
+    return FileCommands.inspected(session) ? null : source;
+  }
+
   public void stop() {
     WordMcp.stop();
     if (session != null)
       try {
         editor.finishComposing();
         if (OfficeCommands.password(session) != null) recovery.forget();
-        else recovery.save(session.document(), source, session.revision());
+        else recovery.save(session.document(), packageSource(), session.revision());
       } catch (IOException e) {
         Log.e(e);
       }
