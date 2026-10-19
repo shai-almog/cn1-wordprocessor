@@ -50,6 +50,8 @@ jobs:
         shell: bash
     env:
       WINDOWS_ARCH: ${{ matrix.arch }}
+      MACOS_CERT_P12: ${{ secrets.MACOS_CERT_P12 }}
+      MACOS_CERT_PASSWORD: ${{ secrets.MACOS_CERT_PASSWORD }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -76,7 +78,28 @@ jobs:
         with: { arch: "${{ matrix.arch == 'arm64' && 'amd64_arm64' || 'amd64' }}" }
       - name: Build
         run: ${{ matrix.build }}
+      - name: macOS signing identity
+        # Repository secrets: MACOS_CERT_P12 (base64 Developer ID Application .p12) and
+        # MACOS_CERT_PASSWORD; NOTARY_APPLE_ID, NOTARY_TEAM_ID and NOTARY_PASSWORD (an
+        # app-specific password) for notarization. Absent secrets give an ad-hoc signed app.
+        if: matrix.platform == 'mac' && env.MACOS_CERT_P12 != ''
+        run: |
+          kc="$RUNNER_TEMP/signing.keychain-db" pw=$(uuidgen)
+          echo "$MACOS_CERT_P12" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          security create-keychain -p "$pw" "$kc"
+          security set-keychain-settings -lut 21600 "$kc"
+          security unlock-keychain -p "$pw" "$kc"
+          security import "$RUNNER_TEMP/cert.p12" -k "$kc" -P "$MACOS_CERT_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -k "$pw" "$kc" >/dev/null
+          security list-keychains -d user -s "$kc" $(security list-keychains -d user | tr -d '"')
+          rm "$RUNNER_TEMP/cert.p12"
+          id=$(security find-identity -v -p codesigning "$kc" | awk -F'"' '/Developer ID Application/{print $2; exit}')
+          echo "MACOS_SIGN_IDENTITY=$id" >> "$GITHUB_ENV"
       - name: Package
+        env:
+          NOTARY_APPLE_ID: ${{ secrets.NOTARY_APPLE_ID }}
+          NOTARY_TEAM_ID: ${{ secrets.NOTARY_TEAM_ID }}
+          NOTARY_PASSWORD: ${{ secrets.NOTARY_PASSWORD }}
         run: scripts/dist.sh ${{ matrix.platform }} "$VERSION"
       - uses: actions/upload-artifact@v4
         with:
