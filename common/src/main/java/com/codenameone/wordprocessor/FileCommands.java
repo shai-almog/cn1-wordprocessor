@@ -102,16 +102,17 @@ final class FileCommands implements Commands.Extension {
 
   private static Map<String, Object> inspect(Document d) {
     final int[] revisions = {0}, hidden = {0};
-    for (Block b : d.blocks) {
-      if (!(b instanceof Paragraph)) continue;
-      var p = (Paragraph) b;
-      if (p.breakRevision != null || p.formatRevision != null) revisions[0]++;
-      p.text.visit(
-          (o, t, style) -> {
-            if (style.revision != null || style.formatRevision != null) revisions[0]++;
-            if (style.characters.hidden) hidden[0] += t.length();
-          });
-    }
+    everyParagraph(
+        d,
+        p -> {
+          if (p.breakRevision != null || p.formatRevision != null) revisions[0]++;
+          p.text.visit(
+              (o, t, style) -> {
+                if (style.revision != null || style.formatRevision != null) revisions[0]++;
+                if (style.characters.hidden) hidden[0] += t.length();
+              });
+          return p;
+        });
     int props = 0;
     for (String key : DocumentProperties.KEYS) if (!d.properties.get(key).isEmpty()) props++;
     boolean furniture = hasText(d.furniture);
@@ -132,22 +133,85 @@ final class FileCommands implements Commands.Extension {
     return false;
   }
 
-  /** Deletes hidden runs in body paragraphs, last first so earlier offsets stay valid. */
-  private static void removeHidden(Session s) {
-    var d = s.document();
-    for (int i = d.blocks.size() - 1; i >= 0; i--) {
-      if (!(d.blocks.get(i) instanceof Paragraph)) continue;
-      final var runs = new ArrayList<int[]>();
-      ((Paragraph) d.blocks.get(i))
-          .text.visit(
-              (o, t, style) -> {
-                if (style.characters.hidden) runs.add(new int[] {o, o + t.length()});
-              });
-      for (int k = runs.size() - 1; k >= 0; k--) {
-        s.select(i, runs.get(k)[0], runs.get(k)[1]);
-        s.replace("");
+  /**
+   * Maps every paragraph the document stores: body, table cells, notes and the header/footer
+   * stories of every section. Inspection and removal share it so they always agree on what
+   * the document contains.
+   */
+  static Document everyParagraph(Document d, Session.ParagraphMap f) {
+    Sequence<Block> blocks = d.blocks;
+    for (int i = 0; i < blocks.size(); i++) {
+      Block b = blocks.get(i), value = b;
+      if (b instanceof Paragraph p) value = f.map(p);
+      else if (b instanceof Table t) {
+        for (int r = 0; r < t.rows(); r++)
+          for (int c = 0; c < t.columns(); c++)
+            if (!t.covered(r, c)) {
+              var cell = t.cell(r, c);
+              var mapped = paragraphs(cell, f);
+              if (mapped != cell) t = t.setCell(r, c, mapped);
+            }
+        value = t;
       }
+      if (value != b) blocks = blocks.set(i, value);
     }
+    if (blocks != d.blocks) d = d.blocks(blocks, d.nextId);
+    d =
+        Notes.map(
+            d,
+            n -> {
+              var mapped = paragraphs(n.paragraphs, f);
+              return mapped == n.paragraphs ? n : n.paragraphs(mapped);
+            });
+    d = d.furniture(furniture(d.furniture, f));
+    var sections = new java.util.LinkedHashMap<String, Section>();
+    boolean changed = false;
+    for (var e : d.sections.entrySet()) {
+      var section = e.getValue();
+      var mapped = section.furniture(furniture(section.furniture, f));
+      changed |= mapped != section;
+      sections.put(e.getKey(), mapped);
+    }
+    // lastSection is derived from d.furniture, already mapped above.
+    return changed ? d.sections(sections, d.lastSection) : d;
+  }
+
+  private static Sequence<Paragraph> paragraphs(Sequence<Paragraph> in, Session.ParagraphMap f) {
+    var out = in;
+    for (int i = 0; i < in.size(); i++) {
+      var p = in.get(i);
+      var mapped = f.map(p);
+      if (mapped != p) out = out.set(i, mapped);
+    }
+    return out;
+  }
+
+  private static PageFurniture furniture(PageFurniture in, Session.ParagraphMap f) {
+    var out = in;
+    for (var e : in.stories.entrySet()) {
+      var mapped = paragraphs(e.getValue(), f);
+      if (mapped != e.getValue()) out = out.story(e.getKey(), mapped);
+    }
+    return out;
+  }
+
+  /** Deletes hidden runs everywhere {@link #everyParagraph} reaches, as one undo step. */
+  private static void removeHidden(Session s) {
+    var d =
+        everyParagraph(
+            s.document(),
+            p -> {
+              final var runs = new ArrayList<int[]>();
+              p.text.visit(
+                  (o, t, style) -> {
+                    if (style.characters.hidden) runs.add(new int[] {o, o + t.length()});
+                  });
+              var text = p.text;
+              for (int k = runs.size() - 1; k >= 0; k--)
+                text = text.replace(runs.get(k)[0], runs.get(k)[1], RichText.of(""));
+              return runs.isEmpty() ? p : p.text(text);
+            });
+    if (d != s.document()) s.replaceDocument(d);
   }
 
   private static Map<String, Object> accessibility(Document d) {

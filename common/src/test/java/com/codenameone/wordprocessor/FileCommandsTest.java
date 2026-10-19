@@ -87,6 +87,28 @@ public class FileCommandsTest {
   }
 
   @Test
+  public void inspectorReachesTableCellsAndHeaders() {
+    var s = new Session(Document.empty());
+    s.replace("SECRET");
+    s.select(0, 0, 6);
+    s.format("hidden", "true");
+    var hidden = (Paragraph) s.document().blocks.get(0);
+    var cell = new Sequence<Paragraph>().append(hidden.copy("c1", hidden.text));
+    var plain = new Sequence<Paragraph>().append(new Paragraph("c2", RichText.of("ok")));
+    var table = new Table("t1", Arrays.asList(Arrays.asList(cell, plain)));
+    var d = s.document();
+    d = d.blocks(d.blocks.append(table), d.nextId);
+    d = d.furniture(d.furniture.story("header", new Sequence<Paragraph>().append(hidden.copy("h1", hidden.text))));
+    s.replaceDocument(d);
+    Map<?, ?> r = (Map<?, ?>) run(s, "file.inspect", "remove", Arrays.<Object>asList("hidden"));
+    assertEquals(18, ((Map<?, ?>) r.get("found")).get("hiddenCharacters"));
+    assertEquals(0, ((Map<?, ?>) r.get("after")).get("hiddenCharacters"));
+    assertEquals("ok", Table.cellText(((Table) s.document().blocks.get(1)).cell(0, 1)));
+    s.undo();
+    assertEquals(18, ((Map<?, ?>) ((Map<?, ?>) run(s, "file.inspect")).get("found")).get("hiddenCharacters"));
+  }
+
+  @Test
   public void accessibilityFindsAltTextHeadingOrderAndContrast() {
     var s = new Session(Document.empty());
     s.replace("Intro");
