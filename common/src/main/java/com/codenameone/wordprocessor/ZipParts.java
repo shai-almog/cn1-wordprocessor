@@ -81,6 +81,48 @@ public final class ZipParts {
    * has no parts.
    */
   static LinkedHashMap<String, byte[]> read(InputStream input) throws IOException {
+    return read(input, null);
+  }
+
+  /**
+   * CRC checks of large parts that run on a background thread while the caller parses them.
+   * The caller must call {@link #await()} before trusting the result, and on any failure, so
+   * a corrupt package reports its corruption rather than a parse error.
+   */
+  static final class Deferred {
+    private final java.util.List<Object[]> pending = new java.util.ArrayList<>();
+    private Thread thread;
+    private volatile String corrupt;
+
+    private void start() {
+      if (pending.isEmpty()) return;
+      thread =
+          new Thread(
+              () -> {
+                for (Object[] p : pending) {
+                  byte[] b = (byte[]) p[1];
+                  if (crc(b, 0, b.length) != (Integer) p[2]) {
+                    corrupt = (String) p[0];
+                    return;
+                  }
+                }
+              },
+              "zip-crc");
+      thread.start();
+    }
+
+    void await() throws IOException {
+      if (thread != null)
+        try {
+          thread.join();
+        } catch (InterruptedException interrupted) {
+          throw new IOException("Interrupted while verifying package");
+        }
+      if (corrupt != null) throw new IOException("Corrupt package entry: " + corrupt);
+    }
+  }
+
+  static LinkedHashMap<String, byte[]> read(InputStream input, Deferred deferred) throws IOException {
     byte[] zip = readAll(input);
     var parts = new LinkedHashMap<String, byte[]>();
     int end = -1;
@@ -136,12 +178,14 @@ public final class ZipParts {
           }
           if (n != bytes.length) throw new IOException("Corrupt package entry: " + name);
         } else throw new IOException("Unsupported compression in package entry: " + name);
-        if (crc(bytes, 0, bytes.length) != crc) throw new IOException("Corrupt package entry: " + name);
+        if (deferred != null && bytes.length >= CHUNK) deferred.pending.add(new Object[] {name, bytes, crc});
+        else if (crc(bytes, 0, bytes.length) != crc) throw new IOException("Corrupt package entry: " + name);
         parts.put(name, bytes);
       }
     } finally {
       inflater.end();
     }
+    if (deferred != null) deferred.start();
     return parts;
   }
 

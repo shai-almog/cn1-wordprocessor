@@ -23,7 +23,21 @@ public final class Docx {
   private Docx() {}
 
   public static Opened read(InputStream input) throws IOException {
-    var parts = ZipParts.read(input);
+    // The large parts' CRCs are verified on another thread while they are parsed here.
+    var checks = new ZipParts.Deferred();
+    var parts = ZipParts.read(input, checks);
+    Opened opened;
+    try {
+      opened = read(parts);
+    } catch (IOException | RuntimeException failure) {
+      checks.await(); // corruption explains the failure better than the parse error
+      throw failure;
+    }
+    checks.await();
+    return opened;
+  }
+
+  private static Opened read(Map<String, byte[]> parts) throws IOException {
     var main = parts.get("word/document.xml");
     if (main == null) throw new IOException("Missing word/document.xml");
     Element root = Xml.parse(main);

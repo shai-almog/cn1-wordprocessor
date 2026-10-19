@@ -52,6 +52,20 @@ public class ZipPartsTest {
   }
 
   @Test
+  public void docxReportsCorruptionOfALargePartVerifiedInTheBackground() throws IOException {
+    byte[] random = new byte[3 * ZipParts.CHUNK];
+    new Random(9).nextBytes(random); // incompressible, so stored and easy to corrupt in place
+    var parts = new LinkedHashMap<String, byte[]>();
+    parts.put("word/document.xml", random);
+    var out = new ByteArrayOutputStream();
+    ZipParts.write(parts, out);
+    byte[] zip = out.toByteArray();
+    zip[30 + "word/document.xml".length() + 100] ^= 1;
+    var failure = assertThrows(IOException.class, () -> Docx.read(new ByteArrayInputStream(zip)));
+    assertEquals("Corrupt package entry: word/document.xml", failure.getMessage());
+  }
+
+  @Test
   public void writtenArchivesReadBackAndOpenWithJavaUtilZip() throws IOException {
     var parts = new LinkedHashMap<String, byte[]>();
     parts.put("word/document.xml", ZipParts.utf8("<w:document>" + "text ".repeat(5000) + "</w:document>"));
