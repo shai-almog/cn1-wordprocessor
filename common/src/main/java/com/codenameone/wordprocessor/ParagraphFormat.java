@@ -222,6 +222,14 @@ public final class ParagraphFormat {
     return !Float.isNaN(f) && !Float.isInfinite(f);
   }
 
+  /** The right and first-line indents set at once, without a round trip through text. */
+  public ParagraphFormat withIndents(float right, float first) {
+    layout(right, first, tabInterval);
+    return new ParagraphFormat(
+        right, first, tabInterval, keepLines, widowControl, tabs, outlineLevel, lineRule,
+        columnBreak, shading, rtl, asianOff, dropCap, borders);
+  }
+
   public ParagraphFormat with(String key, String value) {
     // Every other field is already valid, so only the changed one is parsed and checked.
     float right = rightIndent, first = firstIndent, tab = tabInterval;

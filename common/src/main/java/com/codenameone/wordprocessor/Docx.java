@@ -311,18 +311,14 @@ static final char COLUMN_BREAK = '\u000B';
         // line rule and amount inherited from the paragraph's named style.
         String rule = Xml.attr(p, "lineRule", layout.lineRule);
         float stored = line * ("auto".equals(layout.lineRule) ? 240 : 20);
-        line =
-            Math.max(
-                .06f,
-                Xml.number(Xml.attr(p, "line", "" + stored))
-                    / ("auto".equals(rule) ? 240f : 20f));
+        String amount = Xml.attr(p, "line", null);
+        line = Math.max(.06f, (amount == null ? stored : Xml.number(amount)) / ("auto".equals(rule) ? 240f : 20f));
         layout = layout.with("lineRule", rule);
       } else if ("ind".equals(kind)) {
         indent = Math.max(0, twips(p, "left", 0));
-        layout = layout.with("rightIndent", String.valueOf(Math.max(0, twips(p, "right", 0))));
         layout =
-            layout.with(
-                "firstIndent", String.valueOf(twips(p, "firstLine", 0) - twips(p, "hanging", 0)));
+            layout.withIndents(
+                Math.max(0, twips(p, "right", 0)), twips(p, "firstLine", 0) - twips(p, "hanging", 0));
       } else if ("keepLines".equals(kind))
         layout = layout.with("keepLines", String.valueOf(enabled(p)));
       else if ("widowControl".equals(kind))

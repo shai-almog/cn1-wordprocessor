@@ -94,6 +94,14 @@ public final class TextStyle {
         effects);
   }
 
+  /** This style at another point size; the same as with("size", ...) without the text. */
+  public TextStyle size(float points) {
+    if (points == size) return this;
+    return new TextStyle(
+        font, points, color, bold, italic, underline, strike, background, link, script, revision,
+        formatRevision, previousStyle, characters);
+  }
+
   public TextStyle revision(Revision value) {
     if (revision == value) return this;
     return new TextStyle(

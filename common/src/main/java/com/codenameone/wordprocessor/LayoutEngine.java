@@ -509,6 +509,10 @@ public final class LayoutEngine {
     measured++;
     var out = new ArrayList<RawLine>();
     var text = p.text.toString();
+    int length = text.length();
+    var st = new TextStyle[length];
+    var obj = new boolean[length];
+    p.text.fill(st, obj);
     int skip = 0, dropLines = 0;
     float dropWidth = 0, letterWidth = 0;
     TextStyle dropStyle = null;
@@ -535,20 +539,25 @@ public final class LayoutEngine {
       boolean hyphenated = false;
       float x = 0;
       while (end < text.length()) {
-        int count = Graphemes.next(p.text, end) - end;
+        char first = text.charAt(end);
+        // ASCII followed by ASCII is always its own cluster (CR LF aside): skip the rules.
+        int count =
+            first < 128 && first != '\r' && (end + 1 == length || text.charAt(end + 1) < 128)
+                ? 1
+                : Graphemes.next(p.text, end) - end;
         String ch =
             count == 1 && text.charAt(end) < 128
                 ? ASCII[text.charAt(end)]
                 : text.substring(end, end + count);
-        if ("\n".equals(ch) && !p.text.styleAt(end).characters.hidden) {
+        if ("\n".equals(ch) && !st[end].characters.hidden) {
           break;
         }
         float w =
-            p.text.styleAt(end).characters.hidden
+            st[end].characters.hidden
                 ? 0
                 : "\t".equals(ch)
                     ? tabWidth(p, text, end, x, start == 0 ? p.format.firstIndent : 0)
-                    : clusterWidth(p, text, end, end + count);
+                    : clusterWidth(p, text, end, end + count, st, obj);
         if (x + w > available && end > start) {
           int soft = hyphenate ? hyphenPoint(p, text, start, Math.max(lastBreak, start), end, available) : -1;
           if (soft > 0) {
@@ -567,11 +576,11 @@ public final class LayoutEngine {
       float pos = 0;
       int a = start == 0 ? skip : start;
       while (a < end) {
-        var s = p.text.styleAt(a);
+        var s = st[a];
         int b = a + 1;
         while (b < end
-            && !p.text.objectAt(a)
-            && !p.text.objectAt(b)
+            && !obj[a]
+            && !obj[b]
             && text.charAt(a) != '\t'
             && text.charAt(b) != '\t'
             && (!s.characters.smallCaps
@@ -579,7 +588,7 @@ public final class LayoutEngine {
                 || !Graphemes.isBoundary(p.text, b)
                 || Character.isLowerCase(text.charAt(a))
                     == Character.isLowerCase(text.charAt(b)))
-            && s.equals(p.text.styleAt(b))) b++;
+            && s.equals(st[b])) b++;
         var chunk = text.substring(a, b);
         float w =
             s.characters.hidden
@@ -722,7 +731,6 @@ public final class LayoutEngine {
   private float clusterWidth(Paragraph p, String text, int start, int end) {
     if (end == start + 1) {
       char c = text.charAt(start);
-      // Plain Latin characters: a per-style table, no substring or hash lookup.
       if (c < 128 && !p.text.objectAt(start) && p.text.displayAt(start, ASCII[c]) == ASCII[c])
         return metrics.ascii(c, ASCII[c], p.text.styleAt(start));
     }
@@ -734,6 +742,25 @@ public final class LayoutEngine {
           && !p.text.objectAt(at)
           && !p.text.objectAt(next)
           && style.equals(p.text.styleAt(next))) next++;
+      width += metrics.width(p.text.displayAt(at, text.substring(at, next)), style);
+      at = next;
+    }
+    return width;
+  }
+
+  /** As above with the paragraph's per-character styles and object flags already resolved. */
+  private float clusterWidth(
+      Paragraph p, String text, int start, int end, TextStyle[] st, boolean[] obj) {
+    if (end == start + 1) {
+      char c = text.charAt(start);
+      // Plain Latin characters: a per-style table, no substring or hash lookup.
+      if (c < 128 && !obj[start]) return metrics.ascii(c, ASCII[c], st[start]);
+    }
+    float width = 0;
+    for (int at = start; at < end; ) {
+      var style = st[at];
+      int next = at + 1;
+      while (next < end && !obj[at] && !obj[next] && style.equals(st[next])) next++;
       width += metrics.width(p.text.displayAt(at, text.substring(at, next)), style);
       at = next;
     }

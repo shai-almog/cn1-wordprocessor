@@ -419,6 +419,28 @@ public final class RichText {
     return n.text.charAt(i);
   }
 
+  /**
+   * Each character's style, and whether it belongs to a field or note, for [0, length()):
+   * one tree walk instead of a descent per character in layout's inner loops.
+   */
+  public void fill(TextStyle[] styles, boolean[] objects) {
+    fill(root, 0, styles, objects);
+  }
+
+  private static void fill(Node n, int offset, TextStyle[] styles, boolean[] objects) {
+    if (n == null) return;
+    if (n.text != null) {
+      boolean object = n.field != null || n.note != null;
+      for (int i = offset, end = offset + n.length; i < end; i++) {
+        styles[i] = n.style;
+        objects[i] = object;
+      }
+      return;
+    }
+    fill(n.l, offset, styles, objects);
+    fill(n.r, offset + len(n.l), styles, objects);
+  }
+
   public TextStyle styleAt(int i) {
     if (length() == 0) return emptyStyle;
     i = Math.max(0, Math.min(length() - 1, i));
