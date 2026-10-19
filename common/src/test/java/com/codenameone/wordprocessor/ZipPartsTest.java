@@ -27,6 +27,31 @@ public class ZipPartsTest {
   }
 
   @Test
+  public void crcCombineMatchesWholeCrc() {
+    byte[] data = new byte[1000];
+    new Random(5).nextBytes(data);
+    for (int split : new int[] {0, 1, 7, 500, 999, 1000})
+      assertEquals(
+          ZipParts.crc(data, 0, data.length),
+          ZipParts.combine(ZipParts.crc(data, 0, split), ZipParts.crc(data, split, data.length - split), data.length - split));
+  }
+
+  @Test
+  public void largePartsCompressInParallelChunks() throws IOException {
+    var parts = new LinkedHashMap<String, byte[]>();
+    var text = new StringBuilder();
+    var random = new Random(11);
+    while (text.length() < 5 * ZipParts.CHUNK + 1234) text.append("<w:t>").append(random.nextInt()).append("</w:t>");
+    parts.put("word/document.xml", ZipParts.utf8(text));
+    var out = new ByteArrayOutputStream();
+    ZipParts.write(parts, out);
+    assertArrayEquals(parts.get("word/document.xml"), ZipParts.read(new ByteArrayInputStream(out.toByteArray())).get("word/document.xml"));
+    var jdk = new ZipInputStream(new ByteArrayInputStream(out.toByteArray()));
+    assertNotNull(jdk.getNextEntry());
+    assertArrayEquals(parts.get("word/document.xml"), jdk.readAllBytes());
+  }
+
+  @Test
   public void writtenArchivesReadBackAndOpenWithJavaUtilZip() throws IOException {
     var parts = new LinkedHashMap<String, byte[]>();
     parts.put("word/document.xml", ZipParts.utf8("<w:document>" + "text ".repeat(5000) + "</w:document>"));

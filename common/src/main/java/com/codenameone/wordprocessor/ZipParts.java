@@ -30,12 +30,24 @@ public final class ZipParts {
     try {
       for (var e : parts.entrySet()) {
         byte[] name = utf8(e.getKey()), data = e.getValue();
-        int crc = crc(data, 0, data.length);
-        deflater.reset();
-        deflater.setInput(data, 0, data.length);
-        deflater.finish();
-        var packed = new Bytes(data.length / 4 + 64);
-        while (!deflater.finished()) packed.write(buffer, 0, deflater.deflate(buffer, 0, buffer.length));
+        int crc;
+        Bytes packed;
+        if (data.length >= 2 * CHUNK) {
+          Chunk[] chunks = parallel(data);
+          crc = chunks[0].crc;
+          packed = new Bytes(data.length / 4 + 64);
+          for (int i = 0; i < chunks.length; i++) {
+            if (i > 0) crc = combine(crc, chunks[i].crc, chunks[i].length);
+            packed.write(chunks[i].out.array(), 0, chunks[i].out.size());
+          }
+        } else {
+          crc = crc(data, 0, data.length);
+          deflater.reset();
+          deflater.setInput(data, 0, data.length);
+          deflater.finish();
+          packed = new Bytes(data.length / 4 + 64);
+          while (!deflater.finished()) packed.write(buffer, 0, deflater.deflate(buffer, 0, buffer.length));
+        }
         boolean stored = packed.size() >= data.length;
         int method = stored ? 0 : 8, size = stored ? data.length : packed.size();
         int offset = archive.size();
@@ -191,6 +203,120 @@ public final class ZipParts {
     }
     for (; i < end; i++) c = t[(c ^ b[i]) & 0xff] ^ (c >>> 8);
     return ~c;
+  }
+
+  /** Large parts are split into chunks that are checksummed and compressed on several threads. */
+  static final int CHUNK = 128 * 1024;
+
+  private static final class Chunk implements Runnable {
+    final byte[] data;
+    final int offset, length;
+    final boolean last;
+    final Bytes out;
+    int crc;
+    Throwable failure;
+
+    Chunk(byte[] data, int offset, int length, boolean last) {
+      this.data = data;
+      this.offset = offset;
+      this.length = length;
+      this.last = last;
+      out = new Bytes(length / 4 + 64);
+    }
+
+    @Override
+    public void run() {
+      try {
+        crc = crc(data, offset, length);
+        // Raw deflate streams concatenate when every chunk but the last ends on a sync flush
+        // (byte aligned, no final-block bit), as pigz does; each chunk starts a fresh window.
+        var deflater = new Deflater(1, true);
+        byte[] buffer = new byte[64 * 1024];
+        try {
+          deflater.setInput(data, offset, length);
+          if (last) {
+            deflater.finish();
+            while (!deflater.finished()) out.write(buffer, 0, deflater.deflate(buffer, 0, buffer.length));
+          } else {
+            int n;
+            do {
+              n = deflater.deflate(buffer, 0, buffer.length, Deflater.SYNC_FLUSH);
+              out.write(buffer, 0, n);
+            } while (n == buffer.length || !deflater.needsInput());
+          }
+        } finally {
+          deflater.end();
+        }
+      } catch (Throwable t) {
+        failure = t;
+      }
+    }
+  }
+
+  private static Chunk[] parallel(byte[] data) throws IOException {
+    int count = (data.length + CHUNK - 1) / CHUNK;
+    var chunks = new Chunk[count];
+    for (int i = 0; i < count; i++) {
+      int start = i * CHUNK;
+      chunks[i] = new Chunk(data, start, Math.min(CHUNK, data.length - start), i == count - 1);
+    }
+    // The portable API has no processor count; every supported desktop and phone has at least
+    // two cores and three workers (this thread plus two) saturate a typical one without waste.
+    int workers = Math.min(count, 3);
+    var next = new int[1];
+    Runnable worker =
+        () -> {
+          while (true) {
+            int i;
+            synchronized (next) {
+              i = next[0]++;
+            }
+            if (i >= count) return;
+            chunks[i].run();
+          }
+        };
+    var threads = new Thread[workers - 1];
+    for (int i = 0; i < threads.length; i++) (threads[i] = new Thread(worker, "zip-deflate")).start();
+    worker.run();
+    for (Thread t : threads)
+      try {
+        t.join();
+      } catch (InterruptedException interrupted) {
+        throw new IOException("Interrupted while compressing");
+      }
+    for (Chunk c : chunks) if (c.failure != null) throw new IOException("Compression failed: " + c.failure);
+    return chunks;
+  }
+
+  /** The CRC of a + b from their CRCs and b's length (zlib's crc32_combine). */
+  static int combine(int crcA, int crcB, long lengthB) {
+    if (lengthB <= 0) return crcA;
+    int[] even = new int[32], odd = new int[32];
+    odd[0] = 0xedb88320; // the operator for one zero bit
+    for (int i = 1, row = 1; i < 32; i++, row <<= 1) odd[i] = row;
+    square(even, odd); // two zero bits
+    square(odd, even); // four zero bits
+    int a = crcA;
+    do {
+      square(even, odd);
+      if ((lengthB & 1) != 0) a = times(even, a);
+      lengthB >>= 1;
+      if (lengthB == 0) break;
+      square(odd, even);
+      if ((lengthB & 1) != 0) a = times(odd, a);
+      lengthB >>= 1;
+    } while (lengthB != 0);
+    return a ^ crcB;
+  }
+
+  private static int times(int[] matrix, int vector) {
+    int sum = 0;
+    for (int i = 0; vector != 0; i++, vector >>>= 1) if ((vector & 1) != 0) sum ^= matrix[i];
+    return sum;
+  }
+
+  private static void square(int[] square, int[] matrix) {
+    for (int i = 0; i < 32; i++) square[i] = times(matrix, matrix[i]);
   }
 
   /** A growable byte buffer whose array is read without a copy. */
