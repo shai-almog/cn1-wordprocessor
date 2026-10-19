@@ -29,7 +29,7 @@ cn1_exe() { # the native executable under $1
     windows) find "$1/common/target" -name Main.exe | head -1 ;;
   esac
 }
-wc_exe() { for f in "$1/target/release/wordcraft" "$1/target/release/wordcraft.exe"; do [[ -f $f ]] && echo "$f"; done; return 0; }
+wc_exe() { for f in "$1/target/release/wordcraft.exe" "$1/target/release/wordcraft"; do [[ -f $f ]] && { echo "$f"; return 0; }; done; return 0; }
 
 # Fixtures first: the Linux build cleans common/target, which holds the JVM generator.
 scripts/build.sh -DskipTests
