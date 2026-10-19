@@ -23,6 +23,12 @@ def run(side,exe,fixture,root,workload):
     env=os.environ.copy();env.update(NATIVE_BENCH_INPUT=str(fixture),NATIVE_BENCH_OUT=str(root),WORDCRAFT_NO_PREFS='1')
     if workload:env['NATIVE_BENCH_WORKLOAD']='1'
     else:env.pop('NATIVE_BENCH_WORKLOAD',None)
+    if side=='cn1':
+        # The CN1 app has no environment access; it reads this request file (see prepare.py),
+        # at the root of the instrumented checkout that contains the executable.
+        home=next(d for d in Path(exe).resolve().parents if (d/'common').is_dir() and (d/'pom.xml').is_file())
+        def url(p):return 'file://'+Path(p).resolve().as_posix()
+        (home/'native-bench.json').write_text(json.dumps({'input':url(fixture),'out':url(root),'workload':bool(workload)}))
     args=[str(exe)]+([str(fixture)] if side=='wordcraft' else [])
     with (root/'process.log').open('wb',buffering=0) as log:
         start=time.monotonic(); wall=time.time(); p=subprocess.Popen(args,stdout=log,stderr=subprocess.STDOUT,env=env)

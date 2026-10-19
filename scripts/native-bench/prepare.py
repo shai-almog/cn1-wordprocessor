@@ -9,7 +9,9 @@ def patch(text,old,new,count=-1):
 p=argparse.ArgumentParser();p.add_argument('cn1',type=Path);p.add_argument('wordcraft',type=Path,nargs='?');a=p.parse_args()
 base=Path(__file__).resolve().parent
 editor=a.cn1/'common/src/main/java/com/codenameone/wordprocessor'
-shutil.copy2(base/'NativeBenchmark.java',editor/'NativeBenchmark.java')
+# run.py writes each launch's request here; the app reads it with FileSystemStorage.
+request=(a.cn1.resolve()/'native-bench.json').as_posix()
+f=editor/'NativeBenchmark.java';f.write_text((base/'NativeBenchmark.java').read_text().replace('@NATIVE_BENCH_REQUEST@','file://'+request))
 f=editor/'WordProcessor.java';s=f.read_text()
 s=patch(s,'var recovered = recovery.recover();','var recovered = NativeBenchmark.input == null ? recovery.recover() : NativeBenchmark.load();')
 s=patch(s,'new UITimer(this::autosave).schedule(1000, true, form);','if (NativeBenchmark.input == null) new UITimer(this::autosave).schedule(1000, true, form);\n    else new NativeBenchmark(session, editor, this::edited, form);\n    editor.repaint();')

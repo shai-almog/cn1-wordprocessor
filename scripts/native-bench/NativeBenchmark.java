@@ -1,16 +1,23 @@
 package com.codenameone.wordprocessor;
 
+import com.codename1.io.FileSystemStorage;
+import com.codename1.io.Util;
 import com.codename1.ui.Form;
 import java.io.*;
+import java.util.Map;
 
 /** Opt-in benchmark instrumentation, applied only to an isolated build by prepare.py. */
 final class NativeBenchmark {
   static NativeBenchmark current;
-  static String input = System.getenv("NATIVE_BENCH_INPUT");
+  // run.py writes the request before each launch: {"input", "out", "workload"}. prepare.py
+  // replaces the placeholder with the file's absolute path in the instrumented checkout.
+  static final Map<String, Object> request = request("@NATIVE_BENCH_REQUEST@");
+  static String input = request == null ? null : (String) request.get("input");
   final Session session;
   final EditorSurface editor;
   final Runnable changed;
-  final String out = System.getenv("NATIVE_BENCH_OUT");
+  final String out = (String) request.get("out");
+  final boolean workload = Boolean.TRUE.equals(request.get("workload"));
   final String original;
   long readyAt, last;
   int step;
@@ -19,12 +26,30 @@ final class NativeBenchmark {
   String operation;
   long operationStart;
 
+  static Map<String, Object> request(String path) {
+    FileSystemStorage fs = FileSystemStorage.getInstance();
+    if (!fs.exists(path)) return null;
+    try (InputStream in = fs.openInputStream(path)) {
+      return Json.parse(new String(Util.readInputStream(in), "UTF-8"));
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  static InputStream read(String path) throws IOException {
+    return FileSystemStorage.getInstance().openInputStream(path);
+  }
+
+  static OutputStream write(String path) throws IOException {
+    return FileSystemStorage.getInstance().openOutputStream(path);
+  }
+
   static Document load() {
     if (input == null) return null;
     try {
       long t = System.nanoTime();
       Document doc;
-      try (InputStream in = new FileInputStream(input)) {
+      try (InputStream in = read(input)) {
         doc = Docx.read(in).document;
       }
       emit("open", "ms", (System.nanoTime() - t) / 1e6);
@@ -95,7 +120,7 @@ final class NativeBenchmark {
         || waiting
         || System.currentTimeMillis() - readyAt < 5000
         || System.currentTimeMillis() - last < 60) return;
-    if (System.getenv("NATIVE_BENCH_WORKLOAD") == null) return;
+    if (!workload) return;
     try {
       if (step < 100) {
         operation = step % 2 == 0 ? "insert" : "undo";
@@ -125,7 +150,7 @@ final class NativeBenchmark {
         operation = "saveDocx";
         operationStart = System.nanoTime();
         emit("operationStart", "operation", operation);
-        try (OutputStream bytes = new FileOutputStream(out + "/saved-" + step + ".docx")) {
+        try (OutputStream bytes = write(out + "/saved-" + step + ".docx")) {
           Docx.write(session.document(), bytes);
         }
         editor.repaint();
@@ -133,7 +158,7 @@ final class NativeBenchmark {
         operation = "reopenDocx";
         operationStart = System.nanoTime();
         emit("operationStart", "operation", operation);
-        try (InputStream bytes = new FileInputStream(out + "/saved-102.docx")) {
+        try (InputStream bytes = read(out + "/saved-102.docx")) {
           Document document = Docx.read(bytes).document;
           long read = System.nanoTime();
           if (!original.equals(document.plainText()))
@@ -153,7 +178,7 @@ final class NativeBenchmark {
         operationStart = System.nanoTime();
         emit("operationStart", "operation", operation);
         byte[] pdf = PdfExporter.write(session.document());
-        try (OutputStream bytes = new FileOutputStream(out + "/export-" + step + ".pdf")) {
+        try (OutputStream bytes = write(out + "/export-" + step + ".pdf")) {
           bytes.write(pdf);
         }
         editor.repaint();
