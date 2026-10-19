@@ -63,7 +63,7 @@ final class NativeBenchmark {
     java.util.Map<String, Object> row =
         Json.object("event", event, "wallMs", System.currentTimeMillis());
     for (int i = 0; i < values.length; i += 2) row.put((String) values[i], values[i + 1]);
-    System.out.println("NATIVE_BENCH " + Json.write(row));
+    System.out.println("NATIVE_BENCH " + com.codename1.io.JSONParser.toJson(row));
   }
 
   static long paintStart, operationEnd;
