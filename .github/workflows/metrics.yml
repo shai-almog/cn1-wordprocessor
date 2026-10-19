@@ -1,7 +1,7 @@
 # Public, reproducible evidence for every README claim, for this project and for Wordcraft at
 # the pinned revision on the same runner images:
 #   java / wordcraft  source size and tokens, functional-test cost (JVM vs cargo), JVM engine
-#   macos             native startup, idle RAM, command-to-paint latency and bundle size
+#   desktop           native startup, idle RAM, latency and size vs Wordcraft on macOS, Linux, Windows
 #                     against Wordcraft (scripts/native-bench)
 #   ios / android / web  the same source built, launched and screenshotted on each target
 name: metrics
@@ -89,9 +89,20 @@ jobs:
           name: wordcraft-metrics
           path: rust-*.txt
 
-  macos:
-    runs-on: macos-15
+  desktop:
+    # The head-to-head native benchmark against Wordcraft on every desktop OS it ships for.
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {os: macos, runner: macos-15}
+          - {os: linux, runner: ubuntu-24.04}
+          - {os: windows, runner: windows-latest}
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 150
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -99,77 +110,33 @@ jobs:
           distribution: temurin
           java-version: '17'
       - uses: dtolnay/rust-toolchain@stable
-      - name: Production builds (Java app and Wordcraft)
+      - if: matrix.os == 'linux'
+        name: Linux libraries and display
         run: |
-          export WORDPROCESSOR_MAVEN_REPO="$PWD/.local/maven-repository"
-          scripts/build-native.sh -DskipTests
-          git clone -q "$WORDCRAFT_REPO" "$RUNNER_TEMP/wordcraft"
-          git -C "$RUNNER_TEMP/wordcraft" checkout -q "$WORDCRAFT_REV"
-          (cd "$RUNNER_TEMP/wordcraft" && cargo build --release --locked -p wordcraft \
-            && bash packaging/macos/package.sh --arch aarch64)
-      - name: Fixtures
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq xvfb mesa-utils libgl1-mesa-dri libxkbcommon-dev libwayland-dev \
+            libx11-dev libxcursor-dev libxrandr-dev libxi-dev libgl1-mesa-dev libgtk-3-dev \
+            libfontconfig1-dev libwebkit2gtk-4.1-dev libgstreamer1.0-dev \
+            libgstreamer-plugins-base1.0-dev libgeoclue-2-dev
+      - if: matrix.os == 'windows'
+        uses: ilammy/msvc-dev-cmd@v1
+      - name: Source metrics
+        if: matrix.os == 'macos'
         run: |
-          export WORDPROCESSOR_MAVEN_REPO="$PWD/.local/maven-repository"
-          mvn -B -ntp -Dmaven.repo.local="$WORDPROCESSOR_MAVEN_REPO" -pl common \
-            org.apache.maven.plugins:maven-dependency-plugin:3.6.1:build-classpath \
-            -DincludeScope=test -Dmdep.outputFile=target/test-classpath.txt
-          mkdir -p artifacts/startup-final
-          scripts/benchmark.sh 1 1 artifacts/startup-final/1-paragraphs.docx
-          scripts/benchmark.sh 1000 1 artifacts/1000-paragraphs.docx
-          scripts/benchmark.sh 10000 1 artifacts/startup-final/10000-paragraphs.docx
-      - name: Instrumented copies
-        run: |
-          rsync -a --exclude target --exclude .git ./ "$RUNNER_TEMP/cn1-bench/"
-          cp -R "$RUNNER_TEMP/wordcraft" "$RUNNER_TEMP/wordcraft-bench"
-          python3 scripts/native-bench/prepare.py "$RUNNER_TEMP/cn1-bench" "$RUNNER_TEMP/wordcraft-bench"
-          (cd "$RUNNER_TEMP/cn1-bench" && WORDPROCESSOR_MAVEN_REPO="$PWD/.local/maven-repository" \
-            scripts/build-native.sh -DskipTests)
-          (cd "$RUNNER_TEMP/wordcraft-bench" && cargo build --release --locked -p wordcraft)
-      - name: Startup, RAM and workload
-        run: |
-          base=artifacts/native-bench/ci
-          cn1="$RUNNER_TEMP/cn1-bench/common/target/mac-native/Build/Products/Release/Main.app/Contents/MacOS/Main"
-          wc="$RUNNER_TEMP/wordcraft-bench/target/release/wordcraft"
-          c=scripts/native-bench/collect.sh
-          bash $c "$cn1" "$wc" artifacts/startup-final/1-paragraphs.docx $base/startup-1 10
-          bash $c "$cn1" "$wc" artifacts/1000-paragraphs.docx $base/startup-1000 10
-          bash $c "$cn1" "$wc" artifacts/startup-final/10000-paragraphs.docx $base/startup-10000 10
-          bash $c "$cn1" "$wc" artifacts/1000-paragraphs.docx $base/workload-1000 3 --workload
-      - name: Sizes and report
-        run: |
-          python3 - <<'PY'
-          import hashlib, json, os, platform, subprocess
-          def bundle(path):
-              return sum(os.path.getsize(os.path.join(r, f)) for r, _, fs in os.walk(path) for f in fs
-                         if not os.path.islink(os.path.join(r, f)))
-          def side(exe, app):
-              return {'executableBytes': os.path.getsize(exe), 'appBundleBytes': bundle(app),
-                      'sha256': hashlib.sha256(open(exe, 'rb').read()).hexdigest()}
-          t = os.environ['RUNNER_TEMP']
-          cn1 = 'common/target/mac-native/Build/Products/Release/Main.app'
-          wc = subprocess.check_output(['bash', '-c', f'ls -d {t}/wordcraft/target/*/WordCraft.app {t}/wordcraft/*.app 2>/dev/null | head -1']).decode().strip()
-          art = {'cn1': side(cn1 + '/Contents/MacOS/Main', cn1),
-                 'wordcraft': side(f'{t}/wordcraft/target/release/wordcraft', wc or f'{t}/wordcraft/target/release'),
-                 'platform': platform.platform(), 'machine': platform.machine() + ' GitHub macos-15 runner',
-                 'cpuCount': os.cpu_count(), 'ramBytes': int(subprocess.check_output(['sysctl', '-n', 'hw.memsize'])),
-                 'wordcraftRevision': os.environ['WORDCRAFT_REV'], 'frameworkRevision': 'cn1 7.0.278',
-                 'cn1Revision': os.environ['GITHUB_SHA']}
-          json.dump(art, open('artifacts/native-bench/ci/artifacts.json', 'w'), indent=2)
-          PY
-          git clone -q "$WORDCRAFT_REPO" wordcraft-src && git -C wordcraft-src checkout -q "$WORDCRAFT_REV"
+          git clone -q "$WORDCRAFT_REPO" "$RUNNER_TEMP/wordcraft-src" && git -C "$RUNNER_TEMP/wordcraft-src" checkout -q "$WORDCRAFT_REV"
           brew install -q cloc
           python3 -m venv .venv && .venv/bin/pip install -q -r scripts/metrics-requirements.txt
-          .venv/bin/python scripts/source-metrics.py wordcraft-src --out artifacts/source-metrics.json
-          python3 scripts/native-bench/report.py --base artifacts/native-bench/ci \
-            --out native-benchmarks.md --json native-benchmarks.json
-          cat native-benchmarks.md >> "$GITHUB_STEP_SUMMARY"
+          .venv/bin/python scripts/source-metrics.py "$RUNNER_TEMP/wordcraft-src" --out artifacts/source-metrics.json
+      - name: Builds, startup, RAM, workload and report
+        run: |
+          run=(); [[ ${{ matrix.os }} == linux ]] && run=(xvfb-run -a -s "-screen 0 1920x1080x24")
+          "${run[@]}" scripts/native-bench/desktop.sh artifacts/native-bench/ci
+          cat artifacts/native-bench/ci/native-benchmarks.md >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: macos-native
-          path: |
-            native-benchmarks.*
-            artifacts/native-bench/ci
+          name: ${{ matrix.os }}-native
+          path: artifacts/native-bench/ci
 
   ios:
     runs-on: macos-15

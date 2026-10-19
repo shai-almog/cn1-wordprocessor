@@ -9,4 +9,7 @@ if [[ ! -f "$classpath_file" ]]; then
   exit 1
 fi
 IFS= read -r classpath < "$classpath_file" || [[ -n "$classpath" ]]
-export WORDPROCESSOR_CLASSPATH="$wordprocessor_root/common/target/test-classes:$wordprocessor_root/common/target/classes:$classpath"
+# Git Bash on Windows: the JVM wants Windows paths and ';' (Maven already wrote the file so).
+sep=:
+if command -v cygpath >/dev/null 2>&1; then sep=';'; wordprocessor_root=$(cygpath -m "$wordprocessor_root"); fi
+export WORDPROCESSOR_CLASSPATH="$wordprocessor_root/common/target/test-classes$sep$wordprocessor_root/common/target/classes$sep$classpath"
