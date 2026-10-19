@@ -17,6 +17,12 @@ env:
   VERSION: ${{ inputs.version || 'dev' }}
   WORDPROCESSOR_MAVEN_REPO: ${{ github.workspace }}/.local/maven-repository
 
+# A newer push to the same branch or PR supersedes older runs; tag (release) runs are never
+# cancelled. When build.yml is called from release.yml the group is the caller's tag ref.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
+
 jobs:
   test:
     runs-on: ubuntu-24.04
