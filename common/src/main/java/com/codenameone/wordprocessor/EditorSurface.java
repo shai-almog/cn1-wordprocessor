@@ -248,12 +248,41 @@ public final class EditorSurface extends Container
     if (navigationLine != null && navigationLayout == result && navigationSelection == selection)
       return navigationLine;
     LayoutEngine.Line found = null;
-    for (LayoutEngine.Page page : result.pages)
-      for (LayoutEngine.Line line : page.lines)
-        if (editingBlock(line) == selection.block
-            && selection.caret >= line.start
-            && selection.caret <= line.end) found = line;
+    for (LayoutEngine.Line line : linesOf(selection.block))
+      if (editingBlock(line) == selection.block
+          && selection.caret >= line.start
+          && selection.caret <= line.end) found = line;
     return found;
+  }
+
+  private LayoutEngine.Result linesLayout;
+  private Map<Integer, java.util.List<LayoutEngine.Line>> linesByBlock;
+
+  /**
+   * The lines that can belong to editing block {@code block}, in layout order. Outside a cell
+   * that is the block's own body lines, indexed once per layout; the caret lookups ask several
+   * times per edit and a full scan of a long document per lookup dominated typing latency.
+   */
+  private java.util.List<LayoutEngine.Line> linesOf(int block) {
+    var result = layout();
+    if (session.inCell()) {
+      var all = new ArrayList<LayoutEngine.Line>();
+      for (LayoutEngine.Page page : result.pages) all.addAll(page.lines);
+      return all;
+    }
+    if (linesLayout != result) {
+      linesByBlock = new HashMap<>();
+      for (LayoutEngine.Page page : result.pages)
+        for (LayoutEngine.Line line : page.lines)
+          if (line.row < 0) {
+            var list = linesByBlock.get(line.block);
+            if (list == null) linesByBlock.put(line.block, list = new ArrayList<>());
+            list.add(line);
+          }
+      linesLayout = result;
+    }
+    var lines = linesByBlock.get(block);
+    return lines == null ? java.util.Collections.emptyList() : lines;
   }
 
   private LayoutEngine.Line verticalLine(LayoutEngine.Line current, boolean down, boolean page) {
@@ -2650,10 +2679,9 @@ public final class EditorSurface extends Container
     var selection = session.selection();
     if (selection.block == block && selection.caret == offset) chosen = caretLine();
     if (chosen == null)
-      for (LayoutEngine.Page page : layout().pages)
-        for (LayoutEngine.Line line : page.lines)
-          if (editingBlock(line) == block && offset >= line.start && offset <= line.end)
-            chosen = line;
+      for (LayoutEngine.Line line : linesOf(block))
+        if (editingBlock(line) == block && offset >= line.start && offset <= line.end)
+          chosen = line;
     if (chosen != null)
       return new int[] {
         viewportX()
@@ -2700,8 +2728,13 @@ public final class EditorSurface extends Container
     var index = textIndex();
     float scale = scale();
     int top = viewportY() - getScrollY();
-    for (LayoutEngine.Page page : layout().pages) {
-      for (LayoutEngine.Line line : page.lines) {
+    var pages = layout().pages;
+    for (int p = 0; p < pages.size(); p++) {
+      // Only visible lines are reported; skip whole pages off screen without walking their lines.
+      // Side-by-side pages share a row top, so only the one-column stack can bound by the next page.
+      if ((across <= 1 || reflow) && top + pageY(p + 1) < viewportY()
+          || top + pageY(p) > viewportY() + getHeight()) continue;
+      for (LayoutEngine.Line line : pages.get(p).lines) {
         int y = top + pageY(line.page) + Math.round(line.y * scale);
         int height = Math.round(line.height * scale);
         if (editingBlock(line) < 0 || !textLine(line) || y + height < viewportY() || y > viewportY() + getHeight())
