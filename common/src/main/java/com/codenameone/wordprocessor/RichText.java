@@ -180,6 +180,8 @@ public final class RichText {
 
   public boolean hasNotes() { return root != null && root.hasNotes; }
 
+  public boolean hasFields() { return root != null && root.hasFields; }
+
   public boolean hasObjects() { return root != null && (root.hasNotes || root.hasFields); }
 
   public Note noteAt(int offset) {

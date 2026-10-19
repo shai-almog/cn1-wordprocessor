@@ -25,6 +25,7 @@ public final class DocumentIndex {
   public static InlineField marker(Paragraph p) { return marker(p, "INDEX"); }
 
   static InlineField marker(Paragraph p, String kind) {
+    if (!p.text.hasFields()) return null;
     for (InlineField f : p.text.fields())
       if (kind.equals(new FieldCode(f.instruction).name)) return f;
     return null;
@@ -38,7 +39,10 @@ public final class DocumentIndex {
   public static int[] range(Document d) { return range(d, "INDEX"); }
 
   static int[] range(Document d, String kind) {
-    for (int i = 0; i < d.blocks.size(); i++) if (d.blocks.get(i) instanceof Paragraph && marker(d.paragraph(i), kind) != null) {
+    int i = -1;
+    for (Block block : d.blocks) {
+      i++;
+      if (!(block instanceof Paragraph) || marker((Paragraph) block, kind) == null) continue;
       int end = i + 1;
       while (end < d.blocks.size() && d.blocks.get(end) instanceof Paragraph
           && ("BIBLIOGRAPHY".equals(kind) ? Citations.entryStyle(d.paragraph(end).style) : "TOA".equals(kind) ? authorityStyle(d.paragraph(end).style) : entryStyle(d.paragraph(end).style))

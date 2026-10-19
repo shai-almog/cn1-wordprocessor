@@ -170,4 +170,25 @@ public class ZipPartsTest {
     assertTrue(ZipParts.read(new ByteArrayInputStream("plain text".getBytes("UTF-8"))).isEmpty());
     assertEquals(1, ZipParts.read(new ByteArrayInputStream(one)).size());
   }
+
+  @Test
+  public void utf8EncodingMatchesTheJdkForCompactAndWideText() throws IOException {
+    String[] samples = {"", "plain ascii <w:t>", "caf\u00e9", "quote \u2019 here", "lone \ud800 x", "\udc00", "pair \ud83d\ude00"};
+    for (String text : samples) {
+      assertArrayEquals(text, text.getBytes("UTF-8"), ZipParts.utf8(text));
+      assertArrayEquals(text, text.getBytes("UTF-8"), ZipParts.utf8(new StringBuilder(text)));
+    }
+  }
+
+  @Test
+  public void latin1AndWidePartsParseToTheSameStrings() throws IOException {
+    for (String extra : new String[] {"", "\u00e9", "\u2019"}) {
+      String xml = "<r a=\"v" + extra + "\"><x>one" + extra + "</x><![CDATA[c" + extra + "]]>t &amp; u</r>";
+      var e = Xml.parse(xml.getBytes("UTF-8"));
+      assertEquals("v" + extra, e.getAttribute("a"));
+      assertEquals("one" + extra, ((com.codename1.xml.Element) e.getChildAt(0).getChildAt(0)).getText());
+      assertEquals("c" + extra, ((com.codename1.xml.Element) e.getChildAt(1)).getText());
+      assertEquals("t & u", ((com.codename1.xml.Element) e.getChildAt(2)).getText());
+    }
+  }
 }

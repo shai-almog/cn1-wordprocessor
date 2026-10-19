@@ -36,6 +36,11 @@ final class DocxToc {
   }
 
   static List<Element> body(Element body, Set<String> warnings) {
+    return body(body, true, warnings);
+  }
+
+  /** {@code fields} false: the part has no complex field, so no TOC field can be lifted. */
+  static List<Element> body(Element body, boolean fields, Set<String> warnings) {
     var blocks = new ArrayList<Element>();
     for (Element child : Xml.children(body, null)) {
       Element properties = Xml.child(child, "sdtPr");
@@ -52,6 +57,7 @@ final class DocxToc {
         blocks.addAll(Xml.children(content, null));
       } else blocks.add(child);
     }
+    if (!fields) return blocks;
     // Only remove a complete TOC field after verifying its result paragraphs. Other fields,
     // including nested PAGEREFs, remain in the ordinary inline field reader.
     var stack = new ArrayList<Pending>();

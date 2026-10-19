@@ -49,14 +49,19 @@ public final class Docx {
         new DocxStyles(parts.get("word/styles.xml"), parts.get("word/settings.xml"), warnings);
     var links = new DocxLinks(parts);
     var comments = new DocxComments(parts);
+    comments.markers = Xml.mayContain(root, "bookmarkStart") || Xml.mayContain(root, "bookmarkEnd")
+        || Xml.mayContain(root, "commentRangeStart") || Xml.mayContain(root, "commentRangeEnd")
+        || Xml.mayContain(root, "commentReference");
     var pictures = new DocxPictures(parts);
+    pictures.present = Xml.mayContain(root, "drawing") || Xml.mayContain(root, "oMath")
+        || Xml.mayContain(root, "oMathPara");
     long[] id = {1};
     links.notes = new DocxNotes(parts, id, warnings, styles);
-    var blocks = new Sequence<Block>();
+    var blocks = new ArrayList<Block>();
     var sectionElements = new LinkedHashMap<String, Element>();
     Paragraph dropLetter = null;
     String dropSpec = null;
-    for (Element c : DocxToc.body(body, warnings)) {
+    for (Element c : DocxToc.body(body, Xml.mayContain(root, "fldChar"), warnings)) {
       String kind = Xml.local(c);
       if ("p".equals(kind)) {
         var paragraphWarnings = new LinkedHashSet<String>();
@@ -97,23 +102,23 @@ public final class Docx {
         if (section != null) sectionElements.put(p.id, section);
         warnings.addAll(paragraphWarnings);
         var images = pictures.read(c, id, warnings);
-        if (images.isEmpty() || p.text.length() > 0 || section != null) blocks = blocks.append(p);
+        if (images.isEmpty() || p.text.length() > 0 || section != null) blocks.add(p);
         if (!images.isEmpty() && p.text.length() > 0)
           warnings.add("Pictures embedded in text moved after their paragraph");
         Element props = Xml.child(c, "pPr"), jc = props == null ? null : Xml.child(props, "jc");
         String align = jc == null ? "left" : Xml.attr(jc, "val", "left");
         if (!"center".equals(align) && !"right".equals(align)) align = "left";
         for (Picture image : images)
-          blocks = blocks.append(image.resize(image.width, image.height, image.alt, align));
+          blocks.add(image.resize(image.width, image.height, image.alt, align));
       } else if ("tbl".equals(kind)) {
         Table table = readTable(c, id, warnings, lists, styles, links, comments);
-        if (table != null) blocks = blocks.append(table);
+        if (table != null) blocks.add(table);
       } else if (!"sectPr".equals(kind)) warnings.add("Document feature: " + kind);
     }
-    if (blocks.size() == 0
+    if (blocks.isEmpty()
         || !(blocks.get(blocks.size() - 1) instanceof Paragraph)
         || sectionElements.containsKey(blocks.get(blocks.size() - 1).id()))
-      blocks = blocks.append(new Paragraph("p" + id[0]++, new RichText()));
+      blocks.add(new Paragraph("p" + id[0]++, new RichText()));
     var sections = new LinkedHashMap<String, Section>();
     for (Map.Entry<String, Element> sectionEntry : sectionElements.entrySet())
       sections.put(
@@ -133,7 +138,7 @@ public final class Docx {
         warnings.add("Page background fill effects shown as a solid color");
     }
     var document =
-        new Document(blocks, last.page, "Imported document", id[0]).sections(sections, last);
+        new Document(Sequence.of(blocks), last.page, "Imported document", id[0]).sections(sections, last);
     document = document.comments(comments.read(document, warnings));
     document = document.bookmarks(comments.bookmarks.read(document, warnings));
     Element settings =
@@ -172,7 +177,10 @@ public final class Docx {
               template,
               styles.text(styleEntry.getKey(), null)));
     }
-    document = Notes.normalize(document.styles(definitions));
+    document = document.styles(definitions);
+    // Notes are referenced only from the main story (DocxFields rejects them elsewhere).
+    if (Xml.mayContain(root, "footnoteReference") || Xml.mayContain(root, "endnoteReference"))
+      document = Notes.normalize(document);
 
     return new Opened(document, warnings, parts);
   }
@@ -201,11 +209,11 @@ public final class Docx {
           throw new IllegalArgumentException("Table size limit exceeded");
         boolean continuation =
             vertical != null && !"restart".equals(Xml.attr(vertical, "val", "continue"));
-        var content = new Sequence<Paragraph>();
+        var cellParagraphs = new ArrayList<Paragraph>();
         for (Element p : Xml.children(cell, "p"))
-          content = content.append(paragraph(p, id, warnings, lists, styles, links, comments));
-        if (content.size() == 0)
-          content = content.append(new Paragraph("p" + id[0]++, new RichText()));
+          cellParagraphs.add(paragraph(p, id, warnings, lists, styles, links, comments));
+        if (cellParagraphs.isEmpty()) cellParagraphs.add(new Paragraph("p" + id[0]++, new RichText()));
+        var content = Sequence.of(cellParagraphs);
         if (continuation) {
           int[] found = null;
           for (int[] old : spans)
@@ -501,11 +509,15 @@ static final char COLUMN_BREAK = '\u000B';
   }
 
   public static List<String> conversionWarnings(Document d, Opened source) {
+    return conversionWarnings(d, source, null);
+  }
+
+  private static List<String> conversionWarnings(Document d, Opened source, DocxTabs tabs) {
     var warnings = new LinkedHashSet<String>();
     if (source != null && source.document == d) return new ArrayList<>();
     if (source != null) warnings.addAll(source.warnings);
 
-    var tabs = new DocxTabs(d);
+    if (tabs == null) tabs = new DocxTabs(d);
     for (Paragraph paragraph : DocxTabs.paragraphs(d))
       exportWarnings(paragraph, warnings, tabs.interval);
     return new ArrayList<>(warnings);
@@ -537,14 +549,14 @@ static final char COLUMN_BREAK = '\u000B';
   public static void write(Document d, Opened source, OutputStream out, boolean allowLoss)
       throws IOException {
     boolean original = source != null && source.document == d;
-    var losses = conversionWarnings(d, source);
+    var tabs = original ? null : new DocxTabs(d);
+    var losses = conversionWarnings(d, source, tabs);
     if (!losses.isEmpty() && !allowLoss)
       throw new IOException("Save As with explicit conversion required: " + losses);
     final var parts = new LinkedHashMap<String, byte[]>();
     if (source != null) parts.putAll(source.parts);
     if (!original) {
       var lists = new DocxLists(d);
-      var tabs = new DocxTabs(d);
       var links = new DocxLinks(parts);
       links.notes = new DocxNotes(d);
       links.styles = d.styles;
@@ -1284,13 +1296,20 @@ static final char COLUMN_BREAK = '\u000B';
     }
     b.append("<w:r>");
     writeRunProperties(b, s, links == null ? null : links.base);
+    String tag = deleted ? "delText" : "t";
+    if (text.indexOf('\n') < 0 && text.indexOf('\t') < 0) {
+      b.append("<w:").append(tag).append(" xml:space=\"preserve\">").append(Xml.escape(text))
+          .append("</w:").append(tag).append("></w:r>");
+      if (!s.link.isEmpty()) b.append("</w:hyperlink>");
+      RevisionFormats.end(b, s.revision);
+      return;
+    }
     String[] lines = TextUtil.split(text, '\n');
     for (int i = 0; i < lines.length; i++) {
       if (i > 0) b.append("<w:br/>");
       String[] tabs = TextUtil.split(lines[i], '\t');
       for (int j = 0; j < tabs.length; j++) {
         if (j > 0) b.append("<w:tab/>");
-        String tag = deleted ? "delText" : "t";
         b.append("<w:")
             .append(tag)
             .append(" xml:space=\"preserve\">")

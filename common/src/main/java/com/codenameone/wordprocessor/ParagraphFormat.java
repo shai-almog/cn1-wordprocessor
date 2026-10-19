@@ -300,6 +300,7 @@ public final class ParagraphFormat {
   }
 
   public boolean asian(String option) {
+    if (asianOff.isEmpty()) return true;
     return !("," + asianOff + ",").contains("," + option + ",");
   }
 }

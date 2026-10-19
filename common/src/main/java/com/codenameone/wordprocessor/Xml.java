@@ -13,12 +13,22 @@ public final class Xml {
    * on ParparVM every Hashtable owns a monitor that the collector tears down under a global
    * lock, which made attribute storage the largest cost of opening a document natively.
    */
+  /**
+   * Whether a parsed part may contain an element with this local name (24 characters or fewer).
+   * False means it certainly does not, so readers skip searching each paragraph for it.
+   */
+  static boolean mayContain(Element root, String local) {
+    return !(root instanceof Node) || ((Node) root).vocabulary == null || ((Node) root).vocabulary.contains(local);
+  }
+
   static final class Node extends Element {
     /** Attribute names and values, alternating; elements carry only a handful. */
     String[] attrs;
     int attrCount;
     /** Tag without its namespace prefix, pooled at parse time. */
     String local;
+    /** On a parsed root only: every short name and value the part contains. */
+    Set<String> vocabulary;
 
     Node(String tag, String local) {
       super(tag);
@@ -161,8 +171,15 @@ public final class Xml {
     // Decoded straight into the reader's buffer: ParparVM's String(byte[], "UTF-8") decodes
     // through generic charset code, and the reader then copied the String to a char[] again.
     char[] chars = new char[bytes.length];
-    int n = decodeUtf8(bytes, chars);
-    return new Reader(chars, n).read();
+    boolean[] wide = {false};
+    int n = decodeUtf8(bytes, chars, wide);
+    var reader = new Reader(chars, n);
+    // A part of Latin-1 characters (nearly every OOXML part) becomes one compact String that
+    // names, values and text are sliced from: ParparVM copies a compact slice's bytes, where a
+    // String built from char[] scans and packs every character again. A part with any wider
+    // character keeps the char[] constructor, which still packs each Latin-1 string on its own.
+    if (!wide[0]) reader.source = new String(chars, 0, n);
+    return reader.read();
   }
 
   /**
@@ -171,6 +188,11 @@ public final class Xml {
    * maximal invalid prefix (Unicode's "maximal subpart" rule), the next byte decoded afresh.
    */
   static int decodeUtf8(byte[] bytes, char[] out) {
+    return decodeUtf8(bytes, out, new boolean[1]);
+  }
+
+  /** Sets {@code wide[0]} when a decoded character is above U+00FF. */
+  static int decodeUtf8(byte[] bytes, char[] out, boolean[] wide) {
     int n = 0, length = bytes.length;
     for (int i = 0; i < length; ) {
       int b = bytes[i];
@@ -195,6 +217,7 @@ public final class Xml {
         else if (b == 0xf4) high = 0x8f;
       } else {
         out[n++] = '\ufffd';
+        wide[0] = true;
         i++;
         continue;
       }
@@ -211,16 +234,20 @@ public final class Xml {
       }
       if (!ok) {
         out[n++] = '\ufffd';
+        wide[0] = true;
         i = j;
       } else if (cp >= 0xd800 && cp <= 0xdfff) {
         out[n++] = '\ufffd'; // JDK 17 replaces a whole encoded surrogate with one character
+        wide[0] = true;
         i = j;
       } else if (cp >= 0x10000) {
+        wide[0] = true;
         out[n++] = (char) (0xd7c0 + (cp >> 10));
         out[n++] = (char) (0xdc00 | cp & 0x3ff);
         i = j;
       } else {
         out[n++] = (char) cp;
+        if (cp > 0xff) wide[0] = true;
         i = j;
       }
     }
@@ -238,6 +265,12 @@ public final class Xml {
     final char[] c;
     final int n;
     int pos, count;
+    /** The whole part as one compact String when every character is Latin-1, else null. */
+    String source;
+
+    String text(int start, int length) {
+      return source != null ? source.substring(start, start + length) : new String(c, start, length);
+    }
 
     Reader(char[] c, int n) {
       this.c = c;
@@ -300,10 +333,12 @@ public final class Xml {
     // Each pooled string's characters, compared against the buffer directly: String methods
     // (regionMatches, charAt) are checked calls per character on ParparVM.
     private final char[][] poolChars = new char[1024][];
+    // Every pool miss: each distinct short name (so every element's local name) at least once.
+    final Set<String> vocabulary = new HashSet<>();
 
     String shared(int start, int end) {
       int len = end - start;
-      if (len > 24) return new String(c, start, len);
+      if (len > 24) return text(start, len);
       int h = len;
       for (int i = start; i < end; i++) h = 31 * h + c[i];
       int slot = (h ^ (h >>> 16)) & (pool.length - 1);
@@ -313,7 +348,8 @@ public final class Xml {
         while (i < len && chars[i] == c[start + i]) i++;
         if (i == len) return pool[slot];
       }
-      var v = new String(c, start, len);
+      var v = text(start, len);
+      vocabulary.add(v);
       pool[slot] = v;
       poolChars[slot] = java.util.Arrays.copyOfRange(c, start, end);
       return v;
@@ -345,6 +381,7 @@ public final class Xml {
       whitespace();
       while (skip("<!--", "-->")) whitespace();
       if (pos != n) throw error("Trailing XML content");
+      ((Node) root).vocabulary = vocabulary;
       return root;
     }
 
@@ -393,7 +430,7 @@ public final class Xml {
         if (at('<', '!') && starts("<![CDATA[", pos)) {
           int end = find("]]>", pos + 9);
           if (end < 0) throw error("Unterminated CDATA");
-          e.addChild(new Element(new String(c, pos + 9, end - pos - 9), true));
+          e.addChild(new Element(text(pos + 9, end - pos - 9), true));
           pos = end + 3;
           continue;
         }
@@ -423,8 +460,8 @@ public final class Xml {
         } else if (ch == '&') entity = true;
         else if (ch == '<' && attribute) throw error("Invalid attribute value");
       }
-      if (entity) return decode(new String(c, start, end - start));
-      return attribute ? shared(start, end) : new String(c, start, end - start);
+      if (entity) return decode(text(start, end - start));
+      return attribute ? shared(start, end) : text(start, end - start);
     }
 
     String decode(String raw) throws IOException {

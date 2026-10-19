@@ -319,12 +319,22 @@ public final class Document {
         bookmarks, bibliography, properties);
   }
 
+  // Documents are immutable, so the ranges are computed once; a race only computes them twice.
+  private List<Section.Range> ranges;
+
   public List<Section.Range> sectionRanges() {
+    if (ranges == null) ranges = computeRanges();
+    return ranges;
+  }
+
+  private List<Section.Range> computeRanges() {
     var result = new ArrayList<Section.Range>();
     int first = 0;
     var previous = PageFurniture.EMPTY;
-    for (int i = 0; i < blocks.size(); i++) {
-      var section = sections.get(blocks.get(i).id());
+    int i = -1;
+    for (Block block : blocks) {
+      i++;
+      var section = sections.isEmpty() ? null : sections.get(block.id());
       if (section != null) {
         var range = new Section.Range(first, i, section, previous, notes);
         result.add(range);

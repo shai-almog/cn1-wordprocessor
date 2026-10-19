@@ -24,6 +24,17 @@ public final class Sequence<T> implements Iterable<T> {
     root = null;
   }
 
+  /** A balanced sequence of the list's elements, built in linear time. */
+  public static <T> Sequence<T> of(List<? extends T> values) {
+    return new Sequence<T>(build(values, 0, values.size()));
+  }
+
+  private static <T> Node<T> build(List<? extends T> values, int from, int to) {
+    if (from >= to) return null;
+    int mid = (from + to) >>> 1;
+    return new Node<T>(build(values, from, mid), values.get(mid), build(values, mid + 1, to));
+  }
+
   private Sequence(Node<T> n) {
     root = n;
   }

@@ -60,8 +60,11 @@ final class DocxComments {
       for (Element c : Xml.children(e, null)) appendText(c, b);
   }
 
+  /** False when the part has no bookmark or comment marker, so paragraphs need no marker scan. */
+  boolean markers = true;
+
   void scan(Element p, String paragraph, Set<String> warnings) {
-    scan(p, paragraph, new int[] {0, 0});
+    if (markers) scan(p, paragraph, new int[] {0, 0});
     bookmarks.warnings(warnings);
   }
 

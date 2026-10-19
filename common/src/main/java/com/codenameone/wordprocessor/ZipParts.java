@@ -389,6 +389,18 @@ public final class ZipParts {
    * per character; part XML is almost all ASCII, which this copies directly.
    */
   public static byte[] utf8(CharSequence text) {
+    if (text instanceof String || text instanceof StringBuilder) {
+      // A compact (Latin-1) String encodes natively on ParparVM without widening to char[].
+      // One byte per character means every character was ASCII, or an unpaired surrogate
+      // written as '?' as below, so the bytes match this encoder exactly.
+      String string = text.toString();
+      try {
+        byte[] bytes = string.getBytes("UTF-8");
+        if (bytes.length == string.length()) return bytes;
+      } catch (java.io.UnsupportedEncodingException impossible) {
+        // UTF-8 is always supported; fall through to the portable encoder.
+      }
+    }
     int n = text.length();
     char[] c = new char[n];
     if (text instanceof String string) string.getChars(0, n, c, 0);

@@ -41,7 +41,11 @@ final class DocxPictures {
     return descendant(paragraph, "drawing") != null;
   }
 
+  /** False when the part has no drawing or equation, so paragraphs need no picture search. */
+  boolean present = true;
+
   List<Picture> read(Element paragraph, long[] id, Set<String> warnings) {
+    if (!present) return Collections.emptyList();
     var result = new ArrayList<Picture>();
     collect(paragraph, result, id, warnings);
     return result;
