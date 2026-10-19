@@ -47,21 +47,31 @@ def compact(cid, r):
 
 summary = {cid: compact(cid, r) for cid, r in sorted(results.items())}
 matrix = json.loads(args.matrix.read_text())
-changed = 0
+changed = demoted = 0
+EVIDENCE = 'docs/native-certification.json#'
 for row in matrix['rows']:
-    if row['status'] != 'unverified':
+    ours = any(e.startswith(EVIDENCE) for e in row.get('evidence') or [])
+    # Rows certified from this summary are recomputed from the latest evidence every run, so
+    # a failing or missing rerun withdraws the certificate. Other statuses are left alone.
+    if row['status'] != 'unverified' and not (row['status'] == 'certified' and ours):
         continue
     cid = row.get('appCommand') or row['command']
     r = summary.get(cid)
     if not r or not r['ok']:
+        if row['status'] == 'certified':
+            row['status'] = 'unverified'
+            row['evidence'] = []
+            row['notes'] = 'certificate withdrawn: latest native evidence ' + ('failed' if r else 'missing')
+            demoted += 1
         continue
+    if row['status'] != 'certified':
+        changed += 1
     row['status'] = 'certified'
-    row['evidence'] = ['docs/native-certification.json#' + cid]
+    row['evidence'] = [EVIDENCE + cid]
     detail = {'replay': 'native replay of ' + ', '.join(r.get('tests', [])[:2]),
               'sequence': 'native scripted sequence',
               'ui': 'native UI activation (%s) observed %s' % (r.get('path'), ', '.join(r.get('observed', [])))}
     row['notes'] = detail.get(r['mode'], r['mode']) + ('; rule: ' + r['rule'] if r.get('rule') else '')
-    changed += 1
 
 counts = {}
 for row in matrix['rows']:
@@ -75,4 +85,4 @@ args.summary.write_text(json.dumps({
     'passed': sum(1 for r in summary.values() if r['ok']),
     'total': len(summary),
     'results': summary}, indent=1) + '\n')
-print('certified', changed, counts)
+print('certified', changed, 'withdrawn', demoted, counts)
