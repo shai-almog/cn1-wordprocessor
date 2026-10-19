@@ -8,6 +8,8 @@ cd "${BASH_SOURCE[0]%/*}/../.."
 out=$1 runs=${2:-10}
 : "${WORDCRAFT_REPO:?}" "${WORDCRAFT_REV:?}"
 tmp=${RUNNER_TEMP:-${TMPDIR:-/tmp}}/desktop-bench
+# RUNNER_TEMP is D:\a\_temp on Windows; tar would read "D:" as a remote host.
+command -v cygpath >/dev/null && tmp=$(cygpath -u "$tmp")
 rm -rf "$tmp" && mkdir -p "$tmp" "$out"
 case "$(uname -s)" in
   Darwin) os=macos build=scripts/build-native.sh ;;
