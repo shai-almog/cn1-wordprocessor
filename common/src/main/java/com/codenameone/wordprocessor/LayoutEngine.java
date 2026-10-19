@@ -367,6 +367,66 @@ public final class LayoutEngine {
   private final MeasurementCache metrics;
   private Map<Paragraph, Cached> cache = new HashMap<>();
   private Map<Paragraph, Cached> nextCache;
+  // Same lines keyed by content: a reopened or reverted document has new paragraph objects
+  // with unchanged text and format, and these reuse their measured lines.
+  private Map<Content, Cached> byContent = new HashMap<>();
+  private Map<Content, Cached> nextByContent;
+
+  /** What line breaking reads from a paragraph without fields, notes or tab stops. */
+  private static final class Content {
+    final String text, align, lineRule, dropCap, asianOff;
+    final int[] starts;
+    final TextStyle[] styles;
+    final float indent, lineSpacing, rightIndent, firstIndent, tabInterval;
+    final int listLevel;
+    final boolean list, rtl;
+    final int hash;
+
+    Content(Paragraph p, String text) {
+      this.text = text;
+      align = p.align;
+      lineRule = p.format.lineRule;
+      dropCap = p.format.dropCap;
+      asianOff = p.format.asianOff;
+      indent = p.indent;
+      lineSpacing = p.lineSpacing;
+      rightIndent = p.format.rightIndent;
+      firstIndent = p.format.firstIndent;
+      tabInterval = p.format.tabInterval;
+      listLevel = p.listLevel;
+      list = !p.list.isEmpty();
+      rtl = p.format.rtl;
+      var at = new ArrayList<Integer>();
+      var st = new ArrayList<TextStyle>();
+      p.text.visit((offset, t, style) -> { at.add(offset); st.add(style); });
+      starts = new int[at.size()];
+      for (int i = 0; i < starts.length; i++) starts[i] = at.get(i);
+      styles = st.toArray(new TextStyle[0]);
+      int h = text.hashCode();
+      h = 31 * h + Arrays.hashCode(starts);
+      h = 31 * h + Arrays.hashCode(styles);
+      h = 31 * h + Float.floatToIntBits(indent) + 7 * listLevel;
+      hash = h;
+    }
+
+    @Override
+    public int hashCode() {
+      return hash;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      if (!(o instanceof Content)) return false;
+      var c = (Content) o;
+      return hash == c.hash && text.equals(c.text) && Arrays.equals(starts, c.starts)
+          && Arrays.equals(styles, c.styles) && Objects.equals(align, c.align)
+          && Objects.equals(lineRule, c.lineRule) && Objects.equals(dropCap, c.dropCap)
+          && Objects.equals(asianOff, c.asianOff) && indent == c.indent
+          && lineSpacing == c.lineSpacing && rightIndent == c.rightIndent
+          && firstIndent == c.firstIndent && tabInterval == c.tabInterval
+          && listLevel == c.listLevel && list == c.list && rtl == c.rtl;
+    }
+  }
   /** Automatic hyphenation ("hyphenation" document setting) and its capitalized-word option. */
   private boolean hyphenate, hyphenateCaps = true;
   private int measured;
@@ -377,6 +437,7 @@ public final class LayoutEngine {
 
   public void clear() {
     cache.clear();
+    byContent.clear();
     metrics.clear();
     numberedSource = numberedView = null;
   }
@@ -500,10 +561,17 @@ public final class LayoutEngine {
                 - (p.list.isEmpty() ? 0 : 18 * (p.listLevel + 1)));
     var c = nextCache.get(p);
     if (c == null) c = cache.get(p);
+    Content content = null;
+    if (c == null && !p.text.hasObjects() && p.format.tabs.isEmpty()) {
+      content = new Content(p, p.text.toString());
+      c = nextByContent.get(content);
+      if (c == null) c = byContent.get(content);
+    }
     boolean dropped = allowDrop && !p.format.dropCap.isEmpty() && p.text.length() > 0
         && !Character.isWhitespace(p.text.charAt(0)) && !p.text.objectAt(0);
     if (c != null && c.width == width && c.drop == dropped) {
       nextCache.put(p, c);
+      if (content != null) nextByContent.put(content, c);
       return c.lines;
     }
     measured++;
@@ -689,6 +757,7 @@ public final class LayoutEngine {
     }
     c = new Cached(width, out, dropped);
     nextCache.put(p, c);
+    if (content != null) nextByContent.put(content, c);
     return out;
   }
 
@@ -913,10 +982,14 @@ public final class LayoutEngine {
 
   private Result layoutOnce(Document doc, long revision) {
     nextCache = new HashMap<>();
+    nextByContent = new HashMap<>();
     measured = 0;
     boolean auto = "automatic".equals(doc.properties.setting("hyphenation", ""));
     boolean caps = !"false".equals(doc.properties.setting("hyphenation.caps", ""));
-    if (auto != hyphenate || caps != hyphenateCaps) cache = new HashMap<>();
+    if (auto != hyphenate || caps != hyphenateCaps) {
+      cache = new HashMap<>();
+      byContent = new HashMap<>();
+    }
     hyphenate = auto;
     hyphenateCaps = caps;
     List<Section.Range> ranges = doc.sectionRanges();
@@ -1040,6 +1113,7 @@ public final class LayoutEngine {
       b.pages.set(i, rebuilt);
     }
     cache = nextCache;
+    byContent = nextByContent;
     return new Result(doc, b.pages, measured, revision, warnings);
   }
 
