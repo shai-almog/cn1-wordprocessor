@@ -106,6 +106,10 @@ jobs:
           - {os: windows, runner: windows-latest}
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 150
+    env:
+      # The ParparVM translator (a forked JVM) exhausted the default heap on the Windows
+      # runner while indexing natives; JAVA_TOOL_OPTIONS reaches every forked JVM.
+      JAVA_TOOL_OPTIONS: ${{ matrix.os == 'windows' && '-Xmx8g' || '' }}
     defaults:
       run:
         shell: bash
