@@ -9,16 +9,13 @@ import com.codename1.xml.Element;
 import java.io.IOException;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Random;
 
 /**
  * Word "Encrypt with Password": ECMA-376 / MS-OFFCRYPTO Agile Encryption (AES-256-CBC, SHA-512, spinCount 100000)
  * in pure Java, because the ParparVM target has no javax.crypto, java.security, java.util.zip or regex.
  *
- * <p>Randomness: the target has no guaranteed SecureRandom, so salts and keys come from a java.util.Random seeded
- * from System.nanoTime() xor currentTimeMillis xor an identity hash and a process-wide counter, and every output
- * block is mixed through SHA-512 of (seed material, counter). This is weaker than an OS entropy source; the
- * confidentiality of a document still rests mainly on the password.
+ * <p>Randomness: keys, salts and IVs come from the platform CSPRNG (com.codename1.security.SecureRandom);
+ * encryption fails on a platform that has none.
  *
  * <p>Reading supports AES (128/192/256) with CBC chaining and SHA-512 password key encryptors, which is what Word
  * 2013+ writes. Older SHA-1 agile files and the legacy RC4/standard encryption are rejected with an IOException.
@@ -52,7 +49,6 @@ public final class OfficeCrypto {
   private static final byte[] BK_HMAC_VALUE = bytes(0xa0, 0x67, 0x7f, 0x02, 0xb2, 0x2c, 0x84, 0x33);
   private static final String NS_ENC = "http://schemas.microsoft.com/office/2006/encryption";
   private static final String NS_PWD = "http://schemas.microsoft.com/office/2006/keyEncryptor/password";
-  private static int counter;
 
   private OfficeCrypto() {}
 
@@ -130,23 +126,18 @@ public final class OfficeCrypto {
     return bytes(v & 0xff, (v >> 8) & 0xff, (v >> 16) & 0xff, (v >> 24) & 0xff);
   }
 
+  /**
+   * Key material, salts and IVs from the platform CSPRNG. A platform without one fails the
+   * save rather than encrypting with predictable bytes.
+   */
   private static byte[] random(int n) {
-    int tag;
-    synchronized (OfficeCrypto.class) {
-      tag = ++counter;
+    try {
+      return com.codename1.security.SecureRandom.bytes(n);
+    } catch (RuntimeException unavailable) {
+      throw new IllegalStateException("Secure random numbers are unavailable on this platform", unavailable);
     }
-    long seed = System.nanoTime() ^ System.currentTimeMillis() ^ System.identityHashCode(new Object()) ^ ((long) tag << 32);
-    var r = new Random(seed);
-    byte[] pool = new byte[64];
-    r.nextBytes(pool);
-    byte[] out = new byte[n];
-    int pos = 0;
-    for (int block = 0; pos < n; block++) {
-      byte[] mix = sha512(pool, le32(block + r.nextInt()));
-      for (int i = 0; i < mix.length && pos < n; i++) out[pos++] = mix[i];
-    }
-    return out;
   }
+
 
   // ------------------------------------------------------------- encrypt
 
