@@ -590,13 +590,13 @@ public final class LayoutEngine {
                     == Character.isLowerCase(text.charAt(b)))
             && s.equals(st[b])) b++;
         var chunk = text.substring(a, b);
+        var display = p.text.displayAt(a, chunk);
         float w =
             s.characters.hidden
                 ? 0
                 : "\t".equals(chunk)
                     ? tabWidth(p, text, a, pos, start == 0 ? p.format.firstIndent : 0)
-                    : metrics.width(p.text.displayAt(a, chunk), s);
-        var display = p.text.displayAt(a, chunk);
+                    : metrics.width(display, s);
         if (hyphenated && b == end) {
           display += "-";
           w += metrics.width("-", s);

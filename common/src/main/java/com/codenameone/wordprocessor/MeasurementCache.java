@@ -21,6 +21,13 @@ final class MeasurementCache implements LayoutEngine.Metrics {
             return size() > 2048;
           }
         };
+    /**
+     * Word widths for {@link #words}, open-addressed and probed by the characters in place so a
+     * hit allocates nothing. Cleared when half full, which bounds it like the LRUs.
+     */
+    String[] wordKeys;
+    float[] wordWidths;
+    int wordCount;
     /** Line-length chunks, kept apart so they cannot evict the cluster widths. */
     final Map<String, Float> runs =
         new LinkedHashMap<>(64, .75f, true) {
@@ -86,10 +93,40 @@ final class MeasurementCache implements LayoutEngine.Metrics {
       while (end < n && text.charAt(end) == ' ') end++;
       while (end < n && text.charAt(end) != ' ') end++;
       while (end < n && text.charAt(end) == ' ') end++;
-      total += cached(start == 0 && end == n ? text : text.substring(start, end), style, v);
+      total += word(text, start, end, style, v);
       start = end;
     }
     return total;
+  }
+
+  private static final int WORDS = 4096;
+
+  private float word(String text, int start, int end, TextStyle style, Values v) {
+    if (v.wordKeys == null) {
+      v.wordKeys = new String[WORDS];
+      v.wordWidths = new float[WORDS];
+    }
+    int hash = 0, length = end - start;
+    for (int i = start; i < end; i++) hash = 31 * hash + text.charAt(i);
+    int slot = (hash ^ (hash >>> 16)) & (WORDS - 1);
+    for (String key; (key = v.wordKeys[slot]) != null; slot = (slot + 1) & (WORDS - 1))
+      if (key.length() == length && same(key, text, start)) return v.wordWidths[slot];
+    String word = start == 0 && end == text.length() ? text : text.substring(start, end);
+    float width = CharacterMetrics.width(delegate, word, style);
+    if (v.wordCount >= WORDS / 2) {
+      java.util.Arrays.fill(v.wordKeys, null);
+      v.wordCount = 0;
+      slot = (hash ^ (hash >>> 16)) & (WORDS - 1);
+    }
+    v.wordKeys[slot] = word;
+    v.wordWidths[slot] = width;
+    v.wordCount++;
+    return width;
+  }
+
+  private static boolean same(String key, String text, int start) {
+    for (int i = 0, n = key.length(); i < n; i++) if (key.charAt(i) != text.charAt(start + i)) return false;
+    return true;
   }
 
   /** Width of one ASCII character c (whose string is text), cached per style. */
