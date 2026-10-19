@@ -15,6 +15,30 @@ public class Main extends com.codename1.system.Lifecycle {
     // The native stub constructs Main before Display.init(); create UI only here.
     app = new WordProcessor();
     app.init(context);
+    final NativeDesktop menu = NativeLookup.create(NativeDesktop.class);
+    if (menu != null && menu.isSupported()) {
+      NativeMenuCallback.listener = app::menuSelected;
+      app.setMenuBar(
+          new WordProcessor.MenuBar() {
+            public boolean install(String spec) {
+              // Keeps the native callback's Java entry point in the translated build.
+              if (spec.isEmpty()) NativeMenuCallback.fire(0);
+              return menu.install(spec);
+            }
+
+            public void check(int id, boolean on) {
+              menu.check(id, on);
+            }
+
+            public void about(String version, String credits) {
+              menu.about(version, credits);
+            }
+
+            public void fitWindow(int widthPercent, int heightPercent) {
+              menu.fitWindow(widthPercent, heightPercent);
+            }
+          });
+    }
     app.setFiles(
         new WordProcessor.Files() {
           public void open(WordProcessor.OpenCallback callback) {

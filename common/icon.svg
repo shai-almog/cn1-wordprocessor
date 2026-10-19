@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#5b7cfa"/>
+      <stop offset="1" stop-color="#2a3fb0"/>
+    </linearGradient>
+    <linearGradient id="paper" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#e9edf8"/>
+    </linearGradient>
+    <linearGradient id="nib" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffd66b"/>
+      <stop offset="1" stop-color="#f29a1f"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="14"/>
+      <feOffset dy="12"/>
+      <feComponentTransfer><feFuncA type="linear" slope="0.35"/></feComponentTransfer>
+      <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <!-- macOS icon grid: 824px squircle centred in 1024 -->
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="url(#bg)" filter="url(#shadow)"/>
+  <!-- page -->
+  <g filter="url(#shadow)">
+    <path d="M290 230 H630 L740 340 V800 Q740 820 720 820 H290 Q270 820 270 800 V250 Q270 230 290 230 Z" fill="url(#paper)"/>
+    <path d="M630 230 V320 Q630 340 650 340 H740 Z" fill="#c9d2ee"/>
+  </g>
+  <!-- text -->
+  <rect x="330" y="300" width="230" height="34" rx="17" fill="#3b5bdb"/>
+  <rect x="330" y="380" width="350" height="20" rx="10" fill="#b7bfd6"/>
+  <rect x="330" y="430" width="350" height="20" rx="10" fill="#b7bfd6"/>
+  <rect x="330" y="480" width="300" height="20" rx="10" fill="#b7bfd6"/>
+  <rect x="330" y="560" width="350" height="20" rx="10" fill="#b7bfd6"/>
+  <rect x="330" y="610" width="220" height="20" rx="10" fill="#b7bfd6"/>
+  <!-- pen nib writing the last line -->
+  <g transform="translate(671 514) rotate(-135)" filter="url(#shadow)">
+    <path d="M0 -150 L48 -60 L30 40 Q0 70 -30 40 L-48 -60 Z" fill="url(#nib)"/>
+    <path d="M0 -150 L0 10" stroke="#8a4f00" stroke-width="7" stroke-linecap="round"/>
+    <circle cx="0" cy="-25" r="13" fill="#8a4f00"/>
+    <rect x="-56" y="40" width="112" height="150" rx="22" fill="#1f2a5c"/>
+    <rect x="-56" y="40" width="112" height="26" rx="10" fill="#ffd66b"/>
+  </g>
+</svg>

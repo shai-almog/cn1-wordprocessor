@@ -40,6 +40,8 @@ public final class AppOptions {
     d.put("showComments", "true");
     d.put("hideInk", "false");
     d.put("officeTheme", "system");
+    // The page goes dark with the app in Dark Mode, as in Word; View > Dark Page overrides it.
+    d.put("darkPage", "true");
     DEFAULTS = Collections.unmodifiableMap(d);
   }
 

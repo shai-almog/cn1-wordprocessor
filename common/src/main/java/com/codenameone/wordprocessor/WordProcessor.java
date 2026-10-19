@@ -210,6 +210,7 @@ public class WordProcessor {
     }
     var recovered = recovery.recover();
     source = recovery.recoveredSource();
+    recovered = offerRecovery(recovered);
     session = new Session(recovered == null ? Document.empty().title("Document1") : recovered);
     if (recovered == null) fileDocument = session.document();
     form =
@@ -265,6 +266,7 @@ public class WordProcessor {
     }
     ribbon.actions(OfficeTheme.row(commentsButton, editingButton, share));
     if (Display.getInstance().isDesktop()) form.setToolbar(new OfficeTitleBar(titleBar()));
+    MacScrolling.install(form);
     form.add(BorderLayout.NORTH, ribbon);
     workspace = new Container(new BorderLayout());
     OfficeTheme.surface(workspace, 0xe7e7e7);
@@ -395,8 +397,8 @@ public class WordProcessor {
     form.add(BorderLayout.SOUTH, footer);
     updateOutline();
     updateStatus();
-    installMenu();
     installCustomKeys();
+    installMenu();
     form.addSizeChangedListener(
         e ->
             Display.getInstance()
@@ -424,12 +426,19 @@ public class WordProcessor {
     }
     configureMobileViewport();
     OfficeTheme.refreshAppearance();
+    applyDarkPage();
+    if (pendingRecovery != null) showRecoveryBar();
     OfficeTheme.applyAppearance(form);
     form.show();
+    fitWindowToScreen();
     // No appearance-change callback exists, so follow the OS setting with a cheap poll.
     new UITimer(
             () -> {
               boolean changed = OfficeTheme.refreshAppearance();
+              if (changed) {
+                darkPageOverride = null;
+                applyDarkPage();
+              }
               if (!changed && !OfficeTheme.mapped()) return;
               // While mapped, also catch chrome created or restyled since the last pass.
               OfficeTheme.applyAppearance(form);
@@ -449,6 +458,72 @@ public class WordProcessor {
               }
             });
     new UITimer(this::autosave).schedule(1000, true, form);
+  }
+
+  private Document pendingRecovery;
+  private Docx.Opened pendingRecoverySource;
+  private Container recoveryBar;
+
+  /**
+   * Unsaved work from a session that ended without saving is offered on a blank document, as
+   * Word's Document Recovery does, rather than opened in place of what the user asked for.
+   */
+  private Document offerRecovery(Document recovered) {
+    if (recovered == null) return null;
+    pendingRecovery = recovered;
+    pendingRecoverySource = source;
+    source = null;
+    return null;
+  }
+
+  private void showRecoveryBar() {
+    recoveryBar = new Container(new BorderLayout());
+    OfficeTheme.surface(recoveryBar, 0xfff4ce);
+    OfficeTheme.space(recoveryBar, 6, 6, 12, 8);
+    recoveryBar.getAllStyles().setBorder(
+        Border.createCompoundBorder(null, Border.createLineBorder(1, 0xe8d48a), null, null));
+    var icon = new Label();
+    icon.setIcon(OfficeTheme.glyphImage(FontImage.MATERIAL_RESTORE, 16, 0x8a6d00));
+    var text = OfficeTheme.label(
+        "RECOVERED  Unsaved changes to \u201c" + pendingRecovery.title
+            + "\u201d from your last session can be restored.", 12, OfficeTheme.INK);
+    OfficeTheme.space(text, 0, 0, 8, 8);
+    var restore = button("Restore", () -> resolveRecovery(true));
+    OfficeTheme.framed(restore);
+    var discard = button("Discard", () -> resolveRecovery(false));
+    OfficeTheme.button(discard);
+    recoveryBar.add(BorderLayout.WEST, icon);
+    recoveryBar.add(BorderLayout.CENTER, text);
+    recoveryBar.add(BorderLayout.EAST, OfficeTheme.row(restore, discard));
+    workspace.add(BorderLayout.NORTH, recoveryBar);
+  }
+
+  private void resolveRecovery(boolean restore) {
+    var document = pendingRecovery;
+    var original = pendingRecoverySource;
+    pendingRecovery = null;
+    pendingRecoverySource = null;
+    if (recoveryBar != null) {
+      recoveryBar.remove();
+      recoveryBar = null;
+      workspace.revalidate();
+    }
+    if (document == null) return;
+    if (!restore) {
+      try {
+        recovery.forget();
+      } catch (IOException ex) {
+        Log.e(ex);
+      }
+      return;
+    }
+    replaceAfterSaving(() -> {
+      forgetFile();
+      session.loadDocument(document);
+      source = original;
+      editor.resetScroll();
+      edited();
+    });
   }
 
   private void configureMobileViewport() {
@@ -744,6 +819,7 @@ public class WordProcessor {
           }
         };
     if (OfficeTheme.mobile()) dialog.setFormBottomPaddingEditingMode(true);
+    MacScrolling.install(dialog);
     // The shared light dialog surface must also override a native theme's title color.
     dialog.getTitleComponent().getAllStyles().setFgColor(OfficeTheme.INK);
     var frame = dialog.getDialogComponent();
@@ -3670,8 +3746,10 @@ public class WordProcessor {
       if (editor.isReflow() != on) editor.setReflow(on);
       zoomTo(editor.getZoom());
     });
-    view("view.darkMode", "Switch the page between light and dark", "value?:boolean", a ->
-        editor.setDarkPage(Commands.flag(a, "value", !editor.isDarkPage())));
+    view("view.darkMode", "Switch the page between light and dark", "value?:boolean", a -> {
+      darkPageOverride = Boolean.valueOf(Commands.flag(a, "value", !editor.isDarkPage()));
+      applyDarkPage();
+    });
     view("view.gridlines", "Show or hide 18pt gridlines", "value?:boolean", a ->
         editor.setGridlines(Commands.flag(a, "value", !editor.isGridlines())));
     view("table.viewGridlines", "Show or hide dotted table gridlines on borderless cell edges", "value?:boolean", a ->
@@ -3918,21 +3996,31 @@ public class WordProcessor {
 
   private final java.util.List<String> installedKeys = new ArrayList<>();
 
+  /** Keyboard shortcuts from Customize Keyboard live in Tools > Custom Shortcuts. */
   private void installCustomKeys() {
-    for (String binding : optionList("keys.custom")) {
-      if (installedKeys.contains(binding)) continue;
-      installedKeys.add(binding);
+    var bindings = optionList("keys.custom");
+    if (bindings.equals(installedKeys)) return;
+    installedKeys.clear();
+    installedKeys.addAll(bindings);
+    if (menus != null) installMenu();
+  }
+
+  private void customShortcuts(AppMenus m) {
+    if (installedKeys.isEmpty()) return;
+    m.submenu("Custom Shortcuts");
+    for (String binding : installedKeys) {
       int eq = binding.indexOf('=');
       var keys = binding.substring(0, eq);
       final var id = binding.substring(eq + 1);
-      int mods = (keys.indexOf("ctrl+") >= 0 ? Command.DESKTOP_SHORTCUT_MODIFIER_PRIMARY : 0)
-          | (keys.indexOf("shift+") >= 0 ? Command.DESKTOP_SHORTCUT_MODIFIER_SHIFT : 0)
-          | (keys.indexOf("alt+") >= 0 ? Command.DESKTOP_SHORTCUT_MODIFIER_ALT : 0);
-      menu("Custom", keys + "  " + id, keys.charAt(keys.length() - 1), mods, () -> {
+      int mods = (keys.indexOf("ctrl+") >= 0 ? AppMenus.CMD : 0)
+          | (keys.indexOf("shift+") >= 0 ? AppMenus.SHIFT : 0)
+          | (keys.indexOf("alt+") >= 0 ? AppMenus.ALT : 0);
+      m.item(id, keys.charAt(keys.length() - 1), mods, menuAction(keys + "  " + id, () -> {
         // A later reassignment or removal disables this binding.
         if (optionList("keys.custom").contains(binding)) run(id, new LinkedHashMap<>());
-      });
+      }));
     }
+    m.end();
   }
 
   /** Line- and screen-relative caret movement needs the editor's layout, so it lives here. */
@@ -4283,17 +4371,23 @@ public class WordProcessor {
     var panel = new Container(new BorderLayout());
     var rail = new Container(OfficeTheme.mobile() ? BoxLayout.x() : BoxLayout.y());
     rail.setScrollableX(OfficeTheme.mobile());
-    OfficeTheme.surface(rail, OfficeTheme.BLUE);
-    OfficeTheme.space(rail, 12, 12, 12, 12);
-    if (!OfficeTheme.mobile()) rail.setPreferredW(OfficeTheme.px(180));
+    OfficeTheme.surface(rail, OfficeTheme.STRIP);
+    OfficeTheme.space(rail, 12, 12, 8, 8);
+    if (!OfficeTheme.mobile()) {
+      rail.setPreferredW(OfficeTheme.px(190));
+      rail.getAllStyles().setBorder(
+          Border.createCompoundBorder(null, null, null, Border.createLineBorder(1, OfficeTheme.BORDER)));
+    }
     var page = new Container(new BorderLayout());
-    OfficeTheme.surface(page, 0xf8f8f8);
+    OfficeTheme.surface(page, OfficeTheme.PAPER);
     OfficeTheme.space(page, 12, 12, OfficeTheme.mobile() ? 12 : 32, 12);
     page.setScrollableY(true);
     String[] labels = {
-      "\u2039 Back to document", "New", "Open", "Info", "Save", "Save As", "Print", "Export"
+      "\u2039 Back", "New", "Open", "Info", "Save", "Save As", "Print", "Export"
     };
+    var sections = new ArrayList<Button>();
     for (String label : labels) {
+      final Button[] self = new Button[1];
       var item =
           button(
               label,
@@ -4322,19 +4416,25 @@ public class WordProcessor {
                   saveDocument(false);
                   return;
                 }
+                for (Button b : sections) OfficeTheme.checked(b, b == self[0]);
                 backstagePage(page, label);
+                OfficeTheme.applyAppearance(rail);
               });
-      OfficeTheme.space(item, 12, 12, 10, 10);
-      item.getAllStyles().setFgColor(0xffffff);
-      item.getAllStyles().setFont(OfficeTheme.font(16, false));
+      self[0] = item;
+      sections.add(item);
+      OfficeTheme.space(item, 9, 9, 12, 12);
+      item.getAllStyles().setFont(OfficeTheme.font(14, "New".equals(label)));
       item.setAlignment(Component.LEFT);
+      if ("New".equals(label)) OfficeTheme.checked(item, true);
       rail.add(item);
     }
     panel.add(OfficeTheme.mobile() ? BorderLayout.NORTH : BorderLayout.WEST, rail);
     panel.add(BorderLayout.CENTER, page);
+    backstagePage(page, "New");
+    // Colored for the active appearance before it is attached: the first frame is final.
+    OfficeTheme.applyAppearance(panel);
     form.removeAll();
     form.add(BorderLayout.CENTER, panel);
-    backstagePage(page, "New");
     form.revalidate();
   }
 
@@ -4385,8 +4485,7 @@ public class WordProcessor {
                       });
                 });
         preview.setText("");
-        preview.setIcon(
-            templatePreview("Blank document".equals(name) ? Document.empty() : sample()));
+        preview.setIcon(templatePreview("Blank document".equals(name)));
         preview.setAccessibilityText("Create " + name);
         preview.setPreferredSize(
             new com.codename1.ui.geom.Dimension(OfficeTheme.px(150), OfficeTheme.px(190)));
@@ -4443,7 +4542,20 @@ public class WordProcessor {
                 }));
     }
     page.add(BorderLayout.CENTER, content);
+    OfficeTheme.applyAppearance(page);
     page.revalidate();
+  }
+
+  private Image blankPreview, samplePreview;
+
+  /** Template thumbnails are laid out once; opening the File tab again reuses them. */
+  private Image templatePreview(boolean blank) {
+    if (blank) {
+      if (blankPreview == null) blankPreview = templatePreview(Document.empty());
+      return blankPreview;
+    }
+    if (samplePreview == null) samplePreview = templatePreview(sample());
+    return samplePreview;
   }
 
   private Image templatePreview(Document document) {
@@ -4612,126 +4724,548 @@ public class WordProcessor {
         v -> run("document.title", Json.object("title", v)));
   }
 
-  private void menu(String group, String name, char key, int modifiers, Runnable action) {
-    uiActions.put(name, action);
-    var command =
-        new Command(name) {
-          @Override
-          public void actionPerformed(com.codename1.ui.events.ActionEvent event) {
-            editor.finishComposing();
-            safe(action);
-          }
-        };
-    command.setDesktopMenu(group);
-    if (key != 0) command.setDesktopShortcut(key, modifiers);
-    form.getToolbar().addCommandToSideMenu(command);
+  /** Platform menu bar with the full structure (the Mac's AppKit menu), set by the launcher. */
+  public interface MenuBar {
+    boolean install(String spec);
+
+    void check(int id, boolean on);
+
+    void about(String version, String credits);
+
+    void fitWindow(int widthPercent, int heightPercent);
   }
 
+  private MenuBar menuBar;
+
+  /**
+   * The first launch opens a window sized for writing (most of the screen, centered) rather than
+   * the port's small default; afterwards the window keeps the frame the user gives it.
+   */
+  private void fitWindowToScreen() {
+    if (menuBar == null || com.codename1.io.Preferences.get("wordprocessor.windowFitted", false)) return;
+    com.codename1.io.Preferences.set("wordprocessor.windowFitted", true);
+    menuBar.fitWindow(80, 90);
+  }
+  private AppMenus menus;
+
+  public void setMenuBar(MenuBar menuBar) {
+    this.menuBar = menuBar;
+  }
+
+  /** A native menu selection; may arrive on any thread. */
+  public void menuSelected(int id) {
+    Display.getInstance().callSerially(() -> {
+      if (menus != null) menus.fire(id);
+    });
+  }
+
+  private Runnable menuAction(String name, Runnable action) {
+    uiActions.put(name, action);
+    return () -> {
+      if (backstage) closeBackstage();
+      editor.finishComposing();
+      safe(action);
+      if (menus != null) menus.sync();
+    };
+  }
+
+  private Runnable cmd(String id) {
+    return () -> runPrompted(id);
+  }
+
+  private Runnable viewCmd(String id) {
+    return () -> run(id, Json.object());
+  }
+
+  /**
+   * The menu bar, following Word for Mac: application, File, Edit, View, Insert, Format, Tools,
+   * Table, Window and Help. The Mac gets it natively with submenus and check marks; other desktops
+   * get the same items through the framework's menu bridge. Phones and tablets use the ribbon.
+   */
   private void installMenu() {
-    int primary = Command.DESKTOP_SHORTCUT_MODIFIER_PRIMARY,
-        shift = primary | Command.DESKTOP_SHORTCUT_MODIFIER_SHIFT;
-    menu("File", "New", 'n', primary, this::newDocument);
-    menu("File", "Open\u2026", 'o', primary, this::open);
-    menu("File", "Save", 's', primary, () -> saveDocument(false));
-    menu("File", "Save As\u2026", 's', shift, () -> saveDocument(true));
-    menu("File", "Print\u2026", 'p', primary, this::printDocument);
-    menu("File", "Export Word Document\u2026", (char) 0, 0, () -> save("docx"));
-    menu("File", "Export PDF\u2026", (char) 0, 0, () -> save("pdf"));
-    menu("File", "Rename\u2026", (char) 0, 0, this::rename);
-    // Undo/Redo/Cut/Copy/Paste/Select All are supplied by the native Mac Edit menu
-    // and reach this editor through TextInputClient. Do not add duplicate items.
-    menu("Edit", "Find and Replace\u2026", 'f', primary, this::find);
-    menu("Insert", "Comment\u2026", (char) 0, 0, this::newComment);
-    menu("Tools", "Comments\u2026", (char) 0, 0, this::comments);
-    menu(
-        "Tools",
-        "Track Changes",
-        'e',
-        shift,
-        () -> {
+    if (OfficeTheme.mobile()) return;
+    final int cmd = AppMenus.CMD, shift = AppMenus.CMD | AppMenus.SHIFT, alt = AppMenus.CMD | AppMenus.ALT;
+    var m = new AppMenus();
+    m.menu(APP_NAME)
+        .item("About " + APP_NAME, menuAction("About", this::about))
+        .separator()
+        .item("Settings…", ',', cmd, menuAction("Settings", this::preferences))
+        .separator()
+        .services()
+        .separator()
+        .system("Hide " + APP_NAME, "hide:", 'h', cmd, null)
+        .system("Hide Others", "hideOtherApplications:", 'h', alt, null)
+        .system("Show All", "unhideAllApplications:", (char) 0, 0, null)
+        .separator()
+        .system("Quit " + APP_NAME, "terminate:", 'q', cmd, () -> Display.getInstance().exitApplication());
+    m.menu("File")
+        .item("New Document", 'n', cmd, menuAction("New Document", this::newDocument))
+        .item("New from Template…", 'p', shift, menuAction("New from Template", cmd("file.newFromTemplate")))
+        .item("Open…", 'o', cmd, menuAction("Open", this::open))
+        .separator()
+        .item("Close", 'w', cmd, menuAction("Close", viewCmd("file.close")))
+        .item("Save", 's', cmd, menuAction("Save", () -> saveDocument(false)))
+        .item("Save As…", 's', shift, menuAction("Save As", () -> saveDocument(true)))
+        .item("Save as Template…", menuAction("Save as Template", cmd("file.saveTemplate")))
+        .item("Browse Version History", menuAction("Version History", cmd("file.versions")))
+        .separator()
+        .submenu("Export")
+        .item("PDF…", menuAction("Export PDF", () -> save("pdf")))
+        .item("Word Document (.docx)…", menuAction("Export Word Document", () -> save("docx")))
+        .item("Rich Text Format (.rtf)…", menuAction("Export Rich Text", () -> save("rtf")))
+        .item("Web Page (.html)…", menuAction("Export Web Page", () -> save("html")))
+        .item("Markdown (.md)…", menuAction("Export Markdown", () -> save("md")))
+        .item("Plain Text (.txt)…", menuAction("Export Plain Text", () -> save("txt")))
+        .end()
+        .item("Share…", menuAction("Share", this::share))
+        .separator()
+        .item("Protect Document…", menuAction("Protect Document", this::protectDialog))
+        .item("Inspect Document…", menuAction("Inspect Document", this::inspectDialog))
+        .item("Check Accessibility", menuAction("Check Accessibility", () -> report("Accessibility", "file.accessibility")))
+        .separator()
+        .item("Page Setup…", menuAction("Page Setup", this::margins))
+        .item("Print…", 'p', cmd, menuAction("Print", this::printDocument))
+        .separator()
+        .item("Properties…", menuAction("Properties", this::propertiesDialog))
+        .item("Rename…", menuAction("Rename", this::rename));
+    m.menu("Edit")
+        .system("Undo", "undo:", 'z', cmd, () -> run("edit.undo", Json.object()))
+        .system("Redo", "redo:", 'z', shift, () -> run("edit.redo", Json.object()))
+        .item("Undo History…", menuAction("Undo History", this::undoHistory))
+        .separator()
+        .system("Cut", "cut:", 'x', cmd, () -> clipboard("cut"))
+        .system("Copy", "copy:", 'c', cmd, () -> clipboard("copy"))
+        .system("Paste", "paste:", 'v', cmd, () -> clipboard("paste"))
+        .item("Paste Special…", menuAction("Paste Special", this::pasteOptions))
+        .item("Office Clipboard", menuAction("Office Clipboard", this::officeClipboard))
+        .item("Clear Formatting", menuAction("Clear Formatting", this::clearFormatting))
+        .system("Select All", "selectAll:", 'a', cmd, null)
+        .separator()
+        .submenu("Find")
+        .item("Find…", 'f', cmd, menuAction("Find", this::find))
+        .item("Find Next", 'g', cmd, menuAction("Find Next", viewCmd("edit.findNext")))
+        .item("Find Previous", 'g', shift, menuAction("Find Previous", viewCmd("edit.findPrevious")))
+        .item("Replace…", 'h', shift, menuAction("Find and Replace", this::find))
+        .item("Go To…", 'g', alt, menuAction("Go To", cmd("edit.goto")))
+        .end();
+    m.menu("View")
+        .toggle("Draft", () -> editor.isDraft(), menuAction("Draft", viewCmd("view.draft")))
+        .toggle("Web Layout", () -> editor.isReflow() && !editor.isDraft(), menuAction("Web Layout", viewCmd("view.webLayout")))
+        .toggle("Outline", () -> editor.getOutline() != null, menuAction("Outline", viewCmd("view.outline")))
+        .toggle("Print Layout", () -> !editor.isReflow(), menuAction("Print Layout", viewCmd("view.printLayout")))
+        .toggle("Read Mode", () -> editor.isViewOnly(), menuAction("Read Mode", viewCmd("view.readMode")))
+        .toggle("Focus", () -> ribbon.isHidden(), menuAction("Focus", viewCmd("view.focus")))
+        .separator()
+        .toggle("Ruler", () -> !ruler.isHidden(), menuAction("Ruler", viewCmd("view.ruler")))
+        .toggle("Navigation Pane", () -> navigation.getParent() != null, menuAction("Navigation Pane", viewCmd("view.navigationPane")))
+        .toggle("Formatting Marks", '8', cmd, () -> editor.isShowMarks(), menuAction("Formatting Marks", viewCmd("view.marks")))
+        .toggle("Gridlines", () -> editor.isGridlines(), menuAction("Gridlines", viewCmd("view.gridlines")))
+        .separator()
+        .item("Header and Footer", menuAction("Header and Footer", viewCmd("insert.editHeader")))
+        .item("Footnotes", menuAction("Footnotes", this::showNotes))
+        .item("Comments", menuAction("Comments", this::comments))
+        .item("Reviewing Pane", menuAction("Reviewing Pane", this::revisionsPane))
+        .separator()
+        .toggle("Dark Page", () -> editor.isDarkPage(), menuAction("Dark Page", this::toggleDarkPage))
+        .separator()
+        .submenu("Zoom")
+        .item("Zoom In", menuAction("Zoom In", viewCmd("view.zoomIn")))
+        .item("Zoom Out", menuAction("Zoom Out", viewCmd("view.zoomOut")))
+        .item("Actual Size", '0', cmd, menuAction("Actual Size", viewCmd("view.zoom100")))
+        .item("Page Width", menuAction("Page Width", viewCmd("view.pageWidth")))
+        .item("One Page", menuAction("One Page", viewCmd("view.onePage")))
+        .item("Multiple Pages", menuAction("Multiple Pages", viewCmd("view.multiplePages")))
+        .end()
+        .item("Split", menuAction("Split", viewCmd("view.split")));
+    m.menu("Insert")
+        .submenu("Break")
+        .item("Page Break", menuAction("Page Break", viewCmd("insert.pageBreak")))
+        .item("Column Break", menuAction("Column Break", viewCmd("layout.columnBreak")))
+        .item("Section Break…", menuAction("Section Break", this::sectionBreakDialog))
+        .end()
+        .item("Page Numbers…", menuAction("Page Numbers", cmd("insert.pageNumber")))
+        .item("Date and Time…", menuAction("Date and Time", cmd("insert.dateTime")))
+        .item("Field…", menuAction("Field", cmd("insert.field")))
+        .item("Bookmark…", menuAction("Bookmark", this::bookmarkDialog))
+        .separator()
+        .item("Footnote…", menuAction("Footnote", () -> noteDialog(null, "footnote")))
+        .item("Endnote…", menuAction("Endnote", () -> noteDialog(null, "endnote")))
+        .item("Caption…", menuAction("Caption", this::captionDialog))
+        .item("Cross-reference…", menuAction("Cross-reference", this::crossReferenceDialog))
+        .submenu("Index and Tables")
+        .item("Table of Contents…", menuAction("Table of Contents", this::contentsDialog))
+        .item("Table of Figures…", menuAction("Table of Figures", () -> contentsDialog("Figure")))
+        .item("Mark Contents Entry…", menuAction("Mark Contents Entry", this::markContentsDialog))
+        .item("Index…", menuAction("Index", this::indexDialog))
+        .item("Citation…", menuAction("Citation", this::citationDialog))
+        .item("Bibliography…", menuAction("Bibliography", this::bibliographyDialog))
+        .end()
+        .separator()
+        .item("Table…", menuAction("Table", this::insertTable))
+        .item("Quick Tables…", menuAction("Quick Tables", this::quickTables))
+        .item("Picture…", menuAction("Picture", this::insertPicture))
+        .item("Chart…", menuAction("Chart", cmd("insert.chart")))
+        .item("Shape…", menuAction("Shape", cmd("insert.shape")))
+        .item("Text Box", menuAction("Text Box", cmd("insert.textBox")))
+        .item("Equation", menuAction("Equation", cmd("insert.equation")))
+        .item("Symbol…", menuAction("Symbol", cmd("insert.symbol")))
+        .separator()
+        .item("New Comment", 'a', alt, menuAction("New Comment", this::newComment))
+        .item("Link…", 'k', cmd, menuAction("Link", cmd("insert.link")));
+    m.menu("Format")
+        .item("Font…", 'd', cmd, menuAction("Font", this::fontDialog))
+        .item("Paragraph…", 'm', alt, menuAction("Paragraph", this::paragraphDialog))
+        .item("Line Spacing…", menuAction("Line Spacing", this::lineSpacingDialog))
+        .item("Document…", menuAction("Document", this::sectionSettings))
+        .item("Number Format…", menuAction("Number Format", this::chooseNumberFormat))
+        .item("Borders and Shading…", menuAction("Borders and Shading", this::bordersDialog))
+        .item("Columns…", menuAction("Columns", this::columnsDialog))
+        .item("Tabs…", menuAction("Tabs", viewCmd("para.tabs")))
+        .item("Drop Cap…", menuAction("Drop Cap", cmd("insert.dropCap")))
+        .item("Change Case…", menuAction("Change Case", this::changeCase))
+        .item("Footnote and Endnote…", menuAction("Footnote and Endnote", this::noteOptionsDialog))
+        .separator()
+        .submenu("Character")
+        .item("Bold", 'b', cmd, menuAction("Bold", () -> format("bold")))
+        .item("Italic", 'i', cmd, menuAction("Italic", () -> format("italic")))
+        .item("Underline", 'u', cmd, menuAction("Underline", () -> format("underline")))
+        .item("Strikethrough", 'x', shift, menuAction("Strikethrough", () -> format("strike")))
+        .item("Superscript", '=', shift, menuAction("Superscript", viewCmd("format.superscript")))
+        .item("Subscript", '=', cmd, menuAction("Subscript", viewCmd("format.subscript")))
+        .end()
+        .submenu("Style")
+        .item("Normal", 'n', alt, menuAction("Normal", () -> heading(0)))
+        .item("Heading 1", '1', alt, menuAction("Heading 1", () -> heading(1)))
+        .item("Heading 2", '2', alt, menuAction("Heading 2", () -> heading(2)))
+        .item("Heading 3", '3', alt, menuAction("Heading 3", () -> heading(3)))
+        .separator()
+        .item("Styles…", menuAction("Styles", this::moreStyles))
+        .end()
+        .item("Theme…", menuAction("Theme", cmd("design.theme")))
+        .item("Keep with Next", menuAction("Keep with Next", () -> paragraph(
+            "keepNext", String.valueOf(!session.editingDocument().paragraph(session.selection().block).keepNext))))
+        .item("Restart Numbering…", menuAction("Restart Numbering",
+            () -> prompt("Start at", "1", v -> paragraph("listStart", v))));
+    m.menu("Tools")
+        .item("Spelling and Grammar…", 'l', alt, menuAction("Spelling and Grammar", cmd("review.spelling")))
+        .item("Thesaurus…", menuAction("Thesaurus", cmd("review.thesaurus")))
+        .item("Hyphenation…", menuAction("Hyphenation", cmd("layout.hyphenation")))
+        .item("Language…", menuAction("Language", cmd("review.language")))
+        .item("Word Count…", 'g', shift | AppMenus.ALT, menuAction("Word Count",
+            () -> showText("Word count", statistics.words(session.document()) + " words")))
+        .item("AutoCorrect Options…", menuAction("AutoCorrect Options", () -> preferences("AutoCorrect")))
+        .separator()
+        .toggle("Track Changes", 'e', shift, () -> session.document().trackChanges, menuAction("Track Changes", () -> {
           session.trackChanges(!session.document().trackChanges);
           edited();
-        });
-    menu("Tools", "Reviewing Pane", (char) 0, 0, this::revisionsPane);
-    menu("Tools", "Accept Change", (char) 0, 0, () -> revisionAction(true, false));
-    menu("Tools", "Reject Change", (char) 0, 0, () -> revisionAction(false, false));
-    menu("Insert", "Table\u2026", (char) 0, 0, this::insertTable);
-    menu("Insert", "Quick Tables\u2026", (char) 0, 0, this::quickTables);
-    menu("Insert", "Picture\u2026", (char) 0, 0, this::insertPicture);
-    menu("Insert", "Mark Contents Entry\u2026", (char) 0, 0, this::markContentsDialog);
-    menu("Insert", "Table of Contents\u2026", (char) 0, 0, this::contentsDialog);
-    menu("Insert", "Table of Figures\u2026", (char) 0, 0, () -> contentsDialog("Figure"));
-    menu("Insert", "Footnote\u2026", (char) 0, 0, () -> noteDialog(null, "footnote"));
-    menu("Insert", "Endnote\u2026", (char) 0, 0, () -> noteDialog(null, "endnote"));
-    menu("Insert", "Show Notes\u2026", (char) 0, 0, this::showNotes);
-    menu("Format", "Footnote and Endnote\u2026", (char) 0, 0, this::noteOptionsDialog);
-    menu("Insert", "Caption\u2026", (char) 0, 0, this::captionDialog);
-    menu("Insert", "Bookmark\u2026", (char) 0, 0, this::bookmarkDialog);
-    menu("Insert", "Cross-reference\u2026", (char) 0, 0, this::crossReferenceDialog);
-    menu("Format", "Styles\u2026", (char) 0, 0, this::moreStyles);
-    menu("Format", "Table layout\u2026", (char) 0, 0, this::tableLayout);
-    menu(
-        "Insert",
-        "Page Break",
-        (char) 0,
-        0,
-        () -> {
-          session.replace("\n");
-          paragraph("pageBreak", "true");
-        });
-    menu("Format", "Bold", 'b', primary, () -> format("bold"));
-    menu("Format", "Italic", 'i', primary, () -> format("italic"));
-    menu("Format", "Underline", 'u', primary, () -> format("underline"));
-    menu("Format", "Normal", (char) 0, 0, () -> heading(0));
-    menu("Format", "Font\u2026", (char) 0, 0, this::fontDialog);
-    menu("Format", "Paragraph\u2026", (char) 0, 0, this::paragraphDialog);
-    menu("Format", "Heading 1", (char) 0, 0, () -> heading(1));
-    menu("Format", "Heading 2", (char) 0, 0, () -> heading(2));
-    menu(
-        "Format",
-        "Keep with Next",
-        (char) 0,
-        0,
-        () ->
-            paragraph(
-                "keepNext",
-                String.valueOf(
-                    !session.editingDocument().paragraph(session.selection().block).keepNext)));
-    menu(
-        "Format",
-        "Restart Numbering\u2026",
-        (char) 0,
-        0,
-        () -> prompt("Start at", "1", v -> paragraph("listStart", v)));
-    menu("Format", "Number Format\u2026", (char) 0, 0, this::chooseNumberFormat);
-    menu(
-        "View",
-        "Actual Size",
-        '0',
-        primary,
-        () -> {
-          editor.setZoom(1);
-          updateStatus();
-          ruler.repaint();
-        });
-    menu(
-        "View",
-        "Page Width",
-        (char) 0,
-        0,
-        () -> {
-          editor.fitWidth();
-          updateStatus();
-          ruler.repaint();
-        });
-    menu(
-        "Tools",
-        "Word Count",
-        (char) 0,
-        0,
-        () -> showText("Word count", statistics.words(session.document()) + " words"));
-    menu("Tools", "Commands\u2026", (char) 0, 0, this::commandDialog);
+        }))
+        .item("Accept Change", menuAction("Accept Change", () -> revisionAction(true, false)))
+        .item("Reject Change", menuAction("Reject Change", () -> revisionAction(false, false)))
+        .item("Change Tracking Options…", menuAction("Change Tracking Options", this::trackingOptions))
+        .item("Compare Documents…", menuAction("Compare Documents", this::compareDialog))
+        .separator()
+        .item("Mail Merge…", menuAction("Mail Merge", this::mergeStartDialog))
+        .item("Envelopes…", menuAction("Envelopes", this::envelopeDialog))
+        .item("Labels…", menuAction("Labels", this::labelsDialog))
+        .separator()
+        .item("Macros…", menuAction("Macros", this::macroDialog))
+        .item("Commands…", menuAction("Commands", this::commandDialog))
+        .item("Customize Keyboard…", menuAction("Customize Keyboard", this::customizeKeyboardDialog));
+    m.menu("Table")
+        .item("Insert Table…", menuAction("Insert Table", this::insertTable))
+        .item("Quick Tables…", menuAction("Quick Tables", this::quickTables))
+        .item("Insert Row Below", menuAction("Insert Row Below", viewCmd("table.insertRowBelow")))
+        .submenu("Delete")
+        .item("Rows", menuAction("Delete Rows", viewCmd("table.deleteRow")))
+        .item("Columns", menuAction("Delete Columns", viewCmd("table.deleteColumn")))
+        .item("Table", menuAction("Delete Table", viewCmd("table.deleteTable")))
+        .end()
+        .item("Select Cells…", menuAction("Select Cells", this::selectCellRange))
+        .separator()
+        .item("Merge Cells", menuAction("Merge Cells", viewCmd("table.mergeSelected")))
+        .item("Split Cells…", menuAction("Split Cells", this::splitCells))
+        .item("Split Table", menuAction("Split Table", viewCmd("table.splitTable")))
+        .separator()
+        .item("Sort…", menuAction("Sort", cmd("table.sort")))
+        .item("Formula…", menuAction("Formula", this::tableFormula))
+        .submenu("Convert")
+        .item("Text to Table", menuAction("Text to Table", cmd("table.fromText")))
+        .item("Table to Text", menuAction("Table to Text", cmd("table.toText")))
+        .end()
+        .toggle("Gridlines", () -> editor.isTableGridlines(), menuAction("Table Gridlines", viewCmd("table.viewGridlines")))
+        .separator()
+        .item("Table Properties…", menuAction("Table Properties", this::tableLayout));
+    m.menu("Window")
+        .system("Minimize", "performMiniaturize:", 'm', cmd, null)
+        .system("Zoom", "performZoom:", (char) 0, 0, null)
+        .separator()
+        .item("New Window", menuAction("New Window", viewCmd("view.newWindow")))
+        .separator()
+        .system("Bring All to Front", "arrangeInFront:", (char) 0, 0, null);
+    m.menu("Help")
+        .item("Search Commands…", menuAction("Search Commands", this::searchCommands))
+        .item("Keyboard Shortcuts…", menuAction("Keyboard Shortcuts", this::customizeKeyboardDialog))
+        .separator()
+        .item("Project Website", menuAction("Project Website", () -> Display.getInstance().execute(PROJECT_URL)))
+        .item("Report a Problem", menuAction("Report a Problem", () -> Display.getInstance().execute(PROJECT_URL + "/issues")));
+    menus = m;
+    final MenuBar bar = menuBar;
+    AppMenus.Native mac = bar == null ? null : new AppMenus.Native() {
+      public boolean install(String spec) {
+        return bar.install(spec);
+      }
+
+      public void check(int id, boolean on) {
+        bar.check(id, on);
+      }
+    };
+    if (!m.install(mac)) {
+      var commands = m.commands(r -> r);
+      if (form.getToolbar() instanceof OfficeTitleBar title) title.nativeMenu(commands);
+    }
   }
+
+  /** Session override from View > Dark Page; null follows the appearance and Settings. */
+  private Boolean darkPageOverride;
+
+  private void applyDarkPage() {
+    boolean want =
+        darkPageOverride != null
+            ? darkPageOverride.booleanValue()
+            : OfficeTheme.dark() && AppOptions.flag("darkPage");
+    if (editor.isDarkPage() != want) editor.setDarkPage(want);
+    if (menus != null) menus.sync();
+  }
+
+  private void toggleDarkPage() {
+    darkPageOverride = Boolean.valueOf(!editor.isDarkPage());
+    applyDarkPage();
+  }
+
+  private static final String ABOUT_CREDITS =
+      "<div style=\"font-family:-apple-system,sans-serif;font-size:11px;text-align:center\">"
+          + "A word processor written in Java with Codename One and compiled to native code."
+          + "<br><br>Opens and saves Word (.docx), RTF, HTML, Markdown and plain text, and exports PDF."
+          + "<br><br><a href=\"" + "https://github.com/shai-almog/cn1-wordprocessor" + "\">Project website</a>"
+          + " &middot; <a href=\"" + "https://github.com/shai-almog/cn1-wordprocessor/issues" + "\">Report a problem</a>"
+          + "<br><br>Source Sans 3 and JetBrains Mono fonts: SIL Open Font License 1.1."
+          + "<br>Built with <a href=\"https://www.codenameone.com\">Codename One</a>.</div>";
+
+  /** The platform About panel on the Mac; elsewhere a dialog with the same content. */
+  private void about() {
+    String version = Display.getInstance().getProperty("AppVersion", "1.0");
+    if (menuBar != null) {
+      menuBar.about(version, ABOUT_CREDITS);
+      return;
+    }
+    var body = new Container(BoxLayout.y());
+    var name = OfficeTheme.label(APP_NAME, 20, OfficeTheme.INK);
+    name.getAllStyles().setFont(OfficeTheme.font(20, true));
+    body.add(name);
+    body.add(OfficeTheme.label("Version " + version, 12, OfficeTheme.DIM));
+    var text = new SpanLabelCompat(
+        "A word processor written in Java with Codename One and compiled to native code.\n\n"
+            + "Opens and saves Word (.docx), RTF, HTML, Markdown and plain text, and exports PDF.\n\n"
+            + "Source Sans 3 and JetBrains Mono fonts: SIL Open Font License 1.1.");
+    OfficeTheme.space(text, 12, 12, 0, 0);
+    body.add(text);
+    body.add(OfficeTheme.row(
+        button("Project website", () -> Display.getInstance().execute(PROJECT_URL)),
+        button("Report a problem", () -> Display.getInstance().execute(PROJECT_URL + "/issues"))));
+    showDialog("About " + APP_NAME, body, "Close", null);
+  }
+
+  private void preferences() {
+    preferences("General");
+  }
+
+  /** Settings (Preferences), grouped as Word's: each change applies immediately. */
+  private void preferences(String start) {
+    editor.stopInput();
+    var dialog = officeDialog("Settings");
+    dialog.setLayout(new BorderLayout());
+    var rail = new Container(BoxLayout.y());
+    OfficeTheme.space(rail, 4, 4, 0, 12);
+    var pane = new Container(BoxLayout.y());
+    pane.setScrollableY(true);
+    OfficeTheme.space(pane, 4, 4, 16, 8);
+    pane.setPreferredW(OfficeTheme.px(460));
+    pane.setPreferredH(OfficeTheme.px(400));
+    String[] sections = {"General", "View", "AutoCorrect", "Spelling & Grammar", "Save", "Print", "Ribbon"};
+    var tabs = new ArrayList<Button>();
+    final Runnable[] select = new Runnable[sections.length];
+    for (int i = 0; i < sections.length; i++) {
+      final String section = sections[i];
+      final int index = i;
+      var tab = button(section, () -> select[index].run());
+      tab.setAlignment(Component.LEFT);
+      tab.setPreferredW(OfficeTheme.px(150));
+      tabs.add(tab);
+      rail.add(tab);
+      select[i] = () -> {
+        pane.removeAll();
+        settingsSection(section, pane);
+        for (int t = 0; t < tabs.size(); t++) OfficeTheme.checked(tabs.get(t), t == index);
+        styleDialogBody(pane);
+        OfficeTheme.applyAppearance(dialog);
+        pane.scrollRectToVisible(0, 0, 1, 1, pane);
+        dialog.revalidate();
+      };
+    }
+    dialog.add(BorderLayout.WEST, rail);
+    dialog.add(BorderLayout.CENTER, pane);
+    var done =
+        new Command("Done") {
+          public void actionPerformed(com.codename1.ui.events.ActionEvent e) {
+            dialog.dispose();
+          }
+        };
+    var doneButton = new Button(done);
+    OfficeTheme.button(doneButton);
+    dialog.add(BorderLayout.SOUTH, FlowLayout.encloseRight(doneButton));
+    dialog.setBackCommand(done);
+    dialog.setDefaultCommand(done);
+    int first = Math.max(0, Arrays.asList(sections).indexOf(start));
+    select[first].run();
+    styleDialogBody(dialog.getContentPane());
+    showOfficeDialog(dialog);
+  }
+
+  private static Label settingsHeading(String text) {
+    var l = OfficeTheme.label(text, 13, OfficeTheme.INK);
+    l.getAllStyles().setFont(OfficeTheme.font(13, true));
+    OfficeTheme.space(l, 14, 6, 0, 0);
+    return l;
+  }
+
+  private CheckBox settingsFlag(String label, String key) {
+    var box = new CheckBox(label);
+    box.setSelected(AppOptions.flag(key));
+    box.addActionListener(e -> setOption(key, String.valueOf(box.isSelected())));
+    return box;
+  }
+
+  private ComboBox<String> settingsChoice(String key, String[] labels, String[] values) {
+    var box = new ComboBox<String>(labels);
+    box.setSelectedIndex(Math.max(0, Arrays.asList(values).indexOf(AppOptions.get(key))));
+    box.addActionListener(e -> setOption(key, values[box.getSelectedIndex()]));
+    return box;
+  }
+
+  private EditField settingsText(String key) {
+    var f = field(AppOptions.get(key));
+    f.addDataChangedListener((type, index) -> setOption(key, f.getText()));
+    return f;
+  }
+
+  private void settingsSection(String section, Container pane) {
+    switch (section) {
+      case "General" -> {
+        pane.add(settingsHeading("Personalize"));
+        pane.add(formRow("Name", settingsText("userName")));
+        pane.add(formRow("Initials", settingsText("userInitials")));
+        pane.add(settingsHeading("Appearance"));
+        pane.add(formRow("Theme", settingsChoice("officeTheme",
+            new String[] {"Match System", "Light", "Dark"}, new String[] {"system", "light", "dark"})));
+        pane.add(settingsFlag("Turn the page dark in Dark Mode", "darkPage"));
+        pane.add(settingsHeading("Units"));
+        pane.add(formRow("Measure in", settingsChoice("units",
+            new String[] {"Inches", "Centimeters", "Millimeters", "Points", "Picas"},
+            new String[] {"inches", "centimeters", "millimeters", "points", "picas"})));
+        pane.add(formRow("Numerals", settingsChoice("numeral",
+            new String[] {"Arabic", "Hindi", "Context", "System"},
+            new String[] {"arabic", "hindi", "context", "system"})));
+      }
+      case "View" -> {
+        pane.add(settingsHeading("Show in document"));
+        pane.add(settingsFlag("Comments", "showComments"));
+        pane.add(settingsFlag("Hide ink annotations", "hideInk"));
+      }
+      case "AutoCorrect" -> {
+        pane.add(settingsHeading("As you type"));
+        pane.add(settingsFlag("Replace text as you type", "autocorrect.replaceText"));
+        pane.add(settingsFlag("Capitalize first letter of sentences", "autocorrect.capitalizeSentences"));
+        pane.add(settingsFlag("Capitalize names of days", "autocorrect.capitalizeDays"));
+        pane.add(settingsFlag("Correct TWo INitial CApitals", "autocorrect.twoInitialCaps"));
+        pane.add(settingsFlag("Replace straight quotes with smart quotes", "autocorrect.smartQuotes"));
+        pane.add(settingsHeading("Replacements (one per line: typed=replacement)"));
+        var entries = field(AppOptions.get("autocorrect.entries").replace('|', '\n'), 8, 30);
+        entries.addDataChangedListener((type, index) ->
+            setOption("autocorrect.entries", entries.getText().trim().replace('\n', '|')));
+        pane.add(entries);
+      }
+      case "Spelling & Grammar" -> {
+        pane.add(settingsHeading("Proofing"));
+        pane.add(settingsFlag("Check spelling as you type", "checkSpelling"));
+        pane.add(settingsFlag("Check grammar as you type", "checkGrammar"));
+      }
+      case "Save" -> {
+        pane.add(settingsHeading("AutoSave"));
+        pane.add(settingsFlag("Turn on AutoSave by default", "autosave"));
+        pane.add(formRow("Save every", settingsChoice("autosaveMinutes",
+            new String[] {"1 minute", "2 minutes", "5 minutes", "10 minutes", "15 minutes", "30 minutes"},
+            new String[] {"1", "2", "5", "10", "15", "30"})));
+      }
+      case "Print" -> {
+        pane.add(settingsHeading("Include with document"));
+        pane.add(settingsFlag("Print comments and tracked changes", "printMarkup"));
+      }
+      default -> {
+        pane.add(settingsHeading("Show these ribbon tabs"));
+        var hidden = new ArrayList<String>(Arrays.asList(TextUtil.split(AppOptions.get("ribbon.hidden"), ',')));
+        for (String title : ribbon.titles()) {
+          if ("Table Layout".equals(title) || "Custom".equals(title)) continue;
+          var box = new CheckBox(title);
+          box.setSelected(!hidden.contains(title));
+          box.addActionListener(e -> {
+            var now = new ArrayList<String>(Arrays.asList(TextUtil.split(AppOptions.get("ribbon.hidden"), ',')));
+            now.remove("");
+            now.remove(title);
+            if (!box.isSelected()) now.add(title);
+            setOption("ribbon.hidden", joinComma(now));
+          });
+          pane.add(box);
+        }
+        pane.add(settingsHeading("Keyboard"));
+        pane.add(button("Customize Keyboard…", this::customizeKeyboardDialog));
+      }
+    }
+  }
+
+  /** Stores a validated option and applies it to the open window. */
+  private void setOption(String key, String value) {
+    try {
+      commands.execute(session, "file.options", Json.object("key", key, "value", value));
+    } catch (IllegalArgumentException ex) {
+      status.setText(ex.getMessage());
+      return;
+    }
+    switch (key) {
+      case "officeTheme" -> {
+        OfficeTheme.refreshAppearance();
+        darkPageOverride = null;
+        applyDarkPage();
+        OfficeTheme.applyAppearance(form);
+        Form current = Display.getInstance().getCurrent();
+        if (current != form) OfficeTheme.applyAppearance(current);
+        form.repaint();
+      }
+      case "darkPage" -> {
+        darkPageOverride = null;
+        applyDarkPage();
+      }
+      case "autosave" -> autoSave.setOn(AppOptions.flag("autosave"));
+      case "ribbon.hidden" -> applyRibbonOptions();
+      default -> {
+        editor.repaint();
+        ruler.repaint();
+        updateStatus();
+      }
+    }
+  }
+
+  static final String APP_NAME = "CN1 Word Processor";
+  static final String PROJECT_URL = "https://github.com/shai-almog/cn1-wordprocessor";
 
   private void zoom(float delta) {
     editor.setZoom(editor.getZoom() + delta);
@@ -5691,6 +6225,7 @@ public class WordProcessor {
   }
 
   private void updateStatus() {
+    if (menus != null) menus.sync();
     ribbon.setTabVisible("Table Layout", session.inCell());
     refreshRevisions();
     if (stylesPane != null
@@ -6370,6 +6905,7 @@ public class WordProcessor {
       return;
     }
     if (saving
+        || pendingRecovery != null
         || session.isComposing()
         || session.revision() == savedRevision
         || System.currentTimeMillis() - lastEdit < 1000) return;
@@ -6688,7 +7224,10 @@ public class WordProcessor {
     if (session != null)
       try {
         editor.finishComposing();
-        if (OfficeCommands.password(session) != null) recovery.forget();
+        // An offered recovery stays until the user opens or discards it. Otherwise only unsaved
+        // work is kept: a saved or untouched document leaves nothing to recover next launch.
+        if (pendingRecovery != null) return;
+        if (OfficeCommands.password(session) != null || saved()) recovery.forget();
         else recovery.save(session.document(), packageSource(), session.revision());
       } catch (IOException e) {
         Log.e(e);

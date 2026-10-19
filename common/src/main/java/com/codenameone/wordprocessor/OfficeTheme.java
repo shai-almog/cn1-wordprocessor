@@ -85,7 +85,12 @@ final class OfficeTheme {
     b.getAllStyles().setBorder(OfficeBorder.of(-1, 4));
     b.getAllStyles().setFont(font(12, false));
     b.getDisabledStyle().setBgTransparency(0);
+    // Every state gets a light-theme ink: a state left to the native theme carries its Dark Mode
+    // colors, which the appearance mapping would invert into dark text on a dark hover fill.
     b.getUnselectedStyle().setFgColor(INK);
+    b.getSelectedStyle().setFgColor(INK);
+    b.getPressedStyle().setFgColor(INK);
+    b.getDisabledStyle().setFgColor(0xa0a0a0);
     b.getUnselectedStyle().setBgTransparency(0);
     b.getSelectedStyle().setBgColor(HOVER);
     b.getSelectedStyle().setBgTransparency(255);

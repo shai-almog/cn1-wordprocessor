@@ -165,6 +165,9 @@ final class OfficeRibbon extends Container {
       b.getUnselectedStyle().setFgColor(selected ? OfficeTheme.ACCENT_TEXT : OfficeTheme.INK);
       b.getUnselectedStyle().setFont(OfficeTheme.font(12.5f, selected));
       b.getUnselectedStyle().setBorder(selected ? INDICATOR : OfficeBorder.of(-1, 4));
+      b.getSelectedStyle().setFgColor(selected ? OfficeTheme.ACCENT_TEXT : OfficeTheme.INK);
+      // The colors above are light-theme values; map them now rather than on the next poll.
+      OfficeTheme.applyAppearance(b);
     }
     revalidate();
     repaint();
