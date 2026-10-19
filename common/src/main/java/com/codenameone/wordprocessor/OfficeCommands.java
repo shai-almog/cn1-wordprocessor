@@ -42,10 +42,10 @@ final class OfficeCommands implements Commands.Extension {
     }
   }
 
-  private static final SessionMap<List<Version>> VERSIONS = new SessionMap<>();
+  private static final SessionMap<List<Version>> VERSIONS = SessionMap.forDocument();
   private static final SessionMap<List<Object>> RECORDING = new SessionMap<>();
-  private static final SessionMap<int[]> READING = new SessionMap<>();
-  private static final SessionMap<String> PASSWORDS = new SessionMap<>();
+  private static final SessionMap<int[]> READING = SessionMap.forDocument();
+  private static final SessionMap<String> PASSWORDS = SessionMap.forDocument();
 
   /** The password Word documents saved from this session are encrypted with, or null. */
   public static String password(Session s) {

@@ -15,7 +15,7 @@ import java.util.Set;
  * proofing language is set to something other than English are skipped.
  */
 final class ProofingCommands implements Commands.Extension {
-  private static final SessionMap<Set<String>> ONCE = new SessionMap<>();
+  private static final SessionMap<Set<String>> ONCE = SessionMap.forDocument();
 
   private record Found(int block, Proofing.Issue issue, String word) {
     Map<String, Object> map() {

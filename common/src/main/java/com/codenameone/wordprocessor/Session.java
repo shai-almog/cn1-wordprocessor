@@ -766,6 +766,9 @@ public final class Session {
     insertionStyle = null;
     document = d;
     mergeData = MergeData.EMPTY;
+    synchronized (SessionMap.DOCUMENT_KEYS) {
+      for (Object key : SessionMap.DOCUMENT_KEYS) attachments.remove(key);
+    }
     selectFirst();
     undo.clear();
     redo.clear();

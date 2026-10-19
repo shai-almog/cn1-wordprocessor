@@ -61,12 +61,25 @@ public class WordProcessor {
   private Files files;
   private String filePath, fileFormat = "cn1doc";
   private Document fileDocument;
+  /** The password the DOCX at filePath is encrypted with (null when it is not). */
+  private String filePassword;
   private int documentEpoch;
+
+  /**
+   * Whether the file at filePath holds the current document: the same content and, for DOCX,
+   * the same encryption. Adding or removing a password changes only the saved file.
+   */
+  private boolean saved() {
+    return fileDocument == session.document()
+        && (!"docx".equals(fileFormat)
+            || java.util.Objects.equals(filePassword, OfficeCommands.password(session)));
+  }
 
   private void forgetFile() {
     filePath = null;
     fileFormat = "cn1doc";
     fileDocument = null;
+    filePassword = null;
     documentEpoch++;
   }
 
@@ -4478,7 +4491,7 @@ public class WordProcessor {
   private void replaceAfterSaving(Runnable next) {
     editor.finishComposing();
     editor.stopInput();
-    if (session.document() == fileDocument) {
+    if (saved()) {
       next.run();
       return;
     }
@@ -5695,7 +5708,7 @@ public class WordProcessor {
             + (editor.layout().warnings.isEmpty()
                 ? ""
                 : "    |    " + editor.layout().warnings.get(0))
-            + (filePath != null && fileDocument == session.document()
+            + (filePath != null && saved()
                 ? "    |    Saved"
                 : ""));
     if (trackingButton != null) {
@@ -5748,7 +5761,7 @@ public class WordProcessor {
     if (documentTitle != null) {
       var title =
           session.document().title
-              + (filePath != null && fileDocument == session.document()
+              + (filePath != null && saved()
                   ? " \u2014 Saved"
                   : filePath != null || session.canUndo() ? " \u2014 Edited" : " \u2014 Not saved")
               + " \u25be";
@@ -6348,7 +6361,7 @@ public class WordProcessor {
 
   private void autosave() {
     long now = System.currentTimeMillis();
-    if (AppOptions.flag("autosave") && filePath != null && !saving && session.document() != fileDocument
+    if (AppOptions.flag("autosave") && filePath != null && !saving && !saved()
         && !session.isComposing() && now - lastEdit >= 1000
         && now - lastFileAutosave >= Integer.parseInt(AppOptions.get("autosaveMinutes")) * 60000L) {
       lastFileAutosave = now;
@@ -6443,6 +6456,7 @@ public class WordProcessor {
                     // An encrypted original stays encrypted when saved back.
                     OfficeCommands.password(session, password);
                     fileDocument = document;
+                    filePassword = password;
                     if (name.toLowerCase().endsWith(".cn1doc")
                         || name.toLowerCase().endsWith(".docx")) {
                       filePath = path;
@@ -6590,6 +6604,7 @@ public class WordProcessor {
                         "Use DOCX, HTML or native project format to retain tables");
               bytes = TextFormats.write(snapshot, type).getBytes("UTF-8");
             }
+            final String writtenPassword = "docx".equals(format) ? OfficeCommands.password(session) : null;
             files.save(
                 TextUtil.fileName(snapshot.title) + "." + format,
                 !asNew && workingFile ? filePath : null,
@@ -6599,6 +6614,7 @@ public class WordProcessor {
                     filePath = path;
                     fileFormat = format;
                     fileDocument = snapshot;
+                    filePassword = writtenPassword;
                     updateStatus();
                   }
                   status.setText(
