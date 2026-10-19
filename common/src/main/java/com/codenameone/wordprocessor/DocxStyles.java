@@ -95,6 +95,9 @@ final class DocxStyles {
 
   private ParagraphFormat baseFormat;
 
+  /** Docx's resolved paragraph state per style, so each style chain is applied once. */
+  final Map<String, Object[]> paragraphStates = new HashMap<>();
+
   /** The default paragraph format with this document's tab interval, built once. */
   ParagraphFormat baseFormat() {
     if (baseFormat == null)

@@ -290,85 +290,20 @@ static final char COLUMN_BREAK = '\u000B';
       DocxComments comments,
       boolean styleTemplate) {
     var text = new RichText();
-    String style = styles.defaultParagraph(), align = "left", list = "";
-    float before = 0, after = 6, indent = 0, line = 1.2f;
-    boolean pageBreak = false, keep = false;
-    int listLevel = 0, listStart = 0;
-    String listFormat = "decimal", listId = "";
-    var layout = styles.baseFormat();
+    String list = "";
+    int listStart = 0;
+    String listFormat = "decimal";
     Element props = Xml.child(e, "pPr");
+    String named = styles.defaultParagraph();
     if (props != null && Xml.child(props, "pStyle") != null)
-      style = Xml.attr(Xml.child(props, "pStyle"), "val", style);
-    var properties = styles.paragraphProperties(style);
-    if (!styleTemplate)
-      for (int i = properties.size() - 1; i >= 0; i--)
-        if ("outlineLvl".equals(Xml.local(properties.get(i)))) properties.remove(i);
-    if (props != null) properties.addAll(Xml.children(props, null));
-    for (Element p : properties) {
-      String kind = Xml.local(p);
-      if ("pStyle".equals(kind)) style = Xml.attr(p, "val", "Normal");
-      else if ("numPr".equals(kind)) {
-        Element n = Xml.child(p, "numId"), level = Xml.child(p, "ilvl");
-        listId = n == null ? "" : Xml.attr(n, "val", "");
-        listLevel = level == null ? 0 : Integer.parseInt(Xml.attr(level, "val", "0"));
-      } else if ("jc".equals(kind)) align = Xml.attr(p, "val", "left");
-      else if ("spacing".equals(kind)) {
-        before = twips(p, "before", Math.round(before * 20));
-        after = twips(p, "after", Math.round(after * 20));
-        // A spacing element that only overrides before/after must retain the
-        // line rule and amount inherited from the paragraph's named style.
-        String rule = Xml.attr(p, "lineRule", layout.lineRule);
-        float stored = line * ("auto".equals(layout.lineRule) ? 240 : 20);
-        String amount = Xml.attr(p, "line", null);
-        line = Math.max(.06f, (amount == null ? stored : Xml.number(amount)) / ("auto".equals(rule) ? 240f : 20f));
-        layout = layout.with("lineRule", rule);
-      } else if ("ind".equals(kind)) {
-        indent = Math.max(0, twips(p, "left", 0));
-        layout =
-            layout.withIndents(
-                Math.max(0, twips(p, "right", 0)), twips(p, "firstLine", 0) - twips(p, "hanging", 0));
-      } else if ("keepLines".equals(kind))
-        layout = layout.with("keepLines", String.valueOf(enabled(p)));
-      else if ("widowControl".equals(kind))
-        layout = layout.with("widowControl", String.valueOf(enabled(p)));
-      else if ("bidi".equals(kind)) layout = layout.with("rtl", String.valueOf(enabled(p)));
-      else if (ParagraphFormat.ASIAN.contains(kind)) {
-        var off = layout.asianOff;
-        if (!enabled(p)) off = off.isEmpty() ? kind : off + "," + kind;
-        layout = layout.with("asianOff", off);
-      }
-      else if ("outlineLvl".equals(kind)) {
-        int level = Integer.parseInt(Xml.attr(p, "val", "9"));
-        if (level < 0 || level > 9)
-          throw new IllegalArgumentException("Invalid DOCX outline level");
-        layout = layout.with("outlineLevel", "" + (level == 9 ? 0 : level + 1));
-      } else if ("tabs".equals(kind)) {
-        var stops = new ArrayList<TabStop>(layout.tabs);
-        for (Element tab : Xml.children(p, "tab")) {
-          float position = twips(tab, "pos", 0);
-          String alignment = Xml.attr(tab, "val", "left"), leader = Xml.attr(tab, "leader", "none");
-          for (int i = stops.size() - 1; i >= 0; i--)
-            if (Math.abs(stops.get(i).position - position) < .01f) stops.remove(i);
-          if ("clear".equals(alignment)) continue;
-          try {
-            stops.add(new TabStop(position, alignment, leader));
-          } catch (IllegalArgumentException unsupported) {
-            warnings.add("Unsupported tab stop: " + alignment + "/" + leader);
-          }
-        }
-        layout = layout.with("tabs", TabStop.encode(stops));
-      } else if ("pBdr".equals(kind))
-        layout = layout.with("borders", DocxBorders.read(p, warnings).encode());
-      else if ("shd".equals(kind)) {
-        int fill = DocxBorders.shading(p);
-        layout =
-            layout.with(
-                "shading", fill < 0 ? "" : Integer.toHexString(0x1000000 | fill).substring(1));
-      } else if ("pageBreakBefore".equals(kind)) pageBreak = enabled(p);
-      else if ("keepNext".equals(kind)) keep = enabled(p);
-      else if (!"rPr".equals(kind) && !"pPrChange".equals(kind))
-        warnings.add("Paragraph feature: " + kind);
-    }
+      named = Xml.attr(Xml.child(props, "pStyle"), "val", named);
+    var s = styleState(named, styleTemplate, styles, warnings);
+    if (props != null) for (Element p : Xml.children(props, null)) property(s, p, warnings);
+    String style = s.style, align = s.align, listId = s.listId;
+    float before = s.before, after = s.after, indent = s.indent, line = s.line;
+    boolean pageBreak = s.pageBreak, keep = s.keep;
+    int listLevel = s.listLevel;
+    var layout = s.layout;
     List<TabStop> stops = layout.tabs;
     boolean periodic = stops.size() == 64;
     float interval = stops.isEmpty() ? 36 : stops.get(0).position;
@@ -468,6 +403,123 @@ static final char COLUMN_BREAK = '\u000B';
     }
     comments.scan(e, paragraph.id, warnings);
     return paragraph;
+  }
+
+  /** Paragraph properties as a pPr element list accumulates them. */
+  private static final class ParagraphState {
+    String style, align = "left", listId = "";
+    float before = 0, after = 6, indent = 0, line = 1.2f;
+    boolean pageBreak, keep;
+    int listLevel;
+    ParagraphFormat layout;
+
+    ParagraphState copy() {
+      var c = new ParagraphState();
+      c.style = style;
+      c.align = align;
+      c.listId = listId;
+      c.before = before;
+      c.after = after;
+      c.indent = indent;
+      c.line = line;
+      c.pageBreak = pageBreak;
+      c.keep = keep;
+      c.listLevel = listLevel;
+      c.layout = layout;
+      return c;
+    }
+  }
+
+  /**
+   * A copy of the state a named style's inherited properties produce. Every paragraph of a
+   * style shares it, so the style chain is resolved once per read instead of per paragraph;
+   * the warnings it raised are replayed into each caller's set.
+   */
+  private static ParagraphState styleState(
+      String style, boolean styleTemplate, DocxStyles styles, Set<String> warnings) {
+    String key = (styleTemplate ? "T:" : "P:") + style;
+    Object[] cached = styles.paragraphStates.get(key);
+    if (cached == null) {
+      var state = new ParagraphState();
+      state.style = style;
+      state.layout = styles.baseFormat();
+      var raised = new LinkedHashSet<String>();
+      for (Element p : styles.paragraphProperties(style))
+        if (styleTemplate || !"outlineLvl".equals(Xml.local(p))) property(state, p, raised);
+      cached = new Object[] {state, raised};
+      styles.paragraphStates.put(key, cached);
+    }
+    @SuppressWarnings("unchecked")
+    var raised = (Set<String>) cached[1];
+    warnings.addAll(raised);
+    return ((ParagraphState) cached[0]).copy();
+  }
+
+  /** Applies one pPr child element to the state. */
+  private static void property(ParagraphState s, Element p, Set<String> warnings) {
+    String kind = Xml.local(p);
+    if ("pStyle".equals(kind)) s.style = Xml.attr(p, "val", "Normal");
+    else if ("numPr".equals(kind)) {
+      Element n = Xml.child(p, "numId"), level = Xml.child(p, "ilvl");
+      s.listId = n == null ? "" : Xml.attr(n, "val", "");
+      s.listLevel = level == null ? 0 : Xml.integer(Xml.attr(level, "val", "0"), 0);
+    } else if ("jc".equals(kind)) s.align = Xml.attr(p, "val", "left");
+    else if ("spacing".equals(kind)) {
+      s.before = twips(p, "before", Math.round(s.before * 20));
+      s.after = twips(p, "after", Math.round(s.after * 20));
+      // A spacing element that only overrides before/after must retain the
+      // line rule and amount inherited from the paragraph's named style.
+      String rule = Xml.attr(p, "lineRule", s.layout.lineRule);
+      float stored = s.line * ("auto".equals(s.layout.lineRule) ? 240 : 20);
+      String amount = Xml.attr(p, "line", null);
+      s.line = Math.max(.06f, (amount == null ? stored : Xml.number(amount)) / ("auto".equals(rule) ? 240f : 20f));
+      s.layout = s.layout.with("lineRule", rule);
+    } else if ("ind".equals(kind)) {
+      s.indent = Math.max(0, twips(p, "left", 0));
+      s.layout =
+          s.layout.withIndents(
+              Math.max(0, twips(p, "right", 0)), twips(p, "firstLine", 0) - twips(p, "hanging", 0));
+    } else if ("keepLines".equals(kind))
+      s.layout = s.layout.with("keepLines", String.valueOf(enabled(p)));
+    else if ("widowControl".equals(kind))
+      s.layout = s.layout.with("widowControl", String.valueOf(enabled(p)));
+    else if ("bidi".equals(kind)) s.layout = s.layout.with("rtl", String.valueOf(enabled(p)));
+    else if (ParagraphFormat.ASIAN.contains(kind)) {
+      var off = s.layout.asianOff;
+      if (!enabled(p)) off = off.isEmpty() ? kind : off + "," + kind;
+      s.layout = s.layout.with("asianOff", off);
+    }
+    else if ("outlineLvl".equals(kind)) {
+      int level = Xml.integer(Xml.attr(p, "val", "9"), -1);
+      if (level < 0 || level > 9)
+        throw new IllegalArgumentException("Invalid DOCX outline level");
+      s.layout = s.layout.with("outlineLevel", "" + (level == 9 ? 0 : level + 1));
+    } else if ("tabs".equals(kind)) {
+      var stops = new ArrayList<TabStop>(s.layout.tabs);
+      for (Element tab : Xml.children(p, "tab")) {
+        float position = twips(tab, "pos", 0);
+        String alignment = Xml.attr(tab, "val", "left"), leader = Xml.attr(tab, "leader", "none");
+        for (int i = stops.size() - 1; i >= 0; i--)
+          if (Math.abs(stops.get(i).position - position) < .01f) stops.remove(i);
+        if ("clear".equals(alignment)) continue;
+        try {
+          stops.add(new TabStop(position, alignment, leader));
+        } catch (IllegalArgumentException unsupported) {
+          warnings.add("Unsupported tab stop: " + alignment + "/" + leader);
+        }
+      }
+      s.layout = s.layout.with("tabs", TabStop.encode(stops));
+    } else if ("pBdr".equals(kind))
+      s.layout = s.layout.with("borders", DocxBorders.read(p, warnings).encode());
+    else if ("shd".equals(kind)) {
+      int fill = DocxBorders.shading(p);
+      s.layout =
+          s.layout.with(
+              "shading", fill < 0 ? "" : Integer.toHexString(0x1000000 | fill).substring(1));
+    } else if ("pageBreakBefore".equals(kind)) s.pageBreak = enabled(p);
+    else if ("keepNext".equals(kind)) s.keep = enabled(p);
+    else if (!"rPr".equals(kind) && !"pPrChange".equals(kind))
+      warnings.add("Paragraph feature: " + kind);
   }
 
   private static boolean enabled(Element e) {

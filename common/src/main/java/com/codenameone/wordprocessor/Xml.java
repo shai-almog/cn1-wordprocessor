@@ -25,6 +25,8 @@ public final class Xml {
     /** Attribute names and values, alternating; elements carry only a handful. */
     String[] attrs;
     int attrCount;
+    /** Each attribute's name without its prefix, at its name's index in attrs. */
+    String[] locals;
     /** Tag without its namespace prefix, pooled at parse time. */
     String local;
     /** On a parsed root only: every short name and value the part contains. */
@@ -40,17 +42,47 @@ public final class Xml {
       return -1;
     }
 
+
     public int setAttribute(String name, String value) {
       int i = index(name);
       if (i >= 0) {
         attrs[i + 1] = value;
         return -1;
       }
-      if (attrs == null) attrs = new String[4];
-      else if (attrCount == attrs.length) attrs = Arrays.copyOf(attrs, attrCount * 2);
+      int colon = name.indexOf(':');
+      add(name, colon < 0 ? name : name.substring(colon + 1), value);
+      return -1;
+    }
+
+    /** Appends an attribute the element does not have yet. */
+    void add(String name, String local, String value) {
+      if (attrs == null) {
+        attrs = new String[4];
+        locals = new String[4];
+      } else if (attrCount == attrs.length) {
+        attrs = Arrays.copyOf(attrs, attrCount * 2);
+        locals = Arrays.copyOf(locals, attrCount * 2);
+      }
+      locals[attrCount] = local;
       attrs[attrCount++] = name;
       attrs[attrCount++] = value;
-      return -1;
+    }
+
+    /**
+     * The index of the attribute named exactly name, else w:name, else any prefix:name; -1
+     * when absent. Compares pooled local names instead of building or suffix-matching names.
+     */
+    int lookup(String name) {
+      int prefixed = -1, w = -1;
+      for (int i = 0; i < attrCount; i += 2) {
+        String k = attrs[i];
+        if (k.equals(name)) return i;
+        if (locals[i] != k && locals[i].equals(name)) {
+          if (k.length() == name.length() + 2 && k.charAt(0) == 'w') w = i;
+          else if (prefixed < 0) prefixed = i;
+        }
+      }
+      return w >= 0 ? w : prefixed;
     }
 
     public String getAttribute(String name) {
@@ -63,6 +95,7 @@ public final class Xml {
       int i = index(name);
       if (i < 0) return;
       System.arraycopy(attrs, i + 2, attrs, i, attrCount - i - 2);
+      System.arraycopy(locals, i + 2, locals, i, attrCount - i - 2);
       attrCount -= 2;
       attrs[attrCount] = attrs[attrCount + 1] = null;
     }
@@ -179,7 +212,7 @@ public final class Xml {
     // String built from char[] scans and packs every character again. A part with any wider
     // character keeps the char[] constructor, which still packs each Latin-1 string on its own.
     if (!wide[0]) reader.source = new String(chars, 0, n);
-    return reader.read();
+    return finish(reader);
   }
 
   /**
@@ -256,82 +289,165 @@ public final class Xml {
 
   public static Element parse(String text) throws IOException {
     if (text.length() > 32 * 1024 * 1024) throw new IOException("XML part exceeds 32 MiB");
-    return new Reader(text.toCharArray(), text.length()).read();
+    return finish(new Reader(text.toCharArray(), text.length()));
   }
 
+  /** The parsed root, or the parser's recorded error as an IOException. */
+  private static Element finish(Reader reader) throws IOException {
+    var root = reader.read();
+    if (root == null) throw new IOException(reader.failure + " at XML offset " + reader.failedAt);
+    return root;
+  }
+
+  /**
+   * The parser never throws: ParparVM gives a method that can throw, or that calls anything,
+   * an emulated operand stack and an overflow guard, so the per-character loops are static
+   * leaf helpers over local copies of the buffer, and the first error is recorded and unwound
+   * by returning null. Only {@link #parse} turns it into an IOException.
+   */
   private static final class Reader {
-    // The hot loops index this copy directly: String.charAt is a checked call per character
-    // on ParparVM, and a part is scanned character by character.
     final char[] c;
     final int n;
     int pos, count;
     /** The whole part as one compact String when every character is Latin-1, else null. */
     String source;
-
-    String text(int start, int length) {
-      return source != null ? source.substring(start, start + length) : new String(c, start, length);
-    }
+    /** The first error and the offset it was found at; parsing stops once set. */
+    String failure;
+    int failedAt;
 
     Reader(char[] c, int n) {
       this.c = c;
       this.n = n;
     }
 
-    /** Whether t occurs at {@code at}. */
-    boolean starts(String t, int at) {
-      if (at < 0 || at + t.length() > n) return false;
-      for (int i = 0; i < t.length(); i++) if (c[at + i] != t.charAt(i)) return false;
+    String text(int start, int length) {
+      return source != null ? source.substring(start, start + length) : new String(c, start, length);
+    }
+
+    /** Records the first error; always null so callers can {@code return fail(...)}. */
+    Node fail(String message) {
+      if (failure == null) {
+        failure = message;
+        failedAt = pos;
+      }
+      return null;
+    }
+
+    // ---- leaf helpers: no calls, no throws, locals only ----
+
+    /** The first index at or after p that is not an ASCII XML space. */
+    static int spaces(char[] c, int p, int n) {
+      while (p < n) {
+        char ch = c[p];
+        if (ch != ' ' && ch != '\n' && ch != '\r' && ch != '\t') return p;
+        p++;
+      }
+      return p;
+    }
+
+    /** The first index at or after p that is not an ASCII name character. */
+    static int nameEnd(char[] c, int p, int n) {
+      while (p < n) {
+        char ch = c[p];
+        if (!(ch >= 'a' && ch <= 'z' || ch >= 'A' && ch <= 'Z' || ch >= '0' && ch <= '9'
+            || ch == '_' || ch == ':' || ch == '-' || ch == '.')) return p;
+        p++;
+      }
+      return p;
+    }
+
+    /** The index of ch at or after p, or n. */
+    static int until(char[] c, char ch, int p, int n) {
+      while (p < n && c[p] != ch) p++;
+      return p;
+    }
+
+    /** Whether t's characters occur at p. */
+    static boolean starts(char[] c, int p, int n, char[] t) {
+      if (p < 0 || p + t.length > n) return false;
+      for (int i = 0; i < t.length; i++) if (c[p + i] != t[i]) return false;
       return true;
     }
 
-    /** The index of t at or after {@code from}, or -1. */
-    int find(String t, int from) {
-      char first = t.charAt(0);
-      for (int i = from, last = n - t.length(); i <= last; i++) if (c[i] == first && starts(t, i)) return i;
+    /** The index of t at or after p, or -1. */
+    static int find(char[] c, int p, int n, char[] t) {
+      char first = t[0];
+      for (int last = n - t.length; p <= last; p++) {
+        if (c[p] != first) continue;
+        int i = 1;
+        while (i < t.length && c[p + i] == t[i]) i++;
+        if (i == t.length) return p;
+      }
       return -1;
     }
 
-    IOException error(String m) {
-      return new IOException(m + " at XML offset " + pos);
+    static final int ENTITY = 1, CONTROL = 2, LESS = 4;
+
+    /** ENTITY, CONTROL and LESS flags for the characters of [start, end). */
+    static int scan(char[] c, int start, int end) {
+      int flags = 0;
+      for (int i = start; i < end; i++) {
+        char ch = c[i];
+        if (ch < 32) {
+          if (ch != '\t' && ch != '\n' && ch != '\r') flags |= CONTROL;
+        } else if (ch == '&') flags |= ENTITY;
+        else if (ch == '<') flags |= LESS;
+      }
+      return flags;
     }
+
+    static int hash(char[] c, int start, int end) {
+      int h = end - start;
+      for (int i = start; i < end; i++) h = 31 * h + c[i];
+      return h ^ (h >>> 16);
+    }
+
+    static boolean same(char[] pooled, char[] c, int start, int len) {
+      if (pooled == null || pooled.length != len) return false;
+      for (int i = 0; i < len; i++) if (pooled[i] != c[start + i]) return false;
+      return true;
+    }
+
+    static final char[] PI = {'<', '?'}, PI_END = {'?', '>'}, COMMENT = {'<', '!', '-', '-'},
+        COMMENT_END = {'-', '-', '>'}, CDATA = {'<', '!', '[', 'C', 'D', 'A', 'T', 'A', '['},
+        CDATA_END = {']', ']', '>'};
+
+    // ---- cold paths: calls allowed, rarely reached ----
 
     void whitespace() {
-      while (pos < n) {
-        char ch = c[pos];
-        if (ch == ' ' || ch == '\n' || ch == '\r' || ch == '\t' || ch > 127 && Character.isWhitespace(ch)) pos++;
-        else if (ch < 32 && Character.isWhitespace(ch)) pos++;
-        else break;
-      }
+      int p = spaces(c, pos, n);
+      while (p < n && (c[p] > 127 || c[p] < 32) && Character.isWhitespace(c[p])) p = spaces(c, p + 1, n);
+      pos = p;
     }
 
-    boolean nameStart(char c) {
-      return c >= 'a' && c <= 'z'
-          || c >= 'A' && c <= 'Z'
-          || c == '_'
-          || c == ':'
-          || c > 127 && Unicode.letter(c);
+    /** End of a name starting at p, following non-ASCII letters and digits too. */
+    int wideNameEnd(int p) {
+      p = nameEnd(c, p, n);
+      while (p < n && c[p] > 127 && (Unicode.letter(c[p]) || Character.isDigit(c[p]))) p = nameEnd(c, p + 1, n);
+      return p;
     }
 
-    String name() throws IOException {
+    /** A name at pos, or null after recording the error. */
+    String name() {
       int start = pos;
-      if (pos >= n || !nameStart(c[pos])) throw error("Expected XML name");
-      pos++;
-      while (pos < n) {
-        char ch = c[pos];
-        if (nameStart(ch)
-            || ch >= '0' && ch <= '9'
-            || ch == '-'
-            || ch == '.'
-            || ch > 127 && Character.isDigit(ch)) pos++;
-        else break;
-      }
-      return shared(start, pos);
+      if (start >= n) return failName();
+      char first = c[start];
+      boolean ascii = first >= 'a' && first <= 'z' || first >= 'A' && first <= 'Z' || first == '_' || first == ':';
+      if (!ascii && !(first > 127 && Unicode.letter(first))) return failName();
+      int end = nameEnd(c, start + 1, n);
+      if (end < n && c[end] > 127) end = wideNameEnd(end);
+      pos = end;
+      return shared(start, end);
+    }
+
+    private String failName() {
+      fail("Expected XML name");
+      return null;
     }
 
     /** Pool of short strings: names and small values repeat thousands of times per part. */
     private final String[] pool = new String[1024];
-    // Each pooled string's characters, compared against the buffer directly: String methods
-    // (regionMatches, charAt) are checked calls per character on ParparVM.
+    // Each pooled string's characters, compared against the buffer directly.
     private final char[][] poolChars = new char[1024][];
     // Every pool miss: each distinct short name (so every element's local name) at least once.
     final Set<String> vocabulary = new HashSet<>();
@@ -339,15 +455,8 @@ public final class Xml {
     String shared(int start, int end) {
       int len = end - start;
       if (len > 24) return text(start, len);
-      int h = len;
-      for (int i = start; i < end; i++) h = 31 * h + c[i];
-      int slot = (h ^ (h >>> 16)) & (pool.length - 1);
-      char[] chars = poolChars[slot];
-      if (chars != null && chars.length == len) {
-        int i = 0;
-        while (i < len && chars[i] == c[start + i]) i++;
-        if (i == len) return pool[slot];
-      }
+      int slot = hash(c, start, end) & (pool.length - 1);
+      if (same(poolChars[slot], c, start, len)) return pool[slot];
       var v = text(start, len);
       vocabulary.add(v);
       pool[slot] = v;
@@ -355,47 +464,49 @@ public final class Xml {
       return v;
     }
 
-    void expect(char ch) throws IOException {
-      if (pos >= n || c[pos++] != ch) throw error("Expected " + ch);
-    }
-
-    /** Whether the buffer holds a, b at pos. */
-    boolean at(char a, char b) {
-      return pos + 1 < n && c[pos] == a && c[pos + 1] == b;
-    }
-
-    boolean skip(String begin, String end) throws IOException {
-      // Every construct skipped here starts with '<' and a second character that a tag lacks.
-      if (!at(begin.charAt(0), begin.charAt(1)) || !starts(begin, pos)) return false;
-      int finish = find(end, pos + begin.length());
-      if (finish < 0) throw error("Unterminated XML declaration/comment");
-      pos = finish + end.length();
+    /** Skips a construct opened by begin and closed by end; false when absent or on error. */
+    boolean skip(char[] begin, char[] end) {
+      if (!starts(c, pos, n, begin)) return false;
+      int finish = find(c, pos + begin.length, n, end);
+      if (finish < 0) {
+        fail("Unterminated XML declaration/comment");
+        return false;
+      }
+      pos = finish + end.length;
       return true;
     }
 
-    Element read() throws IOException {
+    Node read() {
       if (n > 0 && c[0] == '\ufeff') pos++;
       whitespace();
-      while (skip("<?", "?>") || skip("<!--", "-->")) whitespace();
+      while (skip(PI, PI_END) || skip(COMMENT, COMMENT_END)) whitespace();
+      if (failure != null) return null;
       var root = element(0);
+      if (root == null) return null;
       whitespace();
-      while (skip("<!--", "-->")) whitespace();
-      if (pos != n) throw error("Trailing XML content");
-      ((Node) root).vocabulary = vocabulary;
+      while (skip(COMMENT, COMMENT_END)) whitespace();
+      if (failure != null) return null;
+      if (pos != n) return fail("Trailing XML content");
+      root.vocabulary = vocabulary;
       return root;
     }
 
-    Element element(int depth) throws IOException {
-      if (depth > 256 || ++count > 500000) throw error("XML complexity limit exceeded");
-      if (at('<', '!')) throw error("DTD and entity declarations are not supported");
-      expect('<');
+    Node element(int depth) {
+      if (depth > 256 || ++count > 500000) return fail("XML complexity limit exceeded");
+      final char[] c = this.c;
+      final int n = this.n;
+      if (pos + 1 < n && c[pos] == '<' && c[pos + 1] == '!')
+        return fail("DTD and entity declarations are not supported");
+      if (pos >= n || c[pos] != '<') return fail("Expected <");
+      pos++;
       int nameStart = pos;
       var tag = name();
+      if (tag == null) return null;
       int colon = tag.indexOf(':');
       var e = new Node(tag, colon < 0 ? tag : shared(nameStart + colon + 1, pos));
       while (true) {
         whitespace();
-        if (at('/', '>')) {
+        if (pos + 1 < n && c[pos] == '/' && c[pos + 1] == '>') {
           pos += 2;
           return e;
         }
@@ -403,104 +514,135 @@ public final class Xml {
           pos++;
           break;
         }
+        int keyStart = pos;
         var key = name();
-        if (((Node) e).index(key) >= 0) throw error("Duplicate attribute");
+        if (key == null) return null;
+        if (e.index(key) >= 0) return fail("Duplicate attribute");
+        int keyColon = key.indexOf(':');
+        var keyLocal = keyColon < 0 ? key : shared(keyStart + keyColon + 1, pos);
         whitespace();
-        expect('=');
+        if (pos >= n || c[pos] != '=') return fail("Expected =");
+        pos++;
         whitespace();
-        if (pos >= n) throw error("Missing attribute value");
+        if (pos >= n) return fail("Missing attribute value");
         char quote = c[pos++];
-        if (quote != '\"' && quote != '\'') throw error("Unquoted attribute");
-        int end = pos;
-        while (end < n && c[end] != quote) end++;
-        if (end >= n) throw error("Unterminated attribute");
-        e.setAttribute(key, value(pos, end, true));
+        if (quote != '\"' && quote != '\'') return fail("Unquoted attribute");
+        int end = until(c, quote, pos, n);
+        if (end >= n) return fail("Unterminated attribute");
+        var value = value(pos, end, true);
+        if (value == null) return null;
+        e.add(key, keyLocal, value);
         pos = end + 1;
       }
       while (pos < n) {
-        if (at('<', '/')) {
-          pos += 2;
-          var close = name();
-          whitespace();
-          expect('>');
-          if (!tag.equals(close)) throw error("Mismatched closing tag");
-          return e;
-        }
-        if (skip("<!--", "-->")) continue;
-        if (at('<', '!') && starts("<![CDATA[", pos)) {
-          int end = find("]]>", pos + 9);
-          if (end < 0) throw error("Unterminated CDATA");
-          e.addChild(new Element(text(pos + 9, end - pos - 9), true));
-          pos = end + 3;
+        if (c[pos] != '<') {
+          int end = until(c, '<', pos, n);
+          if (end >= n) return fail("Unterminated element");
+          var value = value(pos, end, false);
+          if (value == null) return null;
+          e.addChild(new Element(value, true));
+          pos = end;
           continue;
         }
-        if (skip("<?", "?>")) continue;
-        if (c[pos] == '<') e.addChild(element(depth + 1));
-        else {
-          int end = pos;
-          while (end < n && c[end] != '<') end++;
-          if (end >= n) throw error("Unterminated element");
-          e.addChild(new Element(value(pos, end, false), true));
-          pos = end;
+        char next = pos + 1 < n ? c[pos + 1] : 0;
+        if (next == '/') {
+          pos += 2;
+          var close = name();
+          if (close == null) return null;
+          whitespace();
+          if (pos >= n || c[pos] != '>') return fail("Expected >");
+          pos++;
+          if (!tag.equals(close)) return fail("Mismatched closing tag");
+          return e;
         }
+        if (next == '!') {
+          if (skip(COMMENT, COMMENT_END)) continue;
+          if (failure != null) return null;
+          if (starts(c, pos, n, CDATA)) {
+            int end = find(c, pos + 9, n, CDATA_END);
+            if (end < 0) return fail("Unterminated CDATA");
+            e.addChild(new Element(text(pos + 9, end - pos - 9), true));
+            pos = end + 3;
+            continue;
+          }
+        } else if (next == '?') {
+          if (skip(PI, PI_END)) continue;
+          return null;
+        }
+        var child = element(depth + 1);
+        if (child == null) return null;
+        e.addChild(child);
       }
-      throw error("Unterminated element");
+      return fail("Unterminated element");
     }
 
     /**
-     * The decoded text of [start, end): validated in place, and only copied out (pooled for
-     * attributes) when it holds no entity, which is nearly every value in OOXML.
+     * The decoded text of [start, end), or null after recording an error: validated in place,
+     * and only copied out (pooled for attributes) when it holds no entity, which is nearly
+     * every value in OOXML.
      */
-    String value(int start, int end, boolean attribute) throws IOException {
-      boolean entity = false;
-      for (int i = start; i < end; i++) {
-        char ch = c[i];
-        if (ch < 32) {
-          if (ch != '\t' && ch != '\n' && ch != '\r') throw error("Invalid XML control character");
-        } else if (ch == '&') entity = true;
-        else if (ch == '<' && attribute) throw error("Invalid attribute value");
+    String value(int start, int end, boolean attribute) {
+      int flags = scan(c, start, end);
+      if ((flags & CONTROL) != 0 || attribute && (flags & LESS) != 0) {
+        fail((flags & CONTROL) != 0 ? "Invalid XML control character" : "Invalid attribute value");
+        return null;
       }
-      if (entity) return decode(text(start, end - start));
+      if ((flags & ENTITY) != 0) return decode(start, end);
       return attribute ? shared(start, end) : text(start, end - start);
     }
 
-    String decode(String raw) throws IOException {
-      StringBuilder b = null;
-      for (int i = 0; i < raw.length(); i++) {
-        char c = raw.charAt(i);
-        if (c != '&') {
-          if (c < 32 && c != '\t' && c != '\n' && c != '\r')
-            throw error("Invalid XML control character");
-          if (b != null) b.append(c);
+    /** Entity-decoded [start, end), or null after recording an error. */
+    String decode(int start, int end) {
+      var b = new StringBuilder(end - start);
+      for (int i = start; i < end; i++) {
+        char ch = c[i];
+        if (ch != '&') {
+          b.append(ch);
           continue;
         }
-        if (b == null) b = new StringBuilder(raw.length()).append(raw, 0, i);
-        int end = raw.indexOf(';', i + 1);
-        if (end < 0) throw error("Unterminated entity");
-        var entity = raw.substring(i + 1, end);
-        if ("amp".equals(entity)) b.append('&');
-        else if ("lt".equals(entity)) b.append('<');
-        else if ("gt".equals(entity)) b.append('>');
-        else if ("quot".equals(entity)) b.append('\"');
-        else if ("apos".equals(entity)) b.append('\'');
-        else if (entity.startsWith("#")) {
-          try {
-            int cp =
-                entity.startsWith("#x")
-                    ? Integer.parseInt(entity.substring(2), 16)
-                    : Integer.parseInt(entity.substring(1));
-            if (cp < 0
-                || cp > 0x10ffff
-                || cp >= 0xd800 && cp <= 0xdfff
-                || cp < 32 && cp != 9 && cp != 10 && cp != 13) throw new NumberFormatException();
-            b.append(Character.toChars(cp));
-          } catch (IllegalArgumentException ex) {
-            throw error("Invalid numeric entity");
-          }
-        } else throw error("Unknown entity");
-        i = end;
+        int semi = until(c, ';', i + 1, end);
+        if (semi >= end) return failText("Unterminated entity");
+        int from = i + 1, len = semi - from;
+        if (len == 3 && c[from] == 'a' && c[from + 1] == 'm' && c[from + 2] == 'p') b.append('&');
+        else if (len == 2 && c[from] == 'l' && c[from + 1] == 't') b.append('<');
+        else if (len == 2 && c[from] == 'g' && c[from + 1] == 't') b.append('>');
+        else if (len == 4 && c[from] == 'q' && c[from + 1] == 'u' && c[from + 2] == 'o' && c[from + 3] == 't') b.append('\"');
+        else if (len == 4 && c[from] == 'a' && c[from + 1] == 'p' && c[from + 2] == 'o' && c[from + 3] == 's') b.append('\'');
+        else if (len > 1 && c[from] == '#') {
+          int cp = codePoint(c, from + 1, semi);
+          if (cp < 0) return failText("Invalid numeric entity");
+          if (cp >= 0x10000) b.append((char) (0xd7c0 + (cp >> 10))).append((char) (0xdc00 | cp & 0x3ff));
+          else b.append((char) cp);
+        } else return failText("Unknown entity");
+        i = semi;
       }
-      return b == null ? raw : b.toString();
+      return b.toString();
+    }
+
+    private String failText(String message) {
+      fail(message);
+      return null;
+    }
+
+    /** The XML character a numeric reference's digits [p, end) name, or -1 when invalid. */
+    static int codePoint(char[] c, int p, int end) {
+      int radix = 10;
+      if (p < end && c[p] == 'x') {
+        radix = 16;
+        p++;
+      }
+      if (p >= end || end - p > 8) return -1;
+      int cp = 0;
+      for (; p < end; p++) {
+        char ch = c[p];
+        int digit = ch >= '0' && ch <= '9' ? ch - '0'
+            : radix == 16 && ch >= 'a' && ch <= 'f' ? ch - 'a' + 10
+            : radix == 16 && ch >= 'A' && ch <= 'F' ? ch - 'A' + 10 : -1;
+        if (digit < 0) return -1;
+        cp = cp * radix + digit;
+      }
+      if (cp > 0x10ffff || cp >= 0xd800 && cp <= 0xdfff || cp < 32 && cp != 9 && cp != 10 && cp != 13) return -1;
+      return cp;
     }
   }
 
@@ -515,30 +657,38 @@ public final class Xml {
    * Float.parseFloat with a fast path for the plain integers nearly every OOXML measurement
    * is: ParparVM's general float parser was a tenth of the time spent opening a DOCX.
    */
-  public static float number(String v) {
-    int n = v.length(), i = n > 0 && v.charAt(0) == '-' ? 1 : 0;
-    if (i == n || n - i > 9) return Float.parseFloat(v);
+  /**
+   * A decimal int (optional sign, at most nine digits), or the fallback when v is anything
+   * else. Never throws, unlike Integer.parseInt.
+   */
+  public static int integer(String v, int fallback) {
+    int n = v.length(), i = n > 0 && (v.charAt(0) == '-' || v.charAt(0) == '+') ? 1 : 0;
+    if (i == n || n - i > 9) return fallback;
     int value = 0;
     for (int j = i; j < n; j++) {
       char ch = v.charAt(j);
-      if (ch < '0' || ch > '9') return Float.parseFloat(v);
+      if (ch < '0' || ch > '9') return fallback;
       value = value * 10 + (ch - '0');
     }
-    return i == 1 ? -value : value;
+    return v.charAt(0) == '-' ? -value : value;
   }
+
+  public static float number(String v) {
+    int value = integer(v, Integer.MIN_VALUE);
+    return value != Integer.MIN_VALUE ? value : decimal(v);
+  }
+
+  /** The rare non-integer measurement, kept out of number() so its hot path never throws. */
+  private static float decimal(String v) {
+    return Float.parseFloat(v);
+  }
+
 
   public static String attr(Element e, String name, String fallback) {
     // Exact lookups: Element.getAttribute lower-cases the name on every call, which made
     // attribute reads the largest cost of opening a document. OOXML names are case-exact.
     if (e instanceof Node n) {
-      int i = n.index(name);
-      if (i < 0) i = n.index("w:" + name);
-      for (int j = 0; i < 0 && j < n.attrCount; j += 2) {
-        var k = n.attrs[j];
-        if (k.length() > name.length()
-            && k.endsWith(name)
-            && k.charAt(k.length() - name.length() - 1) == ':') i = j;
-      }
+      int i = n.lookup(name);
       return i < 0 ? fallback : n.attrs[i + 1];
     }
     var attributes = e.getAttributes();
