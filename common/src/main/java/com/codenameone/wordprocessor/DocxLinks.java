@@ -7,6 +7,9 @@ import java.util.*;
 /** External hyperlink relationships with collision-free IDs and bookmark anchors. */
 final class DocxLinks {
   DocxNotes notes;
+  /** Paragraph styles written to styles.xml, and the run base of the paragraph being written. */
+  Map<String, ParagraphStyle> styles;
+  TextStyle base;
   private static final String PATH = "word/_rels/document.xml.rels";
   private static final String NS = "http://schemas.openxmlformats.org/package/2006/relationships";
   private static final String TYPE =

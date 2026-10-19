@@ -547,6 +547,7 @@ static final char COLUMN_BREAK = '\u000B';
       var tabs = new DocxTabs(d);
       var links = new DocxLinks(parts);
       links.notes = new DocxNotes(d);
+      links.styles = d.styles;
       var comments = new DocxComments(d);
       var pictures = new DocxPictures(parts);
       var furniture = new ArrayList<DocxFurniture>();
@@ -1124,15 +1125,21 @@ static final char COLUMN_BREAK = '\u000B';
     b.append(section).append("</w:pPr>");
     if (p.format.columnBreak) b.append("<w:r><w:br w:type=\"column\"/></w:r>");
     b.append(prefix);
+    var outer = links.base;
+    var style = links.styles == null ? null : links.styles.get(p.style);
+    links.base = style == null ? null : style.text;
     comments.content(b, p, links);
+    links.base = outer;
     b.append(suffix).append("</w:p>");
   }
 
   /**
-   * Run properties are written in full on every run, and a document has few distinct styles:
-   * reuse the markup per style. TextStyle is immutable with a cached hash.
+   * A document has few distinct run styles: reuse the markup per style, and per (paragraph-style
+   * base, style) pair for the compact form. TextStyle is immutable with a cached hash.
    */
   private static final Map<TextStyle, String> RUN_PROPERTIES = new HashMap<>();
+
+  private static final Map<TextStyle, Map<TextStyle, String>> RUN_DIFFERENCES = new HashMap<>();
 
   static void writeRunProperties(StringBuilder b, TextStyle s) {
     String cached;
@@ -1141,7 +1148,7 @@ static final char COLUMN_BREAK = '\u000B';
     }
     if (cached == null) {
       var x = new StringBuilder(640);
-      buildRunProperties(x, s);
+      buildRunProperties(x, s, null);
       cached = x.toString();
       synchronized (RUN_PROPERTIES) {
         if (RUN_PROPERTIES.size() > 512) RUN_PROPERTIES.clear();
@@ -1151,62 +1158,91 @@ static final char COLUMN_BREAK = '\u000B';
     b.append(cached);
   }
 
-  private static void buildRunProperties(StringBuilder b, TextStyle s) {
-    b.append("<w:rPr><w:rFonts w:ascii=\"")
-        .append(Xml.escape(s.font))
-        .append("\" w:hAnsi=\"")
-        .append(Xml.escape(s.font))
-        .append("\"/><w:sz w:val=\"")
-        .append(Math.round(s.size * 2))
-        .append("\"/><w:color w:val=\"")
-        .append(TextUtil.padded(s.color, 16, 6))
-        .append("\"/><w:shd w:fill=\"")
-        .append(
-            s.characters.shading >= 0
-                ? s.characters.value("shading")
-                : TextUtil.padded(s.background, 16, 6))
-        .append("\"/>");
-    b.append(s.bold ? "<w:b/>" : "<w:b w:val=\"0\"/>");
-    b.append(s.italic ? "<w:i/>" : "<w:i w:val=\"0\"/>");
-    b.append("<w:u w:val=\"")
-        .append(s.characters.underlineStyle)
-        .append("\" w:color=\"")
-        .append(s.characters.value("underlineColor"))
-        .append("\"/>");
-    b.append(s.strike ? "<w:strike/>" : "<w:strike w:val=\"0\"/>");
+  /**
+   * Writes only the properties that differ from {@code base}, the paragraph style's run format
+   * as written to styles.xml (every style carries a complete rPr and no basedOn, so the reader
+   * resolves an omitted property to exactly that value). Null base writes everything.
+   */
+  static void writeRunProperties(StringBuilder b, TextStyle s, TextStyle base) {
+    if (base == null || s.formatRevision != null) {
+      writeRunProperties(b, s);
+      return;
+    }
+    String cached;
+    synchronized (RUN_DIFFERENCES) {
+      var forBase = RUN_DIFFERENCES.get(base);
+      cached = forBase == null ? null : forBase.get(s);
+    }
+    if (cached == null) {
+      var x = new StringBuilder(160);
+      buildRunProperties(x, s, base);
+      cached = x.toString();
+      synchronized (RUN_DIFFERENCES) {
+        if (RUN_DIFFERENCES.size() > 64) RUN_DIFFERENCES.clear();
+        var forBase = RUN_DIFFERENCES.get(base);
+        if (forBase == null) RUN_DIFFERENCES.put(base, forBase = new HashMap<>());
+        if (forBase.size() > 512) forBase.clear();
+        forBase.put(s, cached);
+      }
+    }
+    b.append(cached);
+  }
+
+  private static final int BORDER = 16, LANGUAGE = 17;
+
+  /** The rPr children in a fixed order; optional ones are "" when absent. */
+  private static String[] runProperties(TextStyle s) {
+    var c = s.characters;
     String[] tags = {
       "dstrike", "smallCaps", "caps", "vanish", "outline", "shadow", "emboss", "imprint"
     };
     boolean[] flags = {
-      s.characters.doubleStrike, s.characters.smallCaps, s.characters.allCaps, s.characters.hidden,
-      s.characters.outline, s.characters.shadow, s.characters.emboss, s.characters.engrave
+      c.doubleStrike, c.smallCaps, c.allCaps, c.hidden, c.outline, c.shadow, c.emboss, c.engrave
     };
+    var out = new String[22];
+    out[0] = "<w:rFonts w:ascii=\"" + Xml.escape(s.font) + "\" w:hAnsi=\"" + Xml.escape(s.font) + "\"/>";
+    out[1] = "<w:sz w:val=\"" + Math.round(s.size * 2) + "\"/>";
+    out[2] = "<w:color w:val=\"" + TextUtil.padded(s.color, 16, 6) + "\"/>";
+    out[3] =
+        "<w:shd w:fill=\""
+            + (c.shading >= 0 ? c.value("shading") : TextUtil.padded(s.background, 16, 6))
+            + "\"/>";
+    out[4] = s.bold ? "<w:b/>" : "<w:b w:val=\"0\"/>";
+    out[5] = s.italic ? "<w:i/>" : "<w:i w:val=\"0\"/>";
+    out[6] = "<w:u w:val=\"" + c.underlineStyle + "\" w:color=\"" + c.value("underlineColor") + "\"/>";
+    out[7] = s.strike ? "<w:strike/>" : "<w:strike w:val=\"0\"/>";
     for (int i = 0; i < tags.length; i++)
-      b.append("<w:")
-          .append(tags[i])
-          .append(" w:val=\"")
-          .append(flags[i] ? "1" : "0")
-          .append("\"/>");
-    if (s.characters.border >= 0)
-      b.append("<w:bdr w:val=\"single\" w:sz=\"4\" w:space=\"0\" w:color=\"")
-          .append(s.characters.value("border"))
-          .append("\"/>");
-    if (!s.characters.lang.isEmpty())
-      b.append("<w:lang w:val=\"").append(Xml.escape(s.characters.lang)).append("\"/>");
-    b.append("<w:spacing w:val=\"")
-        .append(Math.round(s.characters.spacing * 20))
-        .append("\"/><w:w w:val=\"")
-        .append(Math.round(s.characters.scale))
-        .append("\"/><w:position w:val=\"")
-        .append(Math.round(s.characters.position * 2))
-        .append("\"/>");
-    b.append("<w:vertAlign w:val=\"").append(s.script).append("\"/>");
+      out[8 + i] = "<w:" + tags[i] + " w:val=\"" + (flags[i] ? "1" : "0") + "\"/>";
+    out[BORDER] =
+        c.border >= 0
+            ? "<w:bdr w:val=\"single\" w:sz=\"4\" w:space=\"0\" w:color=\"" + c.value("border") + "\"/>"
+            : "";
+    out[LANGUAGE] = c.lang.isEmpty() ? "" : "<w:lang w:val=\"" + Xml.escape(c.lang) + "\"/>";
+    out[18] = "<w:spacing w:val=\"" + Math.round(c.spacing * 20) + "\"/>";
+    out[19] = "<w:w w:val=\"" + Math.round(c.scale) + "\"/>";
+    out[20] = "<w:position w:val=\"" + Math.round(c.position * 2) + "\"/>";
+    out[21] = "<w:vertAlign w:val=\"" + s.script + "\"/>";
+    return out;
+  }
+
+  private static void buildRunProperties(StringBuilder b, TextStyle s, TextStyle base) {
+    String[] own = runProperties(s), inherited = base == null ? null : runProperties(base);
+    // An absent border or language cannot be expressed as a difference: write everything.
+    if (inherited != null
+        && ((own[BORDER].isEmpty() && !inherited[BORDER].isEmpty())
+            || (own[LANGUAGE].isEmpty() && !inherited[LANGUAGE].isEmpty()))) inherited = null;
+    int start = b.length();
+    b.append("<w:rPr>");
+    int open = b.length();
+    for (int i = 0; i < own.length; i++)
+      if (inherited == null || !own[i].equals(inherited[i])) b.append(own[i]);
     if (s.formatRevision != null) {
       RevisionFormats.formatStart(b, s.formatRevision);
       writeRunProperties(b, s.previousStyle);
       b.append("</w:rPrChange>");
     }
-    b.append("</w:rPr>");
+    if (b.length() == open) b.setLength(start);
+    else b.append("</w:rPr>");
   }
 
   static void writeRun(StringBuilder b, String text, TextStyle s, DocxLinks links) {
@@ -1222,7 +1258,7 @@ static final char COLUMN_BREAK = '\u000B';
       else b.append("<w:hyperlink r:id=\"").append(Xml.escape(links.id(s.link))).append("\">");
     }
     b.append("<w:r>");
-    writeRunProperties(b, s);
+    writeRunProperties(b, s, links == null ? null : links.base);
     String[] lines = TextUtil.split(text, '\n');
     for (int i = 0; i < lines.length; i++) {
       if (i > 0) b.append("<w:br/>");
