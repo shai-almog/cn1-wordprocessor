@@ -1060,12 +1060,22 @@ static final char COLUMN_BREAK = '\u000B';
           .with("before", "0").with("after", "0"), lists, tabs, links, comments, "", "", "");
       p = p.text(p.text.slice(skip, p.text.length())).with("dropCap", "");
     }
-    int properties = b.length() + "<w:p><w:pPr>".length();
-    b.append("<w:p><w:pPr><w:pStyle w:val=\"")
-        .append(Xml.escape(p.style))
-        .append("\"/><w:jc w:val=\"")
-        .append(Xml.escape("justify".equals(p.align) ? "both" : p.align))
-        .append("\"/><w:spacing w:before=\"")
+    // A style's definition is written by this same code from its own paragraph, with every
+    // element below always present (Asian options when off). The reader applies the style's
+    // pPr and then the direct one, so an element whose inputs equal the style's is omitted.
+    var styleDefinition = links.styles == null ? null : links.styles.get(p.style);
+    Paragraph base = styleDefinition == null ? null : styleDefinition.paragraph;
+    b.append("<w:p><w:pPr><w:pStyle w:val=\"").append(Xml.escape(p.style)).append("\"/>");
+    if (base == null || !p.align.equals(base.align))
+      b.append("<w:jc w:val=\"")
+          .append(Xml.escape("justify".equals(p.align) ? "both" : p.align))
+          .append("\"/>");
+    if (base == null
+        || p.before != base.before
+        || p.after != base.after
+        || p.lineSpacing != base.lineSpacing
+        || !p.format.lineRule.equals(base.format.lineRule))
+      b.append("<w:spacing w:before=\"")
         .append(Math.round(p.before * 20))
         .append("\" w:after=\"")
         .append(Math.round(p.after * 20))
@@ -1073,7 +1083,14 @@ static final char COLUMN_BREAK = '\u000B';
         .append(Math.round(p.lineSpacing * ("auto".equals(p.format.lineRule) ? 240 : 20)))
         .append("\" w:lineRule=\"")
         .append(p.format.lineRule)
-        .append("\"/><w:ind w:left=\"")
+        .append("\"/>");
+    if (base == null
+        || p.indent != base.indent
+        || !p.list.equals(base.list)
+        || p.listLevel != base.listLevel
+        || p.format.rightIndent != base.format.rightIndent
+        || p.format.firstIndent != base.format.firstIndent)
+      b.append("<w:ind w:left=\"")
         .append(Math.round((p.indent + (p.list.isEmpty() ? 0 : 18 * (p.listLevel + 1))) * 20))
         .append("\" w:right=\"")
         .append(Math.round(p.format.rightIndent * 20))
@@ -1092,14 +1109,17 @@ static final char COLUMN_BREAK = '\u000B';
       b.append("<w:outlineLvl w:val=\"")
           .append(p.format.outlineLevel == 0 ? 9 : p.format.outlineLevel - 1)
           .append("\"/>");
-    b.append(p.format.keepLines ? "<w:keepLines/>" : "<w:keepLines w:val=\"0\"/>");
+    if (base == null || p.format.keepLines != base.format.keepLines)
+      b.append(p.format.keepLines ? "<w:keepLines/>" : "<w:keepLines w:val=\"0\"/>");
     if (!p.format.dropCap.isEmpty())
       b.append("<w:framePr w:dropCap=\"").append(p.format.dropMode()).append("\" w:lines=\"")
           .append(p.format.dropLines()).append("\" w:hSpace=\"").append(Math.round(p.format.dropDistance() * 20))
           .append("\" w:wrap=\"around\" w:vAnchor=\"text\" w:hAnchor=\"text\"/>");
-    b.append(p.format.widowControl ? "<w:widowControl/>" : "<w:widowControl w:val=\"0\"/>");
+    if (base == null || p.format.widowControl != base.format.widowControl)
+      b.append(p.format.widowControl ? "<w:widowControl/>" : "<w:widowControl w:val=\"0\"/>");
     for (String option : ParagraphFormat.ASIAN)
-      if (!p.format.asian(option)) b.append("<w:").append(option).append(" w:val=\"0\"/>");
+      if (!p.format.asian(option) && (base == null || base.format.asian(option)))
+        b.append("<w:").append(option).append(" w:val=\"0\"/>");
     if (p.format.rtl) b.append("<w:bidi/>");
     DocxBorders.write(b, p.format);
     tabs.write(b, p);
@@ -1127,7 +1147,6 @@ static final char COLUMN_BREAK = '\u000B';
       b.append(content.substring(content.indexOf("<w:pPr>"), content.lastIndexOf("</w:pPr>") + 8));
       b.append("</w:pPrChange>");
     }
-    omitInherited(b, properties, p.style, lists, tabs, links);
     b.append(section).append("</w:pPr>");
     if (p.format.columnBreak) b.append("<w:r><w:br w:type=\"column\"/></w:r>");
     b.append(prefix);
@@ -1137,78 +1156,6 @@ static final char COLUMN_BREAK = '\u000B';
     comments.content(b, p, links);
     links.base = outer;
     b.append(suffix).append("</w:p>");
-  }
-
-  private static final java.util.Set<String> INHERITABLE = new java.util.HashSet<>();
-
-  static {
-    INHERITABLE.addAll(java.util.Arrays.asList("jc", "spacing", "ind", "keepLines", "widowControl"));
-    INHERITABLE.addAll(ParagraphFormat.ASIAN);
-  }
-
-  /**
-   * Drops direct paragraph properties the paragraph style already writes identically. The
-   * reader applies the style's pPr children and then the direct ones, element by element, so
-   * an identical direct element changes nothing. Only simple self-closing elements qualify.
-   */
-  private static void omitInherited(
-      StringBuilder b, int start, String styleId, DocxLists lists, DocxTabs tabs, DocxLinks links) {
-    if (links.styles == null || !links.styles.containsKey(styleId)) return;
-    var inherited = links.inherited.get(styleId);
-    if (inherited == null) {
-      var styles = links.styles;
-      links.styles = null;
-      var own = new StringBuilder();
-      writeParagraph(
-          own, styles.get(styleId).paragraph, lists, tabs.withoutStyles(), links,
-          new DocxComments(Document.empty()));
-      links.styles = styles;
-      inherited = new java.util.HashSet<String>();
-      var text = own.toString();
-      int from = text.indexOf("<w:pPr>") + 7, end = text.indexOf("</w:pPr>");
-      for (int[] e = new int[2]; next(text, from, end, e); from = e[1])
-        if (e[0] < 0) inherited.add(text.substring(-e[0] - 1, e[1]));
-      links.inherited.put(styleId, inherited);
-    }
-    if (inherited.isEmpty()) return;
-    var chars = new char[b.length() - start];
-    b.getChars(start, b.length(), chars, 0);
-    var region = new String(chars);
-    var kept = new StringBuilder(region.length());
-    int from = 0;
-    for (int[] e = new int[2]; next(region, from, region.length(), e); from = e[1]) {
-      int at = e[0] < 0 ? -e[0] - 1 : e[0];
-      var element = region.substring(at, e[1]);
-      if (e[0] >= 0 || !inherited.contains(element)) kept.append(element);
-    }
-    if (from != region.length()) return; // not plain elements: leave untouched
-    b.setLength(start);
-    b.append(kept);
-  }
-
-  /**
-   * Finds the top-level element starting at {@code from} (before {@code end}). Sets e[1] to its
-   * end, and e[0] to its start, or to -start-1 when it is a self-closing inheritable element.
-   */
-  private static boolean next(String b, int from, int end, int[] e) {
-    if (from >= end || b.charAt(from) != '<') return false;
-    int nameEnd = from + 1;
-    while (nameEnd < end && " />".indexOf(b.charAt(nameEnd)) < 0) nameEnd++;
-    String name = b.substring(from + 1, nameEnd);
-    int close = from;
-    while (close < end && b.charAt(close) != '>') close++;
-    if (close >= end) return false;
-    if (b.charAt(close - 1) == '/') {
-      e[0] = name.startsWith("w:") && INHERITABLE.contains(name.substring(2)) ? -from - 1 : from;
-      e[1] = close + 1;
-      return true;
-    }
-    String closing = "</" + name + ">";
-    int at = b.indexOf(closing, close);
-    if (at < 0 || at + closing.length() > end) return false;
-    e[0] = from;
-    e[1] = at + closing.length();
-    return true;
   }
 
   /**
