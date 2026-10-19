@@ -4,6 +4,7 @@ import static org.junit.Assert.*;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import org.junit.Test;
@@ -38,7 +39,9 @@ public class CharacterDecorationTest {
     assertEquals(CharacterFormat.DEFAULT, s.document().paragraph(0).text.styleAt(8).characters);
     assertEquals(c, DocumentXml.read(DocumentXml.write(s.document())).paragraph(0).text.styleAt(0).characters);
     var out = new ByteArrayOutputStream();
-    Docx.write(s.document(), out);
+    // DOCX cannot carry ruby or enclosures yet, so a plain save asks for explicit conversion.
+    assertThrows(IOException.class, () -> Docx.write(s.document(), new ByteArrayOutputStream()));
+    Docx.write(s.document(), null, out, true);
     var back =
         Docx.read(new ByteArrayInputStream(out.toByteArray())).document.paragraph(0).text.styleAt(0).characters;
     assertEquals(0x112233, back.border);

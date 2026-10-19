@@ -475,6 +475,10 @@ static final char COLUMN_BREAK = '\u000B';
     for (Element c : Xml.children(e, null)) {
       String k = Xml.local(c);
       if ("t".equals(k) || "delText".equals(k)) b.append(Xml.text(c));
+      else if ("ruby".equals(k)) {
+        // DocxFields keeps the base text; the guide itself is not modeled.
+        warnings.add("Phonetic guide (ruby) dropped; base text kept");
+      }
       else if ("tab".equals(k)) b.append('\t');
       else if ("br".equals(k) && "column".equals(Xml.attr(c, "type", ""))) {
         // Becomes ParagraphFormat.columnBreak once the paragraph is assembled.
@@ -517,6 +521,13 @@ static final char COLUMN_BREAK = '\u000B';
         }
     if (!p.list.isEmpty() && !"bullet".equals(p.list) && !"number".equals(p.list))
       warnings.add("Unsupported list format: " + p.list);
+    p.text.visit(
+        (o, t, style) -> {
+          if (!style.characters.ruby.isEmpty())
+            warnings.add("Phonetic guides (ruby) are not saved to DOCX");
+          if (!"none".equals(style.characters.enclose))
+            warnings.add("Enclosed characters are not saved to DOCX");
+        });
   }
 
   public static void write(Document d, OutputStream out) throws IOException {

@@ -73,10 +73,20 @@ final class DocxFields {
       warnings.add("Nested field result is flattened within its parent field");
     }
     checkResult(field.result, field.style);
+    checkInstruction(instruction);
     append(
         RichText.field(
             new InlineField(instruction, field.result.plainText(), field.locked, false),
             field.style));
+  }
+
+  /** Field types kept and saved verbatim but displayed only as their stored result. */
+  private void checkInstruction(String instruction) {
+    String type = instruction.trim();
+    int space = type.indexOf(' ');
+    if (space > 0) type = type.substring(0, space);
+    if ("EQ".equalsIgnoreCase(type))
+      warnings.add("Equation field (EQ, used for enclosed and combined characters) shown as its stored result");
   }
 
   private void node(Element node, String link) {
@@ -101,6 +111,7 @@ final class DocxFields {
         append(result);
       } else {
         checkResult(result, result.styleAt(0));
+        checkInstruction(instruction);
         append(
             RichText.field(
                 new InlineField(instruction, result.plainText(), enabled(node, "fldLock"), false),
@@ -162,6 +173,12 @@ final class DocxFields {
           stack.get(stack.size() - 1).separated = true;
         else if ("end".equals(action) && !stack.isEmpty()) close();
         else warnings.add("Unmatched complex field marker");
+      } else if ("ruby".equals(type)) {
+        // Docx.run reports the dropped phonetic guide; the base text stays in the document.
+        Element base = Xml.child(child, "rubyBase");
+        if (base != null)
+          for (Element r : Xml.children(base, "r"))
+            for (Element t : Xml.children(r, "t")) append(RichText.of(Xml.text(t), style));
       } else if (("instrText".equals(type) || "delInstrText".equals(type))) {
         if (stack.isEmpty()) warnings.add("Instruction outside a field");
         else stack.get(stack.size() - 1).instruction.append(Xml.text(child));
