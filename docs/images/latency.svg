@@ -40,4 +40,4 @@
 <rect x="190" y="354" width="420.0" height="18" rx="3" fill="#e0663a"/>
 <text x="616.0" y="367" font-size="12">431</text>
 <text x="744" y="356" font-size="12" font-weight="600" text-anchor="end" fill="#2f7ff0">16.0× better</text>
-<text x="16" y="416" font-size="11" class="muted">CI run 39438215005, GitHub macos-15 runner, same fixture. Source: docs/native-benchmarks.json</text></svg>
+<text x="16" y="416" font-size="11" class="muted">GitHub macos-15 runner, commit a729b74, same fixture. Source: docs/native-benchmarks.json</text></svg>

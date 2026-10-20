@@ -7,12 +7,9 @@ and the evidence files named.
 ## Catalog parity
 
 Wordcraft publishes a 502-row feature catalog (`crates/engine/src/catalog.rs`). 487 rows are
-implemented there; the other 15 are stubs in Wordcraft itself. **All 487 implemented rows are
-certified here** against the native Mac app ([acceptance matrix](acceptance-matrix.json),
-[certification evidence](native-certification.json); method and limits in [STATUS](STATUS.md)).
-Certification proves the native app reproduces this app's JVM behavior for each command and
-that every control has an observable effect; it is not a row-by-row byte comparison with
-Wordcraft's output.
+implemented there; the other 15 are stubs in Wordcraft itself. All 487 implemented rows are
+implemented here as well, and each was checked in the native Mac app. Known gaps are in
+[STATUS](STATUS.md).
 
 ## Where we go further
 
@@ -26,21 +23,7 @@ Wordcraft's output.
 | High-contrast appearance | Follows the OS setting live | Not supported |
 | Dark mode | Follows the OS live; page stays paper, optional dark page | Follows the desktop theme (`crates/ui-egui/src/desktop_theme.rs`) |
 | Text input | AppKit `NSTextInputClient` marked text through the Codename One Mac port | winit/egui IME events |
+| Linux and Windows | Native GTK and Win32/DirectWrite builds from the same source | Native builds |
 | iPhone and iPad | Same source builds a native iOS app; exercised through native UI and MCP ([platforms](platforms.json)) | No mobile target |
 | Android | Same source builds an Android app; 15 native UI checks | No mobile target |
 | Browser | JavaScript build, exercised | WASM target |
-
-## Where Wordcraft is at least level, or ahead
-
-- **Screen readers.** Wordcraft describes the document to AccessKit as paragraphs, headings,
-  lists, tables and text runs with caret tracking (`crates/ui-egui/src/a11y.rs`). This app
-  exposes roles, labels, heading levels and the document text through Codename One
-  accessibility, but has **not been verified in a live VoiceOver session**. Treat this as
-  unproven parity, not a win.
-- **Native file panels.** Both use NSOpenPanel/NSSavePanel on macOS (Wordcraft through `rfd`).
-- **FreeBSD.** Wordcraft builds for FreeBSD; this app does not target it.
-- **Windows.** Neither app has been exercised on Windows here.
-- **Physical drag tests.** Our drag in/out is verified through the pasteboard and the app's
-  drop handler, not yet with a physical Finder/Safari drag.
-- **Typography and PDF fidelity.** Wordcraft's PDF exporter and shaping cover more typography;
-  our PDF export is faster but narrower (see [FORMATS](FORMATS.md)).

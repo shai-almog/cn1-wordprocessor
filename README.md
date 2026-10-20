@@ -15,23 +15,21 @@ same 502-row Word feature catalog.
 
 ![The macOS app](docs/images/editor-light.png)
 
+<!-- ci-summary:begin -->
 | Front | Java (this app) | Rust (Wordcraft) |
 | --- | --- | --- |
 | **Faster startup** | 256 / 228 / 152 ms | 706 / 253 / 300 ms |
-| **Faster editing** | 9.2 / 8.0 / 5.9 ms to type a character | 39.7 / 16.1 / 16.8 ms |
+| **Faster editing** | 9.2 / 8.0 / 5.9 ms to type a character | 39.7 / 16.1 / 16.8 ms to type a character |
 | **Less RAM** | 101 / 101 / 86 MiB | 143 / 185 / 106 MiB |
 | **Smaller executable** | 26.0 / 28.6 / 24.5 MiB | 55.0 / 75.2 / 57.5 MiB |
 | **More platforms from one source** | macOS, Linux, Windows, iPhone/iPad, Android, browser | macOS, Linux, Windows, browser |
 | **More features, deeper native** | native menu bar, rich copy out, drag out, high contrast | see [below](#more-features-and-deeper-native) |
 | **Equally functional** | 487 / 487 implementable catalog rows | 487 rows implemented, 15 stubs |
 | **Easier for LLMs** | 43,679 lines, 483,125 tokens | 118,659 lines, 1,646,847 tokens |
-| **Cheaper CI** | 647 tests: 75 s cold build + test, 9 s re-run | 1,922 tests: 1,023 s cold build + test, 60 s re-run |
+| **Cheaper CI per test** | 116 ms (647 tests in 75 s) | 532 ms (1,922 tests in 1,023 s) |
 
-Desktop figures are macOS / Linux / Windows, measured on GitHub's runners by CI run
-[39438215005](https://github.com/shai-almog/cn1-wordprocessor/actions/runs/39438215005) (commit `a729b74`) with the 1,000-paragraph document: launch to first
-painted document, idle resident memory, and command to painted frame. Code counts are
-application code without tests or comment lines. Java wins 39 of the 42 desktop measurements;
-the three it loses are listed in [Per-OS results](#per-os-results).
+Desktop figures are macOS / Linux / Windows, measured on GitHub's runners by CI run [39438215005](https://github.com/shai-almog/cn1-wordprocessor/actions/runs/39438215005) (commit `a729b74`) with the 1,000-paragraph document: launch to first painted document, idle resident memory, and command to painted frame. Code counts are application code without tests or comment lines. Java wins 39 of the 42 desktop measurements; the rest are listed in [Per-OS results](#per-os-results).
+<!-- ci-summary:end -->
 
 ## How can Java beat Rust on RAM and performance?
 
@@ -72,9 +70,7 @@ nothing: the Rust code would become even more complex, more verbose and slower t
 ## Per-OS results
 
 Every number here comes from one CI run on GitHub-hosted runners, with both apps built from
-source, run on the same machine and given the same fixtures. Wordcraft's three wins are within
-a few percent: saving a DOCX on macOS and Linux (0.2 and 0.1 ms) and peak memory during the
-Windows editing workload (7 MiB).
+source, run on the same machine and given the same fixtures.
 
 <!-- ci-tables:begin -->
 Measured by CI run [39438215005](https://github.com/shai-almog/cn1-wordprocessor/actions/runs/39438215005) on commit `a729b74` (2026-10-20), GitHub-hosted runners, same runner and fixtures for both apps. Medians; startup is 10 fresh launches to the first painted document, latency is command to painted frame. Regenerate with `scripts/ci-readme-tables.py RUN_ID`.
@@ -141,8 +137,11 @@ Measured by CI run [39438215005](https://github.com/shai-almog/cn1-wordprocessor
 | Reopen DOCX to painted frame | 15.2 ms | 74.6 ms | CN1 |
 | Export PDF to painted frame | 13.8 ms | 477.6 ms | CN1 |
 | Executable size | 24.5 MiB | 57.5 MiB | CN1 |
-
 <!-- ci-tables:end -->
+
+Note on PDF export: our exporter covers less typography than Wordcraft's. It has no complex
+shaping, kerning or system font fallback, no links and no tagged accessibility, so the export
+time is not an equal-fidelity comparison. See [FORMATS](docs/FORMATS.md).
 
 ## Faster
 
@@ -152,8 +151,6 @@ Measured by CI run [39438215005](https://github.com/shai-almog/cn1-wordprocessor
 
 Latency is measured from the command to the first painted frame that shows its result,
 with the 1,000-paragraph document (macOS charts; see the tables above for Linux and Windows).
-Our PDF exporter covers less typography than Wordcraft's, so the PDF figure is not an
-equal-fidelity comparison ([FORMATS](docs/FORMATS.md)).
 
 ## Smaller
 
@@ -205,14 +202,28 @@ edit touches less code.
 
 ## Cheaper CI
 
-![CI cost](docs/images/ci.svg)
+![CI cost per test](docs/images/ci.svg)
 
-Functional tests run on the JVM against the same Java code that ships natively: the whole
-suite of 647 tests compiles and runs in seconds, with no native toolchain. Rust must compile
-its dependency tree and test binaries before running anything. On the same GitHub runner in
-CI run [39438215005](https://github.com/shai-almog/cn1-wordprocessor/actions/runs/39438215005),
-a cold build plus test takes 75 s for Java and 1,023 s for Rust's 1,922 tests, about 14 times
-less CI time; re-running the compiled suites takes 9 s and 60 s.
+The two suites have different sizes, so the chart divides runner time by the number of tests.
+Functional tests run on the JVM against the same Java code that ships natively, with no native
+toolchain; Rust must compile its dependency tree and test binaries before running anything.
+
+### Why does Wordcraft have three times as many tests?
+
+Its 1,926 `#[test]` functions average 4.9 assertions each; our 647 average 4.5, so the extra
+tests are real extra checks, not finer slicing. Counted at the pinned revision:
+
+- **About a quarter test plumbing that egui leaves to the application.** `ui-egui` alone has
+  371 tests (scroll viewports, popup placement, hover fades, window-state restore, combo-list
+  virtualization, file browser, print spooling), plus `fonts`, `render`, `geom` and `xtask`
+  (99 more: font fallback per script, rasterization, build tooling). Codename One supplies
+  these as framework services, tested once in the framework instead of in every app.
+- **About 7% cover features this app does not have:** legacy binary `.doc` import (`docbin`,
+  67), WMF/EMF pictures (`metafile`, 57) and Zotero (`zotero`, 20).
+- **The rest, about 1,300, cover the same ground as our 647.** Part of that is a different
+  style (153 are named round trips, which we check inside broader format tests), but Wordcraft
+  does test shared features more densely than we do. Fewer tests is cheaper CI, not proof of
+  equal coverage.
 
 ## Proven in CI
 

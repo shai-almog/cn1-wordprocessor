@@ -58,7 +58,7 @@ ops = [('Type a character', 'insert'), ('Undo', 'undo'), ('Paste 10,000 chars', 
        ('Save DOCX', 'saveDocx'), ('Reopen DOCX', 'reopenDocx'), ('Export PDF', 'exportPdf')]
 chart('latency', 'Command to painted frame, 1,000-paragraph document', 'milliseconds, median, CI macOS runner',
       [(l, paint('cn1', k), paint('wordcraft', k)) for l, k in ops],
-      'CI run 39438215005, GitHub macos-15 runner, same fixture. Source: docs/native-benchmarks.json')
+      f"GitHub macos-15 runner, commit {bench['artifacts']['cn1Revision'][:7]}, same fixture. Source: docs/native-benchmarks.json")
 chart('startup', 'Launch to first painted document', 'milliseconds, median of 10 fresh launches, CI macOS runner',
       [(f'{int(p):,} paragraphs', start[p]['cn1']['cpuReadyMs']['median'], start[p]['wordcraft']['cpuReadyMs']['median'])
        for p in ('1', '1000', '10000')],
@@ -79,8 +79,9 @@ chart('source', 'Application source an LLM has to read', 'thousands; tests exclu
        ('Tokens (o200k_base)', ja['testPrunedTokens'] / 1000, ra['testPrunedTokens'] / 1000),
        ('Files', ja['files'], ra['files'])],
       'cloc + tiktoken; Wordcraft pinned at 159b84f. Source: docs/source-metrics.json, CI workflow metrics.yml')
-chart('ci', 'Test-suite cost', 'seconds, GitHub ubuntu-24.04 runner',
-      [('Build + run tests, cold', ci['java']['coldBuildTestSeconds'], ci['rust']['coldBuildTestSeconds']),
-       ('Run tests, compiled', ci['java']['testSeconds'], ci['rust']['testSeconds'])],
-      f"{ci['java']['tests']:,} Java tests vs {ci['rust']['tests']:,} Rust tests. Source: docs/ci-metrics.json, CI workflow metrics.yml")
+jt, rt = ci['java']['tests'], ci['rust']['tests']
+chart('ci', 'Test-suite cost per test', 'milliseconds of CI runner time per test',
+      [('Cold build + run tests', ci['java']['coldBuildTestSeconds'] * 1000 / jt, ci['rust']['coldBuildTestSeconds'] * 1000 / rt),
+       ('Re-run compiled tests', ci['java']['testSeconds'] * 1000 / jt, ci['rust']['testSeconds'] * 1000 / rt)],
+      f"{jt:,} Java tests in {ci['java']['coldBuildTestSeconds']} s vs {rt:,} Rust tests in {ci['rust']['coldBuildTestSeconds']} s, cold. Source: docs/ci-metrics.json, CI workflow metrics.yml")
 print('wrote', sorted(p.name for p in out.glob('*.svg')))
