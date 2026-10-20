@@ -1,20 +1,19 @@
 {
   "schema": 1,
-  "measured": "2026-10-18, Mac16,5 (16 CPUs, 64 GiB), macOS 26.6.2, warm OS file cache",
+  "measured": "CI run 39438215005 (a729b74), GitHub ubuntu-24.04 runners",
   "definition": "Cold = no compiled output for the project (Java: module target/ removed; Rust: empty CARGO_TARGET_DIR). Java resolves prebuilt dependency jars from a populated local Maven repository; Rust compiles its crate dependencies from source, as every cold cargo build does. Compiled = tests re-run with nothing to rebuild. The same steps run on GitHub's ubuntu-24.04 runners in .github/workflows/metrics.yml.",
   "java": {
     "command": "mvn -o -pl document,layout,formats,automation,editor,cli,benchmarks install / surefire:test",
-    "coldBuildTestSeconds": 8,
-    "testSeconds": 6,
-    "tests": 623
+    "coldBuildTestSeconds": 75,
+    "testSeconds": 9,
+    "tests": 647
   },
   "rust": {
     "revision": "159b84f54c74e9e82fb3109b758ae7dd6f4e3ab0",
     "command": "cargo test --workspace --locked --no-run / cargo test --workspace --locked",
-    "coldBuildTestSeconds": 185,
-    "coldBuildOnlySeconds": 165,
-    "testSeconds": 20,
-    "tests": 1921,
+    "coldBuildTestSeconds": 1023,
+    "testSeconds": 60,
+    "tests": 1922,
     "ignored": 2
   }
 }

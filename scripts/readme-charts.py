@@ -56,10 +56,10 @@ work, start = bench['workload'], bench['startup']
 paint = lambda side, op: work[side]['commandToCpuPaint'][op]['median']
 ops = [('Type a character', 'insert'), ('Undo', 'undo'), ('Paste 10,000 chars', 'paste10000'),
        ('Save DOCX', 'saveDocx'), ('Reopen DOCX', 'reopenDocx'), ('Export PDF', 'exportPdf')]
-chart('latency', 'Command to painted frame, 1,000-paragraph document', 'milliseconds, median of 3 native runs',
+chart('latency', 'Command to painted frame, 1,000-paragraph document', 'milliseconds, median, CI macOS runner',
       [(l, paint('cn1', k), paint('wordcraft', k)) for l, k in ops],
-      'Native macOS ARM64 release builds, same machine and fixture. Source: docs/native-benchmarks.json')
-chart('startup', 'Launch to first painted document', 'milliseconds, median of 10 fresh launches',
+      'CI run 39438215005, GitHub macos-15 runner, same fixture. Source: docs/native-benchmarks.json')
+chart('startup', 'Launch to first painted document', 'milliseconds, median of 10 fresh launches, CI macOS runner',
       [(f'{int(p):,} paragraphs', start[p]['cn1']['cpuReadyMs']['median'], start[p]['wordcraft']['cpuReadyMs']['median'])
        for p in ('1', '1000', '10000')],
       'Warm file cache; ends at the CPU paint of the document. Source: docs/native-benchmarks.json')
@@ -79,7 +79,7 @@ chart('source', 'Application source an LLM has to read', 'thousands; tests exclu
        ('Tokens (o200k_base)', ja['testPrunedTokens'] / 1000, ra['testPrunedTokens'] / 1000),
        ('Files', ja['files'], ra['files'])],
       'cloc + tiktoken; Wordcraft pinned at 159b84f. Source: docs/source-metrics.json, CI workflow metrics.yml')
-chart('ci', 'Test-suite cost', 'seconds on the same machine',
+chart('ci', 'Test-suite cost', 'seconds, GitHub ubuntu-24.04 runner',
       [('Build + run tests, cold', ci['java']['coldBuildTestSeconds'], ci['rust']['coldBuildTestSeconds']),
        ('Run tests, compiled', ci['java']['testSeconds'], ci['rust']['testSeconds'])],
       f"{ci['java']['tests']:,} Java tests vs {ci['rust']['tests']:,} Rust tests. Source: docs/ci-metrics.json, CI workflow metrics.yml")

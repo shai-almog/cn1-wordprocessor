@@ -17,19 +17,21 @@ same 502-row Word feature catalog.
 
 | Front | Java (this app) | Rust (Wordcraft) |
 | --- | --- | --- |
-| **Faster startup** | 79 / 144 / 217 ms | 279 / 290 / 481 ms |
-| **Faster editing** | 3.4 ms insert, 5.6 ms save, 7.8 ms PDF | 12.0 ms insert, 9.6 ms save, 255 ms PDF |
-| **Less RAM** | 137 / 163 / 197 MiB | 175 / 227 / 323 MiB |
-| **Smaller on disk** | 33 MB app bundle | 57 MB app bundle |
-| **More platforms from one source** | macOS, iPhone/iPad, Android, browser | desktop and browser |
+| **Faster startup** | 256 / 228 / 152 ms | 706 / 253 / 300 ms |
+| **Faster editing** | 9.2 / 8.0 / 5.9 ms to type a character | 39.7 / 16.1 / 16.8 ms |
+| **Less RAM** | 101 / 101 / 86 MiB | 143 / 185 / 106 MiB |
+| **Smaller executable** | 26.0 / 28.6 / 24.5 MiB | 55.0 / 75.2 / 57.5 MiB |
+| **More platforms from one source** | macOS, Linux, Windows, iPhone/iPad, Android, browser | macOS, Linux, Windows, browser |
 | **More features, deeper native** | native menu bar, rich copy out, drag out, high contrast | see [below](#more-features-and-deeper-native) |
 | **Equally functional** | 487 / 487 implementable catalog rows | 487 rows implemented, 15 stubs |
-| **Easier for LLMs** | 42,475 lines, 490,197 tokens | 118,659 lines, 1,646,847 tokens |
-| **Cheaper CI** | 623 functional tests in 6 s on the JVM | 1,921 tests after a 165 s compile |
+| **Easier for LLMs** | 43,679 lines, 483,125 tokens | 118,659 lines, 1,646,847 tokens |
+| **Cheaper CI** | 647 tests: 75 s cold build + test, 9 s re-run | 1,922 tests: 1,023 s cold build + test, 60 s re-run |
 
-Startup and RAM are for 1 / 1,000 / 10,000-paragraph documents (launch to first painted
-document; idle resident memory). Code counts are application code without tests or comment
-lines. Every number is reproduced by [CI](#proven-in-ci).
+Desktop figures are macOS / Linux / Windows, measured on GitHub's runners by CI run
+[39438215005](https://github.com/shai-almog/cn1-wordprocessor/actions/runs/39438215005) (commit `a729b74`) with the 1,000-paragraph document: launch to first
+painted document, idle resident memory, and command to painted frame. Code counts are
+application code without tests or comment lines. Java wins 39 of the 42 desktop measurements;
+the three it loses are listed in [Per-OS results](#per-os-results).
 
 ## How can Java beat Rust on RAM and performance?
 
@@ -67,6 +69,81 @@ it to deliver a better result. For this kind of work, Rust is simply not the rig
 Matching Java here would mean reinventing what Java already provides, inside Rust. That gains
 nothing: the Rust code would become even more complex, more verbose and slower to compile.
 
+## Per-OS results
+
+Every number here comes from one CI run on GitHub-hosted runners, with both apps built from
+source, run on the same machine and given the same fixtures. Wordcraft's three wins are within
+a few percent: saving a DOCX on macOS and Linux (0.2 and 0.1 ms) and peak memory during the
+Windows editing workload (7 MiB).
+
+<!-- ci-tables:begin -->
+Measured by CI run [39438215005](https://github.com/shai-almog/cn1-wordprocessor/actions/runs/39438215005) on commit `a729b74` (2026-10-20), GitHub-hosted runners, same runner and fixtures for both apps. Medians; startup is 10 fresh launches to the first painted document, latency is command to painted frame. Regenerate with `scripts/ci-readme-tables.py RUN_ID`.
+
+### macOS
+
+[arm64 GitHub macos15 runner, 3 CPUs](https://github.com/shai-almog/cn1-wordprocessor/actions/runs/39438215005/job/118681360991)
+
+| Measure (lower is better) | Codename One | Wordcraft (Rust) | Better |
+|---|---:|---:|---|
+| Startup, 1 paragraph | 193 ms | 631 ms | CN1 |
+| Startup, 1,000 paragraphs | 256 ms | 706 ms | CN1 |
+| Startup, 10,000 paragraphs | 556 ms | 1401 ms | CN1 |
+| Idle RAM, 1 paragraph | 87 MiB | 107 MiB | CN1 |
+| Idle RAM, 1,000 paragraphs | 101 MiB | 143 MiB | CN1 |
+| Idle RAM, 10,000 paragraphs | 213 MiB | 367 MiB | CN1 |
+| Peak RAM, 1,000-paragraph workload | 220 MiB | 221 MiB | CN1 |
+| Type a character to painted frame | 9.2 ms | 39.7 ms | CN1 |
+| Undo to painted frame | 8.3 ms | 39.6 ms | CN1 |
+| Paste 10,000 chars to painted frame | 14.2 ms | 64.1 ms | CN1 |
+| Save DOCX to painted frame | 7.7 ms | 7.5 ms | **Wordcraft** |
+| Reopen DOCX to painted frame | 19.6 ms | 105.0 ms | CN1 |
+| Export PDF to painted frame | 27.0 ms | 431.5 ms | CN1 |
+| Executable size | 26.0 MiB | 55.0 MiB | CN1 |
+
+### Linux
+
+[x86_64 GitHub ubuntu24 runner, 4 CPUs](https://github.com/shai-almog/cn1-wordprocessor/actions/runs/39438215005/job/118681360992)
+
+| Measure (lower is better) | Codename One | Wordcraft (Rust) | Better |
+|---|---:|---:|---|
+| Startup, 1 paragraph | 168 ms | 169 ms | CN1 |
+| Startup, 1,000 paragraphs | 228 ms | 253 ms | CN1 |
+| Startup, 10,000 paragraphs | 795 ms | 1006 ms | CN1 |
+| Idle RAM, 1 paragraph | 86 MiB | 162 MiB | CN1 |
+| Idle RAM, 1,000 paragraphs | 101 MiB | 185 MiB | CN1 |
+| Idle RAM, 10,000 paragraphs | 181 MiB | 386 MiB | CN1 |
+| Peak RAM, 1,000-paragraph workload | 184 MiB | 221 MiB | CN1 |
+| Type a character to painted frame | 8.0 ms | 16.1 ms | CN1 |
+| Undo to painted frame | 7.6 ms | 16.0 ms | CN1 |
+| Paste 10,000 chars to painted frame | 17.6 ms | 26.4 ms | CN1 |
+| Save DOCX to painted frame | 5.8 ms | 5.7 ms | **Wordcraft** |
+| Reopen DOCX to painted frame | 23.1 ms | 84.7 ms | CN1 |
+| Export PDF to painted frame | 21.0 ms | 562.0 ms | CN1 |
+| Executable size | 28.6 MiB | 75.2 MiB | CN1 |
+
+### Windows
+
+[AMD64 GitHub win25-vs2026 runner, 4 CPUs](https://github.com/shai-almog/cn1-wordprocessor/actions/runs/39438215005/job/118681360832)
+
+| Measure (lower is better) | Codename One | Wordcraft (Rust) | Better |
+|---|---:|---:|---|
+| Startup, 1 paragraph | 112 ms | 239 ms | CN1 |
+| Startup, 1,000 paragraphs | 152 ms | 300 ms | CN1 |
+| Startup, 10,000 paragraphs | 484 ms | 793 ms | CN1 |
+| Idle RAM, 1 paragraph | 68 MiB | 82 MiB | CN1 |
+| Idle RAM, 1,000 paragraphs | 86 MiB | 106 MiB | CN1 |
+| Idle RAM, 10,000 paragraphs | 168 MiB | 307 MiB | CN1 |
+| Peak RAM, 1,000-paragraph workload | 170 MiB | 163 MiB | **Wordcraft** |
+| Type a character to painted frame | 5.9 ms | 16.8 ms | CN1 |
+| Undo to painted frame | 5.5 ms | 16.8 ms | CN1 |
+| Paste 10,000 chars to painted frame | 16.4 ms | 26.6 ms | CN1 |
+| Save DOCX to painted frame | 4.5 ms | 5.9 ms | CN1 |
+| Reopen DOCX to painted frame | 15.2 ms | 74.6 ms | CN1 |
+| Export PDF to painted frame | 13.8 ms | 477.6 ms | CN1 |
+| Executable size | 24.5 MiB | 57.5 MiB | CN1 |
+
+<!-- ci-tables:end -->
+
 ## Faster
 
 ![Startup time](docs/images/startup.svg)
@@ -74,10 +151,9 @@ nothing: the Rust code would become even more complex, more verbose and slower t
 ![Command-to-paint latency](docs/images/latency.svg)
 
 Latency is measured from the command to the first painted frame that shows its result,
-with the 1,000-paragraph document. Java wins every operation: insert and undo about 3.5x,
-paste 2.4x, save 1.7x, reopen 1.2x and PDF export about 33x. Our PDF exporter covers less
-typography than Wordcraft's, so the PDF figure is not an equal-fidelity comparison
-([FORMATS](docs/FORMATS.md)).
+with the 1,000-paragraph document (macOS charts; see the tables above for Linux and Windows).
+Our PDF exporter covers less typography than Wordcraft's, so the PDF figure is not an
+equal-fidelity comparison ([FORMATS](docs/FORMATS.md)).
 
 ## Smaller
 
@@ -132,10 +208,11 @@ edit touches less code.
 ![CI cost](docs/images/ci.svg)
 
 Functional tests run on the JVM against the same Java code that ships natively: the whole
-suite of 623 tests compiles and runs in seconds, with no native toolchain. Rust must compile
-its dependency tree and test binaries before running anything (165 s cold, 20 s for the test
-run), so every pull request costs minutes of runner time: about 8 s from a cold checkout for
-Java against about 185 s for Rust, roughly 23 times less CI time for the functional suite.
+suite of 647 tests compiles and runs in seconds, with no native toolchain. Rust must compile
+its dependency tree and test binaries before running anything. On the same GitHub runner in
+CI run [39438215005](https://github.com/shai-almog/cn1-wordprocessor/actions/runs/39438215005),
+a cold build plus test takes 75 s for Java and 1,023 s for Rust's 1,922 tests, about 14 times
+less CI time; re-running the compiled suites takes 9 s and 60 s.
 
 ## Proven in CI
 
@@ -146,7 +223,7 @@ for both projects on GitHub's runners:
 | --- | --- | --- |
 | `java` | Ubuntu | Cold build and functional-test time, test count, JVM engine benchmark, source lines and tokens |
 | `wordcraft` | Ubuntu | Wordcraft's cold build and `cargo test` time and test count |
-| `macos` | macOS | Startup, idle RAM, command-to-paint latency and bundle size of both native apps, same fixtures |
+| `desktop` | macOS, Ubuntu, Windows | Startup, idle and peak RAM, command-to-paint latency and executable size of both native apps, same fixtures |
 | `ios` | macOS | The same source built for the iPhone simulator, launch-to-key-window time, app size and a screenshot |
 | `android` | Ubuntu | The same source built as an APK, cold-start time on an emulator, APK size and a screenshot |
 | `web` | Ubuntu | The browser build, run headless in Chrome, bundle size and a screenshot |
