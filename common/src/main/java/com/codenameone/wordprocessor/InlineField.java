@@ -11,7 +11,7 @@ public final class InlineField {
   public InlineField(String instruction, String result, boolean locked, boolean showCode) {
     if (instruction == null
         || instruction.trim().isEmpty()
-        || instruction.length() > 8192
+        || instruction.length() > (instruction.startsWith(Zotero.PREFIX) ? 1000000 : 8192)
         || result == null
         || result.length() > 1000000) throw new IllegalArgumentException("Invalid field");
     this.instruction = instruction;

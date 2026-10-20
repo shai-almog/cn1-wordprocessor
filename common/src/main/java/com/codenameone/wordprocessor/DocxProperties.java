@@ -59,6 +59,7 @@ final class DocxProperties {
       if (!Xml.attr(protect, "hash", "").isEmpty() || !Xml.attr(protect, "hashValue", "").isEmpty())
         warnings.add("Protection password is not kept");
     }
+    p = readCustom(parts, p, warnings);
     Element vars = settings == null ? null : Xml.child(settings, "docVars");
     if (vars != null)
       for (Element v : Xml.children(vars, "docVar")) {
@@ -77,6 +78,7 @@ final class DocxProperties {
   static final String VAR = "cn1.";
 
   static void write(Map<String, byte[]> parts, DocumentProperties p) throws IOException {
+    writeCustom(parts, p);
     for (String part : new String[] {CORE, APP}) {
       boolean core = CORE.equals(part);
       boolean any = false;
@@ -181,5 +183,90 @@ final class DocxProperties {
           Xml.parse(
               "<w:documentProtection xmlns:w=\"" + w + "\" w:edit=\"" + p.protection
                   + "\" w:enforcement=\"1\"/>"));
+  }
+
+  private static final String CUSTOM = "docProps/custom.xml",
+      CUSTOM_NS = "http://schemas.openxmlformats.org/officeDocument/2006/custom-properties",
+      VT = "http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes",
+      FMTID = "{D5CDD505-2E9C-101B-9397-08002B2CF9AE}";
+
+  /** Joins Zotero's ZOTERO_PREF_1..n custom properties (Word plugin layout) into one setting. */
+  private static DocumentProperties readCustom(
+      Map<String, byte[]> parts, DocumentProperties p, Set<String> warnings) {
+    if (!parts.containsKey(CUSTOM)) return p;
+    Element root;
+    try {
+      root = Xml.parse(parts.get(CUSTOM));
+    } catch (IOException ex) {
+      warnings.add("Unreadable custom document properties");
+      return p;
+    }
+    var chunks = new java.util.TreeMap<Integer, String>();
+    for (Element prop : Xml.children(root, "property")) {
+      int n = Zotero.prefIndex(Xml.attr(prop, "name", ""));
+      if (n <= 0) continue;
+      String v = "";
+      for (int i = 0; i < prop.getNumChildren(); i++)
+        if (!prop.getChildAt(i).isTextElement()) v = Xml.text((Element) prop.getChildAt(i));
+      chunks.put(n, v);
+    }
+    var b = new StringBuilder();
+    for (int i = 1; chunks.containsKey(i); i++) b.append(chunks.get(i));
+    if (b.length() == 0) return p;
+    try {
+      return p.withSetting(Zotero.PREFS_SETTING, b.toString());
+    } catch (IllegalArgumentException ex) {
+      warnings.add("Zotero document preferences are too long and were not kept");
+      return p;
+    }
+  }
+
+  /** Rewrites ZOTERO_PREF_n custom properties from the setting, keeping other custom properties. */
+  private static void writeCustom(Map<String, byte[]> parts, DocumentProperties p)
+      throws IOException {
+    String prefs = p.setting(Zotero.PREFS_SETTING, "");
+    if (prefs.isEmpty() && !parts.containsKey(CUSTOM)) return;
+    Element root =
+        parts.containsKey(CUSTOM)
+            ? Xml.parse(parts.get(CUSTOM))
+            : Xml.parse("<Properties xmlns=\"" + CUSTOM_NS + "\" xmlns:vt=\"" + VT + "\"/>");
+    int pid = 1;
+    for (int i = root.getNumChildren() - 1; i >= 0; i--) {
+      var c = root.getChildAt(i);
+      if (c.isTextElement() || !"property".equals(Xml.local((Element) c))) continue;
+      if (Zotero.prefIndex(Xml.attr((Element) c, "name", "")) > 0) root.removeChildAt(i);
+      else pid = Math.max(pid, Xml.integer(Xml.attr((Element) c, "pid", "1"), 1));
+    }
+    for (int i = 0, n = 1; i < prefs.length(); i += Zotero.PREF_CHUNK, n++) {
+      String chunk = prefs.substring(i, Math.min(prefs.length(), i + Zotero.PREF_CHUNK));
+      root.addChild(
+          Xml.parse(
+              "<property xmlns=\"" + CUSTOM_NS + "\" xmlns:vt=\"" + VT + "\" fmtid=\"" + FMTID
+                  + "\" pid=\"" + (++pid) + "\" name=\"" + Zotero.PREF_NAME + n + "\"><vt:lpwstr>"
+                  + Xml.escape(chunk) + "</vt:lpwstr></property>"));
+    }
+    parts.put(CUSTOM, Xml.write(root).getBytes("UTF-8"));
+    var rels = new String(parts.get("_rels/.rels"), "UTF-8");
+    if (!rels.contains(CUSTOM + "\"")) {
+      String id = "cn1Custom";
+      while (rels.contains("\"" + id + "\"")) id += "x";
+      parts.put(
+          "_rels/.rels",
+          DocxLists.insert(
+                  rels,
+                  "<Relationship xmlns=\"" + REL + "\" Id=\"" + id
+                      + "\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/custom-properties\" Target=\""
+                      + CUSTOM + "\"/>")
+              .getBytes("UTF-8"));
+    }
+    var types = new String(parts.get("[Content_Types].xml"), "UTF-8");
+    if (!types.contains("\"/" + CUSTOM + "\""))
+      parts.put(
+          "[Content_Types].xml",
+          DocxLists.insert(
+                  types,
+                  "<Override xmlns=\"" + TYPES + "\" PartName=\"/" + CUSTOM
+                      + "\" ContentType=\"application/vnd.openxmlformats-officedocument.custom-properties+xml\"/>")
+              .getBytes("UTF-8"));
   }
 }

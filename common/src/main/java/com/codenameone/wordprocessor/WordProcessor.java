@@ -2200,6 +2200,20 @@ public class WordProcessor {
                           edited();
                         })))),
         OfficeTheme.group(
+            "Zotero",
+            OfficeTheme.row(
+                iconButton(
+                    "Add/Edit Citation",
+                    FontImage.MATERIAL_FORMAT_QUOTE,
+                    () -> zotero(Zotero.Command.ADD_EDIT_CITATION),
+                    true),
+                BoxLayout.encloseY(
+                    button("Add/Edit Bibliography", () -> zotero(Zotero.Command.ADD_EDIT_BIBLIOGRAPHY)),
+                    button("Refresh", () -> zotero(Zotero.Command.REFRESH))),
+                BoxLayout.encloseY(
+                    button("Document Preferences", () -> zotero(Zotero.Command.SET_DOC_PREFS)),
+                    button("Unlink Citations", () -> zotero(Zotero.Command.REMOVE_CODES))))),
+        OfficeTheme.group(
             "Index",
             OfficeTheme.row(
                 iconButton(
@@ -2834,6 +2848,57 @@ public class WordProcessor {
     if (f.ask("Citation style", "Apply") == null) return;
     Citations.style(session, f.str("style"));
     edited();
+  }
+
+  private boolean zoteroBusy;
+
+  /**
+   * Runs one Zotero integration command. The socket exchange runs off the EDT (Zotero waits on
+   * its own dialogs); every document call is answered on the EDT against the live session.
+   */
+  private void zotero(final Zotero.Command command) {
+    if (zoteroBusy) return;
+    zoteroBusy = true;
+    final var bridge =
+        new ZoteroBridge(
+            session,
+            (text, icon, buttons) -> {
+              boolean yes = Dialog.show("Zotero", text, buttons == 0 ? "OK" : "Yes", buttons == 0 ? null : "No");
+              return buttons == 0 ? 0 : yes ? (buttons == 3 ? 2 : 1) : 0;
+            });
+    new Thread(
+            () -> {
+              String failure = null;
+              try {
+                Zotero.run(
+                    Zotero.socket(Zotero.HOST, Zotero.PORT, 3000),
+                    command,
+                    (method, args) -> {
+                      final Object[] out = new Object[2];
+                      CN.callSeriallyAndWait(
+                          () -> {
+                            try {
+                              out[0] = bridge.handle(method, args);
+                            } catch (RuntimeException ex) {
+                              out[1] = ex;
+                            }
+                          });
+                      if (out[1] != null) throw (RuntimeException) out[1];
+                      return out[0];
+                    });
+              } catch (IOException ex) {
+                failure = ex.getMessage();
+              }
+              final String message = failure;
+              CN.callSerially(
+                  () -> {
+                    zoteroBusy = false;
+                    edited();
+                    if (message != null) Dialog.show("Zotero", message, "OK", null);
+                  });
+            },
+            "zotero")
+        .start();
   }
 
   private void bibliographyDialog() {

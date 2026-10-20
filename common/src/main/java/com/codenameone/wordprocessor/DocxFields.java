@@ -225,12 +225,14 @@ final class DocxFields {
       DocxControls.write(b, field, style, links);
       return;
     }
-    if (style.revision != null) {
-      RevisionFormats.start(b, style.revision);
+    if (style.revision != null || Zotero.is(field)) {
+      // Zotero's Word plugin addresses citations as complex fields, so ADDIN fields stay complex.
+      if (style.revision != null) RevisionFormats.start(b, style.revision);
       b.append("<w:r><w:fldChar w:fldCharType=\"begin\" w:fldLock=\"")
           .append(field.locked ? 1 : 0)
           .append("\"/></w:r>");
-      String instruction = style.revision.inserted() ? "instrText" : "delInstrText";
+      String instruction =
+          style.revision == null || style.revision.inserted() ? "instrText" : "delInstrText";
       b.append("<w:r><w:")
           .append(instruction)
           .append(" xml:space=\"preserve\">")
@@ -239,9 +241,10 @@ final class DocxFields {
           .append(instruction)
           .append("></w:r>");
       b.append("<w:r><w:fldChar w:fldCharType=\"separate\"/></w:r>");
-      Docx.writeRun(b, field.result, style.revision(null), links, !style.revision.inserted());
+      if (style.revision == null) Docx.writeRun(b, field.result, style, links);
+      else Docx.writeRun(b, field.result, style.revision(null), links, !style.revision.inserted());
       b.append("<w:r><w:fldChar w:fldCharType=\"end\"/></w:r>");
-      RevisionFormats.end(b, style.revision);
+      if (style.revision != null) RevisionFormats.end(b, style.revision);
       return;
     }
     b.append("<w:fldSimple w:instr=\"")
