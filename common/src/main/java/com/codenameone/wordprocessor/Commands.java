@@ -911,7 +911,7 @@ public final class Commands {
           return null;
         });
     edit("picture.insert", "base64:string,width:number,height:number,alt:string",
-        "Insert embedded PNG or JPEG data at the selection", (s, a) -> {
+        "Insert embedded PNG, JPEG, GIF, BMP, TIFF or WebP data at the selection", (s, a) -> {
           s.insertPicture(
               com.codename1.util.Base64.decode(str(a, "base64").getBytes()),
               ((Number) a.get("width")).floatValue(),

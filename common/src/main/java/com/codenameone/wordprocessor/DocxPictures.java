@@ -267,11 +267,11 @@ final class DocxPictures {
     for (Map.Entry<Picture, String> entry : output.entrySet()) {
       var p = entry.getKey();
       var name =
-          "word/media/" + entry.getValue() + ("image/png".equals(p.mime) ? ".png" : ".jpg");
+          "word/media/" + entry.getValue() + "." + PictureCodecs.extension(p.originalMime());
       while (parts.containsKey(name))
         name =
             name.substring(0, name.lastIndexOf('.')) + "x" + name.substring(name.lastIndexOf('.'));
-      parts.put(name, p.bytes());
+      parts.put(name, p.originalBytes());
       rels =
           DocxLists.insert(
               rels,
@@ -290,7 +290,7 @@ final class DocxPictures {
                   + " PartName=\"/"
                   + name
                   + "\" ContentType=\""
-                  + p.mime
+                  + p.originalMime()
                   + "\"/>");
     }
     parts.put(RELS, rels.getBytes("UTF-8"));

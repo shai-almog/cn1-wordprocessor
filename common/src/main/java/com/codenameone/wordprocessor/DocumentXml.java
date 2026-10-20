@@ -136,7 +136,7 @@ public final class DocumentXml {
         if (picture.drawing != null)
           b.append(" drawing=\"").append(Xml.attribute(controlsOut(picture.drawing.encode()))).append('"');
         b.append(">")
-            .append(com.codename1.util.Base64.encodeNoNewline(picture.bytes()))
+            .append(com.codename1.util.Base64.encodeNoNewline(picture.originalBytes()))
             .append("</picture>");
       } else throw new IllegalArgumentException("Unknown block");
     }

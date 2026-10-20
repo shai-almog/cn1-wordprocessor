@@ -50,7 +50,7 @@ public class Main extends com.codename1.system.Lifecycle {
           }
 
           public void openImage(WordProcessor.OpenCallback callback) {
-            choose(callback, "png,jpg,jpeg");
+            choose(callback, "png,jpg,jpeg,gif,bmp,tif,tiff,webp");
           }
 
           private void choose(WordProcessor.OpenCallback callback, String extensions) {

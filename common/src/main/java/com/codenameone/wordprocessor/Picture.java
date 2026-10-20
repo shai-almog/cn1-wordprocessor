@@ -1,6 +1,9 @@
 package com.codenameone.wordprocessor;
 
-/** Immutable embedded PNG/JPEG picture, sized in typographic points. */
+/**
+ * Immutable embedded picture, sized in typographic points. GIF, BMP, TIFF and WebP payloads are
+ * decoded once to PNG for display and PDF; the original bytes are kept for DOCX and native files.
+ */
 public final class Picture implements Block {
   /** Crop, border and orientation applied on top of the picture's bytes. */
   public static final class Look {
@@ -178,7 +181,7 @@ public final class Picture implements Block {
   }
 
   private final String id;
-  private final byte[] data;
+  private final byte[] data, original;
   public final String mime, alt, align;
   public final float width, height;
   public final int pixelWidth, pixelHeight, channels;
@@ -223,6 +226,20 @@ public final class Picture implements Block {
       Look look,
       Drawing drawing,
       boolean copy) {
+    this(id, data, width, height, alt, align, look, drawing, copy, null);
+  }
+
+  private Picture(
+      String id,
+      byte[] data,
+      float width,
+      float height,
+      String alt,
+      String align,
+      Look look,
+      Drawing drawing,
+      boolean copy,
+      byte[] original) {
     if (id == null
         || data == null
         || data.length < 24
@@ -237,6 +254,16 @@ public final class Picture implements Block {
         || look == null
         || !("left".equals(align) || "center".equals(align) || "right".equals(align)))
       throw new IllegalArgumentException("Invalid picture");
+    if (original == null && PictureCodecs.mime(data) != null) {
+      original = copy ? data.clone() : data;
+      try {
+        data = PictureCodecs.toPng(original);
+      } catch (java.io.IOException ex) {
+        throw new IllegalArgumentException(ex.getMessage(), ex);
+      }
+      copy = false;
+    }
+    this.original = original;
     int[] shape = shape(data);
     pixelWidth = shape[0];
     pixelHeight = shape[1];
@@ -262,28 +289,47 @@ public final class Picture implements Block {
     return id;
   }
 
+  /** Displayable PNG or JPEG bytes. */
   public byte[] bytes() {
     return data.clone();
   }
 
+  /** The bytes as inserted or imported: GIF/BMP/TIFF/WebP stay in their own format. */
+  public byte[] originalBytes() {
+    return (original != null ? original : data).clone();
+  }
+
+  public String originalMime() {
+    return original != null ? PictureCodecs.mime(original) : mime;
+  }
+
   public Picture copy(String id) {
-    return new Picture(id, data, width, height, alt, align, look, drawing, false);
+    return new Picture(id, data, width, height, alt, align, look, drawing, false, original);
   }
 
   public Picture resize(float width, float height, String alt, String align) {
-    return new Picture(id, data, width, height, alt, align, look, drawing, false);
+    return new Picture(id, data, width, height, alt, align, look, drawing, false, original);
   }
 
   public Picture look(Look value) {
-    return new Picture(id, data, width, height, alt, align, value, drawing, false);
+    return new Picture(id, data, width, height, alt, align, value, drawing, false, original);
   }
 
   public Picture drawing(Drawing value) {
     if (value == null) throw new IllegalArgumentException("Invalid drawing");
-    return new Picture(id, data, width, height, alt, align, look, value, false);
+    return new Picture(id, data, width, height, alt, align, look, value, false, original);
   }
 
+  /** {width, height, channels, kind}; kind 1 PNG, 2 JPEG, 3 a format decoded to PNG. */
   public static int[] shape(byte[] b) {
+    if (PictureCodecs.mime(b) != null) {
+      try {
+        var r = PictureCodecs.decode(b);
+        return new int[] {r.width, r.height, 4, 3};
+      } catch (java.io.IOException ex) {
+        throw new IllegalArgumentException(ex.getMessage(), ex);
+      }
+    }
     if (b != null
         && b.length >= 33
         && (b[0] & 255) == 137
@@ -322,7 +368,7 @@ public final class Picture implements Block {
         at += size;
       }
     }
-    throw new IllegalArgumentException("Choose a valid PNG or JPEG picture");
+    throw new IllegalArgumentException("Choose a valid PNG, JPEG, GIF, BMP, TIFF or WebP picture");
   }
 
   private static int integer(byte[] b, int at) {

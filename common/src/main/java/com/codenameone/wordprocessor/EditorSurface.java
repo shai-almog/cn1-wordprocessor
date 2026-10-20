@@ -2287,7 +2287,8 @@ public final class EditorSurface extends Container
     for (String path : files) {
       var lower = path.toLowerCase();
       if (lower.endsWith(".png") || lower.endsWith(".jpg") || lower.endsWith(".jpeg")
-          || lower.endsWith(".gif")) {
+          || lower.endsWith(".gif") || lower.endsWith(".bmp") || lower.endsWith(".tif")
+          || lower.endsWith(".tiff") || lower.endsWith(".webp")) {
         insertPictureBytes(readFile(path), path.substring(path.lastIndexOf('/') + 1));
         any = true;
       } else if (fileDropHandler != null && fileDropHandler.dropped(path)) {

@@ -143,7 +143,7 @@ final class PictureCommands implements Commands.Extension {
           return null;
         });
     c.edit("picture.change", "block?:integer,base64:string",
-        "Replace the picture's image (base64 PNG/JPEG), keeping size, look and alt text",
+        "Replace the picture's image (base64 PNG/JPEG/GIF/BMP/TIFF/WebP), keeping size, look and alt text",
         (s, a) -> {
           int block = block(s, a);
           Picture old = picture(s, block);

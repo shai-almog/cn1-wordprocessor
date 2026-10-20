@@ -1791,7 +1791,7 @@ public class WordProcessor {
             int[] size = Picture.shape(bytes);
             if ((long) size[0] * size[1] > 16000000 || bytes.length > 20 * 1024 * 1024)
               throw new IllegalArgumentException("Picture exceeds 16 megapixels or 20 MiB");
-            Image.createImage(bytes, 0, bytes.length);
+            if (size[3] < 3) Image.createImage(bytes, 0, bytes.length);
             float width = Math.min(size[0] * .75f, session.activeSection().raw.page.contentWidth());
             session.insertPicture(bytes, width, width * size[1] / size[0], name);
             edited();

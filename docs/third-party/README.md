@@ -26,3 +26,10 @@ English proofing data under `document/src/main/resources/proof/`, taken unmodifi
 | `en-us.dic` | Hyphenation/spelling word list derived from the Moby Hyphenator II list by Grady Ward (Project Gutenberg #3204), front-coded and raw-deflated | Public domain |
 | `en-us.pat` | US English Liang hyphenation patterns trained from the Moby list | CC0 / public domain |
 | `en-extra.txt` | Supplemental modern English spelling words written by Wordcraft contributors | MIT (see `wordcraft-LICENSE-MIT`) |
+
+## image-webp (MIT)
+
+`Vp8Decoder.java` ports the lossy WebP (VP8) decoding tables and logic of the
+[image-webp](https://github.com/image-rs/image-webp) crate, licensed MIT OR Apache-2.0.
+Copyright (c) The image-rs Developers. The MIT license permits use, copying, modification and
+distribution provided this copyright notice and permission notice are included.
