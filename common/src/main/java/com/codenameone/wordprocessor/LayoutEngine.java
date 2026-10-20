@@ -20,6 +20,9 @@ public final class LayoutEngine {
     public final int start, end;
     public final float x, width, top;
 
+    /** The span's text runs right to left: its first character is at the right edge. */
+    public final boolean rtl;
+
     Span(String t, TextStyle s, int start, float x, float w) {
       this(t, s, start, x, w, 0);
     }
@@ -39,6 +42,29 @@ public final class LayoutEngine {
       end = start + t.length();
       this.x = x;
       width = w;
+      rtl = false;
+    }
+
+    private Span(Span s, float x, float top, boolean rtl) {
+      rawDisplay = s.rawDisplay;
+      displayText = s.displayText;
+      glyphStyle = s.glyphStyle;
+      this.top = top;
+      text = s.text;
+      style = s.style;
+      start = s.start;
+      end = s.end;
+      width = s.width;
+      this.x = x;
+      this.rtl = rtl;
+    }
+
+    Span placed(float x, boolean rtl) {
+      return new Span(this, x, top, rtl);
+    }
+
+    Span top(float top) {
+      return new Span(this, x, top, rtl);
     }
   }
 
@@ -596,6 +622,7 @@ public final class LayoutEngine {
       letterWidth = metrics.width(text.substring(0, skip), dropStyle);
       dropWidth = "drop".equals(p.format.dropMode()) ? letterWidth + p.format.dropDistance() : 0;
     }
+    byte[] levels = Bidi.needed(text, p.format.rtl) ? Bidi.levels(text, p.format.rtl) : null;
     int start = 0;
     do {
       var line = new RawLine();
@@ -656,7 +683,8 @@ public final class LayoutEngine {
                 || !Graphemes.isBoundary(p.text, b)
                 || Character.isLowerCase(text.charAt(a))
                     == Character.isLowerCase(text.charAt(b)))
-            && s.equals(st[b])) b++;
+            && s.equals(st[b])
+            && (levels == null || levels[a] == levels[b])) b++;
         var chunk = text.substring(a, b);
         var display = p.text.displayAt(a, chunk);
         float w =
@@ -683,6 +711,7 @@ public final class LayoutEngine {
       if (("both".equals(p.align) || "justify".equals(p.align)) && softWrapped)
         justify(line, available, false, p.text);
       else if ("distribute".equals(p.align) && end > start) justify(line, available, true, p.text);
+      if (levels != null && !hasTab(line)) Bidi.reorder(line.spans, levels, p.format.rtl);
       float textOffset = start == 0 ? p.format.firstIndent : 0;
       if ("center".equals(p.align)) textOffset += (available - line.width) / 2;
       else if ("right".equals(p.align)) textOffset += available - line.width;
@@ -701,9 +730,7 @@ public final class LayoutEngine {
       for (int i = 0; i < line.spans.size(); i++) {
         var span = line.spans.get(i);
         float top = baseline - metrics.ascent(span.glyphStyle) - span.style.baselineShift();
-        line.spans.set(
-            i,
-            new Span(span.text, span.style, span.start, span.x, span.width, top, span.rawDisplay));
+        line.spans.set(i, span.top(top));
         if (!span.style.characters.hidden)
           line.height = Math.max(line.height, (top + metrics.height(span.glyphStyle)));
       }
@@ -721,16 +748,7 @@ public final class LayoutEngine {
         line.markerOffset += offset;
         for (int i = 0; i < line.spans.size(); i++) {
           var span = line.spans.get(i);
-          line.spans.set(
-              i,
-              new Span(
-                  span.text,
-                  span.style,
-                  span.start,
-                  span.x,
-                  span.width,
-                  span.top + offset,
-                  span.rawDisplay));
+          line.spans.set(i, span.top(span.top + offset));
         }
       }
       out.add(line);
@@ -875,6 +893,11 @@ public final class LayoutEngine {
     var out = new StringBuilder(count);
     for (int i = 0; i < count; i++) out.append(glyph);
     return out.toString();
+  }
+
+  private static boolean hasTab(RawLine line) {
+    for (Span span : line.spans) if ("\t".equals(span.text)) return true;
+    return false;
   }
 
   private void justify(RawLine line, float available, boolean distributed, RichText source) {

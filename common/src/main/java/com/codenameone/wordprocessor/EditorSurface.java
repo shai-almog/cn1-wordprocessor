@@ -1417,11 +1417,7 @@ public final class EditorSurface extends Container
           int b = current.paragraph == last.paragraph ? Math.min(line.end, comment.end) : line.end;
           if (b > a) {
             g.setColor(0xffedaa);
-            g.fillRect(
-                lx + Math.round(offsetX(line, a) * scale),
-                ly,
-                Math.max(1, Math.round((offsetX(line, b) - offsetX(line, a)) * scale)),
-                Math.round(line.height * scale));
+            fillRange(g, line, a, b, lx, ly, scale);
           }
         }
         int selectedBlock = editingBlock(line);
@@ -1441,11 +1437,7 @@ public final class EditorSurface extends Container
                       ? Math.min(selection.end(), line.end)
                       : line.end;
           g.setColor(0xc5e9e6);
-          g.fillRect(
-              lx + Math.round(offsetX(line, a) * scale),
-              ly,
-              Math.max(1, Math.round((offsetX(line, b) - offsetX(line, a)) * scale)),
-              Math.round(line.height * scale));
+          fillRange(g, line, a, b, lx, ly, scale);
         }
         // Object lines (pictures, charts, equations) have no paragraph to proof.
         if (!exporting && textLine(line) && AppOptions.flag("checkSpelling")) {
@@ -1456,7 +1448,7 @@ public final class EditorSurface extends Container
             int a = Math.max(issue.start(), line.start), b = Math.min(issue.end(), line.end);
             if (a >= b) continue;
             int x0 = lx + Math.round(offsetX(line, a) * scale), x1 = lx + Math.round(offsetX(line, b) * scale);
-            squiggle(g, x0, x1, base, "spelling".equals(issue.kind()) ? 0xd13438 : 0x2b579a);
+            squiggle(g, Math.min(x0, x1), Math.max(x0, x1), base, "spelling".equals(issue.kind()) ? 0xd13438 : 0x2b579a);
           }
         }
         boolean revised = false;
@@ -1615,15 +1607,16 @@ public final class EditorSurface extends Container
           var raw = value.substring(at, end);
           var glyph = font(span.style.glyphStyle(raw), zoom);
           g.setFont(glyph);
+          float w = CharacterMetrics.width(fontMetrics, raw, span.style);
           textEffects.draw(
               g,
               span.style.displayText(raw),
-              Math.round(advance * scale / stretch),
+              Math.round((span.rtl ? span.width - advance - w : advance) * scale / stretch),
               f.getAscent() - glyph.getAscent(),
               glyph,
               span.style,
               scale);
-          advance += CharacterMetrics.width(fontMetrics, raw, span.style);
+          advance += w;
           at = end;
         }
       }
@@ -1634,13 +1627,32 @@ public final class EditorSurface extends Container
   }
 
   private float offsetX(LayoutEngine.Line line, int offset) {
-    for (LayoutEngine.Span s : line.spans)
-      if (offset <= s.end) {
-        if (offset == s.end) return s.x + s.width;
-        if ("\t".equals(s.text)) return s.x + (offset > s.start ? s.width : 0);
-        return s.x + prefixWidth(s.text.substring(0, Math.max(0, offset - s.start)), s.style);
-      }
+    for (LayoutEngine.Span s : line.spans) if (offset <= s.end && offset >= s.start) return spanX(s, offset);
     return line.width;
+  }
+
+  private float spanX(LayoutEngine.Span s, int offset) {
+    float into =
+        offset == s.end
+            ? s.width
+            : "\t".equals(s.text)
+                ? (offset > s.start ? s.width : 0)
+                : prefixWidth(s.text.substring(0, Math.max(0, offset - s.start)), s.style);
+    return s.rtl ? s.x + s.width - into : s.x + into;
+  }
+
+  /** Fills [a, b) of a line, one rectangle per span so mixed-direction ranges stay contiguous. */
+  private void fillRange(Graphics g, LayoutEngine.Line line, int a, int b, int lx, int ly, float scale) {
+    for (LayoutEngine.Span s : line.spans) {
+      int from = Math.max(a, s.start), to = Math.min(b, s.end);
+      if (from >= to) continue;
+      float p = spanX(s, from), q = spanX(s, to), left = Math.min(p, q);
+      g.fillRect(
+          lx + Math.round(left * scale),
+          ly,
+          Math.max(1, Math.round(Math.abs(q - p) * scale)),
+          Math.round(line.height * scale));
+    }
   }
 
   // Caret, selection and the text-input geometry measure every grapheme prefix of the visible
@@ -2538,6 +2550,9 @@ public final class EditorSurface extends Container
     if (!vertical) verticalSelection = null;
     LayoutEngine.Line targetLine = null;
     int caret = x.caret, block = x.block;
+    // In a right-to-left paragraph the left arrow moves toward the end of the text.
+    if (p.format.rtl && (command == KEY_LEFT || command == KEY_RIGHT))
+      command = command == KEY_LEFT ? KEY_RIGHT : KEY_LEFT;
     switch (command) {
       case KEY_BACKSPACE:
         if (word) TextNavigation.deleteWord(session, false);
