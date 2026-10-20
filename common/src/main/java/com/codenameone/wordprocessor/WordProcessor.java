@@ -3457,6 +3457,8 @@ public class WordProcessor {
                               "Compare copy",
                               "Cancel")) return;
                       revised = opened.document;
+                    } else if (name.toLowerCase().endsWith(".doc")) {
+                      revised = DocBinary.read(bytes).document;
                     } else if (name.toLowerCase().endsWith(".cn1doc"))
                       revised = ProjectFile.read(bytes).document;
                     else if (name.toLowerCase().endsWith(".txt"))
@@ -6963,6 +6965,17 @@ public class WordProcessor {
                               "Cancel")) return;
                       source = opened;
                       document = opened.document;
+                    } else if (name.toLowerCase().endsWith(".doc")) {
+                      // Word 97-2003 imports through DOCX; it is saved as a new file, never back to .doc.
+                      Docx.Opened opened = DocBinary.read(bytes);
+                      if (!opened.warnings.isEmpty()
+                          && !showDialog(
+                              "Compatibility report",
+                              new SpanLabelCompat(join(opened.warnings)),
+                              "Open copy",
+                              "Cancel")) return;
+                      source = opened;
+                      document = opened.document.title(name);
                     } else if (name.toLowerCase().endsWith(".cn1doc")) {
                       ProjectFile.Opened project = ProjectFile.read(bytes);
                       document = project.document;

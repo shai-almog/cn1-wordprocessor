@@ -36,6 +36,10 @@ public final class DocumentFiles {
       Docx.Opened d = Docx.read(new ByteArrayInputStream(bytes));
       return new Opened(d.document, d, d.warnings);
     }
+    if ("doc".equals(ext)) {
+      Docx.Opened d = DocBinary.read(bytes);
+      return new Opened(d.document, d, d.warnings);
+    }
     if ("cn1doc".equals(ext)) {
       ProjectFile.Opened d = ProjectFile.read(bytes);
       return new Opened(

@@ -203,3 +203,15 @@ Native certification loads every recorded before-state through native XML, so th
 - Header and footer stories now each get their own id set. Previously a header paragraph could reuse a body id and fail the duplicate-id check on reload.
 - Drawing attributes map C0 control characters to U+E000 and up on write and back on read. Raw control characters are illegal in XML 1.0.
 - `word_load` loads a document without undo history; history is never serialized (see `.cn1doc` above).
+
+## Word 97-2003 binary import (2026-10-20)
+
+`.doc` files open read-only through `DocBinary`, which translates the binary structures into an in-memory
+DOCX package and reuses the DOCX mapping; saving always writes a new file in another format. Supported: text
+across 8-bit and UTF-16 pieces, character formatting (bold, italic, underline, strike, caps, hidden, size,
+font, colour, highlight, super/subscript), paragraph alignment, indents, spacing and keep options, named
+paragraph and character styles, LST/LFO lists, flat tables (column widths, borders on or off), sections and
+page setup, headers/footers, footnotes/endnotes, complex fields, and inline PNG/JPEG pictures. Not yet:
+encrypted or Word 6/95 files (rejected), floating shapes and text boxes, comments, bookmarks, revisions,
+nested tables (flattened), per-cell borders/shading/merges, EMF/WMF/DIB pictures and list-style formatting
+carried by styles.
