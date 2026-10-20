@@ -42,7 +42,7 @@ public class Main extends com.codename1.system.Lifecycle {
     app.setFiles(
         new WordProcessor.Files() {
           public void open(WordProcessor.OpenCallback callback) {
-            choose(callback, "cn1doc,docx,doc,odt,txt,md,html,rtf,adoc");
+            choose(callback, "cn1doc,docx,doc,odt,txt,md,html,rtf,adoc,tex");
           }
 
           public void openRecipients(WordProcessor.OpenCallback callback) {

@@ -51,6 +51,12 @@ public final class DocumentFiles {
           d.source,
           d.source == null ? Collections.<String>emptyList() : d.source.warnings);
     }
+    if ("tex".equals(ext) || "latex".equals(ext))
+      return new Opened(
+          Latex.read(new String(bytes, "UTF-8")).title(path.getFileName().toString()),
+          null,
+          Collections.singletonList(
+              "LaTeX import reads an everyday subset; macros are not expanded and math is kept as text"));
     RichTextFormat format = format(ext);
     if (format == null) throw new IOException("Unsupported format: " + ext);
     Document d = TextFormats.read(new String(bytes, "UTF-8"), format);
@@ -77,6 +83,7 @@ public final class DocumentFiles {
       Docx.write(d, source, out, allowConversion);
       return out.toByteArray();
     }
+    if ("tex".equals(extension)) return Latex.write(d).getBytes("UTF-8");
     RichTextFormat format = format(extension);
     if (format == null) throw new IOException("Unsupported output format: " + extension);
     if (format != RichTextFormat.HTML && format != RichTextFormat.PLAIN_TEXT)

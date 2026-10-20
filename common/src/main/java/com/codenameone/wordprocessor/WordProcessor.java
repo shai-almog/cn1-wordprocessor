@@ -4528,6 +4528,7 @@ public class WordProcessor {
         {"Rich text (.rtf)", "rtf"},
         {"Web page (.html)", "html"},
         {"Markdown (.md)", "md"},
+        {"LaTeX (.tex)", "tex"},
         {"Plain text (.txt)", "txt"}
       };
       for (String[] format : formats)
@@ -4814,6 +4815,7 @@ public class WordProcessor {
         .item("Rich Text Format (.rtf)…", menuAction("Export Rich Text", () -> save("rtf")))
         .item("Web Page (.html)…", menuAction("Export Web Page", () -> save("html")))
         .item("Markdown (.md)…", menuAction("Export Markdown", () -> save("md")))
+        .item("LaTeX (.tex)…", menuAction("Export LaTeX", () -> save("tex")))
         .item("Plain Text (.txt)…", menuAction("Export Plain Text", () -> save("txt")))
         .end()
         .item("Share…", menuAction("Share", this::share))
@@ -6983,6 +6985,9 @@ public class WordProcessor {
                               "Cancel")) return;
                       source = binary ? opened : null;
                       document = opened.document.title(name);
+                    } else if (name.toLowerCase().endsWith(".tex")) {
+                      document = Latex.read(new String(bytes, "UTF-8")).title(name);
+                      source = null;
                     } else if (name.toLowerCase().endsWith(".cn1doc")) {
                       ProjectFile.Opened project = ProjectFile.read(bytes);
                       document = project.document;
@@ -7146,6 +7151,7 @@ public class WordProcessor {
             } else if ("pdf".equals(format))
               bytes = PdfExporter.write(snapshot.page, editor.printLayout(), DocumentFonts.PDF);
             else if ("cn1doc".equals(format)) bytes = ProjectFile.write(snapshot, pkg);
+            else if ("tex".equals(format)) bytes = Latex.write(snapshot).getBytes("UTF-8");
             else {
               RichTextFormat type =
                   "md".equals(format)
