@@ -23,6 +23,10 @@ final class DocxDrawings {
   private DocxDrawings() {}
 
   static void write(StringBuilder b, Picture p, int docId) {
+    write(b, p, docId, null);
+  }
+
+  static void write(StringBuilder b, Picture p, int docId, DocxPictures parts) {
     var d = p.drawing;
     if ("equation".equals(d.kind)) {
       equation(b, p);
@@ -38,7 +42,19 @@ final class DocxDrawings {
         .append("<a:ext uri=\"").append(EXT).append("\"><cn:drawing xmlns:cn=\"").append(CN)
         .append("\" value=\"").append(Xml.attribute(d.encode())).append("\"/></a:ext></a:extLst></wp:docPr>")
         .append("<a:graphic xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\">");
-    if ("shape".equals(d.kind) || "textBox".equals(d.kind)) {
+    String[] dgm = parts != null && "smartArt".equals(d.kind) ? parts.diagramRels(d) : null;
+    if (parts != null && "chart".equals(d.kind)) {
+      // A real chart part: the original one while unedited, otherwise one generated from the data.
+      b.append("<a:graphicData uri=\"").append(DocxCharts.CHART).append("\"><c:chart xmlns:c=\"")
+          .append(DocxCharts.CHART).append("\" xmlns:r=\"").append(DocxCharts.R).append("\" r:id=\"")
+          .append(Xml.attribute(parts.chartRel(d))).append("\"/>");
+    } else if (dgm != null) {
+      // Unedited SmartArt keeps its diagram data, layout, style and color parts.
+      b.append("<a:graphicData uri=\"").append(DocxCharts.DIAGRAM).append("\"><dgm:relIds xmlns:dgm=\"")
+          .append(DocxCharts.DIAGRAM).append("\" xmlns:r=\"").append(DocxCharts.R).append("\" r:dm=\"")
+          .append(Xml.attribute(dgm[0])).append("\" r:lo=\"").append(Xml.attribute(dgm[1])).append("\" r:qs=\"")
+          .append(Xml.attribute(dgm[2])).append("\" r:cs=\"").append(Xml.attribute(dgm[3])).append("\"/>");
+    } else if ("shape".equals(d.kind) || "textBox".equals(d.kind)) {
       b.append("<a:graphicData uri=\"").append(WPS).append("\">");
       shape(b, d, cx, cy);
     } else {

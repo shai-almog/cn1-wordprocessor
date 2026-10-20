@@ -4781,6 +4781,21 @@ public class WordProcessor {
     showDialog(title, area, "Close", null);
   }
 
+  /** The selected chart's data as editable CSV (header row, then one row per category). */
+  private void chartDataDialog() {
+    editor.stopInput();
+    Object current;
+    try {
+      current = commands.execute(session, "chart.editData", Json.object());
+    } catch (RuntimeException e) {
+      showDialog("Edit Chart Data", "Select a chart first.", "Close", null);
+      return;
+    }
+    var area = new com.codename1.ui.TextArea(String.valueOf(current), 8, 40);
+    if (showDialog("Edit Chart Data", area, "Apply", "Cancel"))
+      run("chart.editData", Json.object("data", area.getText()));
+  }
+
   private void rename() {
     prompt(
         "Document name",
@@ -4971,6 +4986,7 @@ public class WordProcessor {
         .item("Quick Tables…", menuAction("Quick Tables", this::quickTables))
         .item("Picture…", menuAction("Picture", this::insertPicture))
         .item("Chart…", menuAction("Chart", cmd("insert.chart")))
+        .item("Edit Chart Data…", menuAction("Edit Chart Data", this::chartDataDialog))
         .item("Shape…", menuAction("Shape", cmd("insert.shape")))
         .item("Text Box", menuAction("Text Box", cmd("insert.textBox")))
         .item("Equation", menuAction("Equation", cmd("insert.equation")))

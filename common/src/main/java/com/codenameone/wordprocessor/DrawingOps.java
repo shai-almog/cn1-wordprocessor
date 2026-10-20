@@ -21,7 +21,7 @@ public final class DrawingOps {
               "line", "arrowLine", "plus", "heart", "callout", "parallelogram", "trapezoid"));
 
   public static final List<String> CHARTS =
-      Collections.unmodifiableList(Arrays.asList("column", "bar", "line", "pie", "area"));
+      Collections.unmodifiableList(Arrays.asList("column", "bar", "line", "pie", "area", "doughnut", "scatter"));
 
   public static final List<String> SMART_ART =
       Collections.unmodifiableList(
@@ -390,6 +390,7 @@ public final class DrawingOps {
 
   private static void chart(Ops ops, Drawing d, float w, float h) {
     var type = d.get("chartType", "column");
+    boolean pie = "pie".equals(type) || "doughnut".equals(type);
     var rows = table(d.get("data", SAMPLE_CHART));
     ops.fill(rect(0, 0, w, h), 0xffffff, 0xd9d9d9, .75f);
     var title = d.get("title", "Chart Title");
@@ -400,21 +401,21 @@ public final class DrawingOps {
     }
     if (rows.size() < 2 || rows.get(0).length < 2) return;
     var header = rows.get(0);
-    int series = "pie".equals(type) ? 1 : header.length - 1, cats = rows.size() - 1;
+    int series = pie ? 1 : header.length - 1, cats = rows.size() - 1;
     boolean legend = !"false".equals(d.get("legend", "true"));
     float bottom = h - (legend ? 26 : 8);
     if (legend) {
-      int entries = "pie".equals(type) ? cats : series;
+      int entries = pie ? cats : series;
       float entryW = Math.min(90, w / Math.max(1, entries));
       float lx = (w - entryW * entries) / 2;
       for (int i = 0; i < entries; i++) {
-        String name = "pie".equals(type) ? rows.get(i + 1)[0] : header[i + 1];
+        String name = pie ? rows.get(i + 1)[0] : header[i + 1];
         ops.fill(rect(lx + i * entryW, h - 17, 7, 7), PALETTE[i % PALETTE.length], -1, 0);
         ops.text(name, lx + i * entryW + 10, h - 21, entryW - 12, 9, 0x595959, false, "left");
       }
     }
     boolean labels = d.flag("dataLabels");
-    if ("pie".equals(type)) {
+    if (pie) {
       float total = 0;
       for (int r = 1; r < rows.size(); r++) total += Math.max(0, value(rows.get(r), 1));
       if (total <= 0) return;
@@ -441,6 +442,7 @@ public final class DrawingOps {
         }
         angle += sweep;
       }
+      if ("doughnut".equals(type)) ops.fill(ellipse(cx, cy, rad / 2, rad / 2), 0xffffff, -1, 0);
       return;
     }
     float max = 0;
@@ -448,6 +450,10 @@ public final class DrawingOps {
       for (int s = 1; s <= series; s++) max = Math.max(max, value(rows.get(r), s));
     max = nice(max);
     float left = 30, right = w - 10, plotTop = top + 4, plotBottom = bottom - 16;
+    if ("scatter".equals(type)) {
+      scatter(ops, rows, series, max, left, right, plotTop, plotBottom, labels);
+      return;
+    }
     boolean bar = "bar".equals(type);
     for (int i = 0; i <= 4; i++) {
       float f = i / 4f;
@@ -507,6 +513,40 @@ public final class DrawingOps {
     ops.line(new float[] {left, plotBottom, right, plotBottom}, 0xbfbfbf, .75f, 255);
   }
 
+  /** Scatter: the first column is x, every other column one y series, both axes linear. */
+  private static void scatter(
+      Ops ops, List<String[]> rows, int series, float max, float left, float right, float top, float bottom, boolean labels) {
+    float lo = Float.MAX_VALUE, hi = -Float.MAX_VALUE;
+    for (int r = 1; r < rows.size(); r++) {
+      float x = value(rows.get(r), 0);
+      lo = Math.min(lo, x);
+      hi = Math.max(hi, x);
+    }
+    if (lo > 0) lo = 0;
+    hi = nice(hi);
+    float span = hi - lo <= 0 ? 1 : hi - lo;
+    for (int i = 0; i <= 4; i++) {
+      float y = bottom - (bottom - top) * i / 4f, x = left + (right - left) * i / 4f;
+      ops.line(new float[] {left, y, right, y}, 0xd9d9d9, .5f, 255);
+      ops.text(trim(max * i / 4f), 0, y - 5, left - 3, 8, 0x595959, false, "right");
+      ops.text(trim(lo + span * i / 4f), x - 15, bottom + 2, 30, 8, 0x595959, false, "center");
+    }
+    for (int s = 1; s <= series; s++) {
+      int c = PALETTE[(s - 1) % PALETTE.length];
+      float[] p = new float[(rows.size() - 1) * 2];
+      for (int r = 1; r < rows.size(); r++) {
+        float px = left + (right - left) * (value(rows.get(r), 0) - lo) / span;
+        float py = bottom - (bottom - top) * (max <= 0 ? 0 : value(rows.get(r), s) / max);
+        p[(r - 1) * 2] = px;
+        p[(r - 1) * 2 + 1] = py;
+        ops.fill(ellipse(px, py, 2.5f, 2.5f), c, -1, 0);
+        if (labels) ops.text(trim(value(rows.get(r), s)), px - 15, py - 12, 30, 8, 0x404040, false, "center");
+      }
+      if (p.length >= 4) ops.line(p, c, 1.5f, 255);
+    }
+    ops.line(new float[] {left, bottom, right, bottom}, 0xbfbfbf, .75f, 255);
+  }
+
   private static float nice(float max) {
     if (max <= 0) return 1;
     double mag = com.codename1.util.MathUtil.pow(10, Math.floor(com.codename1.util.MathUtil.log10(max)));
@@ -548,6 +588,11 @@ public final class DrawingOps {
   }
 
   private static void smartArt(Ops ops, Drawing d, float w, float h) {
+    String saved = d.get("shapes", "");
+    if (!saved.isEmpty() && DocxCharts.smartKey(d).equals(d.get("dgmKey", ""))) {
+      savedShapes(ops, saved, w, h);
+      return;
+    }
     var layout = d.get("layout", "list");
     var all = nodes(d.get("nodes", "Text\nText\nText"));
     var top = new ArrayList<String>();
@@ -614,6 +659,41 @@ public final class DrawingOps {
     } else {
       float gap = 6, bh = (h - gap * (n - 1)) / n;
       for (int i = 0; i < n; i++) node(ops, label, top.get(i), kids.get(i), 0, i * (bh + gap), w, bh, smartColor(d, i));
+    }
+  }
+
+  /** The shapes Word saved for an unedited imported SmartArt graphic (see DocxCharts.shapes). */
+  static void savedShapes(Ops ops, String saved, float w, float h) {
+    for (String line : split(saved, '\n')) {
+      var f = new ArrayList<String>();
+      int start = 0;
+      for (int i = 0; i < line.length() && f.size() < 12; i++)
+        if (line.charAt(i) == ',') {
+          f.add(line.substring(start, i));
+          start = i + 1;
+        }
+      if (f.size() < 12) continue;
+      String text = line.substring(start);
+      float[] v = new float[12];
+      for (int i = 1; i < 12; i++) v[i] = Xml.integer(f.get(i), 0);
+      float x = v[1] * w / 10000, y = v[2] * h / 10000, sw = Math.max(0, v[3] * w / 10000), sh = Math.max(0, v[4] * h / 10000);
+      int fill = (int) v[5], stroke = (int) v[6], color = (int) v[7];
+      if (sw > 0 && sh > 0 && (fill >= 0 || stroke >= 0)) {
+        String g = SHAPES.contains(f.get(0)) || "roundRect".equals(f.get(0)) ? f.get(0) : "rect";
+        float[] p = offset(geometry(g, sw, sh), x, y);
+        if (fill >= 0) ops.fill(p, fill, stroke, stroke >= 0 ? .75f : 0);
+        else ops.paths.add(new Path(p, true, -1, stroke, .75f, 255));
+      }
+      if (!text.trim().isEmpty()) {
+        float tx = v[8] * w / 10000, ty = v[9] * h / 10000, tw = Math.max(4, v[10] * w / 10000), th = v[11] * h / 10000;
+        var lines = split(text, DocxCharts.BREAK);
+        float size = Math.max(6, Math.min(14, th / Math.max(2, lines.size() * 2.2f)));
+        float top = ty + Math.max(0, (th - lines.size() * size * 1.2f) / 2);
+        for (String l : lines) {
+          ops.text(l, tx, top, tw, size, color, false, "center");
+          top += size * 1.2f;
+        }
+      }
     }
   }
 
