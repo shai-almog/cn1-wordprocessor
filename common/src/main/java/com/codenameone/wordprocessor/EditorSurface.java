@@ -1736,7 +1736,7 @@ public final class EditorSurface extends Container
                     repaint()));
         return java.util.Collections.emptyList();
       }
-      issues = Proofing.marks(p.text.plainText(), proofOptions);
+      issues = Proofing.marks(p.text.plainText(), proofOptions, off -> p.text.styleAt(off).characters.lang);
       proofCache.put(p, issues);
     }
     return issues;

@@ -12,7 +12,7 @@ import java.util.Set;
  * changeAll) and {@code review.thesaurus}. The user dictionary and ignore-all list live in the
  * document settings {@code proof.dictionary} and {@code proof.ignore}; "ignore once" is remembered
  * per session by position and word (so a later edit before it can make it flag again). Runs whose
- * proofing language is set to something other than English are skipped.
+ * proofing language is unproofed are skipped; Polish and Portuguese runs use ProofLanguages.
  */
 final class ProofingCommands implements Commands.Extension {
   private static final SessionMap<Set<String>> ONCE = SessionMap.forDocument();
@@ -40,10 +40,6 @@ final class ProofingCommands implements Commands.Extension {
         ProofingCommands::thesaurus);
   }
 
-  private static boolean english(String lang) {
-    return lang.length() == 0 || lang.toLowerCase().startsWith("en");
-  }
-
   private static List<Found> issues(Session s) {
     var d = s.document();
     Proofing.Options o = Proofing.Options.of(d.properties);
@@ -56,8 +52,7 @@ final class ProofingCommands implements Commands.Extension {
       if (!(d.blocks.get(b) instanceof Paragraph)) continue;
       var t = d.paragraph(b).text;
       var text = t.plainText();
-      for (Proofing.Issue i : Proofing.check(text, o)) {
-        if (!english(t.styleAt(i.start()).characters.lang)) continue;
+      for (Proofing.Issue i : Proofing.check(text, o, off -> t.styleAt(off).characters.lang)) {
         var word = text.substring(i.start(), i.end());
         if (once != null && once.contains(b + ":" + i.start() + ":" + word)) continue;
         out.add(new Found(b, i, word));

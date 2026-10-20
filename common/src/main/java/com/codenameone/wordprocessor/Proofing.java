@@ -218,6 +218,101 @@ public final class Proofing {
     return out;
   }
 
+  /** Language of each character: the run's w:lang tag (empty inherits English). */
+  public interface LangAt {
+    String at(int offset);
+  }
+
+  /**
+   * Language-aware marks: each word is checked in its run's proofing language (Polish and
+   * Portuguese against their installed Hunspell dictionary, unproofed languages not at all),
+   * and grammar runs per same-language stretch with that language's rules.
+   */
+  public static List<Issue> marks(String text, Options o, LangAt langAt) {
+    if (langAt == null) return marks(text, o);
+    var out = new ArrayList<Issue>();
+    int n = text.length();
+    int segStart = 0;
+    String segLang = n == 0 ? ProofLanguages.EN : ProofLanguages.of(langAt.at(0));
+    for (int i = 1; i <= n; i++) {
+      String l = i < n ? ProofLanguages.of(langAt.at(i)) : null;
+      if (i < n && l.equals(segLang)) continue;
+      segment(text, segStart, i, segLang, o, out);
+      segStart = i;
+      segLang = l;
+    }
+    Collections.sort(
+        out,
+        new Comparator<Issue>() {
+          public int compare(Issue a, Issue b) {
+            return a.start != b.start ? (a.start < b.start ? -1 : 1) : (a.end < b.end ? -1 : a.end == b.end ? 0 : 1);
+          }
+        });
+    return out;
+  }
+
+  /** Language-aware issues with suggestions in each word's language. */
+  public static List<Issue> check(String text, Options o, LangAt langAt) {
+    var out = marks(text, o, langAt);
+    for (Issue i : out)
+      if ("spelling".equals(i.kind))
+        i.suggestions.addAll(suggest(text.substring(i.start, i.end), 5, langAt == null ? "" : langAt.at(i.start)));
+    return out;
+  }
+
+  /** Suggestions in a language (a w:lang tag; empty is English). */
+  public static List<String> suggest(String word, int max, String lang) {
+    String l = ProofLanguages.of(lang);
+    if (ProofLanguages.EN.equals(l)) return suggest(word, max);
+    HunspellDict d = ProofLanguages.dictionary(l);
+    return d == null ? new ArrayList<String>() : d.suggest(trimmed(word), max);
+  }
+
+  private static void segment(String text, int a, int b, String lang, Options o, List<Issue> out) {
+    if (ProofLanguages.NONE.equals(lang)) return;
+    String sub = text.substring(a, b);
+    var found = new ArrayList<Issue>();
+    if (ProofLanguages.EN.equals(lang)) {
+      found.addAll(checkSpelling(sub, o));
+      found.addAll(checkGrammar(sub));
+    } else {
+      HunspellDict d = ProofLanguages.dictionary(lang);
+      if (d != null)
+        for (int[] w : words(sub)) {
+          String word = trimmed(sub.substring(w[0], w[1])).replace('\u2019', '\'');
+          if (!correctIn(d, word, o))
+            found.add(new Issue(w[0], w[1], "spelling", "Possible spelling mistake", new ArrayList<String>()));
+        }
+      found.addAll(ProofLanguages.grammar(lang, sub));
+    }
+    for (Issue i : found) {
+      String original = sub.substring(i.start, i.end);
+      // A stretch that starts mid-paragraph is not a sentence start: drop its capital-letter mark.
+      if (a > 0 && i.start == 0 && "grammar".equals(i.kind) && !i.suggestions.isEmpty()
+          && !i.suggestions.get(0).equals(original) && i.suggestions.get(0).equalsIgnoreCase(original)) continue;
+      out.add(new Issue(i.start + a, i.end + a, i.kind, i.message, i.suggestions));
+    }
+  }
+
+  private static boolean correctIn(HunspellDict d, String w, Options o) {
+    if (w.length() <= 1) return true;
+    boolean lower = false;
+    for (int i = 0; i < w.length(); i++) {
+      char c = w.charAt(i);
+      if (c >= '0' && c <= '9') return true;
+      if (Character.isLowerCase(c)) lower = true;
+    }
+    if (!lower) return true;
+    String l = w.toLowerCase();
+    if (o.dictionary.contains(l) || o.ignore.contains(l) || d.check(w)) return true;
+    if (w.indexOf('-') >= 0) {
+      for (String part : TextUtil.split(w, '-')) if (part.length() > 0 && !d.check(part)) return false;
+      return true;
+    }
+    int ap = w.indexOf('\'');
+    return ap > 0 && d.check(w.substring(0, ap));
+  }
+
   /** Words within two edits of the misspelling, nearest first. */
   public static List<String> suggest(String word, int max) {
     var lower = trimmed(word).toLowerCase().replace('\u2019', '\'');

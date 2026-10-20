@@ -35,3 +35,9 @@ English proofing data under `document/src/main/resources/proof/`, taken unmodifi
 [image-webp](https://github.com/image-rs/image-webp) crate, licensed MIT OR Apache-2.0.
 Copyright (c) The image-rs Developers. The MIT license permits use, copying, modification and
 distribution provided this copyright notice and permission notice are included.
+
+Proofing languages (Polish, Portuguese): no third-party dictionary is bundled. Like Wordcraft,
+which reads system-installed Hunspell `.aff`/`.dic` pairs and bundles none for these languages,
+`ProofLanguages` reads `pl_PL`/`pt_BR`/`pt_PT` pairs from the usual system locations at runtime
+(each dictionary keeps its own license, typically GPL/LGPL/MPL, and is never redistributed here).
+The test dictionaries in `ProofLanguagesTest` are synthetic and original to this project.
