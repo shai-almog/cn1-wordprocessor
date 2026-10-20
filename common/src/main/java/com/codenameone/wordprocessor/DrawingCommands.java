@@ -281,7 +281,8 @@ final class DrawingCommands implements Commands.Extension {
           var d = Drawing.of("equation").with("text", Commands.str(a, "text", ""));
           boolean display = !a.containsKey("display") || (Boolean) a.get("display");
           float width = display ? s.activeSection().resolved.page.contentWidth() : 160;
-          return insert(s, d.with("display", String.valueOf(display)), width, 30, "Equation");
+          float height = Equation.height(Equation.fromLinear(d.get("text", "")), d.num("fontSize", 12));
+          return insert(s, d.with("display", String.valueOf(display)), width, height, "Equation");
         });
     c.edit("equation.inputFormat", "block?:integer,format:string",
         "Show the equation in professional (built-up) or linear form",

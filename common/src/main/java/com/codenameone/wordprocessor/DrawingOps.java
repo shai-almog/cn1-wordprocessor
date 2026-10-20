@@ -67,6 +67,11 @@ public final class DrawingOps {
   }
 
   public static Ops build(Drawing d, float w, float h) {
+    return build(d, w, h, null);
+  }
+
+  /** As {@link #build(Drawing, float, float)}, measuring equation glyphs with {@code metrics}. */
+  public static Ops build(Drawing d, float w, float h, LayoutEngine.Metrics metrics) {
     var ops = new Ops();
     if (d.flag("hidden")) return ops;
     var k = d.kind;
@@ -75,7 +80,7 @@ public final class DrawingOps {
     else if ("wordArt".equals(k)) wordArt(ops, d, w, h);
     else if ("chart".equals(k)) chart(ops, d, w, h);
     else if ("smartArt".equals(k)) smartArt(ops, d, w, h);
-    else if ("equation".equals(k)) equation(ops, d, w, h);
+    else if ("equation".equals(k)) equation(ops, d, w, h, metrics == null ? new PdfMetrics() : metrics);
     else if ("ink".equals(k) || "canvas".equals(k)) {
       if ("canvas".equals(k)) {
         int fill = d.color("fill", -1);
@@ -678,19 +683,37 @@ public final class DrawingOps {
     return b.toString();
   }
 
-  private static void equation(Ops ops, Drawing d, float w, float h) {
+  private static void equation(Ops ops, Drawing d, float w, float h, LayoutEngine.Metrics metrics) {
     var linear = d.get("text", "");
     boolean professional = !"linear".equals(d.get("format", "professional"));
-    String shown = professional ? professional(linear) : linear;
     float size = d.num("fontSize", 12);
     var justify = d.get("justify", "center");
     var number = d.get("number", "");
     float right = number.isEmpty() ? w : w - 40;
-    ops.texts.add(
-        new Text(shown, 0, (h - size * 1.2f) / 2, right, size, d.color("textColor", 0), false,
-            !d.flag("normalText"), justify, -1, 0));
+    int color = d.color("textColor", 0);
     if (!number.isEmpty())
       ops.texts.add(new Text("(" + number + ")", w - 40, (h - size * 1.2f) / 2, 40, size, 0, false, false, "right", -1, 0));
+    if (!professional) {
+      ops.texts.add(new Text(linear, 0, (h - size * 1.2f) / 2, right, size, color, false, false, justify, -1, 0));
+      return;
+    }
+    // Built-up form: every glyph is measured with the renderer's own metrics and placed left-aligned.
+    Equation.Box box = Equation.layout(Equation.of(d), size, metrics);
+    float x = "left".equals(justify) ? 0 : "right".equals(justify) ? right - box.width : (right - box.width) / 2;
+    x = Math.max(0, x);
+    float base = (h - box.ascent - box.descent) / 2 + box.ascent;
+    boolean upright = d.flag("normalText");
+    for (Equation.Glyph g : box.glyphs)
+      ops.texts.add(new Text(g.text(), x + g.x(), base + g.y() - g.size(), g.width() + 1, g.size(), color, false,
+          g.italic() && !upright, "left", -1, 0));
+    for (float[] l : box.lines) {
+      float[] pts = new float[l.length - 1];
+      for (int i = 0; i + 1 < pts.length; i += 2) {
+        pts[i] = x + l[i];
+        pts[i + 1] = base + l[i + 1];
+      }
+      ops.line(pts, color, l[l.length - 1], 255);
+    }
   }
 
   // ---------------------------------------------------------------- ink, icons, signature, object

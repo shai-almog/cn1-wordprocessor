@@ -96,7 +96,8 @@ final class DocxPictures {
       return;
     }
     if ("oMathPara".equals(Xml.local(e)) || "oMath".equals(Xml.local(e))) {
-      result.add(Picture.drawing("i" + id[0]++, DocxDrawings.math(e), 468, 36, "", "left"));
+      Drawing math = DocxDrawings.math(e);
+      result.add(Picture.drawing("i" + id[0]++, math, 468, Math.max(36, Equation.height(Equation.of(math), 12)), "", "left"));
       return;
     }
     for (Element child : Xml.children(e, null)) collect(child, result, id, warnings);

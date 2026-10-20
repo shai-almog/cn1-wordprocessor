@@ -186,8 +186,25 @@ final class DocxDrawings {
   private static void equation(StringBuilder b, Picture p) {
     var d = p.drawing;
     var justify = d.get("justify", "center");
+    String source = d.get("omml", "");
+    boolean verbatim = !source.isEmpty() && Equation.key(d).equals(d.get("ommlKey", ""));
     b.append("<w:p><w:pPr><w:jc w:val=\"").append("left".equals(justify) ? "left" : "right".equals(justify) ? "right" : "center")
-        .append("\"/></w:pPr><m:oMathPara xmlns:m=\"").append(M).append("\"><m:oMath><m:r>");
+        .append("\"/></w:pPr>");
+    if (verbatim) {
+      boolean para = source.startsWith("<m:oMathPara");
+      if (!para) b.append("<m:oMathPara xmlns:m=\"").append(M).append("\">");
+      b.append(source);
+      if (!para) b.append("</m:oMathPara>");
+      b.append("</w:p>");
+      return;
+    }
+    if (!"linear".equals(d.get("format", "professional")) && d.get("number", "").isEmpty() && !d.flag("normalText")) {
+      // Edited or typed equations are written as built-up Office Math from their linear form.
+      String xml = Equation.omml(Equation.fromLinear(d.get("text", "")));
+      b.append("<m:oMathPara xmlns:m=\"").append(M).append("\">").append(xml).append("</m:oMathPara></w:p>");
+      return;
+    }
+    b.append("<m:oMathPara xmlns:m=\"").append(M).append("\"><m:oMath><m:r>");
     if (d.flag("normalText")) b.append("<m:rPr><m:nor/></m:rPr>");
     var number = d.get("number", "");
     b.append("<m:t xml:space=\"preserve\">").append(Xml.escape(DrawingOps.professional(d.get("text", ""))))
@@ -277,8 +294,24 @@ final class DocxDrawings {
       number = value.substring(mark + NUMBER.length() + 1, value.length() - 1);
       value = value.substring(0, mark);
     }
-    var d = Drawing.of("equation").with("text", value).with("number", number);
+    var tree = Equation.fromOmml(oMath);
+    String linear = Equation.linear(tree);
+    String suffix = number.isEmpty() ? "" : NUMBER + "(" + number + ")";
+    if (!suffix.isEmpty() && linear.endsWith(suffix)) linear = linear.substring(0, linear.length() - suffix.length());
+    else if (!suffix.isEmpty()) linear = value;
+    var d = Drawing.of("equation").with("text", linear).with("number", number);
     if (DocxPictures.descendant(oMath, "nor") != null) d = d.with("normalText", "true");
+    // The source math zone is kept and saved verbatim until the equation is edited.
+    String xml = Xml.write(oMath);
+    if (xml.startsWith("<m:") && xml.length() < 190000) {
+      if (!xml.contains("xmlns:m=")) {
+        int end = xml.indexOf('>');
+        int slash = xml.charAt(end - 1) == '/' ? end - 1 : end;
+        xml = xml.substring(0, slash) + " xmlns:m=\"" + M + "\"" + xml.substring(slash);
+      }
+      d = d.with("omml", xml);
+      d = d.with("ommlKey", Equation.key(d));
+    }
     return d;
   }
 }

@@ -42,7 +42,7 @@ public final class Latex {
     StringBuilder b = new StringBuilder();
     final Map<String, List<String>> labels = new HashMap<>();
     final List<String> lists = new ArrayList<>();
-    boolean ulem, color, multirow, longtable;
+    boolean ulem, color, multirow, longtable, amsmath;
 
     Writer(Document d) {
       this.d = d;
@@ -68,7 +68,17 @@ public final class Latex {
           skipping = false;
           closeLists(0);
           if (block instanceof Table t) table(t);
-          else if (block instanceof Picture pic)
+          else if (block instanceof Picture pic && pic.drawing != null && "equation".equals(pic.drawing.kind)) {
+            // Equations are written as math, not as a picture placeholder.
+            amsmath = true;
+            String number = pic.drawing.get("number", "");
+            String math = Equation.latex(Equation.of(pic.drawing));
+            if ("false".equals(pic.drawing.get("display", "true"))) b.append('$').append(math).append("$\n\n");
+            else if (number.isEmpty()) b.append("\\[").append(math).append("\\]\n\n");
+            else
+              b.append("\\begin{equation*}").append(math).append("\\tag{").append(escape(number))
+                  .append("}\\end{equation*}\n\n");
+          } else if (block instanceof Picture pic)
             b.append("\\begin{center}\\emph{[Picture: ")
                 .append(escape(pic.alt.isEmpty() ? "image" : pic.alt))
                 .append("]}\\end{center}\n\n");
@@ -78,6 +88,7 @@ public final class Latex {
       var head = new StringBuilder("\\documentclass{article}\n");
       head.append("\\usepackage[T1]{fontenc}\n\\usepackage[utf8]{inputenc}\n\\usepackage{textcomp}\n");
       if (ulem) head.append("\\usepackage[normalem]{ulem}\n");
+      if (amsmath) head.append("\\usepackage{amsmath}\n");
       if (color) head.append("\\usepackage{xcolor}\n");
       if (multirow) head.append("\\usepackage{multirow}\n");
       if (longtable) head.append("\\usepackage{longtable}\n");

@@ -22,6 +22,7 @@ Format coverage and its limits are in [FORMATS](FORMATS.md).
 | Editing | Mixed body/table selections, nested table editing, cross-cell and note-story comment ranges, and table-cell proofing are unsupported. The layout engine re-paginates the whole document after an edit rather than only the changed suffix. Undo history is bounded by count (200), not by memory. |
 | Accessibility | The document is exposed to screen readers through Codename One accessibility, but this has not been verified in a live VoiceOver, Narrator or Orca session. |
 | Platforms | Linux and Windows builds are produced and benchmarked by CI but have had little hands-on desktop use. Android and iOS were exercised on the emulator and simulator, not physical devices. The browser build has no live debugging channel. |
+| Equations | Office Math is imported, drawn built-up and round-tripped, but equations are block objects: inline `m:oMath` moves to its own line, editing is through linear text (no in-place structure editing, gallery or ink math), LaTeX import keeps math as text, and fine OMML formatting survives only while the equation is unedited. See FORMATS.md. |
 | Recovery | Crash recovery is stored unencrypted, so password-protected documents get no recovery copy. |
 | Releases | macOS builds are signed with Developer ID; notarization can lag, in which case the DMG is not stapled. Windows and Linux packages are unsigned. |
 | Automation | The SDK and macro API are provisional (`0.1.0-SNAPSHOT`) with no compatibility policy yet. |

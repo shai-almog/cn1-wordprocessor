@@ -62,7 +62,7 @@ public final class EditorSurface extends Container
 
   /** Paints a vector drawing from the primitives shared with PDF and HTML export. */
   private void paintDrawing(Graphics g, LayoutEngine.PlacedPicture pic, int px, int py, float scale) {
-    DrawingOps.Ops ops = DrawingOps.build(pic.picture().drawing, pic.width(), pic.height());
+    DrawingOps.Ops ops = DrawingOps.build(pic.picture().drawing, pic.width(), pic.height(), fontMetrics);
     boolean shapes = g.isShapeSupported();
     boolean aa = g.isAntiAliased();
     g.setAntiAliased(true);
