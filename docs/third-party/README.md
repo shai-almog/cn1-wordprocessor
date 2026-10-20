@@ -15,6 +15,8 @@ is included with native and JavaSE distributions. No font outline files are incl
 
 Bundled document fonts: Adobe Source Sans 3 and Source Serif 4, and JetBrains Mono, under SIL OFL 1.1. Unmodified font files and copyright/license notices are included in `formats/src/main/resources`. These files were taken from the pinned Wordcraft source asset set.
 
+PDF fallback faces, unmodified: NotoSansHebrew-Regular/Bold.ttf and NotoNaskhArabic-Regular/Bold.ttf (hinted TTF from the notofonts/notofonts.github.io repository), SIL OFL 1.1, with `OFL-NotoSansHebrew.txt` and `OFL-NotoNaskhArabic.txt` alongside them in `common/src/main/resources`.
+
 Additional unmodified font faces: SourceSans3-BoldIt.ttf from Adobe source-sans release 3.052R; JetBrainsMono-Bold.ttf, JetBrainsMono-Italic.ttf and JetBrainsMono-BoldItalic.ttf from JetBrainsMono v2.304. The same bundled SIL OFL notices apply.
 
 Unicode 16.0.0 grapheme-break, emoji and Indic-conjunct property data and the official grapheme test corpus are pinned under `unicode-16.0.0`, with original download URLs and SHA-256 hashes in `manifest.json`. `scripts/generate-grapheme-ranges.py` verifies those inputs and generates `GraphemeProperties.java`. The unmodified [Unicode license](unicode-16.0.0/LICENSE.txt) accompanies these data and their derived tables. Generated tables count toward application source totals.

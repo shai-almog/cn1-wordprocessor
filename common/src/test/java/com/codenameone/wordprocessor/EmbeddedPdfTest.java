@@ -112,7 +112,7 @@ public class EmbeddedPdfTest {
     var pdf =
         new String(PdfExporter.write(session.document().page, layout, FONTS), "ISO-8859-1");
     var leader =
-        java.util.regex.Pattern.compile("<((?:0002)+)> Tj").matcher(pdf);
+        java.util.regex.Pattern.compile("\\[<((?:0002)+)>\\] TJ").matcher(pdf);
     assertTrue(leader.find());
     int count = leader.group(1).length() / 4;
     var font = new PdfFonts.TrueType(FONTS.bytes(FONTS.name(TextStyle.DEFAULT)));
@@ -124,14 +124,10 @@ public class EmbeddedPdfTest {
   }
 
   @Test
-  public void missingGlyphAndMalformedFontsFailExplicitly() throws Exception {
-    var fonts = new PdfFonts(FONTS);
-    try {
-      fonts.face(TextStyle.DEFAULT).encode("\uD83D\uDE80");
-      fail();
-    } catch (IOException expected) {
-      assertTrue(expected.getMessage().contains("does not cover"));
-    }
+  public void missingGlyphShowsNotdefAndMalformedFontsFailExplicitly() throws Exception {
+    var face = new PdfFonts(FONTS).face(TextStyle.DEFAULT);
+    assertEquals("<0001>", face.encode("\uD83D\uDE80"));
+    assertEquals(0, face.font.glyph(face.glyphCodes.get(0)));
     for (byte[] bytes :
         new byte[][] {
           new byte[0],

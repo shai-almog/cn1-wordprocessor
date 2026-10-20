@@ -15,9 +15,9 @@ Format coverage and its limits are in [FORMATS](FORMATS.md).
 | Area | Limitation |
 | --- | --- |
 | DOCX | Custom/composite numbering labels, theme fonts and colors, advanced section, header/footer and field content, floating/cropped/rotated pictures, anchored objects and nested tables are approximated or unsupported. Real-world round trips can lose layout detail. |
-| Formats Wordcraft has | No legacy binary `.doc` import, no WMF/EMF pictures, no Zotero integration. |
-| Typography | No shaped layout or caret geometry for Arabic, Hebrew or Indic scripts; bidi navigation, font fallback and RTL tabs are incomplete. Decimal tabs align on a period only. |
-| PDF | No complex shaping, kerning or system font fallback; no links or tagged accessibility. |
+| Formats Wordcraft has | No WMF/EMF pictures, ODT or LaTeX yet, and no Zotero integration. `.doc` import skips comments, bookmarks, tracked changes, merged cells and floating shapes. |
+| Typography | Glyph shaping on screen comes from the platform text renderer. Bidi ordering covers strong types, numbers and neutrals but not explicit embeddings or bracket pairing; lines with tabs keep logical order. Decimal tabs align on a period only. |
+| PDF | Hebrew/Arabic fallback, RTL, Arabic presentation forms, kerning, links, outline and basic tags are exported; no Indic/complex OpenType shaping, system font fallback or font subsetting. See [FORMATS](FORMATS.md). |
 | Editing | Mixed body/table selections, nested table editing, cross-cell and note-story comment ranges, and table-cell proofing are unsupported. The layout engine re-paginates the whole document after an edit rather than only the changed suffix. Undo history is bounded by count (200), not by memory. |
 | Accessibility | The document is exposed to screen readers through Codename One accessibility, but this has not been verified in a live VoiceOver, Narrator or Orca session. |
 | Platforms | Linux and Windows builds are produced and benchmarked by CI but have had little hands-on desktop use. Android and iOS were exercised on the emulator and simulator, not physical devices. The browser build has no live debugging channel. |

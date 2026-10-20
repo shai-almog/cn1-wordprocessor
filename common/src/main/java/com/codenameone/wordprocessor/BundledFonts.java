@@ -1,6 +1,7 @@
 package com.codenameone.wordprocessor;
 
 import java.io.*;
+import java.util.*;
 
 /** Shared OFL font names and bytes for native rendering and headless export. */
 public final class BundledFonts {
@@ -45,20 +46,35 @@ public final class BundledFonts {
 
 
   public static PdfExporter.FontProvider provider(final Resources resources) {
-    return new PdfExporter.FontProvider() {
-      public String name(TextStyle style) { return resource(style); }
-      public byte[] bytes(String name) throws IOException {
-        try (var in = resources.open("/" + name + ".ttf")) {
-          if (in == null) throw new IOException("Missing bundled font " + name);
-          var out = new ByteArrayOutputStream();
-          byte[] buffer = new byte[8192];
-          for (int n; (n = in.read(buffer)) != -1;) {
-            if (out.size() + n > 20 * 1024 * 1024) throw new IOException("Font exceeds size limit");
-            out.write(buffer, 0, n);
-          }
-          return out.toByteArray();
+    return new Provider(resources);
+  }
+
+  /** Noto faces for scripts the document families lack, tried in order per character. */
+  public static List<String> fallbacks(TextStyle style) {
+    String weight = style.bold ? "Bold" : "Regular";
+    return Arrays.asList("NotoSansHebrew-" + weight, "NotoNaskhArabic-" + weight);
+  }
+
+  private static final class Provider implements PdfExporter.FontProvider, PdfExporter.FallbackFonts {
+    private final Resources resources;
+
+    Provider(Resources resources) {
+      this.resources = resources;
+    }
+
+    public String name(TextStyle style) { return resource(style); }
+    public List<String> fallbacks(TextStyle style) { return BundledFonts.fallbacks(style); }
+    public byte[] bytes(String name) throws IOException {
+      try (var in = resources.open("/" + name + ".ttf")) {
+        if (in == null) throw new IOException("Missing bundled font " + name);
+        var out = new ByteArrayOutputStream();
+        byte[] buffer = new byte[8192];
+        for (int n; (n = in.read(buffer)) != -1;) {
+          if (out.size() + n > 20 * 1024 * 1024) throw new IOException("Font exceeds size limit");
+          out.write(buffer, 0, n);
         }
+        return out.toByteArray();
       }
-    };
+    }
   }
 }

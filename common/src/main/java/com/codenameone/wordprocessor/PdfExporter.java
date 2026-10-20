@@ -5,7 +5,7 @@ import java.util.*;
 
 /**
  * Selectable-text PDF export from the shared pagination result. Native callers embed their document
- * fonts; the no-provider overload uses standard Helvetica. Missing glyphs are rejected.
+ * fonts with per-character fallback; the no-provider overload uses standard Helvetica (WinAnsi only).
  */
 public final class PdfExporter {
   private PdfExporter() {}
@@ -14,6 +14,11 @@ public final class PdfExporter {
     String name(TextStyle style);
 
     byte[] bytes(String name) throws IOException;
+  }
+
+  /** Optional on a {@link FontProvider}: faces tried, in order, for characters the chosen face lacks. */
+  public interface FallbackFonts {
+    List<String> fallbacks(TextStyle style);
   }
 
   /** Page color, a lightened diagonal watermark and page borders, under the body. */
@@ -173,7 +178,7 @@ public final class PdfExporter {
       if (headless == null) headless = new LayoutEngine(new PdfMetrics());
       layout = headless.layout(document, 0);
     }
-    return write(document.page, layout);
+    return writeWithFonts(document.page, layout, null, document);
   }
 
   /** Paginate and embed with the same font instances, loading each face at most once per export. */
@@ -186,7 +191,7 @@ public final class PdfExporter {
     } catch (FontFailure failure) {
       throw failure.error;
     }
-    return writeWithFonts(document.page, layout, fonts);
+    return writeWithFonts(document.page, layout, fonts, document);
   }
 
   /** Headless pagination using the same font advances as embedded PDF export. */
@@ -204,35 +209,42 @@ public final class PdfExporter {
     }
   }
 
-  private static void drawText(
-      StringBuilder b, int face, TextStyle s, float x, float y, String encoded) {
+  private static void drawText(StringBuilder b, TextStyle s, float x, float y, String shown) {
     var c = s.characters;
-    if (c.shadow) textPass(b, face, s, x + 1, y - 1, encoded, 0x808080, false);
+    if (c.shadow) textPass(b, s, x + 1, y - 1, shown, 0x808080, false);
     if (c.emboss || c.engrave) {
-      textPass(b, face, s, x - 1, y + 1, encoded, c.engrave ? 0x707070 : 0xffffff, false);
-      textPass(b, face, s, x + 1, y - 1, encoded, c.engrave ? 0xffffff : 0x707070, false);
+      textPass(b, s, x - 1, y + 1, shown, c.engrave ? 0x707070 : 0xffffff, false);
+      textPass(b, s, x + 1, y - 1, shown, c.engrave ? 0xffffff : 0x707070, false);
     }
-    textPass(b, face, s, x, y, encoded, s.color, c.outline);
+    textPass(b, s, x, y, shown, s.color, c.outline);
+  }
+
+  /** Font selection and showing operators: kerned, fallback-aware runs when fonts are embedded. */
+  private static String shown(PdfFonts fonts, TextStyle s, String text, boolean rtl)
+      throws IOException {
+    return shown(fonts, s, text, rtl, true);
+  }
+
+  private static String shown(
+      PdfFonts fonts, TextStyle s, String text, boolean rtl, boolean kerning) throws IOException {
+    if (fonts != null) return fonts.show(s, text, rtl, n(s.renderedSize()), kerning);
+    return "/F" + ((s.bold ? 1 : 0) + (s.italic ? 2 : 0)) + ' ' + n(s.renderedSize()) + " Tf ("
+        + literal(rtl ? reversed(text) : text) + ") Tj";
   }
 
   private static void textPass(
       StringBuilder b,
-      int face,
       TextStyle s,
       float x,
       float y,
-      String encoded,
+      String shown,
       int ink,
       boolean outline) {
     b.append("q ")
         .append(color(ink))
         .append(" RG 0.5 w ")
         .append(color(ink))
-        .append(" rg BT /F")
-        .append(face)
-        .append(' ')
-        .append(n(s.renderedSize()))
-        .append(" Tf ")
+        .append(" rg BT ")
         .append(n(s.characters.scale))
         .append(" Tz ")
         .append(outline ? "1" : "0")
@@ -241,8 +253,8 @@ public final class PdfExporter {
         .append(' ')
         .append(n(y))
         .append(" Tm ")
-        .append(encoded)
-        .append(" Tj ET Q\n");
+        .append(shown)
+        .append(" ET Q\n");
   }
 
   private static void rule(StringBuilder b, int color, float x, float y, float end) {
@@ -267,14 +279,7 @@ public final class PdfExporter {
 
     public float width(String text, TextStyle style) {
       try {
-        var font = fonts.face(style).font;
-        float width = 0;
-        for (int i = 0; i < text.length(); ) {
-          int cp = Character.codePointAt(text, i);
-          i += Character.charCount(cp);
-          width += font.scaled(font.advance(font.glyph(cp))) * style.renderedSize() / 1000;
-        }
-        return width;
+        return fonts.width(style, text, style.renderedSize());
       } catch (IOException error) {
         throw new FontFailure(error);
       }
@@ -295,17 +300,17 @@ public final class PdfExporter {
 
   public static byte[] write(PageSpec fallback, LayoutEngine.Result layout, FontProvider provider)
       throws IOException {
-    return writeWithFonts(fallback, layout, provider == null ? null : new PdfFonts(provider));
+    return writeWithFonts(
+        fallback, layout, provider == null ? null : new PdfFonts(provider), null);
   }
 
   private static byte[] writeWithFonts(
-      PageSpec fallback, LayoutEngine.Result layout, PdfFonts fonts) throws IOException {
+      PageSpec fallback, LayoutEngine.Result layout, PdfFonts fonts, Document document)
+      throws IOException {
+    var structure = new PdfStructure(document);
+    int[] pageIds = new int[layout.pages.size()];
+    for (int i = 0; i < pageIds.length; i++) pageIds[i] = 7 + i * 2;
     if (!layout.warnings.isEmpty()) throw new IOException(layout.warnings.get(0));
-    if (fonts != null)
-      for (LayoutEngine.Page page : layout.pages)
-        for (LayoutEngine.Line line : page.allLines())
-          for (LayoutEngine.Span span : line.spans)
-            if (!span.displayText.isEmpty()) fonts.face(span.style).encode(span.displayText);
     var objects = new ArrayList<byte[]>();
     for (int i = 0; i < 6; i++) objects.add(null);
     objects.set(0, ascii("<< /Type /Catalog /Pages 2 0 R >>"));
@@ -322,7 +327,9 @@ public final class PdfExporter {
                   + names[i]
                   + " /Encoding /WinAnsiEncoding >>"));
     for (int i = 0; i < layout.pages.size() * 2; i++) objects.add(null);
-    String embeddedResources = fonts == null ? "" : fonts.install(objects);
+    // One font dictionary shared by all pages, completed once every page's text is shown.
+    objects.add(null);
+    int fontDictionary = objects.size();
     var imageIds = new HashMap<Picture, Integer>();
     for (LayoutEngine.Page page : layout.pages)
       for (LayoutEngine.PlacedPicture pic : page.pictures)
@@ -331,7 +338,14 @@ public final class PdfExporter {
     int pageIndex = 0;
     for (LayoutEngine.Page page : layout.pages) {
       var spec = page.spec;
-      StringBuilder content = new StringBuilder(), imageResources = new StringBuilder();
+      StringBuilder content = new StringBuilder(), imageResources = new StringBuilder(),
+          annotations = new StringBuilder();
+      int pageNumber = pageIndex;
+      var furniture = Collections.newSetFromMap(new IdentityHashMap<LayoutEngine.Line, Boolean>());
+      furniture.addAll(page.header);
+      furniture.addAll(page.footer);
+      var notes = Collections.newSetFromMap(new IdentityHashMap<LayoutEngine.Line, Boolean>());
+      notes.addAll(page.notes);
       int imageIndex = 0;
       for (float[] rule : page.columnRules)
         content
@@ -353,8 +367,11 @@ public final class PdfExporter {
       }
       for (LayoutEngine.Frame frame : page.frames) frame(content, frame, spec.height);
       for (LayoutEngine.PlacedPicture pic : LayoutEngine.byDepth(page.pictures, false)) {
+        int figure = structure.mcid(pageNumber, structure.figure(pic.picture().alt));
+        content.append("/Figure << /MCID ").append(figure).append(" >> BDC\n");
         if (pic.picture().drawing != null) {
           PdfDrawings.paint(content, pic, spec.height);
+          content.append("EMC\n");
           continue;
         }
         var name = "Im" + (imageIndex++);
@@ -365,6 +382,7 @@ public final class PdfExporter {
             .append(imageIds.get(pic.picture()))
             .append(" 0 R ");
         picture(content, pic, spec.height, name);
+        content.append("EMC\n");
       }
       for (LayoutEngine.Box b : page.boxes) {
         content
@@ -420,6 +438,23 @@ public final class PdfExporter {
             .append(" l S\n");
       }
       for (LayoutEngine.Line line : page.allLines()) {
+        if (furniture.contains(line)) content.append("/Artifact BMC\n");
+        else {
+          var element = structure.element(line, notes.contains(line));
+          if (!notes.contains(line)) structure.heading(line, pageNumber, spec.height - line.y);
+          content.append('/').append(element.type).append(" << /MCID ")
+              .append(structure.mcid(pageNumber, element)).append(" >> BDC\n");
+        }
+        for (LayoutEngine.Span span : line.spans) {
+          var link = span.style.link;
+          if (link == null || link.isEmpty() || span.width <= 0) continue;
+          var action = structure.action(link, layout, pageIds);
+          if (action == null) continue;
+          objects.add(ascii("<< /Type /Annot /Subtype /Link /Rect [" + n(line.x + span.x) + ' '
+              + n(spec.height - line.y - line.height) + ' ' + n(line.x + span.x + span.width) + ' '
+              + n(spec.height - line.y) + "] /Border [0 0 0] " + action + " >>"));
+          annotations.append(objects.size()).append(" 0 R ");
+        }
         if (line.clipped)
           content
               .append("q 0 ")
@@ -465,25 +500,18 @@ public final class PdfExporter {
           if (span.displayText.isEmpty()) continue;
           var s = span.glyphStyle;
           float x = line.x + span.x, y = spec.height - line.y - span.top - s.renderedSize();
-          int face = fonts == null ? (s.bold ? 1 : 0) + (s.italic ? 2 : 0) : fonts.face(s).number;
           var display = span.displayText;
           if ("\t".equals(span.text)) {
             var glyph = display.substring(0, 1);
             float advance;
             if (fonts == null) advance = new PdfMetrics().width(glyph, s.renderedStyle());
-            else {
-              var font = fonts.face(s).font;
-              advance =
-                  font.scaled(font.advance(font.glyph(glyph.charAt(0)))) * s.renderedSize() / 1000f;
-            }
+            else advance = fonts.width(s, glyph, s.renderedSize());
             advance = Math.max(0, advance * s.characters.scale / 100 + s.characters.spacing);
             int count = advance <= 0 ? 0 : Math.min(4096, (int) (span.width / advance));
             char[] repeated = new char[count];
             java.util.Arrays.fill(repeated, glyph.charAt(0));
             display = new String(repeated);
           }
-          String encoded =
-              fonts == null ? "(" + literal(display) + ")" : fonts.face(s).encode(display);
           if (s.background != 0xffffff)
             content
                 .append(color(s.background))
@@ -497,25 +525,28 @@ public final class PdfExporter {
                 .append(n(line.height))
                 .append(" re f\n");
           if (s.characters.spacing == 0 && !s.characters.smallCaps) {
-            drawText(content, face, s, x, y, encoded);
+            drawText(content, s, x, y, shown(fonts, s, display, span.rtl, !"\t".equals(span.text)));
           } else {
             String value = "\t".equals(span.text) ? display : span.rawDisplay;
             RichText source = RichText.of(value, span.style);
             LayoutEngine.Metrics metrics =
                 fonts == null ? new PdfMetrics() : new FontMetrics(fonts);
             float advance = 0;
-            for (int at = 0; at < value.length(); ) {
-              int end = Graphemes.next(source, at);
-              String raw = value.substring(at, end), glyph = span.style.displayText(raw);
+            var bounds = new ArrayList<Integer>();
+            for (int at = 0; at < value.length(); at = Graphemes.next(source, at)) bounds.add(at);
+            bounds.add(value.length());
+            // Right-to-left spans place their last grapheme at the left edge.
+            for (int k = 0; k + 1 < bounds.size(); k++) {
+              int g = span.rtl ? bounds.size() - 2 - k : k;
+              String raw = value.substring(bounds.get(g), bounds.get(g + 1));
+              var glyphStyle = span.style.glyphStyle(raw);
               drawText(
                   content,
-                  face,
-                  span.style.glyphStyle(raw),
+                  glyphStyle,
                   x + advance,
                   y,
-                  fonts == null ? "(" + literal(glyph) + ")" : fonts.face(s).encode(glyph));
+                  shown(fonts, glyphStyle, span.style.displayText(raw), span.rtl));
               advance += CharacterMetrics.width(metrics, raw, span.style);
-              at = end;
             }
           }
           if (s.hasUnderline()) {
@@ -547,6 +578,7 @@ public final class PdfExporter {
           }
         }
         if (line.clipped) content.append("Q\n");
+        content.append("EMC\n");
       }
       // Draw bars after text backgrounds, using the same geometry as the editor canvas.
       for (LayoutEngine.Line line : page.allLines())
@@ -561,8 +593,12 @@ public final class PdfExporter {
               .append(' ')
               .append(n(spec.height - line.y - line.height))
               .append(" l S\n");
-      for (LayoutEngine.PlacedPicture pic : LayoutEngine.byDepth(page.pictures, true))
+      for (LayoutEngine.PlacedPicture pic : LayoutEngine.byDepth(page.pictures, true)) {
+        int figure = structure.mcid(pageNumber, structure.figure(pic.picture().alt));
+        content.append("/Figure << /MCID ").append(figure).append(" >> BDC\n");
         PdfDrawings.paint(content, pic, spec.height);
+        content.append("EMC\n");
+      }
       int pageId = 7 + pageIndex++ * 2;
       objects.set(
           pageId - 1,
@@ -571,15 +607,18 @@ public final class PdfExporter {
                   + n(spec.width)
                   + " "
                   + n(spec.height)
-                  + "] /Resources << /Font << /F0 3 0 R /F1 4 0 R /F2 5 0 R /F3 6 0 R "
-                  + embeddedResources
-                  + " >> /XObject"
+                  + "] /Resources << /Font "
+                  + fontDictionary
+                  + " 0 R /XObject"
                   + " << "
                   + imageResources
                   + ">> >>"
                   + " /Contents "
                   + (pageId + 1)
-                  + " 0 R >>"));
+                  + " 0 R /StructParents "
+                  + pageNumber
+                  + (annotations.length() == 0 ? "" : " /Annots [" + annotations + "]")
+                  + " >>"));
       byte[] stream = ascii(content.toString());
       var obj = new ByteArrayOutputStream();
       obj.write(ascii("<< /Length " + stream.length + " >>\nstream\n"));
@@ -587,6 +626,26 @@ public final class PdfExporter {
       obj.write(ascii("endstream"));
       objects.set(pageId, obj.toByteArray());
     }
+    objects.set(
+        fontDictionary - 1,
+        ascii(
+            "<< /F0 3 0 R /F1 4 0 R /F2 5 0 R /F3 6 0 R"
+                + (fonts == null ? "" : fonts.install(objects))
+                + " >>"));
+    int tree = structure.writeTree(objects, pageIds),
+        outline = structure.writeOutline(objects, pageIds);
+    objects.add(ascii(structure.info(layout)));
+    int info = objects.size();
+    var lang = PdfStructure.language(layout);
+    objects.set(
+        0,
+        ascii(
+            "<< /Type /Catalog /Pages 2 0 R /MarkInfo << /Marked true >> /StructTreeRoot "
+                + tree
+                + " 0 R"
+                + (outline == 0 ? "" : " /Outlines " + outline + " 0 R /PageMode /UseOutlines")
+                + (lang.isEmpty() ? "" : " /Lang (" + lang + ")")
+                + " >>"));
     var pdf = new ByteArrayOutputStream();
     pdf.write(ascii("%PDF-1.4\n% CN1 Word Processor\n"));
     var offsets = new ArrayList<Integer>();
@@ -604,7 +663,9 @@ public final class PdfExporter {
         ascii(
             "trailer\n<< /Size "
                 + (objects.size() + 1)
-                + " /Root 1 0 R >>\nstartxref\n"
+                + " /Root 1 0 R /Info "
+                + info
+                + " 0 R >>\nstartxref\n"
                 + xref
                 + "\n%%EOF\n"));
     return pdf.toByteArray();
@@ -626,9 +687,15 @@ public final class PdfExporter {
         .append(" c ");
   }
 
-  private static String n(float f) {
+  static String n(float f) {
     long scaled = Math.round(Math.abs((double) f) * 1000);
     return (f < 0 ? "-" : "") + scaled / 1000 + "." + TextUtil.padded(scaled % 1000, 10, 3);
+  }
+
+  private static String reversed(String text) {
+    char[] c = new char[text.length()];
+    for (int i = 0; i < c.length; i++) c[i] = text.charAt(c.length - 1 - i);
+    return new String(c);
   }
 
   private static String color(int c) {
