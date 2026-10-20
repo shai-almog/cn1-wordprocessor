@@ -770,6 +770,7 @@ static final char COLUMN_BREAK = '\u000B';
           .append(DocxBorders.hex(d.lastSection.decor.pageColor))
           .append("\"/>");
     b.append("<w:body>");
+    var written = new IdentityHashMap<Paragraph, Fragment>();
     int sectionIndex = 0;
     List<Section.Range> sections = d.sectionRanges();
     var contentsRanges = TableContents.ranges(d);
@@ -817,7 +818,9 @@ static final char COLUMN_BREAK = '\u000B';
           if (blockIndex == contents[0] + 1) prefix = DocxToc.begin(contentsField);
           if (blockIndex == contents[1] - 1) suffix = DocxToc.END_FIELD;
         }
-        writeParagraph(b, paragraph, lists, tabs, links, comments, sectionXml, prefix, suffix);
+        if (sectionXml.isEmpty() && prefix.isEmpty() && suffix.isEmpty())
+          writeBodyParagraph(b, paragraph, d, lists, tabs, links, comments, written);
+        else writeParagraph(b, paragraph, lists, tabs, links, comments, sectionXml, prefix, suffix);
       } else if (block instanceof Picture picture) pictures.write(b, picture);
       else if (block instanceof Table t) {
         b.append("<w:tbl><w:tblPr>");
@@ -867,6 +870,9 @@ static final char COLUMN_BREAK = '\u000B';
     b.append(sectionXml(d.lastSection, furniture.get(furniture.size() - 1)));
     b.append("</w:body></w:document>");
     lastDocumentChars = b.length();
+    synchronized (FRAGMENT_LOCK) {
+      fragments = written;
+    }
     return b;
   }
 
@@ -1100,6 +1106,72 @@ static final char COLUMN_BREAK = '\u000B';
       DocxComments comments,
       String section) {
     writeParagraph(b, p, lists, tabs, links, comments, section, "", "");
+  }
+
+  /**
+   * The XML of a body paragraph from the previous save, with what it was written against.
+   * Paragraphs are immutable, so one that kept its identity and context writes the same XML:
+   * a save after an edit serializes only the changed paragraphs. Only the latest save's
+   * fragments are kept.
+   */
+  private static final class Fragment {
+    final ParagraphStyle style;
+    final Integer number;
+    final String xml;
+
+    Fragment(ParagraphStyle style, Integer number, String xml) {
+      this.style = style;
+      this.number = number;
+      this.xml = xml;
+    }
+  }
+
+  private static final Object FRAGMENT_LOCK = new Object();
+  private static IdentityHashMap<Paragraph, Fragment> fragments = new IdentityHashMap<>();
+
+  /** Drops the reused paragraph XML (tests compare against a full serialization). */
+  static void forgetFragments() {
+    synchronized (FRAGMENT_LOCK) {
+      fragments = new IdentityHashMap<>();
+    }
+  }
+
+  private static void writeBodyParagraph(
+      StringBuilder b,
+      Paragraph p,
+      Document d,
+      DocxLists lists,
+      DocxTabs tabs,
+      DocxLinks links,
+      DocxComments comments,
+      IdentityHashMap<Paragraph, Fragment> written) {
+    // Content whose XML depends on document order or other parts is always written: fields,
+    // notes, comment and bookmark anchors, drop caps, format revisions and (below) hyperlinks,
+    // whose relationship ids are numbered in order of appearance.
+    if (p.text.hasObjects() || !p.format.dropCap.isEmpty() || p.formatRevision != null
+        || links.styles != d.styles || comments.anchored(p)) {
+      writeParagraph(b, p, lists, tabs, links, comments, "", "", "");
+      return;
+    }
+    ParagraphStyle style = d.styles.get(p.style);
+    Integer number = lists.ids.get(p);
+    Fragment previous;
+    synchronized (FRAGMENT_LOCK) {
+      previous = fragments.get(p);
+    }
+    if (previous != null && previous.style == style
+        && (previous.number == null ? number == null : previous.number.equals(number))) {
+      b.append(previous.xml);
+      written.put(p, previous);
+      return;
+    }
+    int start = b.length();
+    writeParagraph(b, p, lists, tabs, links, comments, "", "", "");
+    // StringBuilder.substring is outside the Codename One API; copy the range out directly.
+    char[] chars = new char[b.length() - start];
+    b.getChars(start, b.length(), chars, 0);
+    String xml = new String(chars);
+    if (xml.indexOf("<w:hyperlink") < 0) written.put(p, new Fragment(style, number, xml));
   }
 
   private static void writeParagraph(

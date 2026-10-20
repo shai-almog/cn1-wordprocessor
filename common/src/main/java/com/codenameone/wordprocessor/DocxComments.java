@@ -158,14 +158,15 @@ final class DocxComments {
     return result;
   }
 
+  /** Whether a comment or bookmark marks a position inside the paragraph. */
+  boolean anchored(Paragraph p) {
+    if (bookmarks.anchored(p.id)) return true;
+    for (ReviewComment c : comments) if (c.startId.equals(p.id) || c.endId.equals(p.id)) return true;
+    return false;
+  }
+
   void content(final StringBuilder b, final Paragraph p, final DocxLinks links) {
-    boolean anchored = bookmarks.anchored(p.id);
-    for (ReviewComment c : comments)
-      if (c.startId.equals(p.id) || c.endId.equals(p.id)) {
-        anchored = true;
-        break;
-      }
-    if (!anchored) {
+    if (!anchored(p)) {
       p.text.visit(
           new RichText.Visitor() {
             public void run(int offset, String text, TextStyle style) {

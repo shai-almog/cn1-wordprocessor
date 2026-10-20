@@ -1370,6 +1370,11 @@ public final class EditorSurface extends Container
             clipY = g.getClipY(),
             clipW = g.getClipWidth(),
             clipH = g.getClipHeight();
+        // Lines outside the repaint area are skipped, with a line's height of slack for ink
+        // that overhangs it. Some ports (Windows DirectWrite) lay out every string they are
+        // asked to draw even when it is clipped away.
+        int top = y + Math.round(line.y * scale), extent = Math.round(line.height * scale);
+        if (top + 2 * extent < clipY || top - extent > clipY + clipH) continue;
         if (line.clipped)
           g.clipRect(
               clipX,

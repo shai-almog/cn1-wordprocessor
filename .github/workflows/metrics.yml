@@ -171,17 +171,26 @@ jobs:
           xcrun simctl boot "$dev"; xcrun simctl bootstatus "$dev" -b
           xcrun simctl install "$dev" "$app"
           bid=$(defaults read "$app/Info" CFBundleIdentifier)
+          # Launch to key window, timed from the simulator's own log timestamps (it shares the
+          # host clock), so the polling below adds nothing to the measurement.
           for i in 1 2 3 4 5 6; do
             xcrun simctl terminate "$dev" "$bid" 2>/dev/null || true
+            sleep 1
             start=$(python3 -c 'import time;print(time.time())')
             xcrun simctl launch "$dev" "$bid" >/dev/null
             # Bounded: an app that never shows its window fails the job instead of hanging it.
             for t in $(seq 300); do
-              xcrun simctl spawn "$dev" log show --last 30s --style compact --predicate 'process == "Main"' 2>/dev/null | grep -q 'UIKit:KeyWindow' && break
+              line=$(xcrun simctl spawn "$dev" log show --start "$(date -r "${start%.*}" '+%Y-%m-%d %H:%M:%S')" --style compact --predicate 'process == "Main"' 2>/dev/null | grep 'UIKit:KeyWindow' | head -1)
+              [ -n "$line" ] && break
               [ $t = 300 ] && { echo 'The app did not start'; exit 1; }
               sleep 0.2
             done
-            python3 -c "import time;print(round((time.time()-$start)*1000))" >> ios-launch-ms.txt
+            python3 - "$start" "$line" >> ios-launch-ms.txt <<'PY'
+          import datetime, sys
+          start, line = float(sys.argv[1]), sys.argv[2]
+          stamp = datetime.datetime.strptime(' '.join(line.split()[:2]), '%Y-%m-%d %H:%M:%S.%f')
+          print(round((stamp.timestamp() - start) * 1000))
+          PY
           done
           sleep 5
           xcrun simctl io "$dev" screenshot ios.png
@@ -220,10 +229,7 @@ jobs:
           arch: x86_64
           target: google_apis
           script: |
-            adb install -r "$(cat apk-path.txt)"
-            pkg=com.codenameone.wordprocessor.app
-            act=$(adb shell cmd package resolve-activity --brief $pkg | tail -1 | tr -d '\r')
-            for i in 1 2 3 4 5 6; do adb shell am force-stop $pkg; adb shell am start -W -n "$act" | grep TotalTime | awk '{print $2}' >> android-launch-ms.txt; sleep 2; done
+            scripts/android-launch.sh "$(cat apk-path.txt)"
             sleep 8; adb exec-out screencap -p > android.png
             stat -c %s "$(cat apk-path.txt)" > android-apk-bytes.txt
             echo "Android cold start TotalTime ms: $(tr '\n' ' ' < android-launch-ms.txt); APK bytes: $(cat android-apk-bytes.txt)" >> "$GITHUB_STEP_SUMMARY"

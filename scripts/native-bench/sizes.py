@@ -13,8 +13,9 @@ if osname == 'macos':
     cn1_bundle = os.path.dirname(os.path.dirname(os.path.dirname(cn1_exe)))
     wc_bundle = (glob.glob(f'{wc_root}/target/*/WordCraft.app') + glob.glob(f'{wc_root}/*.app') + [os.path.dirname(wc_exe)])[0]
 else:
-    # The CN1 desktop build directory holds the executable and its resources; Wordcraft ships one binary.
-    cn1_bundle, wc_bundle = os.path.dirname(cn1_exe), None
+    # Both ship a single self-contained executable here (dist.sh packages only CN1's Main, not
+    # the CMake build tree beside it).
+    cn1_bundle, wc_bundle = None, None
 def ram():
     if osname == 'macos': return int(subprocess.check_output(['sysctl', '-n', 'hw.memsize']))
     if osname == 'linux': return os.sysconf('SC_PAGE_SIZE') * os.sysconf('SC_PHYS_PAGES')
@@ -23,7 +24,8 @@ def ram():
         _fields_ = [('len', ctypes.c_ulong), ('load', ctypes.c_ulong), ('total', ctypes.c_ulonglong)] + [(f'f{i}', ctypes.c_ulonglong) for i in range(6)]
     m = M(); m.len = ctypes.sizeof(M); ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(m)); return m.total
 wc = side(wc_exe, wc_bundle) if wc_bundle else {**side(wc_exe, os.path.dirname(wc_exe)), 'appBundleBytes': os.path.getsize(wc_exe)}
-json.dump({'os': osname, 'cn1': side(cn1_exe, cn1_bundle), 'wordcraft': wc,
+cn1 = side(cn1_exe, cn1_bundle) if cn1_bundle else {**side(cn1_exe, os.path.dirname(cn1_exe)), 'appBundleBytes': os.path.getsize(cn1_exe)}
+json.dump({'os': osname, 'cn1': cn1, 'wordcraft': wc,
            'platform': platform.platform(), 'machine': f"{platform.machine()} GitHub {os.environ.get('ImageOS', osname)} runner",
            'cpuCount': os.cpu_count(), 'ramBytes': ram(),
            'wordcraftRevision': os.environ['WORDCRAFT_REV'], 'frameworkRevision': 'cn1 7.0.278',

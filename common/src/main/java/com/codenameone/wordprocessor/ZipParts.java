@@ -21,13 +21,15 @@ public final class ZipParts {
 
   static final int MAX_ENTRY = 32 * 1024 * 1024, MAX_TOTAL = 128 * 1024 * 1024, MAX_ENTRIES = 4096;
 
-  static void write(Map<String, byte[]> parts, OutputStream out) throws IOException {
+  static synchronized void write(Map<String, byte[]> parts, OutputStream out) throws IOException {
     var archive = new Bytes(64 * 1024);
     var central = new Bytes(4096);
-    var deflater = new Deflater(1, true); // fastest: XML compresses well at any level
-    byte[] buffer = new byte[64 * 1024];
+    // Level 1, the fastest: XML compresses well at any level. Saves are serialized on this
+    // class, so the saving thread's deflater and buffer are reused between them.
+    var deflater = CALLER_DEFLATER;
+    byte[] buffer = CALLER_BUFFER;
     int count = 0;
-    try {
+    {
       for (var e : parts.entrySet()) {
         byte[] name = utf8(e.getKey()), data = e.getValue();
         int crc;
@@ -63,8 +65,6 @@ public final class ZipParts {
         central.write(name, 0, name.length);
         count++;
       }
-    } finally {
-      deflater.end();
     }
     int directory = archive.size();
     archive.write(central.array(), 0, central.size());
@@ -252,7 +252,7 @@ public final class ZipParts {
   /** Large parts are split into chunks that are checksummed and compressed on several threads. */
   static final int CHUNK = 128 * 1024;
 
-  private static final class Chunk implements Runnable {
+  private static final class Chunk {
     final byte[] data;
     final int offset, length;
     final boolean last;
@@ -268,28 +268,22 @@ public final class ZipParts {
       out = new Bytes(length / 4 + 64);
     }
 
-    @Override
-    public void run() {
+    void run(Deflater deflater, byte[] buffer) {
       try {
         crc = crc(data, offset, length);
         // Raw deflate streams concatenate when every chunk but the last ends on a sync flush
         // (byte aligned, no final-block bit), as pigz does; each chunk starts a fresh window.
-        var deflater = new Deflater(1, true);
-        byte[] buffer = new byte[64 * 1024];
-        try {
-          deflater.setInput(data, offset, length);
-          if (last) {
-            deflater.finish();
-            while (!deflater.finished()) out.write(buffer, 0, deflater.deflate(buffer, 0, buffer.length));
-          } else {
-            int n;
-            do {
-              n = deflater.deflate(buffer, 0, buffer.length, Deflater.SYNC_FLUSH);
-              out.write(buffer, 0, n);
-            } while (n == buffer.length || !deflater.needsInput());
-          }
-        } finally {
-          deflater.end();
+        deflater.reset();
+        deflater.setInput(data, offset, length);
+        if (last) {
+          deflater.finish();
+          while (!deflater.finished()) out.write(buffer, 0, deflater.deflate(buffer, 0, buffer.length));
+        } else {
+          int n;
+          do {
+            n = deflater.deflate(buffer, 0, buffer.length, Deflater.SYNC_FLUSH);
+            out.write(buffer, 0, n);
+          } while (n == buffer.length || !deflater.needsInput());
         }
       } catch (Throwable t) {
         failure = t;
@@ -297,37 +291,89 @@ public final class ZipParts {
     }
   }
 
-  private static Chunk[] parallel(byte[] data) throws IOException {
+  /*
+   * Two compression threads live for the whole session, each with its own Deflater and buffer,
+   * and the saving thread works alongside them. Starting threads and allocating deflate state
+   * (window and hash tables) on every save cost more on the native VMs than the compression
+   * the threads parallelize.
+   */
+  private static final Object QUEUE = new Object();
+  private static Chunk[] queued;
+  private static int next, unfinished;
+  private static boolean started;
+  private static final Deflater CALLER_DEFLATER = new Deflater(1, true);
+  private static final byte[] CALLER_BUFFER = new byte[64 * 1024];
+
+  private static Chunk take() {
+    synchronized (QUEUE) {
+      return queued != null && next < queued.length ? queued[next++] : null;
+    }
+  }
+
+  private static void finished() {
+    synchronized (QUEUE) {
+      if (--unfinished == 0) QUEUE.notifyAll();
+    }
+  }
+
+  private static void startWorkers() {
+    if (started) return;
+    started = true;
+    for (int i = 0; i < 2; i++) {
+      var worker =
+          new Thread(
+              () -> {
+                var deflater = new Deflater(1, true);
+                byte[] buffer = new byte[64 * 1024];
+                while (true) {
+                  Chunk c;
+                  synchronized (QUEUE) {
+                    while ((c = queued != null && next < queued.length ? queued[next++] : null) == null)
+                      try {
+                        QUEUE.wait();
+                      } catch (InterruptedException ignored) {
+                        // keep serving; the pool lives as long as the application
+                      }
+                  }
+                  c.run(deflater, buffer);
+                  finished();
+                }
+              },
+              "zip-deflate");
+      worker.setDaemon(true);
+      worker.start();
+    }
+  }
+
+  private static synchronized Chunk[] parallel(byte[] data) throws IOException {
+    // Equal chunks: the save waits for the slowest one, so a short last chunk wastes a thread.
     int count = (data.length + CHUNK - 1) / CHUNK;
+    int size = (data.length + count - 1) / count;
     var chunks = new Chunk[count];
     for (int i = 0; i < count; i++) {
-      int start = i * CHUNK;
-      chunks[i] = new Chunk(data, start, Math.min(CHUNK, data.length - start), i == count - 1);
+      int start = i * size;
+      chunks[i] = new Chunk(data, start, Math.min(size, data.length - start), i == count - 1);
     }
-    // The portable API has no processor count; every supported desktop and phone has at least
-    // two cores and three workers (this thread plus two) saturate a typical one without waste.
-    int workers = Math.min(count, 3);
-    var next = new int[1];
-    Runnable worker =
-        () -> {
-          while (true) {
-            int i;
-            synchronized (next) {
-              i = next[0]++;
-            }
-            if (i >= count) return;
-            chunks[i].run();
-          }
-        };
-    var threads = new Thread[workers - 1];
-    for (int i = 0; i < threads.length; i++) (threads[i] = new Thread(worker, "zip-deflate")).start();
-    worker.run();
-    for (Thread t : threads)
-      try {
-        t.join();
-      } catch (InterruptedException interrupted) {
-        throw new IOException("Interrupted while compressing");
-      }
+    startWorkers();
+    synchronized (QUEUE) {
+      queued = chunks;
+      next = 0;
+      unfinished = count;
+      QUEUE.notifyAll();
+    }
+    for (Chunk c; (c = take()) != null; ) {
+      c.run(CALLER_DEFLATER, CALLER_BUFFER);
+      finished();
+    }
+    synchronized (QUEUE) {
+      while (unfinished > 0)
+        try {
+          QUEUE.wait();
+        } catch (InterruptedException interrupted) {
+          throw new IOException("Interrupted while compressing");
+        }
+      queued = null;
+    }
     for (Chunk c : chunks) if (c.failure != null) throw new IOException("Compression failed: " + c.failure);
     return chunks;
   }

@@ -45,7 +45,9 @@ case $platform in
     (cd $t/web-preview && zip -qr "$OLDPWD/dist/$name.zip" .) ;;
   linux)
     exe=$(find $t -path '*linux-build*' -type f -name Main -perm -u+x | head -1)
-    tar -C "$(dirname "$exe")" -czf "dist/$name-$(uname -m).tar.gz" . ;;
+    # The executable is self-contained (resources are linked in); the rest of its directory is
+    # the CMake build tree, object files and Main.debug, which do not ship.
+    tar -C "$(dirname "$exe")" -czf "dist/$name-$(uname -m).tar.gz" Main ;;
   windows)
     exe=$(find $t -name Main.exe | head -1)
     (cd "$(dirname "$exe")" && 7z a -bd -tzip "$OLDPWD/dist/$name-${WINDOWS_ARCH:-x64}.zip" . >/dev/null) ;;
