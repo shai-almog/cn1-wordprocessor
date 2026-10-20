@@ -7,7 +7,8 @@ import java.util.zip.Deflater;
 import java.util.zip.Inflater;
 
 /**
- * Pure-Java GIF (first frame), BMP, TIFF (baseline, first page) and WebP decoding to ARGB, and a
+ * Pure-Java GIF (first frame), BMP, TIFF (baseline, first page), WebP and WMF/EMF (rasterized by
+ * MetafileDecoder) decoding to ARGB, and a
  * PNG encoder so display and PDF only ever see PNG/JPEG. Malformed input fails with IOException.
  */
 final class PictureCodecs {
@@ -36,6 +37,8 @@ final class PictureCodecs {
         || b[0] == 'M' && b[1] == 'M' && b[2] == 0 && b[3] == 42) return "image/tiff";
     if (b[0] == 'R' && b[1] == 'I' && b[2] == 'F' && b[3] == 'F'
         && b[8] == 'W' && b[9] == 'E' && b[10] == 'B' && b[11] == 'P') return "image/webp";
+    if (MetafileDecoder.isEmf(b)) return "image/x-emf";
+    if (MetafileDecoder.isWmf(b)) return "image/x-wmf";
     return null;
   }
 
@@ -47,18 +50,21 @@ final class PictureCodecs {
       case "image/bmp": return "bmp";
       case "image/tiff": return "tiff";
       case "image/webp": return "webp";
+      case "image/x-wmf": return "wmf";
+      case "image/x-emf": return "emf";
       default: return "jpg";
     }
   }
 
   static Raster decode(byte[] b) throws IOException {
     String mime = mime(b);
-    if (mime == null) throw new IOException("Not a GIF, BMP, TIFF or WebP picture");
+    if (mime == null) throw new IOException("Not a GIF, BMP, TIFF, WebP, WMF or EMF picture");
     try {
       switch (mime) {
         case "image/gif": return gif(b);
         case "image/bmp": return bmp(b);
         case "image/tiff": return tiff(b);
+        case "image/x-wmf": case "image/x-emf": return MetafileDecoder.decode(b);
         default: return WebpDecoder.decode(b);
       }
     } catch (RuntimeException ex) {

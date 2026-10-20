@@ -368,7 +368,7 @@ public final class Picture implements Block {
         at += size;
       }
     }
-    throw new IllegalArgumentException("Choose a valid PNG, JPEG, GIF, BMP, TIFF or WebP picture");
+    throw new IllegalArgumentException("Choose a valid PNG, JPEG, GIF, BMP, TIFF, WebP, WMF or EMF picture");
   }
 
   private static int integer(byte[] b, int at) {

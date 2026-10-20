@@ -298,6 +298,8 @@ final class DocBinary {
             + "<Default Extension=\"xml\" ContentType=\"application/xml\"/>"
             + "<Default Extension=\"png\" ContentType=\"image/png\"/>"
             + "<Default Extension=\"jpeg\" ContentType=\"image/jpeg\"/>"
+            + "<Default Extension=\"emf\" ContentType=\"image/x-emf\"/>"
+            + "<Default Extension=\"wmf\" ContentType=\"image/x-wmf\"/>"
             + "<Override PartName=\"/word/document.xml\" ContentType=\"" + CT + "document.main+xml\"/>"
             + types + "</Types>"));
     return parts;
@@ -1464,6 +1466,55 @@ final class DocBinary {
         + "</wp:inline></w:drawing>";
   }
 
+  /**
+   * An OfficeArt metafile BLIP body: a 34-byte header (uncompressed size, bounds, EMU size, stored
+   * size, compression) then the usually deflated metafile. WMF bodies get the placeable header they
+   * are stored without. Null when the payload is malformed or larger than 20 MiB.
+   */
+  private byte[] metafileBlip(long at, long stop, boolean wmf) {
+    if (at + 34 > stop) return null;
+    long size = u32(data, at), saved = u32(data, at + 28);
+    int compression = u8(data, at + 32);
+    long from = at + 34;
+    if (size <= 0 || size > 20L * 1024 * 1024 || saved > stop - from) return null;
+    byte[] raw;
+    if (compression == 0xFE) raw = copy(data, from, Math.min(size, stop - from));
+    else if (compression == 0) {
+      java.util.zip.Inflater inf = new java.util.zip.Inflater();
+      try {
+        inf.setInput(data, (int) from, (int) saved);
+        byte[] out = new byte[(int) size];
+        int n = 0;
+        while (n < out.length && !inf.finished()) {
+          int k = inf.inflate(out, n, out.length - n);
+          if (k == 0 && (inf.needsInput() || inf.needsDictionary())) break;
+          n += k;
+        }
+        raw = n == out.length ? out : java.util.Arrays.copyOf(out, n);
+      } catch (java.util.zip.DataFormatException ex) {
+        return null;
+      } finally {
+        inf.end();
+      }
+    } else return null;
+    if (!wmf || raw.length < 2 || (raw[0] & 255) == 0xD7) return raw;
+    int l = (int) u32(data, at + 4), t = (int) u32(data, at + 8), r = (int) u32(data, at + 12), bt = (int) u32(data, at + 16);
+    long emuW = u32(data, at + 20);
+    int units = Math.abs(r - l);
+    long inch = emuW > 0 && units > 0 ? (long) units * 914400 / emuW : 1440;
+    if (inch <= 0 || inch > 65535) inch = 1440;
+    byte[] out = new byte[22 + raw.length];
+    int[] head = {0xD7, 0xCD, 0xC6, 0x9A, 0, 0, l, l >> 8, t, t >> 8, r, r >> 8, bt, bt >> 8,
+      (int) inch, (int) (inch >> 8), 0, 0, 0, 0};
+    for (int i = 0; i < head.length; i++) out[i] = (byte) head[i];
+    int sum = 0;
+    for (int i = 0; i < 20; i += 2) sum ^= (out[i] & 255) | (out[i + 1] & 255) << 8;
+    out[20] = (byte) sum;
+    out[21] = (byte) (sum >> 8);
+    System.arraycopy(raw, 0, out, 22, raw.length);
+    return out;
+  }
+
   /** Finds the first PNG or JPEG BLIP in the OfficeArt records between at and end. */
   private byte[] blip(long at, long end, int depth, String[] ext) {
     if (depth > 8) return null;
@@ -1488,6 +1539,13 @@ final class DocBinary {
             ext[0] = png ? "png" : "jpeg";
             return b;
           }
+        }
+      } else if (type == 0xF01A || type == 0xF01B) {
+        boolean emf = type == 0xF01A, two = inst == (emf ? 0x3D5 : 0x217);
+        byte[] b = metafileBlip(body + (two ? 32 : 16), stop, !emf);
+        if (b != null) {
+          ext[0] = emf ? "emf" : "wmf";
+          return b;
         }
       }
       if (len > end - body) break;
