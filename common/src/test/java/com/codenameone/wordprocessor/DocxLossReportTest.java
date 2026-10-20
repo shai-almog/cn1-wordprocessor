@@ -35,11 +35,6 @@ public class DocxLossReportTest {
   @Test
   public void unmodeledConstructsAreReported() throws IOException {
     reported(
-        "<w:p><w:r><w:ruby><w:rubyPr/><w:rt><w:r><w:t>kan</w:t></w:r></w:rt>"
-            + "<w:rubyBase><w:r><w:t>K</w:t></w:r></w:rubyBase></w:ruby></w:r></w:p>",
-        "Phonetic guide",
-        "K");
-    reported(
         "<w:p><w:fldSimple w:instr=\"EQ \\o\\ac(O,1)\"><w:r><w:t>1</w:t></w:r></w:fldSimple></w:p>",
         "Equation field",
         "1");
@@ -65,7 +60,6 @@ public class DocxLossReportTest {
     s.select(0, 6, 13);
     s.format("enclose", "circle");
     var warnings = Docx.conversionWarnings(s.document(), null).toString();
-    assertTrue(warnings, warnings.contains("Phonetic guides"));
     assertTrue(warnings, warnings.contains("Enclosed characters"));
   }
 }

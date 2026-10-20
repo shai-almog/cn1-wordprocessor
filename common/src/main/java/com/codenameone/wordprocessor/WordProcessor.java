@@ -7053,11 +7053,17 @@ public class WordProcessor {
                       source = opened;
                       document = opened.document;
                     } else if (name.toLowerCase().endsWith(".doc")
-                        || name.toLowerCase().endsWith(".odt")) {
-                      // Word 97-2003 and ODT import through DOCX; they are saved as a new file.
+                        || name.toLowerCase().endsWith(".odt")
+                        || name.toLowerCase().endsWith(".xml")) {
+                      // Word 97-2003, ODT and Word XML (Flat OPC, Word 2003 XML) import through
+                      // DOCX; they are saved as a new file.
                       boolean binary = name.toLowerCase().endsWith(".doc");
                       Docx.Opened opened =
-                          binary ? DocBinary.read(bytes) : Odt.read(new ByteArrayInputStream(bytes));
+                          binary
+                              ? DocBinary.read(bytes)
+                              : name.toLowerCase().endsWith(".xml")
+                                  ? Docx.read(new ByteArrayInputStream(bytes))
+                                  : Odt.read(new ByteArrayInputStream(bytes));
                       if (!opened.warnings.isEmpty()
                           && !showDialog(
                               "Compatibility report",

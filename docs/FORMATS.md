@@ -194,7 +194,7 @@ Limits:
 - Locks are enforced only for value changes made through `developer.properties`.
 
 ### Character decorations
-Character shading, border, proofing language, phonetic guide (ruby) and enclosure (circle/square/triangle/diamond) are stored in `CharacterFormat` and round-trip through native XML. DOCX writes shading as `w:shd`, the border as `w:bdr` and the language as `w:lang`; shading reads back as the run background. Limitation: DOCX does not yet write or read phonetic guides (`w:ruby`) or enclosed characters (`EQ \o` fields). Saving a document that uses them requires explicit conversion. Reading `w:ruby` keeps the base text and reports the dropped guide; `EQ` fields keep their instruction and show their stored result, with a warning. PDF does not paint shading, borders, ruby or enclosures.
+Character shading, border, proofing language, phonetic guide (ruby) and enclosure (circle/square/triangle/diamond) are stored in `CharacterFormat` and round-trip through native XML. DOCX writes shading as `w:shd`, the border as `w:bdr` and the language as `w:lang`; shading reads back as the run background. DOCX writes and reads phonetic guides as `w:ruby` (guide text up to 200 characters, `rubyPr` sized from the base run; imported alignment, raise and language are not kept). Limitation: DOCX does not write or read enclosed characters (`EQ \o` fields); saving them requires explicit conversion. `EQ` fields keep their instruction and show their stored result, with a warning. PDF does not paint shading, borders, ruby or enclosures.
 
 ### Document settings, direction and section layout
 Application settings (design choices, hyphenation, and others) persist in native XML as `<setting>` children of `<properties>`, and in DOCX as `w:docVars/w:docVar` entries named `cn1.<key>`. Paragraph direction and Asian typography map to `w:bidi` and `w:kinsoku`/`w:wordWrap`/`w:overflowPunct`/`w:autoSpaceDE`/`w:autoSpaceDN`. Section vertical alignment, direction, text flow and grid map to `w:vAlign`, `w:bidi`, `w:textDirection` and `w:docGrid`. Themes are applied to the styles part, not to a `theme1.xml` part, so Word's theme gallery does not show the chosen theme.
@@ -260,3 +260,21 @@ border), first/even-page headers, more than one page style or section, list item
 `start-value` overrides and `text:list-header` indentation, table header-row repetition,
 embedded objects and formulas. LibreOffice acceptance has not been checked locally
 (`soffice` is not installed on the development machine).
+
+## Word XML import: Flat OPC and Word 2003 XML (2026-10-20)
+
+`Docx.read` recognizes a single-file XML document by its first bytes and rewrites it as package
+parts for the DOCX reader (`WordXml`); the app opens `.xml` files this way and saves them as a
+new file. Import only.
+
+- Flat OPC (`pkg:package`, Word's "Word XML Document"): every `pkg:part` becomes a part, from its
+  `pkg:xmlData` element or base64 `pkg:binaryData`, so everything the DOCX reader supports is read.
+  Part names are checked for traversal and duplicates; at most 10000 parts and 512 MB decoded.
+- Word 2003 XML (`w:wordDocument`): body and styles are carried over, with hyphenated 2003 names
+  (`b-cs`, `sz-cs`) and `vmerge`/`hmerge` mapped to ECMA-376 names, `wx:` section wrappers and
+  smart tags unwrapped, `aml:annotation` bookmarks converted, and tracked insertions/deletions
+  accepted with a warning. Limitations (each reported as a warning): lists open as plain
+  paragraphs, external hyperlink targets are dropped (text kept; bookmark links are kept),
+  pictures/text boxes (`w:pict`, `w:binData`), headers/footers, footnotes/endnotes and comments are
+  not imported. Wordcraft converts these into parts; this reader does not yet. Namespace prefixes
+  are matched by the conventional `w:`/`wx:`/`aml:` names, not by resolved URIs.

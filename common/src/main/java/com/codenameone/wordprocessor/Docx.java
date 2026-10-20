@@ -23,6 +23,22 @@ public final class Docx {
   private Docx() {}
 
   public static Opened read(InputStream input) throws IOException {
+    // The package is read whole anyway; buffering it lets the first bytes pick the format.
+    var bytes = new ByteArrayOutputStream();
+    var chunk = new byte[65536];
+    for (int r; (r = input.read(chunk)) > 0; ) {
+      bytes.write(chunk, 0, r);
+      if (bytes.size() > WordXml.MAX_TOTAL) throw new IOException("Document is too large");
+    }
+    byte[] all = bytes.toByteArray();
+    if (all.length >= 2 && !(all[0] == 'P' && all[1] == 'K') && WordXml.looksLikeXml(all)) {
+      // Flat OPC or Word 2003 XML: rewritten as package parts for the same reader.
+      var conversion = new LinkedHashSet<String>();
+      Opened opened = read(WordXml.parts(all, conversion));
+      conversion.addAll(opened.warnings);
+      return new Opened(opened.document, conversion, opened.parts);
+    }
+    input = new ByteArrayInputStream(all);
     // The large parts' CRCs are verified on another thread while they are parsed here.
     var checks = new ZipParts.Deferred();
     var parts = ZipParts.read(input, checks);
@@ -532,12 +548,16 @@ static final char COLUMN_BREAK = '\u000B';
     var style = styles.text(paragraphStyle, Xml.child(e, "rPr"));
     if (!link.isEmpty()) style = style.with("link", link);
     var b = new StringBuilder();
+    RichText before = null;
     for (Element c : Xml.children(e, null)) {
       String k = Xml.local(c);
       if ("t".equals(k) || "delText".equals(k)) b.append(Xml.text(c));
       else if ("ruby".equals(k)) {
-        // DocxFields keeps the base text; the guide itself is not modeled.
-        warnings.add("Phonetic guide (ruby) dropped; base text kept");
+        // The base text carries the guide as its CharacterFormat.ruby; text around it keeps the run style.
+        RichText head = RichText.of(b.toString(), style);
+        b.setLength(0);
+        RichText guided = ruby(c, style);
+        before = before == null ? head.concat(guided) : before.concat(head).concat(guided);
       }
       else if ("tab".equals(k)) b.append('\t');
       else if ("br".equals(k) && "column".equals(Xml.attr(c, "type", ""))) {
@@ -557,7 +577,25 @@ static final char COLUMN_BREAK = '\u000B';
           && !"footnoteRef".equals(k)
           && !"endnoteRef".equals(k)) warnings.add("Run feature: " + k);
     }
-    return RichText.of(b.toString(), style);
+    RichText tail = RichText.of(b.toString(), style);
+    return before == null ? tail : before.concat(tail);
+  }
+
+  /** Base text of a w:ruby with its guide (w:rt text, at most 200 characters) as the ruby format. */
+  static RichText ruby(Element ruby, TextStyle style) {
+    var guide = new StringBuilder();
+    Element rt = Xml.child(ruby, "rt");
+    if (rt != null)
+      for (Element r : Xml.children(rt, "r"))
+        for (Element t : Xml.children(r, "t")) guide.append(Xml.text(t));
+    var base = new StringBuilder();
+    Element rb = Xml.child(ruby, "rubyBase");
+    if (rb != null)
+      for (Element r : Xml.children(rb, "r"))
+        for (Element t : Xml.children(r, "t")) base.append(Xml.text(t));
+    String g = guide.length() > 200 ? guide.toString().substring(0, 200) : guide.toString();
+    g = g.replace('\n', ' ').replace('\r', ' ');
+    return RichText.of(base.toString(), base.length() == 0 || g.isEmpty() ? style : style.with("ruby", g));
   }
 
   public static List<String> conversionWarnings(Document d, Opened source) {
@@ -587,8 +625,6 @@ static final char COLUMN_BREAK = '\u000B';
       warnings.add("Unsupported list format: " + p.list);
     p.text.visit(
         (o, t, style) -> {
-          if (!style.characters.ruby.isEmpty())
-            warnings.add("Phonetic guides (ruby) are not saved to DOCX");
           if (!"none".equals(style.characters.enclose))
             warnings.add("Enclosed characters are not saved to DOCX");
         });
@@ -1418,9 +1454,26 @@ static final char COLUMN_BREAK = '\u000B';
         b.append("<w:hyperlink w:anchor=\"").append(Xml.escape(s.link.substring(1))).append("\">");
       else b.append("<w:hyperlink r:id=\"").append(Xml.escape(links.id(s.link))).append("\">");
     }
+    String tag = deleted ? "delText" : "t";
+    if (!s.characters.ruby.isEmpty() && text.indexOf('\n') < 0 && text.indexOf('\t') < 0) {
+      // Phonetic guide: the guide is written at half the base size, raised above it.
+      int hps = Math.max(2, Math.round(s.size * 2));
+      b.append("<w:r>");
+      writeRunProperties(b, s, links == null ? null : links.base);
+      b.append("<w:ruby><w:rubyPr><w:rubyAlign w:val=\"distributeSpace\"/><w:hps w:val=\"")
+          .append(Math.max(1, hps / 2)).append("\"/><w:hpsRaise w:val=\"").append(hps)
+          .append("\"/><w:hpsBaseText w:val=\"").append(hps)
+          .append("\"/><w:lid w:val=\"ja-JP\"/></w:rubyPr><w:rt><w:r><w:t xml:space=\"preserve\">")
+          .append(Xml.escape(s.characters.ruby)).append("</w:t></w:r></w:rt><w:rubyBase><w:r>");
+      writeRunProperties(b, s, links == null ? null : links.base);
+      b.append("<w:").append(tag).append(" xml:space=\"preserve\">").append(Xml.escape(text))
+          .append("</w:").append(tag).append("></w:r></w:rubyBase></w:ruby></w:r>");
+      if (!s.link.isEmpty()) b.append("</w:hyperlink>");
+      RevisionFormats.end(b, s.revision);
+      return;
+    }
     b.append("<w:r>");
     writeRunProperties(b, s, links == null ? null : links.base);
-    String tag = deleted ? "delText" : "t";
     if (text.indexOf('\n') < 0 && text.indexOf('\t') < 0) {
       b.append("<w:").append(tag).append(" xml:space=\"preserve\">").append(Xml.escape(text))
           .append("</w:").append(tag).append("></w:r>");

@@ -174,11 +174,7 @@ final class DocxFields {
         else if ("end".equals(action) && !stack.isEmpty()) close();
         else warnings.add("Unmatched complex field marker");
       } else if ("ruby".equals(type)) {
-        // Docx.run reports the dropped phonetic guide; the base text stays in the document.
-        Element base = Xml.child(child, "rubyBase");
-        if (base != null)
-          for (Element r : Xml.children(base, "r"))
-            for (Element t : Xml.children(r, "t")) append(RichText.of(Xml.text(t), style));
+        append(Docx.ruby(child, style));
       } else if (("instrText".equals(type) || "delInstrText".equals(type))) {
         if (stack.isEmpty()) warnings.add("Instruction outside a field");
         else stack.get(stack.size() - 1).instruction.append(Xml.text(child));
