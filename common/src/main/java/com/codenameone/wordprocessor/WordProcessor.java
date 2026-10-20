@@ -4763,22 +4763,90 @@ public class WordProcessor {
               "remove", java.util.Arrays.<Object>asList("comments", "hidden", "properties")));
   }
 
+  /**
+   * Checker results pane: one row per issue; an issue tied to a block is a button that closes the
+   * pane and moves the caret to that block.
+   */
   private void report(String title, String id) {
     editor.stopInput();
     Map<?, ?> r = (Map<?, ?>) commands.execute(session, id, Json.object());
-    var text = new StringBuilder();
+    var list = new Container(BoxLayout.y());
+    final int[] jump = {-1};
     for (Object o : (java.util.List<?>) r.get("issues")) {
       if (o instanceof Map<?, ?> i) {
-        text.append(i.get("severity")).append(": ").append(i.get("message"));
-        if (((Number) i.get("block")).intValue() >= 0)
-          text.append(" (paragraph ").append(((Number) i.get("block")).intValue() + 1).append(')');
-      } else text.append(o);
-      text.append('\n');
+        final int block = ((Number) i.get("block")).intValue();
+        String text = i.get("severity") + ": " + i.get("message");
+        if (block >= 0) {
+          var b =
+              button(
+                  text + " (paragraph " + (block + 1) + ")",
+                  () -> {
+                    jump[0] = block;
+                    if (acceptOpenDialog != null) acceptOpenDialog.run();
+                  });
+          b.getAllStyles().setAlignment(Component.LEFT);
+          list.add(b);
+        } else list.add(new SpanLabelCompat(text));
+      } else list.add(new SpanLabelCompat(String.valueOf(o)));
     }
-    if (text.length() == 0) text.append("No issues found.");
-    var area = new com.codename1.ui.TextArea(text.toString());
-    area.setEditable(false);
-    showDialog(title, area, "Close", null);
+    if (list.getComponentCount() == 0) list.add(new SpanLabelCompat("No issues found."));
+    showDialog(title, list, "Close", null);
+    if (jump[0] >= 0 && jump[0] < session.document().blocks.size()) {
+      session.leaveCell();
+      session.select(jump[0], 0, 0);
+      editor.revealSelection();
+      edited();
+    }
+  }
+
+  private com.codename1.ui.util.UITimer readAloudTimer;
+  private float readAloudRate = 1f;
+
+  /**
+   * Read Aloud: speaks the sentence at the caret through {@link Speech}, then advances sentence by
+   * sentence after an estimated speaking time (TextToSpeech has no completion callback).
+   */
+  private void readAloud(String action) {
+    if (readAloudTimer != null) {
+      readAloudTimer.cancel();
+      readAloudTimer = null;
+    }
+    Speech.engine().stop();
+    if (!"stop".equals(action) && !Speech.engine().speechSupported()) {
+      showDialog("Read Aloud", "Text to speech is not available on this platform.", "Close", null);
+      return;
+    }
+    Map<?, ?> r;
+    try {
+      r = (Map<?, ?>) commands.execute(session, "review.readAloud", Json.object("action", action, "rate", readAloudRate));
+    } catch (RuntimeException e) {
+      return;
+    }
+    editor.revealSelection();
+    edited(false);
+    if (!Boolean.TRUE.equals(r.get("reading"))) return;
+    String text = String.valueOf(r.get("text"));
+    Speech.engine().speak(text, readAloudRate);
+    readAloudTimer =
+        com.codename1.ui.util.UITimer.timer(
+            (int) Speech.duration(text, readAloudRate), false, form, () -> readAloud("next"));
+  }
+
+  /** Dictate: recognizes one utterance and inserts it at the caret. */
+  private void dictate() {
+    if (!Speech.engine().dictationSupported()) {
+      showDialog("Dictate", "Speech recognition is not available on this platform.", "Close", null);
+      return;
+    }
+    Speech.engine()
+        .dictate(
+            text ->
+                Display.getInstance()
+                    .callSerially(
+                        () -> {
+                          if (text != null && !text.trim().isEmpty())
+                            run("text.insert", Json.object("text", text.trim() + " "));
+                        }));
   }
 
   /** The selected chart's data as editable CSV (header row, then one row per category). */
@@ -5036,6 +5104,13 @@ public class WordProcessor {
         .item("Word Count…", 'g', shift | AppMenus.ALT, menuAction("Word Count",
             () -> showText("Word count", statistics.words(session.document()) + " words")))
         .item("AutoCorrect Options…", menuAction("AutoCorrect Options", () -> preferences("AutoCorrect")))
+        .item("Check Accessibility", menuAction("Check Accessibility", () -> report("Accessibility", "file.accessibility")))
+        .separator()
+        .item("Read Aloud", menuAction("Read Aloud", () -> readAloud("start")))
+        .item("Read Previous Sentence", menuAction("Read Previous Sentence", () -> readAloud("previous")))
+        .item("Read Next Sentence", menuAction("Read Next Sentence", () -> readAloud("next")))
+        .item("Stop Reading", menuAction("Stop Reading", () -> readAloud("stop")))
+        .item("Dictate", menuAction("Dictate", this::dictate))
         .separator()
         .toggle("Track Changes", 'e', shift, () -> session.document().trackChanges, menuAction("Track Changes", () -> {
           session.trackChanges(!session.document().trackChanges);

@@ -133,6 +133,49 @@ public class FileCommandsTest {
   }
 
   @Test
+  public void accessibilityFlagsEmptyParagraphsUsedForSpacingOncePerRun() {
+    var s = new Session(Document.empty());
+    s.replace("Top");
+    s.enterParagraph();
+    s.enterParagraph();
+    s.enterParagraph();
+    s.replace("Bottom");
+    s.enterParagraph();
+    s.replace("Single gap follows");
+    Map<?, ?> r = (Map<?, ?>) run(s, "file.accessibility");
+    int count = 0, block = -1;
+    for (Object o : (List<?>) r.get("issues"))
+      if ("empty-paragraphs".equals(((Map<?, ?>) o).get("code"))) {
+        count++;
+        block = ((Number) ((Map<?, ?>) o).get("block")).intValue();
+      }
+    assertEquals(1, count);
+    assertEquals(1, block);
+  }
+
+  @Test
+  public void speechDurationScalesWithRateAndEngineIsReplaceable() {
+    assertTrue(Speech.duration("one two three four", 2f) < Speech.duration("one two three four", 1f));
+    assertTrue(Speech.duration("a b c d e f g h", 1f) > Speech.duration("a b", 1f));
+    var spoken = new StringBuilder();
+    Speech.install(
+        new Speech.Engine() {
+          public boolean speechSupported() { return true; }
+          public void speak(String text, float rate) { spoken.append(text); }
+          public void stop() {}
+          public boolean dictationSupported() { return false; }
+          public void dictate(java.util.function.Consumer<String> result) { result.accept(null); }
+        });
+    try {
+      Speech.engine().speak("Hello.", 1f);
+      assertEquals("Hello.", spoken.toString());
+    } finally {
+      Speech.install(null);
+    }
+    assertTrue(Speech.engine() instanceof Speech.Platform);
+  }
+
+  @Test
   public void exportPdfAndCompatibility() {
     var s = new Session(Document.empty());
     s.replace("Hello");

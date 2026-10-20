@@ -69,7 +69,7 @@ final class FileCommands implements Commands.Extension {
           return Json.object("found", before, "after", inspect(s.document()));
         });
     c.query("file.accessibility", "",
-        "Accessibility checker: missing alt text, heading order, table headers, contrast, title and link text",
+        "Accessibility checker: missing alt text, heading order, table headers, contrast, title, link text and empty paragraphs used for spacing",
         (s, a) -> accessibility(s.document()));
     c.query("file.compatibility", "",
         "Compatibility checker: features that change when saved as Word (.docx)", (s, a) -> {
@@ -281,6 +281,13 @@ final class FileCommands implements Commands.Extension {
                     issue("tip", block, "link-text", "Link text does not describe its target"));
               }
             });
+        // Two or more consecutive empty paragraphs are blank lines used for spacing; screen
+        // readers announce each one as "blank". Reported once per run, at its first paragraph.
+        if (level == 0 && p.text.plainText().trim().isEmpty() && i + 1 < d.blocks.size()
+            && d.blocks.get(i + 1) instanceof Paragraph next && next.text.plainText().trim().isEmpty()
+            && !(i > 0 && d.blocks.get(i - 1) instanceof Paragraph prev && prev.text.plainText().trim().isEmpty()))
+          issues.add(
+              issue("tip", i, "empty-paragraphs", "Empty paragraphs used for spacing; use paragraph spacing instead"));
         if (p.text.plainText().contains("    ") || p.text.plainText().contains("\t\t\t"))
           issues.add(
               issue("tip", i, "repeated-blanks", "Repeated blank characters used for layout"));
