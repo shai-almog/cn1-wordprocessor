@@ -13,36 +13,71 @@ public final class TextFormats {
   private TextFormats() {}
 
   public static Document read(String text, RichTextFormat format) {
+    return read(text, format, true);
+  }
+
+  /**
+   * Imports text; when {@code blocks} is set, HTML/Markdown/RTF tables and data/hex pictures are
+   * lifted out first (see {@link TextBlocks}) and re-inserted where their marker lands.
+   */
+  static Document read(String text, RichTextFormat format, boolean blocks) {
+    TextBlocks extracted = new TextBlocks(format);
+    if (blocks) text = extracted.extract(text);
+    int count = extracted.blocks.size();
     HtmlImporter.Result r = RichTextImporter.parse(text, format);
     String[] lines = TextUtil.split(r.getText(), '\n');
-    var blocks = new Sequence<Block>();
+    var out = new Sequence<Block>();
+    boolean[] used = new boolean[count];
+    int[] end = new int[1];
     int offset = 0;
     for (int i = 0; i < lines.length; i++) {
-      var content = new RichText();
-      int a = 0;
-      while (a < lines[i].length()) {
-        int b = a + 1;
-        var source = r.getStyles().get(offset + a);
-        while (b < lines[i].length() && r.getStyles().get(offset + b).equals(source)) b++;
-        TextStyle style = map(source);
-        if (offset + a < r.getLinks().size() && r.getLinks().get(offset + a) != null)
-          style = style.with("link", r.getLinks().get(offset + a));
-        content = content.concat(RichText.of(lines[i].substring(a, b), style));
-        a = b;
+      String line = lines[i];
+      int from = 0, emitted = 0;
+      for (int at = count == 0 ? -1 : line.indexOf("QQWPBLK"); at >= 0; at = line.indexOf("QQWPBLK", at + 1)) {
+        int index = TextBlocks.markerAt(line, at, count, end);
+        if (index < 0 || used[index]) continue;
+        used[index] = true;
+        if (line.substring(from, at).trim().length() > 0) {
+          out = out.append(paragraph(r, extracted.id(), line, offset, from, at, i));
+          emitted++;
+        }
+        out = out.append(extracted.blocks.get(index));
+        emitted++;
+        from = end[0];
+        at = from - 1;
       }
-      var p = new Paragraph("p" + (i + 1), content);
-      if (i < r.getBlocks().size()) {
-        var attr = r.getBlocks().get(i);
-        if (attr.type >= RichBlocks.H1 && attr.type <= (RichBlocks.H1 + 5))
-          p = p.with("style", "Heading" + (attr.type - RichBlocks.H1 + 1));
-        if (attr.listType != RichBlocks.LIST_NONE)
-          p = p.with("list", attr.listType == RichBlocks.LIST_ORDERED ? "number" : "bullet");
-        p = p.with("indent", Integer.toString(attr.indent * 18));
-      }
-      blocks = blocks.append(p);
-      offset += lines[i].length() + 1;
+      if (emitted == 0 || line.substring(from).trim().length() > 0)
+        out = out.append(paragraph(r, extracted.id(), line, offset, from, line.length(), i));
+      offset += line.length() + 1;
     }
-    return new Document(blocks, PageSpec.A4, "Imported document", lines.length + 1);
+    if (out.size() == 0) out = out.append(new Paragraph(extracted.id(), new RichText()));
+    return new Document(out, PageSpec.A4, "Imported document", extracted.next + 1);
+  }
+
+  private static Paragraph paragraph(
+      HtmlImporter.Result r, String id, String line, int offset, int from, int to, int index) {
+    var content = new RichText();
+    int a = from;
+    while (a < to) {
+      int b = a + 1;
+      var source = r.getStyles().get(offset + a);
+      while (b < to && r.getStyles().get(offset + b).equals(source)) b++;
+      TextStyle style = map(source);
+      if (offset + a < r.getLinks().size() && r.getLinks().get(offset + a) != null)
+        style = style.with("link", r.getLinks().get(offset + a));
+      content = content.concat(RichText.of(line.substring(a, b), style));
+      a = b;
+    }
+    var p = new Paragraph(id, content);
+    if (index < r.getBlocks().size()) {
+      var attr = r.getBlocks().get(index);
+      if (attr.type >= RichBlocks.H1 && attr.type <= (RichBlocks.H1 + 5))
+        p = p.with("style", "Heading" + (attr.type - RichBlocks.H1 + 1));
+      if (attr.listType != RichBlocks.LIST_NONE)
+        p = p.with("list", attr.listType == RichBlocks.LIST_ORDERED ? "number" : "bullet");
+      p = p.with("indent", Integer.toString(attr.indent * 18));
+    }
+    return p;
   }
 
   private static TextStyle map(com.codename1.ui.editor.TextStyle s) {
@@ -263,13 +298,40 @@ public final class TextFormats {
       }
       return text.toString();
     }
-    if (format != RichTextFormat.HTML)
+    if (format == RichTextFormat.HTML) return html(d);
+    if (format != RichTextFormat.MARKDOWN && format != RichTextFormat.RTF) {
       for (Block block : d.blocks)
         if (block instanceof Picture)
           throw new IllegalArgumentException(
               "This format cannot preserve embedded pictures. Use DOCX, HTML, PDF or CN1 document.");
-    String html = html(d);
-    return format == RichTextFormat.HTML ? html : RichTextImporter.fromHtml(html, format);
+      return RichTextImporter.fromHtml(html(d), format);
+    }
+    // Tables and raster pictures become marker paragraphs for the text converter, then the
+    // marker is replaced by native GFM / RTF syntax (see TextBlocks).
+    var replaced = new Sequence<Block>();
+    var natives = new java.util.ArrayList<String>();
+    for (Block block : d.blocks) {
+      if (block instanceof Table t) {
+        natives.add(format == RichTextFormat.RTF ? TextBlocks.rtfTable(t) : "\n" + TextBlocks.markdownTable(t));
+      } else if (block instanceof Picture pic && pic.drawing == null) {
+        natives.add(format == RichTextFormat.RTF ? TextBlocks.rtfPicture(pic) : TextBlocks.markdownPicture(pic));
+      } else if (block instanceof Picture) {
+        throw new IllegalArgumentException(
+            "This format cannot preserve drawings. Use DOCX, HTML, PDF or CN1 document.");
+      } else {
+        replaced = replaced.append(block);
+        continue;
+      }
+      replaced = replaced.append(new Paragraph("marker" + natives.size(), RichText.of(TextBlocks.marker(natives.size() - 1))));
+    }
+    String out = RichTextImporter.fromHtml(html(new Document(replaced, d.page, d.title, d.nextId)), format);
+    for (int i = natives.size() - 1; i >= 0; i--) {
+      String m = TextBlocks.marker(i);
+      int at = out.indexOf(m);
+      if (at < 0) throw new IllegalStateException("Table/picture marker lost during " + format + " export");
+      out = out.substring(0, at) + natives.get(i) + out.substring(at + m.length());
+    }
+    return out;
   }
 
   /** Inline SVG for a drawing, from the same primitives the canvas and PDF paint. */
