@@ -42,12 +42,90 @@ public class WordXmlTest {
     assertTrue(p.text.styleAt(0).italic);
     assertEquals(20, p.text.styleAt(0).size, .001);
     String warnings = opened.warnings.toString();
-    assertTrue(warnings, warnings.contains("lists"));
-    assertTrue(warnings, warnings.contains("Pictures"));
+    assertTrue(warnings, warnings.contains("drawing shapes"));
     assertTrue(warnings, warnings.contains("tracked changes"));
-    assertTrue(warnings, warnings.contains("hyperlink"));
+    assertEquals("http://x", p.text.styleAt(4).link);
     assertEquals("bCs", WordXml.rename("b-cs"));
     assertEquals("vMerge", WordXml.rename("vmerge"));
+  }
+
+  private static final String PNG =
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
+
+  @Test
+  public void word2003ListsPicturesBoxesFurnitureNotesAndComments() throws Exception {
+    String xml = "<?xml version=\"1.0\"?><w:wordDocument xmlns:w=\"" + W2003 + "\""
+        + " xmlns:wx=\"http://schemas.microsoft.com/office/word/2003/auxHint\""
+        + " xmlns:v=\"urn:schemas-microsoft-com:vml\" xmlns:aml=\"http://schemas.microsoft.com/aml/2001/core\">"
+        + "<w:lists><w:listDef w:listDefId=\"0\"><w:lvl w:ilvl=\"0\"><w:start w:val=\"3\"/><w:nfc w:val=\"4\"/>"
+        + "<w:lvlText w:val=\"%1)\"/></w:lvl></w:listDef><w:list w:ilfo=\"1\"><w:ilst w:val=\"0\"/></w:list></w:lists>"
+        + "<w:body><wx:sect>"
+        + "<w:p><w:pPr><w:listPr><w:ilvl w:val=\"0\"/><w:ilfo w:val=\"1\"/><wx:t wx:val=\"c)\"/></w:listPr></w:pPr><w:r><w:t>Item</w:t></w:r></w:p>"
+        + "<w:p><w:hlink w:dest=\"https://example.com/\"><w:r><w:t>Web</w:t></w:r></w:hlink>"
+        + "<w:r><w:t>Note</w:t></w:r><w:r><w:footnote><w:p><w:r><w:footnoteRef/></w:r><w:r><w:t> Foot body</w:t></w:r></w:p></w:footnote></w:r>"
+        + "<aml:annotation aml:id=\"0\" w:type=\"Word.Comment.Start\"/><w:r><w:t>Said</w:t></w:r>"
+        + "<aml:annotation aml:id=\"0\" w:type=\"Word.Comment.End\"/>"
+        + "<w:r><aml:annotation aml:id=\"0\" aml:author=\"Ann\" w:type=\"Word.Comment\"><aml:content>"
+        + "<w:p><w:r><w:t>Remark</w:t></w:r></w:p></aml:content></aml:annotation></w:r></w:p>"
+        + "<w:p><w:r><w:pict><w:binData w:name=\"wordml://1.png\">" + PNG + "</w:binData>"
+        + "<v:shape style=\"width:36pt;height:1in\"><v:imagedata src=\"wordml://1.png\"/></v:shape></w:pict></w:r></w:p>"
+        + "<w:p><w:r><w:pict><v:shape style=\"width:144pt;height:72pt\"><v:textbox><w:txbxContent>"
+        + "<w:p><w:r><w:t>Boxed</w:t></w:r></w:p></w:txbxContent></v:textbox></v:shape></w:pict></w:r></w:p>"
+        + "<w:sectPr><w:hdr w:type=\"odd\"><w:p><w:r><w:t>Head</w:t></w:r></w:p></w:hdr>"
+        + "<w:ftr w:type=\"first\"><w:p><w:r><w:t>Foot</w:t></w:r></w:p></w:ftr><w:titlePg/></w:sectPr>"
+        + "</wx:sect></w:body></w:wordDocument>";
+    var opened = open(xml);
+    var d = opened.document;
+    String warnings = opened.warnings.toString();
+    var item = d.paragraph(0);
+    assertEquals("Item", item.text.toString());
+    assertNotNull(warnings, item.list);
+    assertEquals(3, item.listStart);
+    var p = d.paragraph(1);
+    assertTrue(p.text.toString(), p.text.toString().startsWith("WebNote\ufffcSaid"));
+    assertEquals("https://example.com/", p.text.styleAt(0).link);
+    assertEquals(1, Notes.all(d).size());
+    assertEquals(1, d.comments.size());
+    assertEquals("Ann", d.comments.get(0).author);
+    int pictures = 0;
+    boolean box = false;
+    for (int i = 0; i < d.blocks.size(); i++)
+      if (d.blocks.get(i) instanceof Picture pic) {
+        pictures++;
+        if (pic.drawing == null) {
+          assertEquals(36, pic.width, .5);
+          assertEquals(72, pic.height, .5);
+        } else box |= pic.drawing.toString().contains("Boxed") || "textBox".equals(pic.drawing.kind);
+      }
+    assertEquals(warnings, 2, pictures);
+    assertTrue(box);
+    assertTrue(d.furniture.stories.toString(), d.furniture.stories.containsKey("header"));
+    assertTrue(d.furniture.stories.toString(), d.furniture.stories.containsKey("firstFooter"));
+    assertFalse(warnings, warnings.contains("not imported"));
+  }
+
+  @Test
+  public void hostileWord2003SidePartsAreBounded() throws Exception {
+    String xml = "<w:wordDocument xmlns:w=\"" + W2003 + "\" xmlns:v=\"urn:schemas-microsoft-com:vml\""
+        + " xmlns:aml=\"http://schemas.microsoft.com/aml/2001/core\"><w:lists><w:list w:ilfo=\"&quot;x\"/></w:lists><w:body>"
+        + "<w:p><w:r><w:pict><w:binData w:name=\"wordml://../../evil.\">!!notbase64</w:binData>"
+        + "<v:shape style=\"width:-5pt;height:1e30in\"><v:imagedata src=\"file:///etc/passwd\"/></v:shape>"
+        + "<v:oval/></w:pict></w:r>"
+        + "<w:hlink w:dest=\"&quot;&gt;\" w:bookmark=\"b\"><w:r><w:t>x</w:t></w:r></w:hlink>"
+        + "<aml:annotation aml:id=\"&quot;\" w:type=\"Word.Comment\"/>"
+        + "<w:footnote><w:footnote><w:p/></w:footnote></w:footnote></w:p>"
+        + "<w:sectPr><w:hdr w:type=\"weird\"/><w:hdr/><w:hdr/></w:sectPr></w:body></w:wordDocument>";
+    try {
+      var o = open(xml);
+      assertNotNull(o.document);
+    } catch (IOException | RuntimeException expected) {
+      // rejected cleanly is acceptable too
+    }
+    var parts = WordXml.parts(xml.getBytes("UTF-8"), new java.util.HashSet<String>());
+    for (String name : parts.keySet()) assertFalse(name, name.contains(".."));
+    long[] s = WordXml.size("width:-5pt;height:1e30in");
+    assertEquals(100 * 12700L, s[0]);
+    assertEquals(20000 * 12700L, s[1]);
   }
 
   @Test

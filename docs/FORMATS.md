@@ -273,8 +273,15 @@ new file. Import only.
 - Word 2003 XML (`w:wordDocument`): body and styles are carried over, with hyphenated 2003 names
   (`b-cs`, `sz-cs`) and `vmerge`/`hmerge` mapped to ECMA-376 names, `wx:` section wrappers and
   smart tags unwrapped, `aml:annotation` bookmarks converted, and tracked insertions/deletions
-  accepted with a warning. Limitations (each reported as a warning): lists open as plain
-  paragraphs, external hyperlink targets are dropped (text kept; bookmark links are kept),
-  pictures/text boxes (`w:pict`, `w:binData`), headers/footers, footnotes/endnotes and comments are
-  not imported. Wordcraft converts these into parts; this reader does not yet. Namespace prefixes
+  accepted with a warning. Converted into the parts the DOCX reader understands: `w:listDef`/
+  `w:list` to a numbering part (`w:nfc` codes mapped to `w:numFmt`, `w:listPr`/`w:ilfo` to
+  `w:numPr`/`w:numId`); `w:hlink w:dest` to an external hyperlink relationship (bookmark-only
+  links stay anchors); `w:binData` + `v:imagedata` to media parts and inline DrawingML pictures
+  sized from the VML `style` width/height (pt/in/cm/mm/px; default 100x50 pt, capped at 20000 pt);
+  `v:textbox` to an inline DrawingML text box; `w:hdr`/`w:ftr` in `w:sectPr` to header/footer
+  parts (`odd` = default, `first`, `even`); inline `w:footnote`/`w:endnote` to notes parts with
+  references; `aml:annotation` `Word.Comment.Start/End/Comment` to comment ranges, references and
+  a comments part. Limitations: floating VML positioning is not kept (pictures and boxes become
+  inline); VML shapes other than pictures and text boxes, linked (non-`binData`) pictures and
+  undecodable picture data are dropped with a warning; comment dates are not read. Namespace prefixes
   are matched by the conventional `w:`/`wx:`/`aml:` names, not by resolved URIs.
