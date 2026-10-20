@@ -1,10 +1,17 @@
-# Java Beats Rust on Every Front
+# Java Outperforms Rust for Word Processing
 
-A Word-compatible word processor written in **Java** with [Codename One](https://www.codenameone.com),
-compiled ahead of time by ParparVM to native code (no JVM at run time). One codebase ships a
-native macOS app, an iPhone/iPad app, an Android app and a browser app. It is measured head
-to head against [Wordcraft](https://github.com/storytold/wordcraft) (pinned at `159b84f`), a
-Rust/egui clone of the same 502-row Word feature catalog.
+This vibe-coded clone of [Wordcraft](https://github.com/storytold/wordcraft), written in
+**Java** with [Codename One](https://www.codenameone.com), does more than the Rust original.
+It has more functionality, deeper native integration and more platforms. It is faster, uses
+less RAM and costs less CI time, and it does all of that in about **a third of the lines of
+code and tokens**.
+
+That should make the "rewrite it in Rust" movement rethink its direction.
+
+The app is compiled ahead of time by ParparVM to native code, with no JVM at run time. One
+codebase ships a native macOS app, an iPhone/iPad app, an Android app and a browser app. It
+is measured head to head against Wordcraft (pinned at `159b84f`), a Rust/egui clone of the
+same 502-row Word feature catalog.
 
 ![The macOS app](docs/images/editor-light.png)
 
@@ -23,6 +30,42 @@ Rust/egui clone of the same 502-row Word feature catalog.
 Startup and RAM are for 1 / 1,000 / 10,000-paragraph documents (launch to first painted
 document; idle resident memory). Code counts are application code without tests or comment
 lines. Every number is reproduced by [CI](#proven-in-ci).
+
+## How can Java beat Rust on RAM and performance?
+
+Modern Java is fast. Codename One builds on that with ahead-of-time compilation to native
+code, which brings fast startup and low overhead, along with portability to more platforms.
+The language itself adds little cost: plain classes, arrays and primitives compile to code a
+C compiler optimizes like any other, so in the right hands Java runs as fast as native code.
+
+None of this was built for this project. These are advantages the toolchain already has, and
+we did not "cheat" with tricks such as profile-guided optimization. For client applications,
+Java and Codename One bring several built-in advantages over Rust:
+
+* **Garbage collection.** Allocation is cheap, and reclaiming memory is the collector's job
+  on its own thread rather than the application's. There is no ownership bookkeeping in the
+  code, and no defensive cloning or reference counting to satisfy it.
+* **A simple threading model.** The UI runs on one event thread while work such as saving
+  runs in the background, without lifetimes or `Send`/`Sync` bounds to design around. Save,
+  for example, compresses large parts on several cores at once.
+* **Whole-program optimization.** ParparVM translates the bytecode to C after aggressive tree
+  shaking, so only code the app reaches ships. The C compiler then inlines and optimizes
+  across what remains.
+* **Lean platform layers.** Codename One draws its own UI on each platform's graphics API and
+  does not carry the baggage of the OS widget toolkits.
+
+## Can Rust reach Java/Codename One performance?
+
+For size and speed, probably. But it would take a lot of work and deep rethinking of memory
+and inlining strategies. That would likely mean far more code and even slower builds.
+
+Rust is a fantastic tool for low-level programming. Its determinism is essential when building
+something like a kernel module, and that is where it belongs. A kernel or system service
+cannot trade determinism for throughput, but a user application can, whenever resources allow
+it to deliver a better result. For this kind of work, Rust is simply not the right tool.
+
+Matching Java here would mean reinventing what Java already provides, inside Rust. That gains
+nothing: the Rust code would become even more complex, more verbose and slower to compile.
 
 ## Faster
 
@@ -110,6 +153,13 @@ for both projects on GitHub's runners:
 
 The job summary prints each comparison table; raw runs and screenshots are uploaded as
 workflow artifacts. Local runs use the same scripts (`scripts/native-bench/`).
+
+## How was this built?
+
+I started with Codex because my Claude quota was low. It worked reasonably well, but it
+constantly stopped to check in. Switching to Claude Opus 5.5 on low effort got it past the
+finish line. Codename One's built-in MCP server let the agents drive and inspect the running
+app, which kept the iterations quick.
 
 ## Build and run the native macOS application
 

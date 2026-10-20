@@ -22,9 +22,16 @@ case $platform in
     if [[ $identity != - ]]; then
       codesign --force --timestamp --sign "$identity" "dist/$name.dmg"
       if [[ -n ${NOTARY_APPLE_ID:-} ]]; then
-        xcrun notarytool submit "dist/$name.dmg" --wait --apple-id "$NOTARY_APPLE_ID" \
-          --team-id "$NOTARY_TEAM_ID" --password "$NOTARY_PASSWORD"
-        xcrun stapler staple "dist/$name.dmg"
+        # Apple can hold a submission for hours (a new team's first ones especially), so wait a
+        # bounded time. An unstapled but accepted DMG still passes Gatekeeper online; the staple
+        # only adds offline first launch.
+        creds=(--apple-id "$NOTARY_APPLE_ID" --team-id "$NOTARY_TEAM_ID" --password "$NOTARY_PASSWORD")
+        if xcrun notarytool submit "dist/$name.dmg" "${creds[@]}" --wait --timeout 20m; then
+          xcrun stapler staple "dist/$name.dmg" \
+            || echo "::warning::Notarization did not accept $name.dmg; it is signed but not notarized"
+        else
+          echo "::warning::Notarization of $name.dmg did not finish in 20 minutes; it is signed, not stapled"
+        fi
       fi
     fi ;;
   ios)
