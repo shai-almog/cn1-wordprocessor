@@ -21,7 +21,13 @@ public final class ZipParts {
 
   static final int MAX_ENTRY = 32 * 1024 * 1024, MAX_TOTAL = 128 * 1024 * 1024, MAX_ENTRIES = 4096;
 
-  static synchronized void write(Map<String, byte[]> parts, OutputStream out) throws IOException {
+  static void write(Map<String, byte[]> parts, OutputStream out) throws IOException {
+    write(parts, out, null);
+  }
+
+  /** Writes the archive with the named entry, if any, stored uncompressed (an ODF mimetype). */
+  static synchronized void write(Map<String, byte[]> parts, OutputStream out, String store)
+      throws IOException {
     var archive = new Bytes(64 * 1024);
     var central = new Bytes(4096);
     // Level 1, the fastest: XML compresses well at any level. Saves are serialized on this
@@ -50,7 +56,7 @@ public final class ZipParts {
           packed = new Bytes(data.length / 4 + 64);
           while (!deflater.finished()) packed.write(buffer, 0, deflater.deflate(buffer, 0, buffer.length));
         }
-        boolean stored = packed.size() >= data.length;
+        boolean stored = packed.size() >= data.length || e.getKey().equals(store);
         int method = stored ? 0 : 8, size = stored ? data.length : packed.size();
         int offset = archive.size();
         // Fixed 1980-01-01 timestamps: identical documents save byte-identical archives.

@@ -4,6 +4,7 @@
 | --- | --- | --- |
 | `.cn1doc` | ZIP with native document XML and optional original DOCX | Primary editable storage for implemented model; not a Word format. Undo history is not serialized. |
 | DOCX | Paragraphs, inherited paragraph/character styles plus direct formatting, spacing/alignment/indents/periodic tabs/page geometry, nine-level lists with simple labels/restarts, hyperlink relationships, range comments with replies and resolved state, named paragraph style definitions, paragraph-level embedded PNG/JPEG/GIF/BMP/TIFF/WebP pictures, rectangular table content with horizontal/vertical merges and rich cell paragraphs | Theme fonts/colors, custom/composite list labels, bookmarks outside body paragraphs, floating/cropped/rotated/cell pictures, structural/move revisions, advanced fields/sections and advanced table properties are incomplete. Compatibility warnings accompany unsupported constructs. |
+| ODT | Import translates `content.xml`/`styles.xml`/`meta.xml` and `Pictures/` into WordprocessingML and reads it with the DOCX reader; export writes the DOCX package and translates it to ODF 1.3 (stored `mimetype` first, manifest, content, styles, meta, pictures). See [OpenDocument Text](#opendocument-text-odt). | First master page only; comments, tracked changes, text boxes, fields, tab stops, borders and multi-section layouts are not carried. |
 | TXT | UTF-8 text, paragraph breaks, table text, picture descriptions | Formatting is discarded by definition. |
 | HTML | CN1 text import; styled HTML export including merged tables, embedded data-image pictures and superscript/subscript | Imported HTML objects/tables/layout are limited to the CN1 text importer. Not a browser document renderer. |
 | Markdown / RTF / AsciiDoc | CN1 rich-text adapters | Supported text subset only. Markdown/RTF/AsciiDoc table and embedded-picture export is rejected. AsciiDoc output is CLI-accessible. |
@@ -217,3 +218,29 @@ page setup, headers/footers, footnotes/endnotes, complex fields, and inline PNG/
 encrypted or Word 6/95 files (rejected), floating shapes and text boxes, comments, bookmarks, revisions,
 nested tables (flattened), per-cell borders/shading/merges, EMF/WMF/DIB pictures and list-style formatting
 carried by styles.
+
+## OpenDocument Text (.odt)
+
+`Odt.read` and `Odt.write` share the DOCX model mapping: import builds an in-memory DOCX
+from the ODF parts, export translates the DOCX writer's package, so `read(write(doc))`
+round-trips what both directions cover (tested in `OdtTest`).
+
+Covered: paragraphs and `text:h` headings (outline level mapped to `Heading1..9`), common
+paragraph/text styles with parent inheritance and the default style, automatic `P`/`T`
+styles (bold, italic, underline, single/double strike, size, font, color, background,
+super/subscript, caps, small caps, hidden, letter spacing; alignment, indents, spacing,
+line spacing, keep-with-next/together, widows, page break before/after, shading,
+right-to-left), `text:s`, tabs, line breaks, hyperlinks (external and `#bookmark`),
+bookmarks, footnotes and endnotes, `text:list` bullets/numbering with nine levels, prefix,
+suffix, start value and continued numbering, tables with column widths, column/row spans
+and cell background, `draw:frame`/`draw:image` with size and `svg:desc`/`svg:title` alt
+text, page size, orientation and margins, default header and footer of the first master
+page, and title/subject/author/description/keywords.
+
+Not carried: `office:annotation` comments and `text:tracked-changes` (dropped on import,
+as Wordcraft does; deleted text stays deleted), text boxes and drawn shapes, fields (their
+current text is kept), tab stops, paragraph and table borders (export writes a thin cell
+border), first/even-page headers, more than one page style or section, list item
+`start-value` overrides and `text:list-header` indentation, table header-row repetition,
+embedded objects and formulas. LibreOffice acceptance has not been checked locally
+(`soffice` is not installed on the development machine).

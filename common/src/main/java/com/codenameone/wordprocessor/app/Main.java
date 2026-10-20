@@ -42,7 +42,7 @@ public class Main extends com.codename1.system.Lifecycle {
     app.setFiles(
         new WordProcessor.Files() {
           public void open(WordProcessor.OpenCallback callback) {
-            choose(callback, "cn1doc,docx,doc,txt,md,html,rtf,adoc");
+            choose(callback, "cn1doc,docx,doc,odt,txt,md,html,rtf,adoc");
           }
 
           public void openRecipients(WordProcessor.OpenCallback callback) {
@@ -141,6 +141,7 @@ public class Main extends com.codename1.system.Lifecycle {
     if (name.endsWith(".pdf")) return "application/pdf";
     if (name.endsWith(".docx"))
       return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+    if (name.endsWith(".odt")) return "application/vnd.oasis.opendocument.text";
     if (name.endsWith(".txt")) return "text/plain";
     if (name.endsWith(".html")) return "text/html";
     return "application/octet-stream";

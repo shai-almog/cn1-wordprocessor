@@ -40,6 +40,10 @@ public final class DocumentFiles {
       Docx.Opened d = DocBinary.read(bytes);
       return new Opened(d.document, d, d.warnings);
     }
+    if ("odt".equals(ext)) {
+      Docx.Opened d = Odt.read(new ByteArrayInputStream(bytes));
+      return new Opened(d.document, null, d.warnings);
+    }
     if ("cn1doc".equals(ext)) {
       ProjectFile.Opened d = ProjectFile.read(bytes);
       return new Opened(
@@ -63,6 +67,11 @@ public final class DocumentFiles {
     if ("pdf".equals(extension)) return PdfExporter.write(d,
         FONTS);
     if ("cn1doc".equals(extension)) return ProjectFile.write(d, source);
+    if ("odt".equals(extension)) {
+      var out = new ByteArrayOutputStream();
+      Odt.write(d, out);
+      return out.toByteArray();
+    }
     if ("docx".equals(extension)) {
       var out = new ByteArrayOutputStream();
       Docx.write(d, source, out, allowConversion);

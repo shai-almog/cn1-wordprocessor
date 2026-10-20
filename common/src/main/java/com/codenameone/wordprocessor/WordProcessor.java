@@ -3459,6 +3459,8 @@ public class WordProcessor {
                       revised = opened.document;
                     } else if (name.toLowerCase().endsWith(".doc")) {
                       revised = DocBinary.read(bytes).document;
+                    } else if (name.toLowerCase().endsWith(".odt")) {
+                      revised = Odt.read(new ByteArrayInputStream(bytes)).document;
                     } else if (name.toLowerCase().endsWith(".cn1doc"))
                       revised = ProjectFile.read(bytes).document;
                     else if (name.toLowerCase().endsWith(".txt"))
@@ -4520,6 +4522,7 @@ public class WordProcessor {
     } else {
       String[][] formats = {
         {"Word document (.docx)", "docx"},
+        {"OpenDocument text (.odt)", "odt"},
         {"PDF document (.pdf)", "pdf"},
         {"Native document (.cn1doc)", "cn1doc"},
         {"Rich text (.rtf)", "rtf"},
@@ -4807,6 +4810,7 @@ public class WordProcessor {
         .submenu("Export")
         .item("PDF…", menuAction("Export PDF", () -> save("pdf")))
         .item("Word Document (.docx)…", menuAction("Export Word Document", () -> save("docx")))
+        .item("OpenDocument Text (.odt)…", menuAction("Export OpenDocument Text", () -> save("odt")))
         .item("Rich Text Format (.rtf)…", menuAction("Export Rich Text", () -> save("rtf")))
         .item("Web Page (.html)…", menuAction("Export Web Page", () -> save("html")))
         .item("Markdown (.md)…", menuAction("Export Markdown", () -> save("md")))
@@ -5040,7 +5044,7 @@ public class WordProcessor {
   private static final String ABOUT_CREDITS =
       "<div style=\"font-family:-apple-system,sans-serif;font-size:11px;text-align:center\">"
           + "A word processor written in Java with Codename One and compiled to native code."
-          + "<br><br>Opens and saves Word (.docx), RTF, HTML, Markdown and plain text, and exports PDF."
+          + "<br><br>Opens and saves Word (.docx), OpenDocument (.odt), RTF, HTML, Markdown and plain text, and exports PDF."
           + "<br><br><a href=\"" + "https://github.com/shai-almog/cn1-wordprocessor" + "\">Project website</a>"
           + " &middot; <a href=\"" + "https://github.com/shai-almog/cn1-wordprocessor/issues" + "\">Report a problem</a>"
           + "<br><br>Source Sans 3 and JetBrains Mono fonts: SIL Open Font License 1.1."
@@ -5060,7 +5064,7 @@ public class WordProcessor {
     body.add(OfficeTheme.label("Version " + version, 12, OfficeTheme.DIM));
     var text = new SpanLabelCompat(
         "A word processor written in Java with Codename One and compiled to native code.\n\n"
-            + "Opens and saves Word (.docx), RTF, HTML, Markdown and plain text, and exports PDF.\n\n"
+            + "Opens and saves Word (.docx), OpenDocument (.odt), RTF, HTML, Markdown and plain text, and exports PDF.\n\n"
             + "Source Sans 3 and JetBrains Mono fonts: SIL Open Font License 1.1.");
     OfficeTheme.space(text, 12, 12, 0, 0);
     body.add(text);
@@ -6965,16 +6969,19 @@ public class WordProcessor {
                               "Cancel")) return;
                       source = opened;
                       document = opened.document;
-                    } else if (name.toLowerCase().endsWith(".doc")) {
-                      // Word 97-2003 imports through DOCX; it is saved as a new file, never back to .doc.
-                      Docx.Opened opened = DocBinary.read(bytes);
+                    } else if (name.toLowerCase().endsWith(".doc")
+                        || name.toLowerCase().endsWith(".odt")) {
+                      // Word 97-2003 and ODT import through DOCX; they are saved as a new file.
+                      boolean binary = name.toLowerCase().endsWith(".doc");
+                      Docx.Opened opened =
+                          binary ? DocBinary.read(bytes) : Odt.read(new ByteArrayInputStream(bytes));
                       if (!opened.warnings.isEmpty()
                           && !showDialog(
                               "Compatibility report",
                               new SpanLabelCompat(join(opened.warnings)),
                               "Open copy",
                               "Cancel")) return;
-                      source = opened;
+                      source = binary ? opened : null;
                       document = opened.document.title(name);
                     } else if (name.toLowerCase().endsWith(".cn1doc")) {
                       ProjectFile.Opened project = ProjectFile.read(bytes);
@@ -7132,6 +7139,10 @@ public class WordProcessor {
               bytes = out.toByteArray();
               String password = OfficeCommands.password(session);
               if (password != null) bytes = OfficeCrypto.encrypt(bytes, password);
+            } else if ("odt".equals(format)) {
+              var out = new ByteArrayOutputStream();
+              Odt.write(snapshot, out);
+              bytes = out.toByteArray();
             } else if ("pdf".equals(format))
               bytes = PdfExporter.write(snapshot.page, editor.printLayout(), DocumentFonts.PDF);
             else if ("cn1doc".equals(format)) bytes = ProjectFile.write(snapshot, pkg);

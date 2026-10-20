@@ -15,7 +15,7 @@ Format coverage and its limits are in [FORMATS](FORMATS.md).
 | Area | Limitation |
 | --- | --- |
 | DOCX | Custom/composite numbering labels, theme fonts and colors, advanced section, header/footer and field content, floating/cropped/rotated pictures, anchored objects and nested tables are approximated or unsupported. Real-world round trips can lose layout detail. |
-| Formats Wordcraft has | No WMF/EMF pictures, ODT or LaTeX yet, and no Zotero integration. `.doc` import skips comments, bookmarks, tracked changes, merged cells and floating shapes. |
+| Formats Wordcraft has | No WMF/EMF pictures or LaTeX yet, and no Zotero integration. ODT carries one page style and no comments or tracked changes (Wordcraft drops those too). `.doc` import skips comments, bookmarks, tracked changes, merged cells and floating shapes. |
 | Typography | Glyph shaping on screen comes from the platform text renderer. Bidi ordering covers strong types, numbers and neutrals but not explicit embeddings or bracket pairing; lines with tabs keep logical order. Decimal tabs align on a period only. |
 | PDF | Hebrew/Arabic fallback, RTL, Arabic presentation forms, kerning, links, outline and basic tags are exported; no Indic/complex OpenType shaping, system font fallback or font subsetting. See [FORMATS](FORMATS.md). |
 | Editing | Mixed body/table selections, nested table editing, cross-cell and note-story comment ranges, and table-cell proofing are unsupported. The layout engine re-paginates the whole document after an edit rather than only the changed suffix. Undo history is bounded by count (200), not by memory. |
