@@ -26,7 +26,7 @@ public class DocBinaryTest {
     final TreeMap<Integer, byte[]> papx = new TreeMap<>();
     final Map<Integer, byte[]> tables = new TreeMap<>();
     final List<byte[]> sepx = new ArrayList<>();
-    int ccpText, ccpFtn, ccpHdd, ccpEdn, compressed, flags = 0x0200;
+    int ccpText, ccpFtn, ccpHdd, ccpAtn, ccpEdn, compressed, flags = 0x0200;
     byte[] data;
 
     DocWriter run(String s, int... grpprl) {
@@ -194,6 +194,7 @@ public class DocBinaryTest {
       put32(wd, 0x40 + 3 * 4, ccpText);
       put32(wd, 0x40 + 4 * 4, ccpFtn);
       put32(wd, 0x40 + 5 * 4, ccpHdd);
+      put32(wd, 0x40 + 7 * 4, ccpAtn);
       put32(wd, 0x40 + 8 * 4, ccpEdn);
       put16(wd, 0x98, 0x5D);
       for (var e : where.entrySet()) {
@@ -488,5 +489,211 @@ public class DocBinaryTest {
       } catch (IOException expected) {
         assertNotNull(expected.getMessage());
       }
+  }
+
+  static byte[] sttb(int cbExtra, byte[] extra, String... names) {
+    var out = new ByteArrayOutputStream();
+    out.writeBytes(le16(0xFFFF));
+    out.writeBytes(le16(names.length));
+    out.writeBytes(le16(cbExtra));
+    for (String n : names) {
+      out.writeBytes(le16(n.length()));
+      out.writeBytes(utf16(n));
+      if (cbExtra > 0) out.writeBytes(extra);
+    }
+    return out.toByteArray();
+  }
+
+  static byte[] rec(int verInst, int type, byte[]... body) {
+    byte[] b = cat(body);
+    return cat(le16(verInst), le16(type), le32(b.length), b);
+  }
+
+  /** Comment over "Alpha ins", a bookmark, and inserted/deleted runs by two authors. */
+  private static DocWriter revised() {
+    var d = new DocWriter();
+    int dttm = 5 | 14 << 6 | 20 << 11 | 10 << 16 | 126 << 20;
+    d.run("Alpha ").run("ins", 0x01, 0x08, 1, 0x04, 0x48, 1, 0, 0x05, 0x68, dttm & 255, dttm >> 8 & 255,
+        dttm >> 16 & 255, dttm >>> 24).run("del", 0x00, 0x08, 1, 0x63, 0x48, 0, 0);
+    int ref = d.cp();
+    d.run("\u0005").para(0);
+    d.run("Beta").para(0);
+    d.ccpText = d.cp();
+    d.run("\u0005Remark").para(0);
+    int len = d.cp() - d.ccpText;
+    d.para(0);
+    d.ccpAtn = d.cp() - d.ccpText;
+    var atrd = new byte[30];
+    put16(atrd, 0, 2);
+    put16(atrd, 2, 'A');
+    put16(atrd, 4, 'N');
+    put32(atrd, 26, 7);
+    d.tables.put(4, cat(plc(ref, d.ccpText), atrd));
+    d.tables.put(5, plc(0, len, len + 1));
+    d.tables.put(36, cat(le16(3), utf16("Ann")));
+    d.tables.put(37, sttb(10, cat(le16(0x100), le32(7), le32(0)), ""));
+    d.tables.put(42, cat(plc(0, d.ccpText), le32(0)));
+    d.tables.put(43, plc(ref, d.ccpText));
+    d.tables.put(21, sttb(0, null, "Mark"));
+    d.tables.put(22, cat(plc(0, d.ccpText), le32(0)));
+    d.tables.put(23, plc(5, d.ccpText));
+    d.tables.put(51, sttb(0, null, "Bob", "Carol"));
+    return d;
+  }
+
+  @Test
+  public void commentsBookmarksAndRevisionsTranslate() throws Exception {
+    var parts = DocBinary.convert(revised().build());
+    String doc = part(parts, "word/document.xml");
+    assertTrue(doc, doc.contains("<w:bookmarkStart w:id=\"1\" w:name=\"Mark\"/>"));
+    assertTrue(doc.indexOf("<w:bookmarkEnd w:id=\"1\"/>") < doc.indexOf(">ins<"));
+    assertTrue(doc.contains("<w:commentRangeStart w:id=\"0\"/>") && doc.contains("<w:commentRangeEnd w:id=\"0\"/>"));
+    assertTrue(doc.contains("<w:commentReference w:id=\"0\"/>"));
+    assertTrue(doc.contains("w:author=\"Carol\" w:date=\"2026-10-20T14:05:00Z\">"));
+    assertTrue(doc.contains("<w:ins w:id="));
+    assertTrue(doc.contains("<w:del w:id=") && doc.contains("w:author=\"Bob\""));
+    assertTrue(doc.contains("<w:delText xml:space=\"preserve\">del</w:delText>"));
+    String comments = part(parts, "word/comments.xml");
+    assertTrue(comments, comments.contains("w:author=\"Ann\" w:initials=\"AN\"") && comments.contains("Remark"));
+    Document m = DocBinary.read(revised().build()).document;
+    assertEquals(1, m.comments.size());
+    assertEquals("Ann", m.comments.get(0).author);
+    assertTrue(m.plainText(), m.plainText().contains("Alpha"));
+  }
+
+  static int[] tdef(int f0, int f1) {
+    int[] t = new int[11 + 40];
+    System.arraycopy(new int[] {0x08, 0xD6, 48, 0, 2, 0, 0, 0x40, 0x06, 0x80, 0x0C}, 0, t, 0, 11);
+    t[11] = f0;
+    t[31] = f1;
+    return t;
+  }
+
+  static int[] join(int[]... parts) {
+    int n = 0;
+    for (int[] p : parts) n += p.length;
+    int[] out = new int[n];
+    n = 0;
+    for (int[] p : parts) {
+      System.arraycopy(p, 0, out, n, p.length);
+      n += p.length;
+    }
+    return out;
+  }
+
+  private static DocWriter tables() {
+    var d = new DocWriter();
+    int[] cell = {0x16, 0x24, 1}, inner = {0x16, 0x24, 1, 0x49, 0x66, 2, 0, 0, 0}, row = {0x16, 0x24, 1, 0x17, 0x24, 1};
+    d.run("A").mark('\u0007', 0, cell).run("B").mark('\u0007', 0, cell).mark('\u0007', 0, join(row, tdef(0x60, 0)));
+    d.mark('\u0007', 0, cell);
+    d.run("x").mark('\u0007', 0, inner).run("y").mark('\u0007', 0, inner);
+    d.mark('\r', 0, join(inner, new int[] {0x4C, 0x24, 1}, tdef(0, 0)));
+    d.mark('\u0007', 0, cell).mark('\u0007', 0, join(row, tdef(0x20, 0)));
+    d.run("M").mark('\u0007', 0, cell).run("N").mark('\u0007', 0, cell).mark('\u0007', 0, join(row, tdef(1, 2)));
+    d.run("After").para(0);
+    d.ccpText = d.cp();
+    return d;
+  }
+
+  @Test
+  public void mergedAndNestedTablesTranslate() throws Exception {
+    String doc = part(DocBinary.convert(tables().build()), "word/document.xml");
+    assertEquals(doc, 2, doc.split("<w:tbl>", -1).length - 1);
+    assertTrue(doc.indexOf("<w:tbl>", doc.indexOf("<w:tbl>") + 1) < doc.indexOf(">M<"));
+    assertTrue(doc.contains("<w:vMerge w:val=\"restart\"/>") && doc.contains("<w:vMerge/>"));
+    assertTrue(doc.contains("<w:gridSpan w:val=\"2\"/>"));
+    assertEquals(3 + 1, doc.split("<w:tr>", -1).length - 1);
+    Document m = DocBinary.read(tables().build()).document;
+    assertTrue(m.plainText(), m.plainText().contains("After"));
+    boolean table = false;
+    for (int i = 0; i < m.blocks.size(); i++) table |= m.blocks.get(i) instanceof Table;
+    assertTrue(table);
+  }
+
+  static byte[] fspa(int spid, int x, int y, int w, int h, int flags) {
+    var b = new byte[26];
+    put32(b, 0, spid);
+    put32(b, 4, x);
+    put32(b, 8, y);
+    put32(b, 12, x + w);
+    put32(b, 16, y + h);
+    put16(b, 20, flags);
+    return b;
+  }
+
+  static byte[] shape(int type, int spid, byte[] props, int count) {
+    return rec(0xF, 0xF004, rec(2 | type << 4, 0xF00A, le32(spid), le32(0xA00)), rec(3 | count << 4, 0xF00B, props));
+  }
+
+  private static DocWriter floating() {
+    var d = new DocWriter();
+    d.run("Float ");
+    int a = d.cp();
+    d.run("\u0008 shape ");
+    int b = d.cp();
+    d.run("\u0008 box ");
+    int c = d.cp();
+    d.run("\u0008").para(0);
+    d.ccpText = d.cp();
+    d.run("Boxed").para(0);
+    int len = d.cp() - d.ccpText;
+    d.para(0);
+    byte[] blip = rec(0x6E0 << 4, 0xF01E, new byte[17], PNG);
+    var fbseBody = new byte[36];
+    fbseBody[0] = 6;
+    byte[] dgg = rec(0xF, 0xF000, rec(0xF, 0xF001, rec(2 | 6 << 4, 0xF007, fbseBody, blip)));
+    byte[] dg = rec(0xF, 0xF002, rec(0xF, 0xF003,
+        shape(75, 1025, cat(le16(0x4104), le32(1)), 1),
+        shape(3, 1026, cat(le16(0x181), le32(0x0000FF)), 1),
+        shape(202, 1027, new byte[0], 0)));
+    d.tables.put(50, cat(dgg, new byte[] {0}, dg));
+    d.tables.put(40, cat(plc(a, b, c, d.ccpText), fspa(1025, 1440, 720, 2880, 1440, 1 << 1 | 1 << 3 | 3 << 5 | 0x4000),
+        fspa(1026, 0, 0, 1440, 1440, 2 << 1 | 2 << 3 | 1 << 5), fspa(1027, 0, 0, 2880, 720, 0)));
+    var ftx = new byte[44];
+    put32(ftx, 14, 1027);
+    d.tables.put(56, cat(plc(0, len, len + 1), ftx));
+    return d;
+  }
+
+  @Test
+  public void floatingPicturesAndShapesTranslate() throws Exception {
+    var parts = DocBinary.convert(floating().build());
+    String doc = part(parts, "word/document.xml");
+    assertEquals(doc, 3, doc.split("<wp:anchor ", -1).length - 1);
+    assertTrue(doc.contains("behindDoc=\"1\"") && doc.contains("<wp:wrapNone/>"));
+    assertTrue(doc.contains("<wp:positionH relativeFrom=\"page\"><wp:posOffset>914400</wp:posOffset>"));
+    assertTrue(doc.contains("<wp:wrapTopAndBottom/>") && doc.contains("relativeFrom=\"column\""));
+    assertTrue(doc.contains("prst=\"ellipse\"") && doc.contains("<a:srgbClr val=\"FF0000\"/>"));
+    assertTrue(doc.contains("txBox=\"1\"") && doc.contains("<w:txbxContent>"));
+    assertTrue(doc.indexOf("Boxed") > doc.indexOf("<w:txbxContent>"));
+    assertTrue(parts.containsKey("word/media/image1.png"));
+    Document m = DocBinary.read(floating().build()).document;
+    assertTrue(m.plainText(), m.plainText().contains("Float"));
+  }
+
+  @Test
+  public void hostileFeatureTablesOnlyRaiseIOException() throws Exception {
+    var random = new Random(11);
+    for (DocWriter w : new DocWriter[] {revised(), tables(), floating()}) {
+      var streams = CompoundFile.read(w.build());
+      for (int i = 0; i < 200; i++) {
+        var copy = new LinkedHashMap<String, byte[]>();
+        for (var e : streams.entrySet()) copy.put(e.getKey(), e.getValue().clone());
+        byte[] target = copy.get(i % 4 == 0 ? "WordDocument" : "1Table");
+        for (int k = 0; k < 1 + random.nextInt(16); k++)
+          target[random.nextInt(target.length)] = (byte) (i % 3 == 0 ? 0xFF : random.nextInt(256));
+        try {
+          DocBinary.read(CompoundFile.write(copy));
+        } catch (IOException expected) {
+          assertNotNull(expected.getMessage());
+        }
+      }
+    }
+    // A shape table whose records claim more bytes than exist, and anchors to unknown shapes.
+    var d = floating();
+    d.tables.put(50, rec(0xF, 0xF000, rec(0xF, 0xF001, le32(-1))));
+    d.tables.put(21, cat(le16(0xFFFF), le16(60000), le16(0)));
+    String doc = part(DocBinary.convert(d.build()), "word/document.xml");
+    assertFalse(doc.contains("<wp:anchor"));
   }
 }

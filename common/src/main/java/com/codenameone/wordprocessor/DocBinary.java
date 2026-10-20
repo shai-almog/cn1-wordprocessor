@@ -19,7 +19,7 @@ import java.util.Set;
  */
 final class DocBinary {
   private static final int MAX_PIECES = 1000000, MAX_BINS = 100000, MAX_STYLES = 4096, MAX_LISTS = 2000,
-      MAX_SECTIONS = 1024, MAX_NOTES = 10000, MAX_PARTS = 4096;
+      MAX_SECTIONS = 1024, MAX_NOTES = 10000, MAX_PARTS = 4096, MAX_DEPTH = 16;
   private static final long MAX_CHARS = 50000000L;
   private static final String CP1252 =
       "€�‚ƒ„…†‡ˆ‰Š‹Œ�Ž�"
@@ -56,6 +56,17 @@ final class DocBinary {
   private final LinkedHashMap<String, byte[]> parts = new LinkedHashMap<>();
   private final StringBuilder rels = new StringBuilder(), types = new StringBuilder();
   private int pictures, relIds;
+  /** Markup (bookmark and comment-range boundaries) emitted before the main-text character at a CP. */
+  private final Map<Long, StringBuilder> marks = new HashMap<>();
+  private final Map<Long, Integer> atnRefs = new HashMap<>();
+  private final Map<Long, String> floats = new HashMap<>();
+  private final List<String> rmAuthors = new ArrayList<>();
+  /** OfficeArt BLIP store entries as {FBSE body offset, length} in the table stream. */
+  private final List<long[]> blips = new ArrayList<>();
+  /** Main-drawing shapes by spid: {spid, shape type, pib, fill, line, filled, lined, group}. */
+  private final Map<Long, long[]> shapes = new HashMap<>();
+  private final Map<Long, long[]> textboxes = new HashMap<>();
+  private int revIds, markIds, floatIds;
 
   private static final class Style {
     int stk, base = 0xFFF;
@@ -64,7 +75,9 @@ final class DocBinary {
   }
 
   private static final class Chr {
-    Boolean b, i, strike, caps, smallCaps, vanish;
+    Boolean b, i, strike, caps, smallCaps, vanish, ins, del;
+    int insBy = -1, delBy = -1;
+    long insAt, delAt;
     String u, color, font, highlight, vert, style;
     int sz;
 
@@ -99,7 +112,7 @@ final class DocBinary {
     String lineRule;
     boolean keep, keepNext, pageBreak, inTable, ttp, innerTtp, borders;
     int outline = -1, ilvl, ilfo, itap;
-    int[] grid;
+    int[] grid, merge;
 
     String xml(int lists) {
       var s = new StringBuilder();
@@ -136,7 +149,8 @@ final class DocBinary {
     final StringBuilder runs = new StringBuilder();
     String pPr = "", sect;
     boolean inTable, cellEnd, rowEnd, borders;
-    int[] grid;
+    int depth;
+    int[] grid, merge;
 
     String xml() {
       String props = sect == null ? pPr : pPr + sect;
@@ -219,9 +233,13 @@ final class DocBinary {
     parseFonts();
     parseStyles();
     String numbering = numbering();
+    rmAuthors.addAll(sttb(51, null));
     long ftnBase = ccpText, hddBase = ccpText + ccpFtn, ednBase = hddBase + ccpHdd + ccpAtn;
     String footnotes = notes(2, 3, ftnBase, ccpFtn, "footnote", footRefs);
     String endnotes = notes(46, 47, ednBase, ccpEdn, "endnote", endRefs);
+    String comments = comments();
+    bookmarks();
+    floats();
     List<long[]> sects = sections();
     for (long[] s : sects) sectEnds.add(s[0]);
     // Header/footer stories: six separators, then six per section (even/odd header, even/odd footer, first).
@@ -282,6 +300,11 @@ final class DocBinary {
       parts.put("word/endnotes.xml", ZipParts.utf8(endnotes));
       rel("endnotes", "endnotes.xml");
       override("/word/endnotes.xml", CT + "endnotes+xml");
+    }
+    if (comments != null) {
+      parts.put("word/comments.xml", ZipParts.utf8(comments));
+      rel("comments", "comments.xml");
+      override("/word/comments.xml", CT + "comments+xml");
     }
     parts.put(
         "word/_rels/document.xml.rels",
@@ -592,6 +615,24 @@ final class DocBinary {
 
   private void applyChr(Chr c, int op, byte[] b, int a) {
     switch (op) {
+      case 0x0801:
+        c.ins = toggle(b, a, c.ins);
+        break;
+      case 0x0800:
+        c.del = toggle(b, a, c.del);
+        break;
+      case 0x4804:
+        c.insBy = u16(b, a);
+        break;
+      case 0x6805:
+        c.insAt = u32(b, a);
+        break;
+      case 0x4863:
+        c.delBy = u16(b, a);
+        break;
+      case 0x6864:
+        c.delAt = u32(b, a);
+        break;
       case 0x0835:
         c.b = toggle(b, a, c.b);
         break;
@@ -740,6 +781,24 @@ final class DocBinary {
             long brc = u32(b, tc + k * 20 + 4 + e * 4);
             if (brc != 0 && brc != 0xFFFFFFFFL) p.borders = true;
           }
+        // TC80 flags: fFirstMerged, fMerged, fVertMerge (0x20), fVertRestart (0x40)
+        p.merge = new int[64];
+        for (int k = 0; k < count && tc + k * 20 + 2 <= a + n; k++) {
+          int g = u16(b, tc + k * 20);
+          p.merge[k] = (g & 3) | ((g & 0x20) != 0 ? 4 : 0) | ((g & 0x40) != 0 ? 8 : 0);
+        }
+        break;
+      }
+      case 0x5624: {
+        if (p.merge == null) p.merge = new int[64];
+        int f = u8(b, a), l = Math.min(p.merge.length, u8(b, a + 1));
+        for (int k = f; k < l; k++) p.merge[k] = (p.merge[k] & ~3) | (k == f ? 1 : 2);
+        break;
+      }
+      case 0xD62B: {
+        if (p.merge == null) p.merge = new int[64];
+        int k = u8(b, a + 1), v = u8(b, a + 2);
+        if (k < p.merge.length) p.merge[k] = (p.merge[k] & 3) | (v == 1 ? 4 : v == 3 ? 12 : 0);
         break;
       }
       default:
@@ -798,7 +857,7 @@ final class DocBinary {
     Chr c = new Chr();
     if (r != null) sprms(word, r[0], r[1], (op, b, a, n) -> applyChr(c, op, b, a));
     applyPrm(j, c, null);
-    s = c.xml();
+    s = revision(c) + c.xml();
     rprCache.put(key, s);
     return s;
   }
@@ -1208,7 +1267,7 @@ final class DocBinary {
   }
 
   /** Builds runs for one paragraph, merging equal formatting. */
-  private static final class Runs {
+  private final class Runs {
     final StringBuilder out;
     String rPr;
     boolean instr;
@@ -1232,14 +1291,26 @@ final class DocBinary {
 
     void element(String props, String inner) {
       flush();
-      out.append("<w:r>").append(props).append(inner).append("</w:r>");
+      int cut = props.indexOf(1);
+      if (cut >= 0) open(props.substring(0, cut));
+      out.append("<w:r>").append(cut < 0 ? props : props.substring(cut + 1)).append(inner).append("</w:r>");
+      if (cut >= 0) out.append(props.startsWith("<w:del") ? "</w:del>" : "</w:ins>");
+    }
+
+    /** Opens a revision wrapper (the props before the char 1 marker), giving it a unique id. */
+    private void open(String wrap) {
+      out.append(wrap, 0, 6).append(" w:id=\"").append(++revIds).append('"').append(wrap, 6, wrap.length());
     }
 
     void flush() {
       if (text.length() == 0) return;
-      String tag = instr ? "w:instrText" : "w:t";
-      out.append("<w:r>").append(rPr).append('<').append(tag).append(" xml:space=\"preserve\">").append(text)
-          .append("</").append(tag).append("></w:r>");
+      int cut = rPr.indexOf(1);
+      boolean del = cut >= 0 && rPr.startsWith("<w:del");
+      String tag = instr ? (del ? "w:delInstrText" : "w:instrText") : del ? "w:delText" : "w:t";
+      if (cut >= 0) open(rPr.substring(0, cut));
+      out.append("<w:r>").append(cut < 0 ? rPr : rPr.substring(cut + 1)).append('<').append(tag)
+          .append(" xml:space=\"preserve\">").append(text).append("</").append(tag).append("></w:r>");
+      if (cut >= 0) out.append(del ? "</w:del>" : "</w:ins>");
       text.setLength(0);
     }
   }
@@ -1264,6 +1335,13 @@ final class DocBinary {
         continue;
       }
       if (++budget > MAX_CHARS) throw new IOException("The .doc file is too large");
+      if (main && !marks.isEmpty()) {
+        StringBuilder m = marks.get(cp);
+        if (m != null) {
+          runs.flush();
+          para.runs.append(m);
+        }
+      }
       int step = units;
       boolean sectMark = c == 12 && main && sectEnds.contains(cp + 1);
       boolean instr = !fields.isEmpty() && fields.get(fields.size() - 1);
@@ -1278,14 +1356,17 @@ final class DocBinary {
           p.style = styleIds[istd];
         para.inTable = p.inTable;
         para.borders = p.borders;
-        if (p.inTable && c == 7) {
-          if (p.itap > 1) {
-            // nested tables are flattened into the outer cell
-          } else if (p.ttp) para.rowEnd = true;
-          else para.cellEnd = true;
+        para.depth = p.inTable ? Math.max(1, Math.min(MAX_DEPTH, p.itap)) : 0;
+        if (para.depth > 1) {
+          // nested table: inner row ends carry sprmPFInnerTtp on a paragraph mark
+          if (p.innerTtp) para.rowEnd = true;
+          else if (c == 7) para.cellEnd = true;
+        } else if (p.inTable) {
+          if (p.ttp) para.rowEnd = true;
+          else if (c == 7) para.cellEnd = true;
         }
-        if (p.inTable && p.ttp && p.itap <= 1) para.rowEnd = true;
         para.grid = p.grid;
+        para.merge = p.merge;
         para.pPr = p.xml(lfoCount);
         out.add(new Ended(para, cp + 1));
         para = new Para();
@@ -1323,8 +1404,18 @@ final class DocBinary {
           if (pic != null) runs.element(rpr(cp), pic);
           break;
         }
+        case 0x05: {
+          Integer id = main ? atnRefs.get(cp) : null;
+          if (id != null) runs.element("", "<w:commentReference w:id=\"" + id + "\"/>");
+          break;
+        }
+        case 0x08: {
+          String f = main ? floats.get(cp) : null;
+          if (f != null) runs.element(rpr(cp), f);
+          break;
+        }
         case 0x02:
-          if (noteKind != null)
+          if (noteKind != null && !"comment".equals(noteKind) && !"textbox".equals(noteKind))
             runs.element("<w:rPr><w:vertAlign w:val=\"superscript\"/></w:rPr>", "<w:" + noteKind + "Ref/>");
           else if (main) {
             Integer f = footRefs.get(cp), e = endRefs.get(cp);
@@ -1365,61 +1456,48 @@ final class DocBinary {
   }
 
   private String blocks(List<Para> ps) {
+    return content(ps, 0);
+  }
+
+  /** Paragraphs at table depth level, with deeper runs rendered as (nested) tables. */
+  private String content(List<Para> ps, int level) {
     var out = new StringBuilder();
-    StringBuilder rows = null, cell = null;
-    var cells = new ArrayList<String>();
-    int[] grid = null;
-    boolean borders = false;
-    for (Para p : ps) {
-      if (p.inTable) {
-        if (rows == null) {
-          rows = new StringBuilder();
-          cell = new StringBuilder();
-          grid = null;
-          borders = false;
-        }
-        if (p.rowEnd) {
-          if (cell.length() > 0) cells.add(cell.toString());
-          cell = new StringBuilder();
-          rows.append(row(cells, p.grid));
-          if (grid == null || (p.grid != null && p.grid.length > grid.length)) grid = p.grid;
-          borders |= p.borders;
-          cells.clear();
-          continue;
-        }
-        cell.append(p.xml());
-        if (p.cellEnd) {
-          cells.add(cell.toString());
-          cell = new StringBuilder();
-        }
-        continue;
-      }
-      if (rows != null) {
-        out.append(table(rows, cells, cell, grid, borders));
-        rows = null;
-        cells.clear();
-      }
-      out.append(p.xml());
+    for (int i = 0; i < ps.size(); ) {
+      if (ps.get(i).depth > level) {
+        int j = i;
+        while (j < ps.size() && ps.get(j).depth > level) j++;
+        out.append(table(ps.subList(i, j), level + 1));
+        i = j;
+      } else out.append(ps.get(i++).xml());
     }
-    if (rows != null) out.append(table(rows, cells, cell, grid, borders));
     return out.toString();
   }
 
-  private static String row(List<String> cells, int[] grid) {
-    var s = new StringBuilder("<w:tr>");
-    if (cells.isEmpty()) s.append("<w:tc><w:p/></w:tc>");
-    for (int i = 0; i < cells.size(); i++) {
-      s.append("<w:tc>");
-      if (grid != null && i < grid.length)
-        s.append("<w:tcPr><w:tcW w:w=\"").append(grid[i]).append("\" w:type=\"dxa\"/></w:tcPr>");
-      s.append(cells.get(i).isEmpty() ? "<w:p/>" : cells.get(i)).append("</w:tc>");
+  private String table(List<Para> ps, int level) {
+    var rows = new StringBuilder();
+    var cells = new ArrayList<String>();
+    var cell = new ArrayList<Para>();
+    int[] grid = null;
+    boolean borders = false;
+    for (Para p : ps) {
+      boolean own = p.depth == level;
+      if (own && p.rowEnd) {
+        if (!cell.isEmpty()) cells.add(content(cell, level));
+        cell.clear();
+        rows.append(row(cells, p.grid, p.merge));
+        if (grid == null || (p.grid != null && p.grid.length > grid.length)) grid = p.grid;
+        borders |= p.borders;
+        cells.clear();
+        continue;
+      }
+      cell.add(p);
+      if (own && p.cellEnd) {
+        cells.add(content(cell, level));
+        cell.clear();
+      }
     }
-    return s.append("</w:tr>").toString();
-  }
-
-  private static String table(StringBuilder rows, List<String> cells, StringBuilder cell, int[] grid, boolean borders) {
-    if (cell.length() > 0) cells.add(cell.toString());
-    if (!cells.isEmpty()) rows.append(row(cells, grid));
+    if (!cell.isEmpty()) cells.add(content(cell, level));
+    if (!cells.isEmpty()) rows.append(row(cells, grid, null));
     if (rows.length() == 0) return "";
     var s = new StringBuilder("<w:tbl><w:tblPr><w:tblW w:w=\"0\" w:type=\"auto\"/>");
     if (borders) {
@@ -1433,6 +1511,39 @@ final class DocBinary {
     return s.append("</w:tblGrid>").append(rows).append("</w:tbl>").toString();
   }
 
+  /**
+   * One row. merge holds per-cell flags from the TAP: 1 first of a horizontal merge, 2 merged into
+   * the previous cell, 4 vertically merged, 8 vertical merge restart.
+   */
+  private static String row(List<String> cells, int[] grid, int[] merge) {
+    var s = new StringBuilder("<w:tr>");
+    if (cells.isEmpty()) s.append("<w:tc><w:p/></w:tc>");
+    for (int i = 0; i < cells.size(); ) {
+      int m = merge != null && i < merge.length ? merge[i] : 0;
+      String body = cells.get(i);
+      int span = 1, w = grid != null && i < grid.length ? grid[i] : 0;
+      while ((m & 2) == 0 && merge != null && i + span < cells.size() && i + span < merge.length
+          && (merge[i + span] & 2) != 0) {
+        String extra = cells.get(i + span);
+        if (extra.contains("<w:t ")) body += extra;
+        if (grid != null && i + span < grid.length) w += grid[i + span];
+        span++;
+      }
+      s.append("<w:tc>");
+      if (w > 0 || span > 1 || (m & 4) != 0) {
+        s.append("<w:tcPr>");
+        if (w > 0) s.append("<w:tcW w:w=\"").append(w).append("\" w:type=\"dxa\"/>");
+        if (span > 1) s.append("<w:gridSpan w:val=\"").append(span).append("\"/>");
+        if ((m & 4) != 0) s.append((m & 8) != 0 ? "<w:vMerge w:val=\"restart\"/>" : "<w:vMerge/>");
+        s.append("</w:tcPr>");
+      }
+      if (body.isEmpty() || body.endsWith("</w:tbl>")) body += "<w:p/>";
+      s.append(body).append("</w:tc>");
+      i += span;
+    }
+    return s.append("</w:tr>").toString();
+  }
+
   // ---- pictures ----
 
   private String picture(long fc) {
@@ -1444,26 +1555,35 @@ final class DocBinary {
     if (mm == 0x66) at += 1 + u8(data, at);
     int dxa = s16(data, fc + 0x1C), dya = s16(data, fc + 0x1E), mx = u16(data, fc + 0x20), my = u16(data, fc + 0x22);
     String[] ext = new String[1];
-    byte[] blip = blip(at, end, 0, ext);
+    byte[] blip = blip(data, at, end, 0, ext);
     if (blip == null) return null;
     long cx = (long) (dxa > 0 ? dxa : 1440) * (mx > 0 ? mx : 1000) / 1000 * 635;
     long cy = (long) (dya > 0 ? dya : 1440) * (my > 0 ? my : 1000) / 1000 * 635;
     cx = Math.max(12700, Math.min(cx, 20116800L));
     cy = Math.max(12700, Math.min(cy, 20116800L));
-    int n = ++pictures;
-    String name = "media/image" + n + "." + ext[0];
-    parts.put("word/" + name, blip);
-    String id = rel("image", name);
+    String id = media(blip, ext[0]);
+    int n = pictures;
     return "<w:drawing><wp:inline distT=\"0\" distB=\"0\" distL=\"0\" distR=\"0\"><wp:extent cx=\"" + cx + "\" cy=\""
-        + cy + "\"/><wp:docPr id=\"" + n + "\" name=\"Picture " + n + "\"/>"
+        + cy + "\"/><wp:docPr id=\"" + n + "\" name=\"Picture " + n + "\"/>" + picGraphic(id, n, cx, cy)
+        + "</wp:inline></w:drawing>";
+  }
+
+  private String media(byte[] blip, String ext) {
+    int n = ++pictures;
+    String name = "media/image" + n + "." + ext;
+    parts.put("word/" + name, blip);
+    return rel("image", name);
+  }
+
+  private static String picGraphic(String id, int n, long cx, long cy) {
+    return ""
         + "<a:graphic xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\">"
         + "<a:graphicData uri=\"http://schemas.openxmlformats.org/drawingml/2006/picture\">"
         + "<pic:pic xmlns:pic=\"http://schemas.openxmlformats.org/drawingml/2006/picture\"><pic:nvPicPr>"
         + "<pic:cNvPr id=\"" + n + "\" name=\"image" + n + "\"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill>"
         + "<a:blip r:embed=\"" + id + "\"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr>"
         + "<a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"" + cx + "\" cy=\"" + cy + "\"/></a:xfrm>"
-        + "<a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic>"
-        + "</wp:inline></w:drawing>";
+        + "<a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic>";
   }
 
   /**
@@ -1471,7 +1591,7 @@ final class DocBinary {
    * size, compression) then the usually deflated metafile. WMF bodies get the placeable header they
    * are stored without. Null when the payload is malformed or larger than 20 MiB.
    */
-  private byte[] metafileBlip(long at, long stop, boolean wmf) {
+  private static byte[] metafileBlip(byte[] data, long at, long stop, boolean wmf) {
     if (at + 34 > stop) return null;
     long size = u32(data, at), saved = u32(data, at + 28);
     int compression = u8(data, at + 32);
@@ -1516,17 +1636,17 @@ final class DocBinary {
   }
 
   /** Finds the first PNG or JPEG BLIP in the OfficeArt records between at and end. */
-  private byte[] blip(long at, long end, int depth, String[] ext) {
+  private static byte[] blip(byte[] data, long at, long end, int depth, String[] ext) {
     if (depth > 8) return null;
     for (int guard = 0; at + 8 <= end && guard < 1000; guard++) {
       int verInst = u16(data, at), type = u16(data, at + 2);
       long len = u32(data, at + 4), body = at + 8, stop = Math.min(end, body + len);
       int inst = verInst >> 4;
       if ((verInst & 0xF) == 0xF) {
-        byte[] found = blip(body, stop, depth + 1, ext);
+        byte[] found = blip(data, body, stop, depth + 1, ext);
         if (found != null) return found;
       } else if (type == 0xF007) {
-        byte[] found = blip(body + 36 + u8(data, body + 33), stop, depth + 1, ext);
+        byte[] found = blip(data, body + 36 + u8(data, body + 33), stop, depth + 1, ext);
         if (found != null) return found;
       } else if (type == 0xF01E || type == 0xF01D) {
         boolean two = type == 0xF01E ? inst == 0x6E1 : inst == 0x46B || inst == 0x6E3;
@@ -1542,7 +1662,7 @@ final class DocBinary {
         }
       } else if (type == 0xF01A || type == 0xF01B) {
         boolean emf = type == 0xF01A, two = inst == (emf ? 0x3D5 : 0x217);
-        byte[] b = metafileBlip(body + (two ? 32 : 16), stop, !emf);
+        byte[] b = metafileBlip(data, body + (two ? 32 : 16), stop, !emf);
         if (b != null) {
           ext[0] = emf ? "emf" : "wmf";
           return b;
@@ -1552,5 +1672,314 @@ final class DocBinary {
       at = body + len;
     }
     return null;
+  }
+
+  // ---- revisions, bookmarks, comments ----
+
+  /** The w:ins / w:del opening tag (without its id) for a run, then a \u0001 marker; empty if none. */
+  private String revision(Chr c) {
+    boolean del = Boolean.TRUE.equals(c.del);
+    if (!del && !Boolean.TRUE.equals(c.ins)) return "";
+    int by = del ? c.delBy : c.insBy;
+    String who = by >= 0 && by < rmAuthors.size() ? rmAuthors.get(by) : "";
+    if (who.isEmpty()) who = "Unknown";
+    var s = new StringBuilder(del ? "<w:del" : "<w:ins").append(" w:author=\"").append(esc(who)).append('"');
+    String date = dttm(del ? c.delAt : c.insAt);
+    if (date != null) s.append(" w:date=\"").append(date).append('"');
+    return s.append(">\u0001").toString();
+  }
+
+  /** A DTTM ([MS-DOC] 2.9.62) as an ISO date, or null when unset or invalid. */
+  static String dttm(long v) {
+    int min = (int) (v & 63), hr = (int) (v >> 6 & 31), dom = (int) (v >> 11 & 31), mon = (int) (v >> 16 & 15);
+    int yr = (int) (v >> 20 & 511) + 1900;
+    if (v == 0 || mon < 1 || mon > 12 || dom < 1 || hr > 23 || min > 59) return null;
+    return yr + "-" + two(mon) + "-" + two(dom) + "T" + two(hr) + ":" + two(min) + ":00Z";
+  }
+
+  private static String two(int v) {
+    return v < 10 ? "0" + v : String.valueOf(v);
+  }
+
+  static String esc(String v) {
+    var s = new StringBuilder();
+    for (int i = 0; i < v.length(); i++) {
+      char c = v.charAt(i);
+      if (c == '&') s.append("&amp;");
+      else if (c == '<') s.append("&lt;");
+      else if (c == '>') s.append("&gt;");
+      else if (c == '"') s.append("&quot;");
+      else if (c >= 0x20 && c != 0xFFFE && c != 0xFFFF) s.append(c);
+    }
+    return s.toString();
+  }
+
+  private static String xst(byte[] b, long at, int cch) {
+    var s = new StringBuilder();
+    for (int i = 0; i < cch; i++) s.append((char) u16(b, at + i * 2L));
+    return s.toString();
+  }
+
+  /** A PLC at FIB pair i as {count, CP array offset, data array offset}, or null. */
+  private long[] plcAt(int i, int cb) {
+    long[] p = pair(i);
+    if (p == null || p[1] < 4 + 4 + cb || !in(table, p[0], p[1])) return null;
+    long n = (p[1] - 4) / (4 + cb);
+    return new long[] {Math.min(n, MAX_NOTES), p[0], p[0] + (n + 1) * 4};
+  }
+
+  /** The strings of an STTB at FIB pair i; extra, when given, receives each entry's extra-data offset. */
+  private List<String> sttb(int i, List<Long> extra) {
+    var out = new ArrayList<String>();
+    long[] p = pair(i);
+    if (p == null || p[1] < 6 || !in(table, p[0], p[1])) return out;
+    long at = p[0], end = p[0] + p[1];
+    boolean wide = u16(table, at) == 0xFFFF;
+    if (wide) at += 2;
+    int count = u16(table, at), cbExtra = u16(table, at + 2);
+    at += 4;
+    for (int k = 0; k < Math.min(count, MAX_NOTES); k++) {
+      int cch = wide ? u16(table, at) : u8(table, at);
+      at += wide ? 2 : 1;
+      long len = wide ? cch * 2L : cch;
+      if (at + len + cbExtra > end) break;
+      var s = new StringBuilder();
+      for (int c = 0; c < cch; c++) s.append((char) (wide ? u16(table, at + c * 2L) : u8(table, at + c)));
+      out.add(s.toString());
+      at += len;
+      if (extra != null) extra.add(at);
+      at += cbExtra;
+    }
+    return out;
+  }
+
+  private void mark(long cp, String xml) {
+    marks.computeIfAbsent(cp, k -> new StringBuilder()).append(xml);
+  }
+
+  /** SttbfBkmk names with PlcfBkf starts and PlcfBkl ends become bookmarkStart/End in the main text. */
+  private void bookmarks() {
+    List<String> names = sttb(21, null);
+    long[] f = plcAt(22, 4), l = plcAt(23, 0);
+    if (f == null || l == null) return;
+    for (int k = 0; k < f[0] && k < names.size(); k++) {
+      long s = u32(table, f[1] + k * 4L);
+      int ibkl = u16(table, f[2] + k * 4L);
+      if (ibkl >= l[0] || names.get(k).isEmpty() || s >= ccpText) continue;
+      long e = Math.min(u32(table, l[1] + ibkl * 4L), ccpText - 1);
+      if (e < s) continue;
+      int id = ++markIds;
+      mark(s, "<w:bookmarkStart w:id=\"" + id + "\" w:name=\"" + esc(names.get(k)) + "\"/>");
+      mark(e, "<w:bookmarkEnd w:id=\"" + id + "\"/>");
+    }
+  }
+
+  /**
+   * Comments: PlcfandRef (ATRDPre10 per reference), PlcfandTxt (the comment stories), authors from
+   * GrpXstAtnOwners, and the commented ranges from SttbfAtnBkmk tags with PlcfAtnBkf/PlcfAtnBkl.
+   */
+  private String comments() throws IOException {
+    long[] ref = plcAt(4, 30);
+    List<long[]> txt = plc(5, 0);
+    if (ref == null || txt.size() < 2) return null;
+    var owners = new ArrayList<String>();
+    long[] g = pair(36);
+    if (g != null && in(table, g[0], g[1])) {
+      long at = g[0], end = g[0] + g[1];
+      while (at + 2 <= end && owners.size() < MAX_NOTES) {
+        int cch = u16(table, at);
+        if (at + 2 + cch * 2L > end) break;
+        owners.add(xst(table, at + 2, cch));
+        at += 2 + cch * 2L;
+      }
+    }
+    var extra = new ArrayList<Long>();
+    sttb(37, extra);
+    long[] bf = plcAt(42, 4), bl = plcAt(43, 0);
+    var byTag = new HashMap<Long, Integer>();
+    for (int k = 0; k < extra.size(); k++) byTag.putIfAbsent(u32(table, extra.get(k) + 2), k);
+    var s = new StringBuilder(xmlDecl() + "<w:comments" + NS + ">");
+    long base = ccpText + ccpFtn + ccpHdd;
+    int count = 0;
+    for (int i = 0; i < ref[0] && i + 1 < txt.size(); i++) {
+      long cp = u32(table, ref[1] + i * 4L), atrd = ref[2] + i * 30L;
+      if (cp >= ccpText || atnRefs.containsKey(cp)) continue;
+      long a = Math.min(txt.get(i)[0], ccpAtn), b = Math.min(txt.get(i + 1)[0], ccpAtn);
+      String body = b > a ? blocks(walk(base + a, base + b, "comment")) : "";
+      if (body.isEmpty()) body = "<w:p/>";
+      int id = count++;
+      atnRefs.put(cp, id);
+      int ibst = u16(table, atrd + 20);
+      String author = ibst < owners.size() ? owners.get(ibst) : "";
+      String initials = xst(table, atrd + 2, Math.min(9, u16(table, atrd)));
+      Integer k = byTag.get(u32(table, atrd + 26));
+      if (u32(table, atrd + 26) != 0xFFFFFFFFL && k != null && bf != null && bl != null && k < bf[0]) {
+        long st = u32(table, bf[1] + k * 4L);
+        int ibkl = u16(table, bf[2] + k * 4L);
+        if (ibkl < bl[0]) {
+          long en = Math.min(u32(table, bl[1] + ibkl * 4L), ccpText - 1);
+          if (st <= en) {
+            mark(st, "<w:commentRangeStart w:id=\"" + id + "\"/>");
+            mark(en, "<w:commentRangeEnd w:id=\"" + id + "\"/>");
+          }
+        }
+      }
+      s.append("<w:comment w:id=\"").append(id).append("\" w:author=\"").append(esc(author))
+          .append("\" w:initials=\"").append(esc(initials)).append("\">").append(body).append("</w:comment>");
+    }
+    return count == 0 ? null : s.append("</w:comments>").toString();
+  }
+
+  // ---- floating shapes ----
+
+  /**
+   * Floating pictures and shapes of the main document: PlcSpaMom anchors (FSPA) joined by spid with
+   * the shapes of the main OfficeArt drawing (DggInfo); text box text comes from PlcftxbxTxt.
+   */
+  private void floats() throws IOException {
+    long[] p = pair(50);
+    if (p == null || p[1] < 8 || !in(table, p[0], p[1])) return;
+    long end = p[0] + p[1], at = p[0];
+    if (u16(table, at + 2) != 0xF000) return;
+    long len = u32(table, at + 4);
+    if (len > end - at - 8) return;
+    art(at + 8, at + 8 + len, 0, null);
+    at += 8 + len;
+    for (int guard = 0; at + 9 <= end && guard < 16; guard++) {
+      long dl = u32(table, at + 5);
+      if (u16(table, at + 3) != 0xF002 || dl > end - at - 9) break;
+      if (u8(table, at) == 0) art(at + 9, at + 9 + dl, 0, null);
+      at += 9 + dl;
+    }
+    long txbxBase = ccpText + ccpFtn + ccpHdd + ccpAtn + ccpEdn;
+    long[] tx = plcAt(56, 22);
+    if (tx != null)
+      for (int k = 0; k + 1 <= tx[0]; k++) {
+        long a = u32(table, tx[1] + k * 4L), b = u32(table, tx[1] + (k + 1) * 4L);
+        long lid = u32(table, tx[2] + k * 22L + 14);
+        if (b > a) textboxes.putIfAbsent(lid, new long[] {txbxBase + a, txbxBase + b});
+      }
+    long[] spa = plcAt(40, 26);
+    if (spa == null) return;
+    for (int k = 0; k < spa[0]; k++) {
+      long cp = u32(table, spa[1] + k * 4L), d = spa[2] + k * 26L;
+      long[] sh = shapes.get(u32(table, d));
+      if (cp >= ccpText || sh == null || floats.containsKey(cp) || floatIds >= MAX_PARTS) continue;
+      String x = anchor(sh, (int) u32(table, d + 4), (int) u32(table, d + 8), (int) u32(table, d + 12),
+          (int) u32(table, d + 16), u16(table, d + 20));
+      if (x != null) floats.put(cp, x);
+    }
+  }
+
+  /** Collects BLIP store entries and shape properties from OfficeArt records. */
+  private void art(long at, long end, int depth, long[] shape) {
+    if (depth > 8) return;
+    for (int guard = 0; at + 8 <= end && guard < 100000; guard++) {
+      int verInst = u16(table, at), type = u16(table, at + 2);
+      long len = u32(table, at + 4), body = at + 8;
+      if (len > end - body) return;
+      if (type == 0xF007) {
+        if (blips.size() < MAX_PARTS) blips.add(new long[] {body, len});
+      } else if (type == 0xF004) {
+        long[] sh = {-1, 0, 0, -1, -1, 1, 1, 0};
+        art(body, body + len, depth + 1, sh);
+        if (sh[0] >= 0 && shapes.size() < MAX_PARTS * 4) shapes.putIfAbsent(sh[0], sh);
+      } else if ((verInst & 0xF) == 0xF) art(body, body + len, depth + 1, shape);
+      else if (type == 0xF00A && shape != null && len >= 8) {
+        shape[0] = u32(table, body);
+        shape[1] = verInst >> 4;
+        shape[7] = u32(table, body + 4) & 1;
+      } else if (type == 0xF00B && shape != null) {
+        int n = verInst >> 4;
+        for (int k = 0; k < n && k * 6L + 6 <= len; k++) {
+          int id = u16(table, body + k * 6L) & 0x3FFF;
+          long v = u32(table, body + k * 6L + 2);
+          if (id == 0x104) shape[2] = v;
+          else if (id == 0x181) shape[3] = v;
+          else if (id == 0x1C0) shape[4] = v;
+          else if (id == 0x1BF && (v & 0x100000) != 0) shape[5] = v >> 4 & 1;
+          else if (id == 0x1FF && (v & 0x80000) != 0) shape[6] = v >> 3 & 1;
+        }
+      }
+      at = body + len;
+    }
+  }
+
+  private static String prst(int type) {
+    switch (type) {
+      case 1: case 202: return "rect";
+      case 2: return "roundRect";
+      case 3: return "ellipse";
+      case 4: return "diamond";
+      case 5: return "triangle";
+      case 6: return "rtTriangle";
+      case 7: return "parallelogram";
+      case 8: return "trapezoid";
+      case 9: return "hexagon";
+      case 10: return "octagon";
+      case 11: return "plus";
+      case 12: return "star5";
+      case 13: return "rightArrow";
+      case 20: return "line";
+      default: return null;
+    }
+  }
+
+  private static String color(long v, String def) {
+    if (v < 0 || (v >> 24) != 0) return def;
+    return hex((int) (v & 255), (int) (v >> 8 & 255), (int) (v >> 16 & 255));
+  }
+
+  private static long emu(long twips) {
+    return Math.max(-51206400L, Math.min(51206400L, twips * 635));
+  }
+
+  /** A wp:anchor drawing for one FSPA, or null for groups, freeforms and unreadable pictures. */
+  private String anchor(long[] sh, int xl, int yt, int xr, int yb, int flags) throws IOException {
+    if (sh[7] != 0) return null;
+    long cx = Math.max(12700, Math.min(20116800L, emu((long) xr - xl))), cy = Math.max(12700, Math.min(20116800L, emu((long) yb - yt)));
+    String graphic;
+    if (sh[2] > 0 && sh[2] <= blips.size()) {
+      long[] e = blips.get((int) sh[2] - 1);
+      long body = e[0], head = 36 + u8(table, body + 33);
+      String[] ext = new String[1];
+      byte[] img;
+      if (e[1] > head) img = blip(table, body + head, body + e[1], 0, ext);
+      else {
+        long fo = u32(table, body + 28);
+        img = in(word, fo, 8) ? blip(word, fo, Math.min(word.length, fo + 8 + u32(word, fo + 4)), 0, ext) : null;
+      }
+      if (img == null || pictures >= MAX_PARTS) return null;
+      String id = media(img, ext[0]);
+      graphic = picGraphic(id, pictures, cx, cy);
+    } else {
+      String geom = prst((int) sh[1]);
+      if (geom == null) return null;
+      boolean box = sh[1] == 202;
+      var g = new StringBuilder("<a:graphic xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\">"
+          + "<a:graphicData uri=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\">"
+          + "<wps:wsp xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:cNvSpPr");
+      g.append(box ? " txBox=\"1\"/>" : "/>").append("<wps:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"").append(cx)
+          .append("\" cy=\"").append(cy).append("\"/></a:xfrm><a:prstGeom prst=\"").append(geom).append("\"><a:avLst/></a:prstGeom>");
+      g.append(sh[5] == 0 ? "<a:noFill/>" : "<a:solidFill><a:srgbClr val=\"" + color(sh[3], "FFFFFF") + "\"/></a:solidFill>");
+      g.append("<a:ln>").append(sh[6] == 0 ? "<a:noFill/>" : "<a:solidFill><a:srgbClr val=\"" + color(sh[4], "000000")
+          + "\"/></a:solidFill>").append("</a:ln></wps:spPr>");
+      long[] tb = textboxes.get(sh[0]);
+      if (tb != null) {
+        String body = blocks(walk(tb[0], tb[1], "textbox"));
+        if (!body.isEmpty()) g.append("<wps:txbx><w:txbxContent>").append(body).append("</w:txbxContent></wps:txbx>");
+      }
+      graphic = g.append("<wps:bodyPr/></wps:wsp></a:graphicData></a:graphic>").toString();
+    }
+    int bx = flags >> 1 & 3, by = flags >> 3 & 3, wr = flags >> 5 & 15, n = ++floatIds;
+    boolean behind = wr == 3 && (flags & 0x4000) != 0;
+    String wrap = wr == 1 ? "<wp:wrapTopAndBottom/>" : wr == 3 ? "<wp:wrapNone/>" : "<wp:wrapSquare wrapText=\"bothSides\"/>";
+    return "<w:drawing><wp:anchor distT=\"0\" distB=\"0\" distL=\"114300\" distR=\"114300\" simplePos=\"0\" relativeHeight=\""
+        + n + "\" behindDoc=\"" + (behind ? 1 : 0) + "\" locked=\"0\" layoutInCell=\"1\" allowOverlap=\"1\">"
+        + "<wp:simplePos x=\"0\" y=\"0\"/><wp:positionH relativeFrom=\"" + (bx == 1 ? "page" : bx == 0 ? "margin" : "column")
+        + "\"><wp:posOffset>" + emu(xl) + "</wp:posOffset></wp:positionH><wp:positionV relativeFrom=\""
+        + (by == 1 ? "page" : by == 0 ? "margin" : "paragraph") + "\"><wp:posOffset>" + emu(yt)
+        + "</wp:posOffset></wp:positionV><wp:extent cx=\"" + cx + "\" cy=\"" + cy + "\"/>" + wrap
+        + "<wp:docPr id=\"" + (100000 + n) + "\" name=\"Shape " + n + "\"/>" + graphic + "</wp:anchor></w:drawing>";
   }
 }

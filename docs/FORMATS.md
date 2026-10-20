@@ -219,11 +219,21 @@ Native certification loads every recorded before-state through native XML, so th
 DOCX package and reuses the DOCX mapping; saving always writes a new file in another format. Supported: text
 across 8-bit and UTF-16 pieces, character formatting (bold, italic, underline, strike, caps, hidden, size,
 font, colour, highlight, super/subscript), paragraph alignment, indents, spacing and keep options, named
-paragraph and character styles, LST/LFO lists, flat tables (column widths, borders on or off), sections and
-page setup, headers/footers, footnotes/endnotes, complex fields, and inline PNG/JPEG pictures. Not yet:
-encrypted or Word 6/95 files (rejected), floating shapes and text boxes, comments, bookmarks, revisions,
-nested tables (flattened), per-cell borders/shading/merges, EMF/WMF/DIB pictures and list-style formatting
-carried by styles.
+paragraph and character styles, LST/LFO lists, tables (column widths, borders on or off, horizontal merges from
+TC80 fFirstMerged/fMerged or sprmTMerge, vertical merges from fVertMerge/fVertRestart or sprmTVertMerge,
+nested tables from sprmPItap/sprmPFInnerTtp up to 16 levels), sections and page setup, headers/footers,
+footnotes/endnotes, complex fields, inline PNG/JPEG pictures, comments (PlcfandRef/PlcfandTxt with
+GrpXstAtnOwners authors, initials and SttbfAtnBkmk ranges), bookmarks (SttbfBkmk/PlcfBkf/PlcfBkl), tracked
+insertions and deletions (sprmCFRMarkIns/Del with SttbfRMark authors and DTTM dates) and main-text floating
+objects (PlcSpaMom FSPA anchors joined with the OfficeArt drawing: BLIP-store pictures, embedded or at the
+FBSE foDelay offset, preset shapes with solid fill/line colours, and text boxes with their PlcftxbxTxt text;
+page/margin/column/paragraph offsets and none/square/top-and-bottom/behind wrapping). The editor model then
+treats floating DOCX drawings as it does for .docx (a separate paragraph plus a conversion warning). Not yet:
+encrypted or Word 6/95 files (rejected), floating objects in headers, grouped shapes, freeforms and other
+non-preset geometry (dropped), tight/through wrap (written as square), shape rotation, line widths and
+gradients, paragraph-mark and formatting revisions, comment and bookmark boundaries inside table-row end
+marks, per-cell borders/shading, and list-style formatting carried by styles. Wordcraft models only one table
+level and drops comments and revision marks.
 
 ## OpenDocument Text (.odt)
 
