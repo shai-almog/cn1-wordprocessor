@@ -99,7 +99,14 @@ jobs:
           security set-key-partition-list -S apple-tool:,apple: -k "$pw" "$kc" >/dev/null
           security list-keychains -d user -s "$kc" $(security list-keychains -d user | tr -d '"')
           rm "$RUNNER_TEMP/cert.p12"
+          # The Developer ID G2 intermediate makes the identity valid even when the runner's
+          # system keychain lacks it; without it find-identity -v lists nothing.
+          curl -fsSL https://www.apple.com/certificateauthority/DeveloperIDG2CA.cer -o "$RUNNER_TEMP/g2.cer"
+          security import "$RUNNER_TEMP/g2.cer" -k "$kc" || true
+          security find-identity -p codesigning "$kc"
           id=$(security find-identity -v -p codesigning "$kc" | awk -F'"' '/Developer ID Application/{print $2; exit}')
+          # Secrets that do not yield an identity are a configuration error, not an unsigned build.
+          if [[ -z $id ]]; then echo "::error::MACOS_CERT_P12 holds no valid Developer ID Application identity"; exit 1; fi
           echo "MACOS_SIGN_IDENTITY=$id" >> "$GITHUB_ENV"
       - name: Package
         env:
