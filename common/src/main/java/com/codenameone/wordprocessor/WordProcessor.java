@@ -449,14 +449,7 @@ public class WordProcessor {
     if (OfficeTheme.mobile()) editor.fitWidth();
     else zoomTo(1f);
     updateStatus();
-    Display.getInstance()
-        .callSerially(
-            () -> {
-              if (!OfficeTheme.mobile()) {
-                editor.requestFocus();
-                editor.startInput();
-              }
-            });
+    if (!OfficeTheme.mobile()) editor.startInputAfterPaint();
     new UITimer(this::autosave).schedule(1000, true, form);
   }
 

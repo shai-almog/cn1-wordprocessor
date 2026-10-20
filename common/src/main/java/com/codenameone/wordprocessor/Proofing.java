@@ -226,11 +226,18 @@ public final class Proofing {
     if (n == 0 || n > 40) return out;
     final var scored = new ArrayList<Object[]>();
     WordList d = WordList.get();
-    int total = d.words.length;
-    Set<String> ex = extra();
-    java.util.Iterator<String> more = ex.iterator();
-    for (int k = 0; k < total + ex.size(); k++) {
-      String w = k < total ? d.words[k] : more.next();
+    int total = d.size();
+    for (int k = 0; k < total; k++) {
+      int wn = d.length(k);
+      if (wn + 2 < n || wn > n + 2) continue;
+      int dist = distance(lower, d, k);
+      if (dist <= 2) {
+        // Only near matches become Strings; the list itself stays packed.
+        String w = d.word(k);
+        scored.add(new Object[] {Integer.valueOf(dist), Integer.valueOf(w.charAt(0) == lower.charAt(0) ? 0 : 1), w});
+      }
+    }
+    for (String w : extra()) {
       int wn = w.length();
       if (wn + 2 < n || wn > n + 2) continue;
       int dist = distance(lower, w);
@@ -265,16 +272,28 @@ public final class Proofing {
 
   /** Optimal string alignment distance, early exit at 3. */
   static int distance(String a, String b) {
-    int n = a.length(), m = b.length();
+    return distance(a, b.toCharArray(), b.length());
+  }
+
+  /** Distance to dictionary word k, read from the packed list without making a String. */
+  private static int distance(String a, WordList d, int k) {
+    int m = d.length(k);
+    char[] b = new char[m];
+    for (int j = 0; j < m; j++) b[j] = d.charAt(k, j);
+    return distance(a, b, m);
+  }
+
+  private static int distance(String a, char[] b, int m) {
+    int n = a.length();
     int[] prev2 = new int[m + 1], prev = new int[m + 1], cur = new int[m + 1];
     for (int j = 0; j <= m; j++) prev[j] = j;
     for (int i = 1; i <= n; i++) {
       cur[0] = i;
       int rowMin = i;
       for (int j = 1; j <= m; j++) {
-        int cost = a.charAt(i - 1) == b.charAt(j - 1) ? 0 : 1;
+        int cost = a.charAt(i - 1) == b[j - 1] ? 0 : 1;
         int v = Math.min(Math.min(prev[j] + 1, cur[j - 1] + 1), prev[j - 1] + cost);
-        if (i > 1 && j > 1 && a.charAt(i - 1) == b.charAt(j - 2) && a.charAt(i - 2) == b.charAt(j - 1))
+        if (i > 1 && j > 1 && a.charAt(i - 1) == b[j - 2] && a.charAt(i - 2) == b[j - 1])
           v = Math.min(v, prev2[j - 2] + 1);
         cur[j] = v;
         rowMin = Math.min(rowMin, v);

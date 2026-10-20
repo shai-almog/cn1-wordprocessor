@@ -1230,6 +1230,18 @@ public final class EditorSurface extends Container
         Arrays.asList(viewportX(), viewportY(), getWidth(), getHeight()));
   }
 
+  private boolean inputAfterPaint;
+
+  /**
+   * Focuses the editor and connects native text input once the document has painted.
+   * Connecting it binds the input client to the native window, which can wait on the window
+   * server; at launch that would otherwise delay the first frame.
+   */
+  public void startInputAfterPaint() {
+    inputAfterPaint = true;
+    repaint();
+  }
+
   @Override
   public void paint(Graphics g) {
     // Component.internalPaintImpl already translates by the scroll offsets.
@@ -1556,6 +1568,13 @@ public final class EditorSurface extends Container
       }
     }
     paintInk(g);
+    if (inputAfterPaint) {
+      inputAfterPaint = false;
+      Display.getInstance().callSerially(() -> {
+        requestFocus();
+        startInput();
+      });
+    }
   }
 
   public void selectAll() {
