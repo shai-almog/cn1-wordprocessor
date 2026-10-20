@@ -325,8 +325,7 @@ scripts/verify.sh
 
 CLI files must be new paths. Known lossy DOCX conversion requires `--allow-conversion`.
 The CLI is currently JVM tooling; its timings are not native application startup timings.
-See [formats](docs/FORMATS.md), [automation](docs/AUTOMATION.md), and
-[validation](docs/VALIDATION.md).
+See [formats](docs/FORMATS.md) and [automation](docs/AUTOMATION.md).
 
 
 ## Other targets

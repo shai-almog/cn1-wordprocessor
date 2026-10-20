@@ -6,7 +6,7 @@ from pathlib import Path
 root=Path(__file__).resolve().parents[2]
 parser=argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--base',type=Path,default=root/'artifacts/native-bench/final')
-parser.add_argument('--out',type=Path,default=root/'docs/NATIVE-BENCHMARKS.md')
+parser.add_argument('--out',type=Path,default=root/'artifacts/native-benchmarks.md')
 parser.add_argument('--json',type=Path,default=root/'docs/native-benchmarks.json')
 args=parser.parse_args()
 base=args.base.resolve()

@@ -8,7 +8,8 @@ and the evidence files named.
 
 Wordcraft publishes a 502-row feature catalog (`crates/engine/src/catalog.rs`). 487 rows are
 implemented there; the other 15 are stubs in Wordcraft itself. All 487 implemented rows are
-implemented here as well, and each was checked in the native Mac app. Known gaps are in
+implemented here as well, and each was replayed in the native Mac app
+([catalog matrix](acceptance-matrix.json), [native check results](native-certification.json)). Known gaps are in
 [STATUS](STATUS.md).
 
 ## Where we go further
