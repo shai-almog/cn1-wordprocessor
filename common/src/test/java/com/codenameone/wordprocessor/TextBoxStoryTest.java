@@ -430,6 +430,36 @@ public class TextBoxStoryTest {
     assertEquals(java.util.Collections.singletonList(java.util.Arrays.asList(boxes.get(0), boxes.get(1))), TextBoxes.chains(d));
   }
 
+  @Test
+  public void chainWhoseFirstBoxIsAPlainShapeLinks() throws Exception {
+    // Wordcraft links any shape holding text box text: the first box here is an ellipse.
+    String head = wsp("<wps:txbx id=\"3\"><w:txbxContent><w:p><w:r><w:t>Shape text flows</w:t></w:r></w:p></w:txbxContent></wps:txbx><wps:bodyPr/>")
+        .replace("<wps:cNvSpPr txBox=\"1\"/>", "<wps:cNvSpPr/>").replace("prst=\"rect\"", "prst=\"ellipse\"");
+    String body = head + wsp("<wps:linkedTxbx id=\"3\" seq=\"1\"/><wps:bodyPr/>");
+    String xml = "<?xml version=\"1.0\"?><pkg:package xmlns:pkg=\"http://schemas.microsoft.com/office/2006/xmlPackage\">"
+        + "<pkg:part pkg:name=\"/word/document.xml\"><pkg:xmlData><w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\""
+        + " xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\""
+        + " xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\""
+        + " xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><w:body>" + body
+        + "</w:body></w:document></pkg:xmlData></pkg:part></pkg:package>";
+    var d = Docx.read(new java.io.ByteArrayInputStream(xml.getBytes("UTF-8"))).document;
+    var boxes = new java.util.ArrayList<Picture>();
+    for (Block blk : d.blocks) if (blk instanceof Picture p && p.drawing != null) boxes.add(p);
+    assertEquals(2, boxes.size());
+    assertEquals("shape", boxes.get(0).drawing.kind);
+    var chains = TextBoxes.chains(d);
+    assertEquals(1, chains.size());
+    assertEquals(java.util.Arrays.asList(boxes.get(0).id(), boxes.get(1).id()), chains.get(0));
+    assertEquals("Shape text flows", Drawing.plainText(TextBoxes.story(d, TextBoxes.head(d, boxes.get(1).id()))));
+    // Written back as Wordcraft writes the chain, the shape still first.
+    var out = new java.io.ByteArrayOutputStream();
+    Docx.write(d, out);
+    String doc = entry(out.toByteArray(), "word/document.xml");
+    assertTrue(doc.contains("<wps:txbx id=\"1\">") && doc.contains("<wps:linkedTxbx id=\"1\" seq=\"1\"/>"));
+    var back = Docx.read(new java.io.ByteArrayInputStream(out.toByteArray())).document;
+    assertEquals(1, TextBoxes.chains(back).size());
+  }
+
   static String wsp(String inner) {
     return "<w:p><w:r><w:drawing><wp:inline><wp:extent cx=\"1828800\" cy=\"914400\"/><wp:docPr id=\"1\" name=\"Box\"/><a:graphic>"
         + "<a:graphicData uri=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:wsp><wps:cNvSpPr txBox=\"1\"/>"

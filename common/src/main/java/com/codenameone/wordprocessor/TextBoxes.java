@@ -84,7 +84,7 @@ public final class TextBoxes {
   public static List<List<String>> chains(Document d) {
     var boxes = new LinkedHashMap<String, Picture>();
     map(d, p -> {
-      if (p.drawing != null && "textBox".equals(p.drawing.kind)) boxes.putIfAbsent(p.id(), p);
+      if (p.drawing != null && p.drawing.storyKind()) boxes.putIfAbsent(p.id(), p);
       return p;
     });
     var prev = new LinkedHashMap<String, String>();
