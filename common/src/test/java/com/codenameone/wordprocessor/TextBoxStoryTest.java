@@ -231,4 +231,89 @@ public class TextBoxStoryTest {
     t = (Table) story(s.document()).get(1);
     assertEquals("B1", t.paragraph(0, 1, LayoutEngine.NO_PATH, "p21").text.toString());
   }
+
+  static Document turnedBox(String direction, int rotation) {
+    var story = new Sequence<Block>().append(new Paragraph("p10", RichText.of("Turn me")))
+        .append(new Paragraph("p11", RichText.of("Two")));
+    var drawing = Drawing.of("textBox").with("valign", "top").with("textDirection", direction)
+        .with("rotation", String.valueOf(rotation)).story(story);
+    return new Document(new Sequence<Block>().append(new Paragraph("p1", RichText.of("Body")))
+        .append(Picture.drawing("i5", drawing, 80, 160, "", "left")), PageSpec.A4, "T", 30);
+  }
+
+  static LayoutEngine.PlacedPicture placed(LayoutEngine.Page page) {
+    for (LayoutEngine.PlacedPicture p : page.pictures) if (p.picture().id().equals("i5")) return p;
+    throw new AssertionError("no box");
+  }
+
+  @Test
+  public void verticalBoxStoryRunsDownFromTheRightEdge() throws Exception {
+    var d = turnedBox("rotate90", 0);
+    var page = new LayoutEngine(new PdfMetrics()).layout(d, 0).pages.get(0);
+    var box = placed(page);
+    var lines = page.textBoxLines("i5");
+    assertEquals(2, lines.size());
+    var first = lines.get(0);
+    assertEquals(1, first.turn);
+    // Lines run along the 160pt height (inside the 7.2pt margins), stacking from the right edge.
+    assertEquals(box.x() + box.width() - 7.2f, first.turnX, .5f);
+    assertEquals(box.y() + 7.2f, first.turnY, .5f);
+    float[] b = first.pageBounds();
+    assertTrue(b[3] > b[2]);
+    assertTrue(b[0] + b[2] <= box.x() + box.width() - 7f);
+    assertTrue(lines.get(1).pageBounds()[0] < b[0]);
+    // A point in the first line's page bounds maps back into its frame.
+    float[] f = first.toFrame(b[0] + b[2] / 2, b[1] + 2);
+    assertTrue(f[0] >= first.x - .1f && f[1] >= first.y - .1f && f[1] <= first.y + first.height + .1f);
+    // Upward text starts from the bottom-left.
+    var up = new LayoutEngine(new PdfMetrics()).layout(turnedBox("rotate270", 0), 0).pages.get(0);
+    var u = up.textBoxLines("i5").get(0);
+    assertEquals(2, u.turn);
+    assertEquals(placed(up).y() + 160 - 7.2f, u.turnY, .5f);
+    // The PDF turns those lines rather than drawing the drawing's own text.
+    String pdf = new String(PdfExporter.write(d), "ISO-8859-1");
+    assertTrue(pdf.contains("q 0 -1 1 0 "));
+  }
+
+  @Test
+  public void rotatedBoxStoryTurnsWithTheBoxAndStaysEditable() throws Exception {
+    var d = turnedBox("horizontal", 30);
+    var page = new LayoutEngine(new PdfMetrics()).layout(d, 0).pages.get(0);
+    var box = placed(page);
+    var first = page.textBoxLines("i5").get(0);
+    assertEquals(3, first.turn);
+    assertEquals(30, first.angle(), .01f);
+    // The frame's origin is the text area's top-left corner turned about the box centre.
+    double r = Math.toRadians(30);
+    float dx = 7.2f - box.width() / 2, dy = 7.2f - box.height() / 2;
+    assertEquals(box.x() + box.width() / 2 + dx * Math.cos(r) - dy * Math.sin(r), first.turnX, .5f);
+    assertEquals(box.y() + box.height() / 2 + dx * Math.sin(r) + dy * Math.cos(r), first.turnY, .5f);
+    float[] p = first.toPage(first.x + 3, first.y + 4);
+    float[] back = first.toFrame(p[0], p[1]);
+    assertEquals(first.x + 3, back[0], .01f);
+    assertEquals(first.y + 4, back[1], .01f);
+    // Editing the story reaches the turned lines' paragraphs.
+    var s = new Session(d);
+    s.enterTextBox("i5");
+    s.select(0, 0, 0);
+    s.typeText("X", 0);
+    s.leaveCell();
+    assertEquals("XTurn me", ((Paragraph) story(s.document()).get(0)).text.toString());
+    var again = new LayoutEngine(new PdfMetrics()).layout(s.document(), 0).pages.get(0);
+    assertEquals(3, again.textBoxLines("i5").get(0).turn);
+    assertTrue(new String(PdfExporter.write(d), "ISO-8859-1").contains(" cm"));
+  }
+
+  @Test
+  public void stackedBoxStoryIsOneLetterToALine() throws Exception {
+    var page = new LayoutEngine(new PdfMetrics()).layout(turnedBox("stacked", 0), 0).pages.get(0);
+    var lines = page.textBoxLines("i5");
+    int letters = 0;
+    for (LayoutEngine.Line l : lines) {
+      assertEquals(0, l.turn);
+      assertTrue(l.end - l.start <= 2);
+      if (l.paragraphId.equals("p11")) letters++;
+    }
+    assertEquals(3, letters);
+  }
 }

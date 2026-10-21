@@ -257,7 +257,7 @@ public final class EditorSurface extends Container
         unturned = g.getTransform();
         var turned = unturned.copy();
         turned.translate(x + line.turnX * scale, y + line.turnY * scale);
-        turned.rotate((float) (line.turn == 1 ? Math.PI / 2 : -Math.PI / 2), 0, 0);
+        turned.rotate((float) Math.toRadians(line.angle()), 0, 0);
         turned.translate(-x, -y);
         g.setTransform(turned);
       }
@@ -2184,8 +2184,11 @@ public final class EditorSurface extends Container
     LayoutEngine.Line best = null;
     float distance = Float.MAX_VALUE;
     for (LayoutEngine.Line l : p.textBoxLines(id)) {
-      float dy = y < l.y ? l.y - y : y > l.y + l.height ? y - l.y - l.height : 0;
-      float dx = x < l.x ? l.x - x : x > l.x + l.width ? x - l.x - l.width : 0;
+      // A turned or rotated box's line is hit in its unturned frame.
+      float[] f = l.toFrame(x, y);
+      float fx = f[0], fy = f[1];
+      float dy = fy < l.y ? l.y - fy : fy > l.y + l.height ? fy - l.y - l.height : 0;
+      float dx = fx < l.x ? l.x - fx : fx > l.x + l.width ? fx - l.x - l.width : 0;
       float d = dy * 1000 + dx;
       if (d < distance) {
         distance = d;

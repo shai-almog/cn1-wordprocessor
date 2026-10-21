@@ -146,6 +146,24 @@ public final class LayoutEngine {
 
     public float turnX, turnY;
 
+    /**
+     * For turn 3 (a rotated or turned text box's story, as Wordcraft draws a rotated object's
+     * items in a turned frame): the frame's angle in degrees, clockwise on the page; frame point
+     * (u, v) lands at (turnX, turnY) plus (u, v) turned by it.
+     */
+    public float turnAngle;
+
+    Line turned(float angle, float ox, float oy) {
+      float a = ((angle % 360) + 360) % 360;
+      turnAngle = a;
+      return turned(a == 90 ? 1 : a == 270 ? 2 : 3, ox, oy);
+    }
+
+    /** The frame's angle in degrees clockwise: 90 down, -90 up, 0 unturned. */
+    public float angle() {
+      return turn == 1 ? 90 : turn == 2 ? -90 : turn == 3 ? turnAngle : 0;
+    }
+
     Line turned(int value, float ox, float oy) {
       turn = value;
       turnX = ox;
@@ -157,6 +175,11 @@ public final class LayoutEngine {
     public float[] toPage(float u, float v) {
       if (turn == 1) return new float[] {turnX - v, turnY + u};
       if (turn == 2) return new float[] {turnX + v, turnY - u};
+      if (turn == 3) {
+        double r = Math.toRadians(turnAngle);
+        float c = (float) Math.cos(r), s = (float) Math.sin(r);
+        return new float[] {turnX + u * c - v * s, turnY + u * s + v * c};
+      }
       return new float[] {u, v};
     }
 
@@ -164,6 +187,11 @@ public final class LayoutEngine {
     public float[] toFrame(float px, float py) {
       if (turn == 1) return new float[] {py - turnY, turnX - px};
       if (turn == 2) return new float[] {turnY - py, px - turnX};
+      if (turn == 3) {
+        double r = Math.toRadians(turnAngle);
+        float c = (float) Math.cos(r), s = (float) Math.sin(r), dx = px - turnX, dy = py - turnY;
+        return new float[] {dx * c + dy * s, dy * c - dx * s};
+      }
       return new float[] {px, py};
     }
 
@@ -175,6 +203,17 @@ public final class LayoutEngine {
     /** The page rectangle {x, y, w, h} that frame rectangle (u, v, w, h) covers. */
     public float[] pageRect(float u, float v, float w, float h) {
       if (turn == 0) return new float[] {u, v, w, h};
+      if (turn == 3) {
+        float x0 = Float.MAX_VALUE, y0 = Float.MAX_VALUE, x1 = -Float.MAX_VALUE, y1 = -Float.MAX_VALUE;
+        for (int k = 0; k < 4; k++) {
+          float[] p = toPage(u + (k % 2) * w, v + (k / 2) * h);
+          x0 = Math.min(x0, p[0]);
+          y0 = Math.min(y0, p[1]);
+          x1 = Math.max(x1, p[0]);
+          y1 = Math.max(y1, p[1]);
+        }
+        return new float[] {x0, y0, x1 - x0, y1 - y0};
+      }
       float[] a = toPage(u, v), b = toPage(u + w, v + h);
       return new float[] {
         Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.abs(a[0] - b[0]), Math.abs(a[1] - b[1])
@@ -1641,13 +1680,15 @@ public final class LayoutEngine {
 
   /**
    * Whether a drawing's text is laid out as a block story by this engine: text boxes and shapes
-   * with horizontal, unrotated text. Turned text (vert, vert270, stacked) and rotated shapes keep
-   * the drawing's own text painting.
+   * with text, horizontal, turned (vert, vert270), stacked or rotated, as Wordcraft lays out a
+   * box's story and turns it with the box.
    */
   public static boolean storyLaidOut(Drawing d) {
-    return d != null && d.storyKind() && "horizontal".equals(d.get("textDirection", "horizontal"))
-        && d.num("rotation", 0) % 360 == 0 && d.storyOrText("x") != null;
+    return d != null && d.storyKind() && d.storyOrText("x") != null;
   }
+
+  /** The line length stacked text is laid out in, one letter to a line (Wordcraft's STACK_WIDTH). */
+  static final float STACK_WIDTH = 12;
 
   /** Lays out the stories of the page's text boxes inside their text rectangles. */
   private void textBoxes(Document doc, Page page) {
@@ -1658,15 +1699,48 @@ public final class LayoutEngine {
       var blocks = d.storyOrText(pic.picture().id() + "-t");
       float[] rect = DrawingOps.textRect(d, pic.width(), pic.height());
       if (rect[2] < 1 || rect[3] < 1) continue;
-      var laid = boxStory(doc, blocks, page.number, rect[2]);
+      // As Wordcraft's textbox.rs: turned text runs along the box's height and its lines stack
+      // across its width (top-to-bottom ones from the right edge, bottom-to-top ones from the
+      // left); stacked text is one letter to a line.
+      var direction = d.get("textDirection", "horizontal");
+      int turn = "rotate90".equals(direction) ? 1 : "rotate270".equals(direction) ? 2 : 0;
+      boolean stacked = "stacked".equals(direction);
+      float along = turn == 0 ? rect[2] : rect[3], across = turn == 0 ? rect[3] : rect[2];
+      var laid = boxStory(doc, blocks, page.number, stacked ? STACK_WIDTH : along);
       var valign = d.get("valign", "middle");
-      float slack = rect[3] - laid.height;
-      float dy = "top".equals(valign) || slack < 0 ? 0 : "bottom".equals(valign) ? slack : slack / 2;
-      float ox = pic.x() + rect[0], oy = pic.y() + rect[1] + dy;
-      float[] clip = {pic.x() + rect[0], pic.y() + rect[1], rect[2], rect[3]};
+      float slack = across - laid.height;
+      float off = "top".equals(valign) || slack < 0 ? 0 : "bottom".equals(valign) ? slack : slack / 2;
+      float bx = pic.x() + rect[0], by = pic.y() + rect[1];
+      float ox = turn == 1 ? bx + rect[2] - off : turn == 2 ? bx + off : bx;
+      float oy = turn == 1 ? by : turn == 2 ? by + rect[3] : by + off;
+      float angle = turn == 1 ? 90 : turn == 2 ? -90 : 0;
+      float[] clip = {bx, by, rect[2], rect[3]};
+      // A rotated box turns its story about the box centre with it (Wordcraft's Draw::Rotated).
+      float rotation = d.num("rotation", 0) % 360;
+      if (rotation != 0) {
+        double r = Math.toRadians(rotation);
+        float cx = pic.x() + pic.width() / 2, cy = pic.y() + pic.height() / 2;
+        float c = (float) Math.cos(r), sn = (float) Math.sin(r), dx = ox - cx, dy = oy - cy;
+        ox = cx + dx * c - dy * sn;
+        oy = cy + dx * sn + dy * c;
+        angle += rotation;
+        // The clip is the turned text area's page bounds.
+        float x0 = Float.MAX_VALUE, y0 = Float.MAX_VALUE, x1 = -Float.MAX_VALUE, y1 = -Float.MAX_VALUE;
+        for (int k = 0; k < 4; k++) {
+          float px = bx + (k % 2) * rect[2] - cx, py = by + (k / 2) * rect[3] - cy;
+          float qx = cx + px * c - py * sn, qy = cy + px * sn + py * c;
+          x0 = Math.min(x0, qx);
+          y0 = Math.min(y0, qy);
+          x1 = Math.max(x1, qx);
+          y1 = Math.max(y1, qy);
+        }
+        clip = new float[] {x0, y0, x1 - x0, y1 - y0};
+      }
+      boolean turned = angle % 360 != 0;
       for (Line l : laid.lines) {
         var line = new Line(-1, -1, -1, l.paragraphId, pic.page() < 0 ? page.number : pic.page(),
-            ox + l.x, oy + l.y, raw(l), l.marker);
+            turned ? l.x : ox + l.x, turned ? l.y : oy + l.y, raw(l), l.marker);
+        if (turned) line.turned(angle, ox, oy);
         line.textBox = pic.picture().id();
         line.boxCell = l.boxCell;
         line.boxClip = clip;

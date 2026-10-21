@@ -418,10 +418,20 @@ public final class PdfExporter {
         if (line.turn != 0) {
           // Turned cell text: drawn in its frame and turned about the frame origin (see
           // LayoutEngine.Line#toPage), as Wordcraft's PDF writer turns a cell's lines.
+          // Any angle (a rotated text box's story): page = turn origin + frame turned by it,
+          // with PDF's y axis flipped about the page height.
           float h = spec.height;
-          content.append(line.turn == 1 ? "q 0 -1 1 0 " : "q 0 1 -1 0 ")
-              .append(n(line.turn == 1 ? line.turnX - h : line.turnX + h)).append(' ')
-              .append(n(h - line.turnY)).append(" cm\n");
+          if (line.turn != 3)
+            content.append(line.turn == 1 ? "q 0 -1 1 0 " : "q 0 1 -1 0 ")
+                .append(n(line.turn == 1 ? line.turnX - h : line.turnX + h)).append(' ')
+                .append(n(h - line.turnY)).append(" cm\n");
+          else {
+            double r = Math.toRadians(line.angle());
+            float c = Math.round(Math.cos(r) * 1e6) / 1e6f, sn = Math.round(Math.sin(r) * 1e6) / 1e6f;
+            content.append("q ").append(n(c)).append(' ').append(n(-sn)).append(' ').append(n(sn))
+                .append(' ').append(n(c)).append(' ').append(n(line.turnX - h * sn)).append(' ')
+                .append(n(h - line.turnY - h * c)).append(" cm\n");
+          }
         }
         if (line.clipped)
           content
