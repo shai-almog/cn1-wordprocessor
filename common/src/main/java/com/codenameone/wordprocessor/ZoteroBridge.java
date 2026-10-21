@@ -195,7 +195,7 @@ public final class ZoteroBridge implements Zotero.Handler {
         return null;
       }
       case "Document_setBibliographyStyle":
-        // Accepted; the bibliography is one field whose entries share the paragraph's style.
+        setBibliographyStyle(a);
         return null;
       case "Document_convert": {
         Object notes = a.size() > 3 ? a.get(3) : null;
@@ -245,6 +245,17 @@ public final class ZoteroBridge implements Zotero.Handler {
         Located f = fields(session.document()).get(k);
         var rich = runs(str(a, 2), bool(a, 3));
         replaceField(f, f.field.result(plain(str(a, 2), bool(a, 3))));
+        if (Zotero.code(f.field.instruction).regionMatches(true, 0, "BIBL", 0, 4)) {
+          // As Wordcraft's set_text: the bibliography's paragraph takes the Bibliography style.
+          ensureBibliographyStyle();
+          var keep = session.selection();
+          session.transact(
+              s -> {
+                session.select(f.block, f.offset, f.offset + 1);
+                session.applyStyle(BIB_STYLE);
+                session.selectRange(keep.anchorBlock, keep.anchor, keep.block, keep.caret);
+              });
+        }
         if (bool(a, 3)) {
           // The field is one atomic run: apply the formatting its whole result shares.
           var keep = session.selection();
@@ -268,6 +279,41 @@ public final class ZoteroBridge implements Zotero.Handler {
       default:
         throw new UnsupportedOperationException("This editor doesn't support " + method);
     }
+  }
+
+  static final String BIB_STYLE = "Bibliography";
+
+  private void ensureBibliographyStyle() {
+    if (session.document().styles.containsKey(BIB_STYLE)) return;
+    ParagraphStyle normal = session.document().styles.get("Normal");
+    if (normal == null) normal = ParagraphStyle.defaults().get("Normal");
+    session.defineStyle(new ParagraphStyle(BIB_STYLE, BIB_STYLE, normal.paragraph, normal.text));
+  }
+
+  private static float twips(long v) {
+    return Math.max(-31680, Math.min(31680, v)) / 20f;
+  }
+
+  /**
+   * Zotero's bibliography paragraph format (first-line indent, body indent, line spacing and entry
+   * spacing in twips/240ths, then tab stops in twips) applied to the Bibliography style, as
+   * Wordcraft's set_bibliography_style does: no space before, entry spacing after.
+   */
+  private void setBibliographyStyle(List<Object> a) {
+    long first = num(a, 1, 0), body = num(a, 2, 0), line = num(a, 3, 240), entry = num(a, 4, 0);
+    var stops = new ArrayList<TabStop>();
+    if (a.size() > 5 && a.get(5) instanceof List<?> l)
+      for (Object o : l) {
+        if (stops.size() >= 64) break;
+        if (o instanceof Number n) stops.add(new TabStop(Math.max(0, twips(n.longValue())), "left", "none"));
+      }
+    ensureBibliographyStyle();
+    ParagraphStyle old = session.document().styles.get(BIB_STYLE);
+    float spacing = line > 0 ? Math.max(.5f, Math.min(5f, line / 240f)) : 1f;
+    Paragraph p = old.paragraph.with("indent", "" + twips(body)).with("firstIndent", "" + twips(first))
+        .with("spacing", "" + spacing).with("lineRule", "auto").with("before", "0")
+        .with("after", "" + Math.max(0, twips(entry))).with("tabs", TabStop.encode(stops));
+    session.defineStyle(new ParagraphStyle(BIB_STYLE, old.name, p, old.text));
   }
 
   private void replaceField(Located f, InlineField value) {

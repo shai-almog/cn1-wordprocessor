@@ -133,6 +133,39 @@ public class ZoteroTest {
   }
 
   @Test
+  public void bibliographyStyleAppliedAsWordcraft() throws Exception {
+    var s = new Session(Document.empty());
+    s.replace("Refs ");
+    s.select(0, 5, 5);
+    s.insertField(new InlineField(Zotero.PREFIX + "BIBL {} CSL_BIBLIOGRAPHY", "old", false, false));
+    var b = new ZoteroBridge(s, HOST);
+    b.handle("Application_getActiveDocument", Arrays.<Object>asList(3L));
+    b.handle("Document_getFields", Arrays.<Object>asList(1L));
+    // Hanging indent 0.5in, double spacing, 12pt entry spacing, one tab stop at 1in (twips).
+    b.handle("Document_setBibliographyStyle",
+        Arrays.<Object>asList(1L, -720L, 720L, 480L, 240L, Arrays.<Object>asList(1440L), 1L));
+    b.handle("Field_setText", Arrays.<Object>asList(1L, 1L, "{\\rtf Doe. Title.\\par}", true));
+    Paragraph p = s.document().paragraph(0);
+    assertEquals("Bibliography", p.style);
+    ParagraphStyle st = s.document().styles.get("Bibliography");
+    assertEquals(36f, st.paragraph.indent, 0.01f);
+    assertEquals(-36f, st.paragraph.format.firstIndent, 0.01f);
+    assertEquals(2f, st.paragraph.lineSpacing, 0.01f);
+    assertEquals(0f, st.paragraph.before, 0.01f);
+    assertEquals(12f, st.paragraph.after, 0.01f);
+    assertEquals(1, st.paragraph.format.tabs.size());
+    assertEquals(72f, st.paragraph.format.tabs.get(0).position, 0.01f);
+    assertEquals(36f, p.indent, 0.01f);
+    var out = new java.io.ByteArrayOutputStream();
+    Docx.write(s.document(), out);
+    String styles = docPart(out.toByteArray(), "word/styles.xml");
+    int at = styles.indexOf("w:styleId=\"Bibliography\"");
+    assertTrue(styles, at >= 0);
+    String def = styles.substring(at, styles.indexOf("</w:style>", at));
+    assertTrue(def, def.contains("w:hanging=\"720\"") && def.contains("w:after=\"240\"") && def.contains("w:pos=\"1440\""));
+  }
+
+  @Test
   public void editBibliographyDeleteAndUnlink() throws Exception {
     var s = new Session(Document.empty());
     s.replace("A B");
