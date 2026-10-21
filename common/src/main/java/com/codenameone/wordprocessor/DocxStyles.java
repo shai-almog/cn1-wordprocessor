@@ -17,7 +17,16 @@ final class DocxStyles {
   }
 
   DocxStyles(byte[] bytes, byte[] settings, Set<String> warnings) throws IOException {
+    this(bytes, settings, null, warnings);
+  }
+
+  /** The theme part (word/theme/theme1.xml) resolves theme fonts and colours. */
+  private final DocxTheme theme;
+
+  DocxStyles(byte[] bytes, byte[] settings, byte[] themePart, Set<String> warnings)
+      throws IOException {
     this.warnings = warnings;
+    theme = new DocxTheme(themePart, settings);
     float interval = 36;
     if (settings != null) {
       Element stop = Xml.child(Xml.parse(settings), "defaultTabStop");
@@ -193,11 +202,19 @@ final class DocxStyles {
       } else if ("lang".equals(k) && !value.isEmpty()) s = s.with("lang", value);
       else if ("sz".equals(k)) s = s.size(Xml.number(value) / 2);
       else if ("color".equals(k)) {
-        if (!value.isEmpty() && !"auto".equals(value)) s = s.with("color", value);
-      } else if ("rFonts".equals(k))
-        s = s.with("font", Xml.attr(p, "ascii", Xml.attr(p, "hAnsi", s.font)));
-      else if ("shd".equals(k)) {
-        String fill = Xml.attr(p, "fill", "auto");
+        String themed = theme.color(p, "themeColor", "themeTint", "themeShade");
+        if (themed != null) s = s.with("color", themed);
+        else if (!value.isEmpty() && !"auto".equals(value)) s = s.with("color", value);
+      } else if ("rFonts".equals(k)) {
+        // A theme font supersedes the fixed font beside it, as Wordcraft.
+        String font = theme.font(Xml.attr(p, "asciiTheme", ""));
+        if (font == null && Xml.attr(p, "ascii", "").isEmpty())
+          font = theme.font(Xml.attr(p, "hAnsiTheme", ""));
+        if (font == null) font = Xml.attr(p, "ascii", Xml.attr(p, "hAnsi", s.font));
+        s = s.with("font", font);
+      } else if ("shd".equals(k)) {
+        String fill = theme.color(p, "themeFill", "themeFillTint", "themeFillShade");
+        if (fill == null) fill = Xml.attr(p, "fill", "auto");
         if (!"auto".equals(fill)) s = s.with("background", fill);
       } else if ("highlight".equals(k)) {
         String[] names = {

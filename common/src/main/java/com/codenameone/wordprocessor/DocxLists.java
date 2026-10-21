@@ -83,6 +83,11 @@ final class DocxLists {
     return result;
   }
 
+  private static boolean isOff(Element onOff) {
+    String v = Xml.attr(onOff, "val", "true");
+    return "0".equals(v) || "false".equals(v) || "off".equals(v);
+  }
+
   private static Definition definition(Element l, int level, Set<String> warnings) {
     var d = new Definition();
     Element fmt = Xml.child(l, "numFmt"),
@@ -90,9 +95,12 @@ final class DocxLists {
         label = Xml.child(l, "lvlText");
     String format = fmt == null ? "decimal" : Xml.attr(fmt, "val", "decimal");
     if ("bullet".equals(format)) d.kind = "bullet";
-    else if (Arrays.asList("decimal", "lowerLetter", "upperLetter", "lowerRoman", "upperRoman")
-        .contains(format)) d.format = format;
+    else if (ListNumbers.BASES.contains(format) && !"outline".equals(format)
+        && !"legal".equals(format)) d.format = format;
     else warnings.add("Numbering format: " + format);
+    // Legal numbering (w:isLgl) shows every level of the label in Arabic digits, as Wordcraft.
+    Element legal = Xml.child(l, "isLgl");
+    if (legal != null && !isOff(legal) && !"bullet".equals(d.kind)) d.format = "legal";
     if (start != null) d.start = Math.max(1, Integer.parseInt(Xml.attr(start, "val", "1")));
     String text = label == null ? null : Xml.attr(label, "val", "");
     boolean bullet = "bullet".equals(d.kind);

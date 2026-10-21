@@ -22,18 +22,19 @@ public final class ListNumbers {
       String t = template(p.listFormat);
       return t != null ? t : BULLETS[level % 3];
     }
-    return label(levelText(p.listFormat, level), level);
+    return label(levelText(p.listFormat, level), level, "legal".equals(base(p.listFormat)));
   }
 
   /** Expands Word lvlText: %1..%9 are the counters of levels 1..9 in each level's format. */
-  private String label(String text, int level) {
+  private String label(String text, int level, boolean legal) {
     var b = new StringBuilder();
     for (int i = 0; i < text.length(); i++) {
       char c = text.charAt(i);
       if (c == '%' && i + 1 < text.length() && text.charAt(i + 1) >= '1' && text.charAt(i + 1) <= '9') {
         int k = text.charAt(++i) - '1';
         if (k <= level)
-          b.append(format(Math.max(1, values[k]), formats[k] == null ? "decimal" : formats[k]));
+          b.append(format(Math.max(1, values[k]),
+              legal || formats[k] == null ? "decimal" : formats[k]));
       } else b.append(c);
     }
     return b.toString();
@@ -45,7 +46,8 @@ public final class ListNumbers {
   public static final java.util.List<String> BASES =
       java.util.Arrays.asList(
           "decimal", "lowerLetter", "upperLetter", "lowerRoman", "upperRoman", "outline", "legal",
-          "bullet");
+          "bullet", "decimalZero", "ordinal", "cardinalText", "ordinalText", "chicago",
+          "numberInDash", "none");
 
   public static boolean valid(String listFormat) {
     int bar = listFormat.indexOf('|');
@@ -96,14 +98,35 @@ public final class ListNumbers {
   public static String format(int number, String format) {
     format = levelFormat(format, 0);
     if (format.endsWith("Letter")) {
-      var s = "";
-      int n = number;
-      do {
-        n--;
-        s = (char) ('a' + n % 26) + s;
-        n /= 26;
-      } while (n > 0);
-      return format.startsWith("upper") ? s.toUpperCase() : s;
+      // Word letters repeat past z (aa, bb, ...), as Wordcraft; at most 780 (30 z's).
+      if (number <= 0) return "";
+      int n = Math.min(number, 780);
+      var b = new StringBuilder();
+      for (int k = (n - 1) / 26; k >= 0; k--) b.append((char) ('a' + (n - 1) % 26));
+      return format.startsWith("upper") ? b.toString().toUpperCase() : b.toString();
+    }
+    switch (format) {
+      case "decimalZero":
+        return number < 10 && number >= 0 ? "0" + number : String.valueOf(number);
+      case "ordinal":
+        return number + ordinalSuffix(number);
+      case "cardinalText":
+        return capitalize(words(Math.min(Math.max(number, 0), 999999)));
+      case "ordinalText":
+        return ordinalText(number);
+      case "chicago": {
+        if (number <= 0) return "";
+        char mark = "*\u2020\u2021\u00a7".charAt((number - 1) % 4);
+        var b = new StringBuilder();
+        for (int k = Math.min((number - 1) / 4 + 1, 10); k > 0; k--) b.append(mark);
+        return b.toString();
+      }
+      case "numberInDash":
+        return "- " + number + " -";
+      case "none":
+        return "";
+      default:
+        break;
     }
     if (format.endsWith("Roman") && number <= 3999) {
       int[] values = {1000, 900, 500, 400, 100, 90, 50, 40, 10, 9, 5, 4, 1};
@@ -117,5 +140,59 @@ public final class ListNumbers {
       return format.startsWith("lower") ? b.toString().toLowerCase() : b.toString();
     }
     return String.valueOf(number);
+  }
+
+  private static String ordinalSuffix(int n) {
+    int t = n % 100;
+    if (t >= 11 && t <= 13) return "th";
+    return n % 10 == 1 ? "st" : n % 10 == 2 ? "nd" : n % 10 == 3 ? "rd" : "th";
+  }
+
+  private static final String[] ONES = {"zero", "one", "two", "three", "four", "five", "six",
+      "seven", "eight", "nine", "ten", "eleven", "twelve", "thirteen", "fourteen", "fifteen",
+      "sixteen", "seventeen", "eighteen", "nineteen"};
+  private static final String[] TENS = {"", "", "twenty", "thirty", "forty", "fifty", "sixty",
+      "seventy", "eighty", "ninety"};
+
+  /** English cardinal words, as Wordcraft's cardinal_text before capitalizing. */
+  private static String words(int n) {
+    if (n < 20) return ONES[n];
+    if (n < 100) return n % 10 == 0 ? TENS[n / 10] : TENS[n / 10] + "-" + ONES[n % 10];
+    if (n < 1000) {
+      String h = words(n / 100) + " hundred";
+      return n % 100 == 0 ? h : h + " " + words(n % 100);
+    }
+    String th = words(n / 1000) + " thousand";
+    return n % 1000 == 0 ? th : th + " " + words(n % 1000);
+  }
+
+  /** Capitalizes the first letter and each letter after a space or hyphen (Twenty-One). */
+  private static String capitalize(String s) {
+    var b = new StringBuilder(s.length());
+    boolean up = true;
+    for (int i = 0; i < s.length(); i++) {
+      char c = s.charAt(i);
+      b.append(up ? Character.toUpperCase(c) : c);
+      up = c == ' ' || c == '-';
+    }
+    return b.toString();
+  }
+
+  private static String ordinalText(int number) {
+    String c = words(Math.min(Math.max(number, 0), 999999));
+    int cut = Math.max(c.lastIndexOf('-'), c.lastIndexOf(' '));
+    String head = c.substring(0, cut + 1), last = c.substring(cut + 1);
+    switch (last) {
+      case "one": last = "first"; break;
+      case "two": last = "second"; break;
+      case "three": last = "third"; break;
+      case "five": last = "fifth"; break;
+      case "eight": last = "eighth"; break;
+      case "nine": last = "ninth"; break;
+      case "twelve": last = "twelfth"; break;
+      default:
+        last = last.endsWith("y") ? last.substring(0, last.length() - 1) + "ieth" : last + "th";
+    }
+    return capitalize(head + last);
   }
 }

@@ -62,7 +62,8 @@ public final class Docx {
     var warnings = new LinkedHashSet<String>();
     DocxLists.Read lists = DocxLists.read(parts.get("word/numbering.xml"), warnings);
     var styles =
-        new DocxStyles(parts.get("word/styles.xml"), parts.get("word/settings.xml"), warnings);
+        new DocxStyles(parts.get("word/styles.xml"), parts.get("word/settings.xml"),
+            parts.get("word/theme/theme1.xml"), warnings);
     var links = new DocxLinks(parts);
     var comments = new DocxComments(parts);
     comments.markers = Xml.mayContain(root, "bookmarkStart") || Xml.mayContain(root, "bookmarkEnd")
