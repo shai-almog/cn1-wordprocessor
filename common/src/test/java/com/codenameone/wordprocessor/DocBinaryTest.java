@@ -756,4 +756,42 @@ public class DocBinaryTest {
     assertEquals(72, Float.parseFloat(items[1].split("\u001f")[0]), .5f);
     assertEquals(36, Float.parseFloat(items[1].split("\u001f")[1]), .5f);
   }
+
+  /** A synthetic .doc whose group holds a BStore picture (pib 1) beside a rectangle. */
+  @Test
+  public void pictureInsideADocGroupIsKept() throws Exception {
+    var d = new DocWriter();
+    d.run("Group ");
+    int a = d.cp();
+    d.run("\u0008 end").para(0);
+    d.ccpText = d.cp();
+    d.tables.put(6, plc(0, d.ccpText));
+    byte[] blip = rec(0x6E0 << 4, 0xF01E, new byte[17], PNG);
+    var fbseBody = new byte[36];
+    fbseBody[0] = 6;
+    byte[] dgg = rec(0xF, 0xF000, rec(0xF, 0xF001, rec(2 | 6 << 4, 0xF007, fbseBody, blip)));
+    byte[] fspgr = cat(le32(0), le32(0), le32(1000), le32(1000));
+    byte[] head = rec(0xF, 0xF004, rec(1, 0xF009, fspgr), rec(2, 0xF00A, le32(3000), le32(0x201)));
+    byte[] pic = rec(0xF, 0xF004, rec(2 | 75 << 4, 0xF00A, le32(3001), le32(0xA00)),
+        rec(3 | 1 << 4, 0xF00B, cat(le16(0x4104), le32(1))),
+        rec(0, 0xF00F, cat(le32(0), le32(0), le32(500), le32(1000))));
+    byte[] box = rec(0xF, 0xF004, rec(2 | 1 << 4, 0xF00A, le32(3002), le32(0xA00)),
+        rec(0, 0xF00F, cat(le32(500), le32(0), le32(1000), le32(1000))));
+    byte[] dg = rec(0xF, 0xF002, rec(0xF, 0xF003, rec(0xF, 0xF003, head, pic, box)));
+    d.tables.put(50, cat(dgg, new byte[] {0}, dg));
+    d.tables.put(40, cat(plc(a, d.ccpText), fspa(3000, 0, 0, 2880, 1440, 2 << 1 | 2 << 3 | 4 << 5)));
+    var parts = DocBinary.convert(d.build());
+    String doc = part(parts, "word/document.xml");
+    assertTrue(doc, doc.contains("<wpg:wgp") && doc.contains("<pic:pic"));
+    Document m = DocBinary.read(d.build()).document;
+    Picture g = null;
+    for (Block b : m.blocks) if (b instanceof Picture p && p.drawing != null && p.drawing.flag("group")) g = p;
+    assertNotNull(m.plainText(), g);
+    // The picture member fills the left half (72 x 72 of the 144 x 72 frame) and draws as an image.
+    var ops = DrawingOps.build(g.drawing, g.width, g.height);
+    assertEquals(1, ops.images.size());
+    assertEquals(0, ops.images.get(0).x(), .5f);
+    assertEquals(72, ops.images.get(0).width(), .5f);
+    assertFalse(ops.paths.isEmpty());
+  }
 }
