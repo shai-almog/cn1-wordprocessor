@@ -210,20 +210,20 @@ toolchain; Rust must compile its dependency tree and test binaries before runnin
 
 ### Why does Wordcraft have three times as many tests?
 
-Its 1,926 `#[test]` functions average 4.9 assertions each; our 647 average 4.5, so the extra
-tests are real extra checks, not finer slicing. Counted at the pinned revision:
+Wordcraft has 1,926 `#[test]` functions; this app now has over 800 JUnit tests (the CI chart
+above counts the suite at its last metrics run). Counted at Wordcraft's pinned revision:
 
 - **About a quarter test plumbing that egui leaves to the application.** `ui-egui` alone has
   371 tests (scroll viewports, popup placement, hover fades, window-state restore, combo-list
   virtualization, file browser, print spooling), plus `fonts`, `render`, `geom` and `xtask`
   (99 more: font fallback per script, rasterization, build tooling). Codename One supplies
   these as framework services, tested once in the framework instead of in every app.
-- **About 7% cover features this app does not have:** legacy binary `.doc` import (`docbin`,
-  67), WMF/EMF pictures (`metafile`, 57) and Zotero (`zotero`, 20).
-- **The rest, about 1,300, cover the same ground as our 647.** Part of that is a different
+- **The rest cover the same ground as ours**, including `.doc` import, WMF/EMF pictures,
+  Zotero and equation editing, which this app now implements too. Part of the difference is
   style (153 are named round trips, which we check inside broader format tests), but Wordcraft
-  does test shared features more densely than we do. Fewer tests is cheaper CI, not proof of
-  equal coverage.
+  still tests shared features more densely. Fewer tests is cheaper CI, not proof of equal
+  coverage. Editing, shortcuts, IME composition, dark mode and the phone menu are covered by
+  headless tests and by tests that drive the app inside the Codename One simulator.
 
 ## Proven in CI
 
