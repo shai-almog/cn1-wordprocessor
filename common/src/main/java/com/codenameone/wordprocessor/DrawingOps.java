@@ -52,6 +52,12 @@ public final class DrawingOps {
   public record Path(
       float[] points, boolean closed, int fill, int stroke, float width, int alpha) {}
 
+  /**
+   * A raster picture (PNG or JPEG bytes) drawn into the box x, y, width, height, turned clockwise
+   * by rotation degrees about the box's centre: a picture inside a drawing group.
+   */
+  public record Image(byte[] data, float x, float y, float width, float height, float rotation) {}
+
   /** One line of text placed in a box; renderers align it with real font metrics. */
   public record Text(
       String text, float x, float y, float width, float size, int color, boolean bold,
@@ -60,6 +66,7 @@ public final class DrawingOps {
   public static final class Ops {
     public final List<Path> paths = new ArrayList<>();
     public final List<Text> texts = new ArrayList<>();
+    public final List<Image> images = new ArrayList<>();
     /**
      * SmartArt shapes as {prst, x, y, w, h, fill, line, textColor, text} in points, recorded beside
      * the paths so the DOCX writer can save them as the diagram's cached dsp drawing.
@@ -120,19 +127,64 @@ public final class DrawingOps {
         try {
           float x = Float.parseFloat(f.get(0)), y = Float.parseFloat(f.get(1));
           Ops child = build(Drawing.decode(f.get(4)), Float.parseFloat(f.get(2)), Float.parseFloat(f.get(3)));
+          float mw = Float.parseFloat(f.get(2)), mh = Float.parseFloat(f.get(3));
+          // A member's own a:xfrm rot turns it about its centre, as Wordcraft's group members.
+          rotate(child, 0, 0, 0, mw / 2, mh / 2, Drawing.decode(f.get(4)).num("rotation", 0));
           for (Path p : child.paths) offset(p.points, x, y);
           for (Text t : child.texts)
             ops.texts.add(new Text(t.text, t.x + x, t.y + y, t.width, t.size, t.color, t.bold, t.italic, t.align, t.outline, t.rotation));
+          for (Image m : child.images)
+            ops.images.add(new Image(m.data, m.x + x, m.y + y, m.width, m.height, m.rotation));
           ops.paths.addAll(child.paths);
         } catch (RuntimeException malformed) {
           // skip an unreadable group member
         }
+      }
+      // The group's own rotation turns every member about the group's centre.
+      if ("canvas".equals(k)) rotate(ops, 0, 0, 0, w / 2, h / 2, d.num("rotation", 0));
+    } else if ("picture".equals(k)) {
+      try {
+        byte[] data = com.codename1.util.Base64.decode(d.get("image", "").getBytes("UTF-8"));
+        if (data != null && data.length > 0) ops.images.add(new Image(data, 0, 0, w, h, 0));
+      } catch (java.io.UnsupportedEncodingException | RuntimeException bad) {
+        // an unreadable picture member draws nothing
       }
     } else if ("icon".equals(k)) icon(ops, d, w, h);
     else if ("signature".equals(k)) signature(ops, d, w, h);
     else if ("object".equals(k)) object(ops, d, w, h);
     effects(ops, d);
     return ops;
+  }
+
+  /**
+   * Turns the primitives from the given indexes on clockwise by deg degrees about cx, cy: path
+   * points, text and picture boxes (moved by their centres; pictures also turn).
+   */
+  static void rotate(Ops ops, int path, int text, int image, float cx, float cy, float deg) {
+    if (deg % 360 == 0) return;
+    double a = Math.toRadians(deg);
+    float cos = (float) Math.cos(a), sin = (float) Math.sin(a);
+    for (int i = path; i < ops.paths.size(); i++) {
+      float[] p = ops.paths.get(i).points;
+      for (int k = 0; k + 1 < p.length; k += 2) {
+        float dx = p[k] - cx, dy = p[k + 1] - cy;
+        p[k] = cx + dx * cos - dy * sin;
+        p[k + 1] = cy + dx * sin + dy * cos;
+      }
+    }
+    for (int i = text; i < ops.texts.size(); i++) {
+      Text t = ops.texts.get(i);
+      float dx = t.x + t.width / 2 - cx, dy = t.y + t.size / 2 - cy;
+      float nx = cx + dx * cos - dy * sin, ny = cy + dx * sin + dy * cos;
+      ops.texts.set(i, new Text(t.text, nx - t.width / 2, ny - t.size / 2, t.width, t.size, t.color, t.bold, t.italic,
+          t.align, t.outline, t.rotation));
+    }
+    for (int i = image; i < ops.images.size(); i++) {
+      Image m = ops.images.get(i);
+      float dx = m.x + m.width / 2 - cx, dy = m.y + m.height / 2 - cy;
+      float nx = cx + dx * cos - dy * sin, ny = cy + dx * sin + dy * cos;
+      ops.images.set(i, new Image(m.data, nx - m.width / 2, ny - m.height / 2, m.width, m.height, (m.rotation + deg) % 360));
+    }
   }
 
   // ---------------------------------------------------------------- shapes and text boxes

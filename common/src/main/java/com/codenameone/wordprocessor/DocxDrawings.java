@@ -40,7 +40,7 @@ final class DocxDrawings {
         .append("\" name=\"").append(d.kind).append(' ').append(docId).append("\" descr=\"")
         .append(Xml.attribute(p.alt)).append("\"><a:extLst xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\">")
         .append("<a:ext uri=\"").append(EXT).append("\"><cn:drawing xmlns:cn=\"").append(CN)
-        .append("\" value=\"").append(Xml.attribute(d.encode())).append("\"/></a:ext></a:extLst></wp:docPr>")
+        .append("\" value=\"").append(Xml.attribute(DocumentXml.controlsOut(d.encode()))).append("\"/></a:ext></a:extLst></wp:docPr>")
         .append("<a:graphic xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\">");
     String[] dgm = parts != null && "smartArt".equals(d.kind) ? parts.diagramRels(d, p.width, p.height) : null;
     if (parts != null && "chart".equals(d.kind)) {
@@ -66,6 +66,23 @@ final class DocxDrawings {
       DrawingOps.Ops ops = DrawingOps.build(d, p.width, p.height);
       for (DrawingOps.Path path : ops.paths) path(b, path);
       for (DrawingOps.Text text : ops.texts) text(b, text);
+      if (parts != null)
+        for (DrawingOps.Image im : ops.images) {
+          String rel;
+          try {
+            rel = parts.rel(new Picture("g" + docId, im.data(), Math.max(1, im.width()), Math.max(1, im.height()), "", "left"));
+          } catch (IllegalArgumentException bad) {
+            continue;
+          }
+          // A group picture as Word writes one: pic:pic with its box and a:xfrm rot.
+          long rot = Math.round(((im.rotation() % 360) + 360) % 360 * 60000.0);
+          b.append("<pic:pic xmlns:pic=\"http://schemas.openxmlformats.org/drawingml/2006/picture\"><pic:nvPicPr>")
+              .append("<pic:cNvPr id=\"0\" name=\"Picture\"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed=\"")
+              .append(rel).append("\" xmlns:r=\"").append(DocxCharts.R).append("\"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill>")
+              .append("<pic:spPr><a:xfrm").append(rot == 0 ? "" : " rot=\"" + rot + "\"").append("><a:off x=\"")
+              .append(emu(im.x())).append("\" y=\"").append(emu(im.y())).append("\"/><a:ext cx=\"").append(emu(im.width()))
+              .append("\" cy=\"").append(emu(im.height())).append("\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom></pic:spPr></pic:pic>");
+        }
       b.append("</wpg:wgp>");
     }
     b.append("</a:graphicData></a:graphic>").append(containerEnd(p)).append("</w:drawing></w:r></w:p>");
@@ -299,7 +316,7 @@ final class DocxDrawings {
     Element mark = DocxPictures.descendant(docPr, "drawing");
     if (mark == null) return null;
     try {
-      return Drawing.decode(Xml.attr(mark, "value", ""));
+      return Drawing.decode(DocumentXml.controlsIn(Xml.attr(mark, "value", "")));
     } catch (RuntimeException e) {
       return null;
     }
@@ -307,8 +324,13 @@ final class DocxDrawings {
 
   /** A Word shape or text box (wps:wsp outside a group), or null. */
   static Drawing shape(Element container, Set<String> warnings) {
+    return shape(container, warnings, null);
+  }
+
+  /** As above, reading group pictures' bytes by relationship id through blips (null: dropped). */
+  static Drawing shape(Element container, Set<String> warnings, java.util.function.Function<String, byte[]> blips) {
     Element wgp = DocxPictures.descendant(container, "wgp");
-    if (wgp != null) return group(wgp, container, warnings);
+    if (wgp != null) return group(wgp, container, warnings, blips);
     Element wsp = DocxPictures.descendant(container, "wsp");
     if (wsp == null) return null;
     return wsp(wsp);
@@ -317,9 +339,11 @@ final class DocxDrawings {
   /**
    * A wpg:wgp group as Wordcraft's read_group/group_members: members flattened into the group's
    * frame (points), nested groups mapped through their chOff/chExt (outer = x0 + inner * s), to
-   * depth 8. Members are shapes, text boxes and freeforms; pictures inside a group are dropped.
+   * depth 8. Members are shapes, text boxes, freeforms and pictures (their bytes kept as a
+   * "picture" member); member and group a:xfrm rot turn them as there.
    */
-  static Drawing group(Element wgp, Element container, Set<String> warnings) {
+  static Drawing group(Element wgp, Element container, Set<String> warnings,
+      java.util.function.Function<String, byte[]> blips) {
     Element extent = Xml.child(container, "extent");
     float w = extent == null ? 0 : Xml.number(Xml.attr(extent, "cx", "0")) / 12700f;
     float h = extent == null ? 0 : Xml.number(Xml.attr(extent, "cy", "0")) / 12700f;
@@ -331,10 +355,13 @@ final class DocxDrawings {
         t = new float[] {-ch[0] * w / ch[2], -ch[1] * h / ch[3], w / ch[2], h / ch[3]};
     }
     var items = new StringBuilder();
-    members(wgp, t, 0, items, warnings);
+    members(wgp, t, 0, items, warnings, blips);
     if (items.length() == 0) return null;
-    return Drawing.of("canvas").with("fill", "none").with("line", "none").with("group", "true")
+    Drawing g = Drawing.of("canvas").with("fill", "none").with("line", "none").with("group", "true")
         .with("items", items.toString());
+    if (xfrm != null && !Xml.attr(xfrm, "rot", "").isEmpty())
+      g = g.with("rotation", FloatPosition.num(Xml.number(Xml.attr(xfrm, "rot", "0")) / 60000f));
+    return g;
   }
 
   private static Element groupXfrm(Element g) {
@@ -350,12 +377,13 @@ final class DocxDrawings {
         Xml.number(Xml.attr(e, "cx", "0")), Xml.number(Xml.attr(e, "cy", "0"))};
   }
 
-  private static void members(Element g, float[] t, int depth, StringBuilder items, Set<String> warnings) {
+  private static void members(Element g, float[] t, int depth, StringBuilder items, Set<String> warnings,
+      java.util.function.Function<String, byte[]> blips) {
     for (Element m : Xml.children(g, null)) {
       String n = Xml.local(m);
       if ("AlternateContent".equals(n)) {
         Element choice = Xml.child(m, "Choice");
-        if (choice != null) members(choice, t, depth, items, warnings);
+        if (choice != null) members(choice, t, depth, items, warnings, blips);
         continue;
       }
       if ("grpSp".equals(n)) {
@@ -366,19 +394,35 @@ final class DocxDrawings {
         if (c == null) c = b;
         float kx = c[2] > 0 ? b[2] / c[2] : 1, ky = c[3] > 0 ? b[3] / c[3] : 1;
         members(m, new float[] {t[0] + (b[0] - c[0] * kx) * t[2], t[1] + (b[1] - c[1] * ky) * t[3], t[2] * kx, t[3] * ky},
-            depth + 1, items, warnings);
-      } else if ("wsp".equals(n)) {
+            depth + 1, items, warnings, blips);
+      } else if ("wsp".equals(n) || "pic".equals(n)) {
         Element pr = Xml.child(m, "spPr"), x = pr == null ? null : Xml.child(pr, "xfrm");
         float[] b = x == null ? null : box(x, "off", "ext");
         if (b == null) continue;
-        Drawing d = wsp(m);
+        Drawing d;
+        if ("pic".equals(n)) {
+          Element blip = DocxPictures.descendant(m, "blip");
+          byte[] data = blip == null || blips == null ? null : blips.apply(Xml.attr(blip, "embed", ""));
+          if (data == null) {
+            warnings.add("Picture inside a drawing group dropped");
+            continue;
+          }
+          try {
+            // Kept as PNG or JPEG, as the picture model stores them.
+            data = PictureCodecs.mime(data) == null ? data : PictureCodecs.toPng(data);
+          } catch (java.io.IOException ex) {
+            warnings.add("Picture inside a drawing group dropped");
+            continue;
+          }
+          d = Drawing.of("picture").with("image", com.codename1.util.Base64.encodeNoNewline(data));
+        } else d = wsp(m);
         if (x != null && !Xml.attr(x, "rot", "").isEmpty())
           d = d.with("rotation", String.valueOf(Math.round(Xml.number(Xml.attr(x, "rot", "0")) / 60000f)));
         if (items.length() > 0) items.append('\u001e');
         items.append(t[0] + b[0] * t[2]).append('\u001f').append(t[1] + b[1] * t[3]).append('\u001f')
             .append(Math.max(0, b[2] * t[2])).append('\u001f').append(Math.max(0, b[3] * t[3])).append('\u001f')
             .append(d.encode());
-      } else if ("pic".equals(n)) warnings.add("Picture inside a drawing group dropped");
+      }
     }
   }
 

@@ -87,7 +87,7 @@ final class DocxPictures {
         String[] wrap = inline != null ? new String[] {"inline", "", "left", ""} : anchorWrap(anchor);
         Element extent0 = Xml.child(container, "extent"), props0 = Xml.child(container, "docPr");
         Drawing drawing = DocxDrawings.extension(container);
-        if (drawing == null) drawing = DocxDrawings.shape(container, warnings);
+        if (drawing == null) drawing = DocxDrawings.shape(container, warnings, rid -> parts.get(targets.get(rid)));
         if (drawing == null && extent0 != null) drawing = object(container, extent0, warnings);
         if (drawing != null && !"inline".equals(wrap[0]) && !"equation".equals(drawing.kind))
           drawing = drawing.with("wrap", wrap[0]).with("wrapPolygon", wrap[1]).with("position", wrap[3]);
@@ -310,11 +310,8 @@ final class DocxPictures {
 
   private int drawings;
 
-  void write(StringBuilder b, Picture p) {
-    if (p.drawing != null) {
-      DocxDrawings.write(b, p, 1000 + ++drawings, this);
-      return;
-    }
+  /** The relationship id of p's media part, added on first use. */
+  String rel(Picture p) {
     var id = output.get(p);
     if (id == null) {
       id = "cn1Picture" + (output.size() + 1);
@@ -322,6 +319,15 @@ final class DocxPictures {
       ids.add(id);
       output.put(p, id);
     }
+    return id;
+  }
+
+  void write(StringBuilder b, Picture p) {
+    if (p.drawing != null) {
+      DocxDrawings.write(b, p, 1000 + ++drawings, this);
+      return;
+    }
+    String id = rel(p);
     long cx = Math.round(p.width * 12700), cy = Math.round(p.height * 12700);
     b.append("<w:p><w:pPr><w:jc w:val=\"")
         .append(p.align)

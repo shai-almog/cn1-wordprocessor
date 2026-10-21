@@ -18,7 +18,7 @@ public final class Drawing {
       Collections.unmodifiableList(
           Arrays.asList(
               "shape", "textBox", "wordArt", "chart", "smartArt", "equation", "ink", "canvas",
-              "icon", "signature", "object"));
+              "icon", "signature", "object", "picture"));
 
   /** 1x1 transparent PNG used as the picture payload of every drawing. */
   static final byte[] PLACEHOLDER =

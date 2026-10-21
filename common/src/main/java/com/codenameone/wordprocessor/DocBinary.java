@@ -1947,7 +1947,23 @@ final class DocBinary {
         + "\"/><a:chExt cx=\"" + gw + "\" cy=\"" + gh + "\"/></a:xfrm></" + tag + ">";
   }
 
-  /** Members at their child anchors; nested groups as wpg:grpSp. Pictures and freeforms are dropped. */
+  /** The media relationship id of BStore entry pib (1-based), or null when unreadable. */
+  private String blipMedia(long pib) throws IOException {
+    if (pib <= 0 || pib > blips.size()) return null;
+    long[] e = blips.get((int) pib - 1);
+    long body = e[0], head = 36 + u8(table, body + 33);
+    String[] ext = new String[1];
+    byte[] img;
+    if (e[1] > head) img = blip(table, body + head, body + e[1], 0, ext);
+    else {
+      long fo = u32(table, body + 28);
+      img = in(word, fo, 8) ? blip(word, fo, Math.min(word.length, fo + 8 + u32(word, fo + 4)), 0, ext) : null;
+    }
+    if (img == null || pictures >= MAX_PARTS) return null;
+    return media(img, ext[0]);
+  }
+
+  /** Members at their child anchors; nested groups as wpg:grpSp; pictures as pic:pic. Freeforms are dropped. */
   private int groupMembers(StringBuilder g, List<long[]> members, int depth) throws IOException {
     int n = 0;
     for (long[] m : members) {
@@ -1961,7 +1977,13 @@ final class DocBinary {
         g.append(sub).append("</wpg:grpSp>");
         n++;
       } else {
-        String wsp = m[2] > 0 ? null : wsp(m, x, y, w, h);
+        String id = m[2] > 0 ? blipMedia(m[2]) : null;
+        String wsp = id != null
+            ? "<pic:pic xmlns:pic=\"http://schemas.openxmlformats.org/drawingml/2006/picture\"><pic:nvPicPr><pic:cNvPr id=\"0\" name=\"Picture\"/>"
+                + "<pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed=\"" + id + "\"/><a:stretch><a:fillRect/></a:stretch>"
+                + "</pic:blipFill><pic:spPr><a:xfrm><a:off x=\"" + x + "\" y=\"" + y + "\"/><a:ext cx=\"" + w + "\" cy=\"" + h
+                + "\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom></pic:spPr></pic:pic>"
+            : m[2] > 0 ? null : wsp(m, x, y, w, h);
         if (wsp != null) {
           g.append(wsp);
           n++;
@@ -2078,17 +2100,8 @@ final class DocBinary {
       if (n == 0) return null;
       graphic = g.append("</wpg:wgp></a:graphicData></a:graphic>").toString();
     } else if (sh[2] > 0 && sh[2] <= blips.size()) {
-      long[] e = blips.get((int) sh[2] - 1);
-      long body = e[0], head = 36 + u8(table, body + 33);
-      String[] ext = new String[1];
-      byte[] img;
-      if (e[1] > head) img = blip(table, body + head, body + e[1], 0, ext);
-      else {
-        long fo = u32(table, body + 28);
-        img = in(word, fo, 8) ? blip(word, fo, Math.min(word.length, fo + 8 + u32(word, fo + 4)), 0, ext) : null;
-      }
-      if (img == null || pictures >= MAX_PARTS) return null;
-      String id = media(img, ext[0]);
+      String id = blipMedia(sh[2]);
+      if (id == null) return null;
       graphic = picGraphic(id, pictures, cx, cy);
     } else {
       String wsp = wsp(sh, 0, 0, cx, cy);

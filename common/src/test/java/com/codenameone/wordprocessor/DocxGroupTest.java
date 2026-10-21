@@ -47,4 +47,42 @@ public class DocxGroupTest {
     var ops = DrawingOps.build(d, 144, 72);
     assertTrue(ops.paths.size() >= 3);
   }
+
+  @Test
+  public void groupPicturesAndRotationAreDrawnSavedAndExported() throws Exception {
+    // 100 x 50 pt group (child space in EMUs) turned 90 degrees, holding a picture at the left
+    // half turned 30 degrees and a rectangle at the right half.
+    String pic = "<pic:pic xmlns:pic=\"p\" xmlns:r=\"r\"><pic:blipFill><a:blip r:embed=\"rId9\"/></pic:blipFill><pic:spPr>"
+        + "<a:xfrm rot=\"1800000\"><a:off x=\"0\" y=\"0\"/><a:ext cx=\"635000\" cy=\"635000\"/></a:xfrm></pic:spPr></pic:pic>";
+    String xml = "<wp:anchor " + NS + "><wp:extent cx=\"1270000\" cy=\"635000\"/><a:graphic><a:graphicData><wpg:wgp>"
+        + "<wpg:grpSpPr><a:xfrm rot=\"5400000\"><a:off x=\"0\" y=\"0\"/><a:ext cx=\"1270000\" cy=\"635000\"/>"
+        + "<a:chOff x=\"0\" y=\"0\"/><a:chExt cx=\"1270000\" cy=\"635000\"/></a:xfrm></wpg:grpSpPr>"
+        + pic + wsp(635000, 0, 635000, 635000, "<a:prstGeom prst=\"rect\"/>") + "</wpg:wgp></a:graphicData></a:graphic></wp:anchor>";
+    var warnings = new HashSet<String>();
+    Drawing d = DocxDrawings.shape(Xml.parse(xml), warnings, id -> "rId9".equals(id) ? OdtTest.PNG : null);
+    assertTrue(warnings.toString(), warnings.isEmpty());
+    assertEquals(90, d.num("rotation", 0), .01f);
+    var ops = DrawingOps.build(d, 100, 50);
+    assertEquals(1, ops.images.size());
+    var im = ops.images.get(0);
+    // Member 30 degrees plus the group's 90; its centre (25, 25) turned about (50, 25) -> (50, 0).
+    assertEquals(120, im.rotation(), .01f);
+    assertEquals(50, im.x() + im.width() / 2, .01f);
+    assertEquals(0, im.y() + im.height() / 2, .01f);
+    // Without bytes the picture is dropped with a warning, as before.
+    var dropped = new HashSet<String>();
+    DocxDrawings.shape(Xml.parse(xml), dropped, null);
+    assertTrue(dropped.contains("Picture inside a drawing group dropped"));
+    // DOCX keeps it (with a pic:pic for Word) and PDF draws it as an image XObject.
+    var doc = new Document(new Sequence<Block>().append(Picture.drawing("i1", d, 100, 50, "", "left")),
+        PageSpec.A4, "G", 2);
+    var out = new java.io.ByteArrayOutputStream();
+    Docx.write(doc, out);
+    var back = Docx.read(new java.io.ByteArrayInputStream(out.toByteArray())).document;
+    assertEquals(1, DrawingOps.build(((Picture) back.blocks.get(0)).drawing, 100, 50).images.size());
+    String xmlOut = new String(DrawingCommandsTest.part(out.toByteArray(), "word/document.xml"), "UTF-8");
+    assertTrue(xmlOut.contains("<pic:pic") && xmlOut.contains("rot=\"7200000\""));
+    String pdf = new String(PdfExporter.write(doc), "ISO-8859-1");
+    assertTrue(pdf.contains("/Im0 Do"));
+  }
 }

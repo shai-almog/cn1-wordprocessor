@@ -246,6 +246,15 @@ public final class EditorSurface extends Container
       }
     }
     g.setAlpha(alpha);
+    for (int k = 0; k < ops.images.size(); k++) {
+      DrawingOps.Image im = ops.images.get(k);
+      Image image = groupImage(pic.picture().drawing, ops, k);
+      if (image == null) continue;
+      g.setAlpha(alpha);
+      var look = Picture.Look.NONE.rotate(Math.round(im.rotation()), false, false);
+      drawPicture(g, image, look, Math.round(px + im.x() * scale), Math.round(py + im.y() * scale),
+          Math.max(1, Math.round(im.width() * scale)), Math.max(1, Math.round(im.height() * scale)), scale);
+    }
     for (DrawingOps.Text t : ops.texts) {
       var style = TextStyle.DEFAULT.with("size", String.valueOf(t.size()));
       if (t.bold()) style = style.with("bold", "true");
@@ -802,6 +811,27 @@ public final class EditorSurface extends Container
   private static void bar(Graphics g, int x, int y, int length, int t, boolean horizontal) {
     if (horizontal) g.fillRect(x, y, length, t);
     else g.fillRect(x, y, t, length);
+  }
+
+  /** Decoded group pictures per drawing (drawings are immutable), in ops.images order. */
+  private final java.util.Map<Drawing, Image[]> groupImages = new java.util.IdentityHashMap<>();
+
+  private Image groupImage(Drawing d, DrawingOps.Ops ops, int index) {
+    Image[] list = groupImages.get(d);
+    if (list == null || list.length != ops.images.size()) {
+      if (groupImages.size() > 32) groupImages.clear();
+      list = new Image[ops.images.size()];
+      groupImages.put(d, list);
+    }
+    if (list[index] == null) {
+      byte[] data = ops.images.get(index).data();
+      try {
+        list[index] = Image.createImage(data, 0, data.length);
+      } catch (RuntimeException bad) {
+        return null;
+      }
+    }
+    return list[index];
   }
 
   /** Crop maps the visible source fraction onto the frame; rotation turns about its center. */

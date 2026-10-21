@@ -331,10 +331,25 @@ public final class PdfExporter {
     objects.add(null);
     int fontDictionary = objects.size();
     var imageIds = new HashMap<Picture, Integer>();
+    var groupIds = new IdentityHashMap<Picture, int[]>();
     for (LayoutEngine.Page page : layout.pages)
       for (LayoutEngine.PlacedPicture pic : page.paintedPictures())
         if (pic.picture().drawing == null && !imageIds.containsKey(pic.picture()))
           imageIds.put(pic.picture(), PdfPictures.add(objects, pic.picture()));
+        else if (pic.picture().drawing != null && !groupIds.containsKey(pic.picture())) {
+          // Pictures inside a drawing group: one image XObject each.
+          var ops = DrawingOps.build(pic.picture().drawing, pic.width(), pic.height());
+          int[] ids = new int[ops.images.size()];
+          for (int k = 0; k < ids.length; k++) {
+            var im = ops.images.get(k);
+            try {
+              ids[k] = PdfPictures.add(objects, new Picture("g", im.data(), Math.max(1, im.width()), Math.max(1, im.height()), "", "left"));
+            } catch (IllegalArgumentException bad) {
+              ids[k] = -1;
+            }
+          }
+          groupIds.put(pic.picture(), ids);
+        }
     int pageIndex = 0;
     for (LayoutEngine.Page page : layout.pages) {
       var spec = page.spec;
@@ -373,6 +388,7 @@ public final class PdfExporter {
         content.append("/Figure << /MCID ").append(figure).append(" >> BDC\n");
         if (pic.picture().drawing != null) {
           PdfDrawings.paint(content, pic, spec.height, fonts, null);
+          imageIndex = groupImages(content, imageResources, pic, groupIds.get(pic.picture()), spec.height, imageIndex);
           content.append("EMC\n");
           continue;
         }
@@ -606,6 +622,7 @@ public final class PdfExporter {
         int figure = structure.mcid(pageNumber, structure.figure(pic.picture().alt));
         content.append("/Figure << /MCID ").append(figure).append(" >> BDC\n");
         PdfDrawings.paint(content, pic, spec.height, fonts, null);
+        imageIndex = groupImages(content, imageResources, pic, groupIds.get(pic.picture()), spec.height, imageIndex);
         content.append("EMC\n");
       }
       int pageId = 7 + pageIndex++ * 2;
@@ -694,6 +711,30 @@ public final class PdfExporter {
         .append(' ')
         .append(n(y3))
         .append(" c ");
+  }
+
+  /**
+   * A drawing group's pictures as image XObjects (ids from the document's object list): each
+   * drawn into its box turned clockwise about the box centre. Returns the next image index.
+   */
+  private static int groupImages(StringBuilder content, StringBuilder resources, LayoutEngine.PlacedPicture pic,
+      int[] ids, float pageHeight, int imageIndex) {
+    if (ids == null || ids.length == 0) return imageIndex;
+    var ops = DrawingOps.build(pic.picture().drawing, pic.width(), pic.height());
+    for (int k = 0; k < ids.length && k < ops.images.size(); k++) {
+      if (ids[k] < 0) continue;
+      var im = ops.images.get(k);
+      String name = "Im" + imageIndex++;
+      resources.append('/').append(name).append(' ').append(ids[k]).append(" 0 R ");
+      double t = Math.toRadians(-im.rotation());
+      float w = im.width(), h = im.height();
+      float a = (float) (w * Math.cos(t)), b = (float) (w * Math.sin(t)), c = (float) (-h * Math.sin(t)), d = (float) (h * Math.cos(t));
+      float cx = pic.x() + im.x() + w / 2, cy = pageHeight - (pic.y() + im.y() + h / 2);
+      content.append("q ").append(n(a)).append(' ').append(n(b)).append(' ').append(n(c)).append(' ').append(n(d))
+          .append(' ').append(n(cx - (a + c) / 2)).append(' ').append(n(cy - (b + d) / 2)).append(" cm /")
+          .append(name).append(" Do Q\n");
+    }
+    return imageIndex;
   }
 
   static String n(float f) {

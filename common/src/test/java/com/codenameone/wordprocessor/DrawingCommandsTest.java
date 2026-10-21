@@ -140,7 +140,7 @@ public class DrawingCommandsTest {
     assertTrue(TextFormats.html(s.document()).contains("<svg"));
   }
 
-  private static byte[] part(byte[] zip, String name) throws Exception {
+  static byte[] part(byte[] zip, String name) throws Exception {
     var in = new java.util.zip.ZipInputStream(new ByteArrayInputStream(zip));
     for (java.util.zip.ZipEntry e; (e = in.getNextEntry()) != null; )
       if (e.getName().equals(name)) {
