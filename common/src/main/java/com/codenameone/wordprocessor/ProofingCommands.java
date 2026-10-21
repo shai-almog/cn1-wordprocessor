@@ -13,14 +13,46 @@ import java.util.Set;
  * document settings {@code proof.dictionary} and {@code proof.ignore}; "ignore once" is remembered
  * per session by position and word (so a later edit before it can make it flag again). Runs whose
  * proofing language is unproofed are skipped; Polish and Portuguese runs use ProofLanguages.
+ * Table cells are proofed too (as in Wordcraft, whose review commands walk every paragraph path):
+ * an issue in a cell carries the table block, row and column, and "next"/"change" enter the cell.
  */
 final class ProofingCommands implements Commands.Extension {
   private static final SessionMap<Set<String>> ONCE = SessionMap.forDocument();
 
-  private record Found(int block, Proofing.Issue issue, String word) {
+  /**
+   * An issue: in body paragraph {@code block} (row -1), or in paragraph {@code block} of the cell
+   * (row, column) of the table at body block {@code table}.
+   */
+  private record Found(int table, int row, int column, int block, Proofing.Issue issue, String word) {
+    Found(int block, Proofing.Issue issue, String word) {
+      this(block, -1, -1, block, issue, word);
+    }
+
+    /** Document order: table block, row, column, paragraph, offset. */
+    long[] key() {
+      return new long[] {table, row, column, row < 0 ? 0 : block, issue.start()};
+    }
+
+    String once() {
+      return row < 0 ? block + ":" + issue.start() + ":" + word : table + "/" + row + "/" + column + "/" + block + ":" + issue.start() + ":" + word;
+    }
+
+    /** Selects the issue's text, entering or leaving its cell. */
+    void select(Session s) {
+      if (row < 0) {
+        if (s.inCell()) s.leaveCell();
+      } else s.enterCell(table, row, column);
+      s.select(block, issue.start(), issue.end());
+    }
+
     Map<String, Object> map() {
       var m = new LinkedHashMap<String, Object>();
-      m.put("block", Integer.valueOf(block));
+      m.put("block", Integer.valueOf(row < 0 ? block : table));
+      if (row >= 0) {
+        m.put("row", Integer.valueOf(row));
+        m.put("column", Integer.valueOf(column));
+        m.put("paragraph", Integer.valueOf(block));
+      }
       m.put("start", Integer.valueOf(issue.start()));
       m.put("end", Integer.valueOf(issue.end()));
       m.put("kind", issue.kind());
@@ -49,16 +81,41 @@ final class ProofingCommands implements Commands.Extension {
     }
     var out = new ArrayList<Found>();
     for (int b = 0; b < d.blocks.size(); b++) {
-      if (!(d.blocks.get(b) instanceof Paragraph)) continue;
-      var t = d.paragraph(b).text;
-      var text = t.plainText();
-      for (Proofing.Issue i : Proofing.check(text, o, off -> t.styleAt(off).characters.lang)) {
-        var word = text.substring(i.start(), i.end());
-        if (once != null && once.contains(b + ":" + i.start() + ":" + word)) continue;
-        out.add(new Found(b, i, word));
+      if (d.blocks.get(b) instanceof Table table) {
+        for (int r = 0; r < table.rows(); r++)
+          for (int c = 0; c < table.columns(); c++) {
+            if (table.covered(r, c)) continue;
+            int k = 0;
+            for (Paragraph p : table.cell(r, c)) proof(p, o, once, out, b, r, c, k++);
+          }
+        continue;
       }
+      if (!(d.blocks.get(b) instanceof Paragraph)) continue;
+      proof(d.paragraph(b), o, once, out, b, -1, -1, b);
     }
     return out;
+  }
+
+  private static void proof(Paragraph p, Proofing.Options o, Set<String> once, List<Found> out, int table, int row, int column, int block) {
+    var t = p.text;
+    var text = t.plainText();
+    for (Proofing.Issue i : Proofing.check(text, o, off -> t.styleAt(off).characters.lang)) {
+      var f = new Found(table, row, column, block, i, text.substring(i.start(), i.end()));
+      if (once == null || !once.contains(f.once())) out.add(f);
+    }
+  }
+
+  private static int compare(long[] a, long[] b) {
+    for (int i = 0; i < a.length; i++) if (a[i] != b[i]) return a[i] < b[i] ? -1 : 1;
+    return 0;
+  }
+
+  /** The selection's end (or caret, when at) as a document-order key like Found.key(). */
+  private static long[] here(Session s, boolean end) {
+    var sel = s.selection();
+    int b = end ? sel.endBlock() : sel.block, off = end ? sel.end() : sel.caret;
+    if (s.inCell()) return new long[] {s.cellBlock(), s.cellRow(), s.cellColumn(), b, off};
+    return new long[] {b, -1, -1, 0, off};
   }
 
   private static Object spelling(Session s, Map<String, Object> a) {
@@ -66,17 +123,16 @@ final class ProofingCommands implements Commands.Extension {
     if ("check".equals(action)) return report(issues(s));
     if ("next".equals(action)) {
       var all = issues(s);
-      var sel = s.selection();
-      int eb = sel.endBlock(), eo = sel.end();
+      long[] at = here(s, true);
       Found hit = null;
       for (Found f : all)
-        if (f.block > eb || f.block == eb && f.issue.start() >= eo) {
+        if (compare(f.key(), at) >= 0) {
           hit = f;
           break;
         }
       if (hit == null && !all.isEmpty()) hit = all.get(0);
       if (hit == null) return report(all);
-      s.select(hit.block, hit.issue.start(), hit.issue.end());
+      hit.select(s);
       Map<String, Object> m = hit.map();
       m.put("remaining", Integer.valueOf(all.size()));
       return m;
@@ -101,7 +157,7 @@ final class ProofingCommands implements Commands.Extension {
       synchronized (ONCE) {
         var once = ONCE.get(s);
         if (once == null) ONCE.put(s, once = new HashSet<String>());
-        once.add(f.block + ":" + f.issue.start() + ":" + f.word);
+        once.add(f.once());
       }
       return report(issues(s));
     }
@@ -110,7 +166,7 @@ final class ProofingCommands implements Commands.Extension {
       if ("change".equals(action)) {
         Found f = target(s, word);
         if (f == null) throw new IllegalArgumentException("No issue to change");
-        s.select(f.block, f.issue.start(), f.issue.end());
+        f.select(s);
         s.replace(replacement);
       } else {
         if (word == null) word = current(s);
@@ -119,7 +175,7 @@ final class ProofingCommands implements Commands.Extension {
         for (int i = all.size() - 1; i >= 0; i--) {
           var f = all.get(i);
           if (!f.word.equals(word)) continue;
-          s.select(f.block, f.issue.start(), f.issue.end());
+          f.select(s);
           s.replace(replacement);
         }
       }
@@ -142,8 +198,8 @@ final class ProofingCommands implements Commands.Extension {
     var sel = s.selectedText();
     if (sel != null && sel.trim().length() > 0 && sel.indexOf('\n') < 0) return sel.trim();
     var x = s.selection();
-    if (!(s.document().blocks.get(x.block) instanceof Paragraph)) return null;
-    var text = s.document().paragraph(x.block).text.plainText();
+    if (!(s.editingDocument().blocks.get(x.block) instanceof Paragraph)) return null;
+    var text = s.editingDocument().paragraph(x.block).text.plainText();
     for (int[] w : Proofing.words(text)) if (x.caret >= w[0] && x.caret <= w[1]) return text.substring(w[0], w[1]);
     return null;
   }
@@ -151,10 +207,12 @@ final class ProofingCommands implements Commands.Extension {
   /** The issue matching {@code word}, else the one at the selection/caret. */
   private static Found target(Session s, String word) {
     var all = issues(s);
-    var x = s.selection();
-    for (Found f : all)
-      if (word != null ? f.word.equals(word) : f.block == x.block && x.caret >= f.issue.start() && x.caret <= f.issue.end())
-        return f;
+    long[] at = here(s, false);
+    for (Found f : all) {
+      long[] k = f.key();
+      boolean same = k[0] == at[0] && k[1] == at[1] && k[2] == at[2] && k[3] == at[3];
+      if (word != null ? f.word.equals(word) : same && at[4] >= f.issue.start() && at[4] <= f.issue.end()) return f;
+    }
     return null;
   }
 

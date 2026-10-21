@@ -29,6 +29,32 @@ public class ProofingCommandsTest {
   }
 
   @Test
+  public void tableCellsAreProofedAndChangedInPlace() {
+    var s = new Session(Document.empty());
+    s.replace("Body wrold");
+    s.insertTable(2, 2);
+    int table = -1;
+    for (int b = 0; b < s.document().blocks.size(); b++) if (s.document().blocks.get(b) instanceof Table) table = b;
+    s.setCell(table, 1, 1, "Now recieve here");
+    s.select(0, 0, 0);
+    var found = issues(run(s, "review.spelling"));
+    assertEquals(2, found.size());
+    assertEquals("recieve", found.get(1).get("word"));
+    assertEquals(table, found.get(1).get("block"));
+    assertEquals(1, found.get(1).get("row"));
+    assertEquals(1, found.get(1).get("column"));
+    run(s, "review.spelling", "action", "next");
+    assertEquals("wrold", s.selectedText());
+    run(s, "review.spelling", "action", "next");
+    assertTrue(s.inCell());
+    assertEquals("recieve", s.selectedText());
+    run(s, "review.spelling", "action", "change", "replacement", "receive");
+    if (s.inCell()) s.leaveCell();
+    assertEquals("Now receive here", ((Table) s.document().blocks.get(table)).cell(1, 1).get(0).text.plainText());
+    assertEquals(1, issues(run(s, "review.spelling")).size());
+  }
+
+  @Test
   public void checkReportsMisspellingsWithSuggestionsAndNextSelects() {
     Session s = session("Hello wrold and recieve");
     var found = issues(run(s, "review.spelling"));

@@ -48,7 +48,7 @@ public final class ProofLanguages {
   /** Installs (or with null aff, removes) the dictionary of a language from .aff/.dic text. */
   public static synchronized void install(String lang, String aff, String dic) {
     if (aff == null) DICTS.remove(lang);
-    else DICTS.put(lang, new HunspellDict(aff, dic));
+    else DICTS.put(lang, tune(lang, new HunspellDict(aff, dic)));
     SEARCHED.add(lang);
   }
 
@@ -64,9 +64,28 @@ public final class ProofLanguages {
     if (!SEARCHED.contains(lang)) {
       SEARCHED.add(lang);
       HunspellDict d = findInstalled(lang);
-      if (d != null) DICTS.put(lang, d);
+      if (d != null) DICTS.put(lang, tune(lang, d));
     }
     return DICTS.get(lang);
+  }
+
+  // Short words that run into the next / previous word, from Wordcraft's pl/suggest.rs and
+  // pt/suggest.rs LEADING_WORDS / TRAILING_WORDS.
+  private static final String PL_LEADING = "a i o u w z we ze na po do od za co to nie jak tak przy bez pod nad dla"
+      + " \u017ce by czy ju\u017c ani przed przez przede ku a\u017c bo ten ta te tym tej te\u017c jest ode beze nade";
+  private static final String PL_TRAILING = "si\u0119 ci\u0119 mi mu ci go j\u0105 je nam wam im by \u017ce no mnie tobie jej ich";
+  private static final String PT_LEADING = "a o e \u00e9 de do da dos das em no na nos nas por para com sem sob sobre ao aos"
+      + " \u00e0 \u00e0s que se n\u00e3o como mas mais j\u00e1 at\u00e9 entre contra perante desde ap\u00f3s ante durante mediante"
+      + " segundo conforme salvo fora onde quando bem mal pois logo portanto por\u00e9m todavia contudo assim"
+      + " t\u00e3o tanto tudo nada algo cada outro mesmo pr\u00f3prio ainda tampouco quase talvez nunca sempre";
+  private static final String PT_TRAILING = "me te se lhe nos vos lhes o a os as ele ela eles elas isso isto aquilo mim ti si"
+      + " eu tu que de em \u00e9";
+
+  /** Applies Wordcraft's per-language suggestion tuning to a dictionary. */
+  private static HunspellDict tune(String lang, HunspellDict d) {
+    if (PL.equals(lang)) d.setSplitWords(set(PL_LEADING), set(PL_TRAILING));
+    else if (PT.equals(lang)) d.setSplitWords(set(PT_LEADING), set(PT_TRAILING));
+    return d;
   }
 
   public static boolean hasDictionary(String lang) {
@@ -161,6 +180,7 @@ public final class ProofLanguages {
       String l0 = w0.toLowerCase(), l1 = w1.toLowerCase();
       if (gap.trim().length() == 0 && l0.equals(l1) && alpha(w0) && !(pl ? PL_REPEATS : PT_REPEATS).contains(l0))
         v.add(issue(x[0], y[1], pl ? "Powt\u00f3rzone s\u0142owo: \u201e" + w1 + "\u201d" : "Palavra repetida: \u201c" + w1 + "\u201d", w0));
+      if (pl && (" ".equals(gap) || "\u00a0".equals(gap))) weZe(w0, l1, x, v);
       if (pl && " ".equals(gap) && PL_OPENERS.contains(l1) && alpha(w0) && !PL_NO_COMMA_AFTER.contains(l0))
         v.add(issue(x[1], y[0], "Brak przecinka przed \u201e" + w1 + "\u201d", ", "));
     }
@@ -199,6 +219,32 @@ public final class ProofLanguages {
       }
     }
     return v;
+  }
+
+  private static boolean plVowel(char c) {
+    return "a\u0105e\u0119io\u00f3uy\u00e9\u00e1\u00f6\u00fc\u00ed\u00fa".indexOf(Character.toLowerCase(c)) >= 0;
+  }
+
+  private static boolean plConsonant(String w, int i) {
+    return i < w.length() && Unicode.letter(w.charAt(i)) && !plVowel(w.charAt(i));
+  }
+
+  /** Wordcraft's we/ze rule: "we wtorek", "ze szko\u0142y", "ze mn\u0105" (pl/grammar.rs we_ze). */
+  private static void weZe(String w0, String next, int[] x, List<Proofing.Issue> v) {
+    String lng;
+    boolean wanted;
+    if ("w".equals(w0) || "W".equals(w0)) {
+      lng = "we";
+      wanted = (next.startsWith("w") && plConsonant(next, 1)) || "mnie".equals(next);
+    } else if ("z".equals(w0) || "Z".equals(w0)) {
+      lng = "ze";
+      int after = next.startsWith("sz") ? 2 : 1;
+      boolean sibilant = next.length() > 0 && "sz\u015b\u017a\u017c".indexOf(next.charAt(0)) >= 0;
+      wanted = (sibilant && plConsonant(next, after)) || "mn\u0105".equals(next);
+    } else return;
+    if (wanted)
+      v.add(issue(x[0], x[1], "Przed tym s\u0142owem piszemy \u201e" + lng + "\u201d",
+          Character.isUpperCase(w0.charAt(0)) ? Character.toUpperCase(lng.charAt(0)) + lng.substring(1) : lng));
   }
 
   private static boolean isDigits(String w) {
