@@ -48,11 +48,24 @@ public final class Revisions {
     for (Section.Range section : d.sectionRanges())
       for (String key : PageFurniture.KEYS)
         if (section.raw.furniture.stories.containsKey(key))
-          for (Paragraph p : section.raw.furniture.get(key))
-            collect(changes, p, key, section.first, -1, -1);
+          collectBlocks(changes, section.raw.furniture.blocks(key), key, section.first, -1, -1);
     for (Note note : Notes.all(d))
       for (Paragraph p : note.paragraphs) collect(changes, p, "note:" + note.id, -1, -1, -1);
     return Collections.unmodifiableList(changes);
+  }
+
+  /**
+   * A header/footer story's changes: its paragraphs and those in its tables' cells at any depth
+   * (located by story and paragraph id, as header paragraphs are).
+   */
+  private static void collectBlocks(List<Change> out, Sequence<Block> blocks, String story, int block, int row, int col) {
+    for (Block b : blocks) {
+      if (b instanceof Paragraph p) collect(out, p, story, block, row, col);
+      else if (b instanceof Table t)
+        for (int r = 0; r < t.rows(); r++)
+          for (int c = 0; c < t.columns(); c++)
+            if (!t.covered(r, c)) collectBlocks(out, t.blocks(r, c), story, block, row, col);
+    }
   }
 
   private static void collect(

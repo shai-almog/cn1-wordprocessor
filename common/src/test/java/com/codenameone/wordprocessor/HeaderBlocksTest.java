@@ -113,6 +113,21 @@ public class HeaderBlocksTest {
     assertEquals(1, p.header.size());
   }
 
+  /** Tracked changes in header table cells (nested too) are listed for review. */
+  @Test
+  public void reviewListsChangesInsideHeaderTables() {
+    var ins = TextStyle.DEFAULT.revision(new Revision("r1", "insert", "Ann", "2026-01-01T00:00:00Z"));
+    var nested = Table.of("t2", List.of(List.of(cell("n1", RichText.of("Deep", ins)))), List.of());
+    var right = new Sequence<Block>().append(nested).append(new Paragraph("c2", new RichText()));
+    var table = Table.of("t1", List.of(List.of(cell("c1", RichText.of("Cell", ins)), right)), List.of());
+    var story = new Sequence<Block>().append(table).append(new Paragraph("h1", RichText.of("Top", ins)));
+    var d = twoPages(PageFurniture.EMPTY.blocks("header", story));
+    var texts = new ArrayList<String>();
+    for (Revisions.Change c : Revisions.list(d)) if ("header".equals(c.story)) texts.add(c.text);
+    assertEquals(List.of("Cell", "Deep", "Top"), texts);
+    assertEquals(3, d.furniture.allParagraphs("header").size() - 1);
+  }
+
   /** As Wordcraft's layout_box: header text wraps per line beside a header float. */
   @Test
   public void headerTextWrapsAroundHeaderFloats() {

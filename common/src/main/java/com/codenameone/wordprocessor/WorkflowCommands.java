@@ -464,9 +464,9 @@ final class WorkflowCommands implements Commands.Extension {
     var out = new LinkedHashMap<String, Object>();
     out.put("section", to);
     var header = new StringBuilder();
-    for (Paragraph p : r.resolved.furniture.get("header")) header.append(header.length() == 0 ? "" : "\n").append(p.text.plainText());
+    for (Paragraph p : r.resolved.furniture.allParagraphs("header")) header.append(header.length() == 0 ? "" : "\n").append(p.text.plainText());
     var footer = new StringBuilder();
-    for (Paragraph p : r.resolved.furniture.get("footer")) footer.append(footer.length() == 0 ? "" : "\n").append(p.text.plainText());
+    for (Paragraph p : r.resolved.furniture.allParagraphs("footer")) footer.append(footer.length() == 0 ? "" : "\n").append(p.text.plainText());
     out.put("header", header.toString());
     out.put("footer", footer.toString());
     return out;
