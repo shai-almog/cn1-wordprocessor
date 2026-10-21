@@ -492,7 +492,7 @@ public final class PdfExporter {
               .append(" re W n\n");
         if ("◦".equals(line.marker) || "▪".equals(line.marker)) {
           // These list markers are vector geometry; Helvetica/WinAnsi has no glyph for them.
-          float x = line.x - 14, y = spec.height - line.y - line.markerOffset - 8, r = 1.7f;
+          float x = line.rtl ? line.x + line.width + 14 : line.x - 14, y = spec.height - line.y - line.markerOffset - 8, r = 1.7f;
           content.append("0 g 0 G 0.6 w ");
           if ("▪".equals(line.marker)) {
             content
@@ -516,7 +516,8 @@ public final class PdfExporter {
         } else if (!line.marker.isEmpty())
           content
               .append("0 g BT /F0 12 Tf 100 Tz 1 0 0 1 ")
-              .append(n(line.x - 18))
+              // Right to left: the label sits right of the text (about 6pt per glyph at 12pt).
+              .append(n(line.markerX(6 * line.marker.length())))
               .append(' ')
               .append(n(spec.height - line.y - line.markerOffset - 12))
               .append(" Tm (")

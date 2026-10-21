@@ -25,7 +25,7 @@ final class DocxBookmarks {
       String kind, String id, String name, String paragraph, int offset, boolean insideField) {
     if (!"bookmarkStart".equals(kind) && !"bookmarkEnd".equals(kind)) return;
     if (!supported || insideField) {
-      problems.add("Bookmarks outside body paragraphs or inside field results are not supported");
+      problems.add("Bookmarks inside field results are not supported");
       return;
     }
     if ("bookmarkStart".equals(kind)) {
@@ -38,6 +38,14 @@ final class DocxBookmarks {
       endIds.put(id, paragraph);
       ends.put(id, offset);
     }
+  }
+
+  /** Offsets past a dropped note reference mark move with the text (as comment marks do). */
+  void shift(String paragraph, int delta) {
+    for (Map.Entry<String, String> e : startIds.entrySet())
+      if (paragraph.equals(e.getValue())) starts.put(e.getKey(), Math.max(0, starts.get(e.getKey()) + delta));
+    for (Map.Entry<String, String> e : endIds.entrySet())
+      if (paragraph.equals(e.getValue())) ends.put(e.getKey(), Math.max(0, ends.get(e.getKey()) + delta));
   }
 
   void warnings(Set<String> warnings) {

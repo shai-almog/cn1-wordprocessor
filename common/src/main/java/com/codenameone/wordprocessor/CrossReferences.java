@@ -129,7 +129,7 @@ public final class CrossReferences {
       if (page < 1) return field;
       result = SequenceFields.number(page, code.switches.get("*"));
     } else if (code.switches.containsKey("p")) {
-      int target = ReviewComment.block(d, mark.startId), here = ReviewComment.block(d, paragraph);
+      int target = flowBlock(d, mark.startId), here = flowBlock(d, paragraph);
       result = target < here || target == here && mark.start < offset ? "above" : "below";
     } else {
       int here = ReviewComment.block(d, paragraph),
@@ -168,10 +168,20 @@ public final class CrossReferences {
     return field.result(result);
   }
 
+  /** Body block holding a paragraph, also for one in a cell or note (Wordcraft's body order). */
+  private static int flowBlock(Document d, String id) {
+    int block = ReviewComment.block(d, id);
+    if (block >= 0) return block;
+    var at = ReviewComment.locate(d, id);
+    return at == null || at.furniture != null ? -1 : at.block;
+  }
+
   private static String text(
       Document d, LayoutEngine.Result layout, Map<String, List<LayoutEngine.Line>> lines,
       Bookmark mark, Set<String> visiting) {
     int first = ReviewComment.block(d, mark.startId), last = ReviewComment.block(d, mark.endId);
+    // A bookmark in a table cell, header/footer or note story: its plain range text.
+    if (first < 0 || last < 0) return mark.text(d);
     final var out = new StringBuilder();
     for (int i = first; i <= last; i++) {
       if (i > first) out.append('\n');

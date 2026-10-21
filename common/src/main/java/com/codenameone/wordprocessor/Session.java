@@ -134,7 +134,7 @@ public final class Session {
     for (ReviewComment c : document.comments)
       if (ReviewComment.block(view, c.startId) >= 0 && ReviewComment.block(view, c.endId) >= 0)
         comments.add(c);
-    view = view.comments(comments);
+    view = view.comments(comments).bookmarks(storyBookmarks(document, view));
     cell = new CellContext(document, view, selection, ref.block, -1, -1);
     cell.note = id;
     document = view;
@@ -184,7 +184,7 @@ public final class Session {
     for (ReviewComment c : document.comments)
       if (ReviewComment.block(view, c.startId) >= 0 && ReviewComment.block(view, c.endId) >= 0)
         comments.add(c);
-    view = view.comments(comments);
+    view = view.comments(comments).bookmarks(storyBookmarks(document, view));
     cell = new CellContext(document, view, selection, block, row, column);
     cell.parent = outer;
     document = view;
@@ -538,6 +538,14 @@ public final class Session {
       comments.addAll(story.comments);
       out = out.comments(comments);
     }
+    if (story.bookmarks != c.initial.bookmarks) {
+      // Bookmarks of the cell/note story replace their earlier copies (as comments above).
+      var next = new LinkedHashMap<String, Bookmark>();
+      for (Bookmark b : c.root.bookmarks.values())
+        if (!c.initial.bookmarks.containsKey(b.name)) next.put(b.name, b);
+      next.putAll(story.bookmarks);
+      out = out.bookmarks(next);
+    }
     return out;
   }
 
@@ -817,8 +825,21 @@ public final class Session {
     }
   }
 
+  /** The bookmarks whose marks both sit in a cell or note story's own paragraphs. */
+  private static Map<String, Bookmark> storyBookmarks(Document root, Document view) {
+    var result = new LinkedHashMap<String, Bookmark>();
+    for (Bookmark b : root.bookmarks.values())
+      if (ReviewComment.block(view, b.startId) >= 0 && ReviewComment.block(view, b.endId) >= 0)
+        result.put(b.name, b);
+    return result;
+  }
+
+  /**
+   * As Wordcraft's bookmark marks, a bookmark may be added in any story being edited: body text,
+   * a table cell at any depth, or a footnote/endnote story.
+   */
   public void addBookmark(final String name) {
-    if (inCell()) throw new IllegalArgumentException("Select body text for a bookmark");
+    if (cells != null) leaveCell();
     final var selected = selection;
     final var mark =
         new Bookmark(
@@ -850,11 +871,28 @@ public final class Session {
     var mark = document.bookmarks.get(name);
     if (mark == null) throw new IllegalArgumentException("Unknown bookmark: " + name);
     leaveCell();
-    selectRange(
-        ReviewComment.block(document, mark.startId),
-        mark.start,
-        ReviewComment.block(document, mark.endId),
-        mark.end);
+    var first = ReviewComment.locate(document, mark.startId);
+    if (first == null && mark.nestedPath(document) != null) {
+      // A cell of a nested table: enter it level by level, then select in its story.
+      enterCellPath(mark.nestedPath(document));
+      selectRange(
+          ReviewComment.block(document, mark.startId), mark.start,
+          ReviewComment.block(document, mark.endId), mark.end);
+      return;
+    }
+    var last = ReviewComment.locate(document, mark.endId);
+    if (first == null || !first.sameFlow(last))
+      throw new IllegalStateException("Bookmark anchor is no longer available");
+    // A header/footer bookmark has no body caret; the story is unchanged (as for comments).
+    if (first.furniture != null) return;
+    if (!first.sameStory(last)) {
+      if (first.row >= 0) enterCell(first.block, first.row, first.column);
+      select(first.paragraph, mark.start, mark.start);
+      return;
+    }
+    if (first.note != null) enterNote(first.note.id);
+    else if (first.row >= 0) enterCell(first.block, first.row, first.column);
+    selectRange(first.paragraph, mark.start, last.paragraph, mark.end);
   }
 
   public void addComment(final String author, final String text) {
@@ -1266,7 +1304,6 @@ public final class Session {
     }
     leaveCell();
     transact(
-
         s -> {
           var before = document;
           var moves = id == null ? Collections.<String>emptySet() : Revisions.moveNames(document, id);

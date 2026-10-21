@@ -1737,8 +1737,9 @@ public final class EditorSurface extends Container
         if (!line.marker.isEmpty()) {
           g.setFont(font(TextStyle.DEFAULT, zoom));
           g.setColor(ink(0x242424));
-          g.drawString(
-              line.marker, lx - Math.round(18 * scale), ly + Math.round(line.markerOffset * scale));
+          int mx = lx - Math.round(18 * scale);
+          if (line.rtl) mx = x + Math.round(line.markerX(g.getFont().stringWidth(line.marker) / scale) * scale);
+          g.drawString(line.marker, mx, ly + Math.round(line.markerOffset * scale));
         }
         for (ReviewComment comment : session.document().comments) {
           if (comment.resolved) continue;

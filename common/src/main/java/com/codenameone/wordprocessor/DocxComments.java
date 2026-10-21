@@ -163,6 +163,7 @@ final class DocxComments {
       if (paragraph.equals(e.getValue())) starts.put(e.getKey(), Math.max(0, starts.get(e.getKey()) + delta));
     for (Map.Entry<String, String> e : endIds.entrySet())
       if (paragraph.equals(e.getValue())) ends.put(e.getKey(), Math.max(0, ends.get(e.getKey()) + delta));
+    bookmarks.shift(paragraph, delta);
   }
 
   List<ReviewComment> read(Document d, Set<String> warnings) {

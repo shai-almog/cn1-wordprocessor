@@ -131,6 +131,14 @@ public final class LayoutEngine {
     public final String paragraphId, marker;
     public final float x, y, width, height;
 
+    /** A right-to-left line: its list label sits right of the text (Wordcraft mirrors labels). */
+    public final boolean rtl;
+
+    /** Left edge of a list label {@code labelWidth} wide, 18pt before the line's start edge. */
+    public float markerX(float labelWidth) {
+      return rtl ? x + width + 18 - labelWidth : x - 18;
+    }
+
     /** Vertical offset aligning the default-size list marker with the text baseline. */
     public final float markerOffset;
 
@@ -162,6 +170,7 @@ public final class LayoutEngine {
         float visibleHeight) {
       this.marker = marker;
       markerOffset = r.markerOffset;
+      rtl = r.mirrored;
       block = b;
       this.row = row;
       column = col;
@@ -294,6 +303,7 @@ public final class LayoutEngine {
       raw.height = line.height;
       raw.clipped = line.clipped;
       raw.markerOffset = line.markerOffset;
+      raw.mirrored = line.rtl;
       raw.spans.addAll(line.spans);
       raw.barTabs = line.barTabs;
       out.add(
@@ -526,6 +536,9 @@ public final class LayoutEngine {
     RawLine drop;
 
     float dropX;
+
+    /** Laid out from the right edge (a right-to-left paragraph), so its list label sits right. */
+    boolean mirrored;
   }
 
   private static final class Cached {
@@ -768,6 +781,27 @@ public final class LayoutEngine {
 
   private Band band;
 
+  /**
+   * A float band seen from the right edge (Wordcraft mirrors exclusions into a right-to-left
+   * paragraph): the cuts swap sides and each gap [s, e] becomes [width - e, width - s].
+   */
+  static float[] mirrorCut(float[] cut, float width) {
+    var out = cut.clone();
+    out[0] = cut[1];
+    out[1] = cut[0];
+    int g = (cut.length - 3) / 2;
+    for (int k = 0; k < g; k++) {
+      out[3 + k * 2] = width - cut[4 + (g - 1 - k) * 2];
+      out[4 + k * 2] = width - cut[3 + (g - 1 - k) * 2];
+    }
+    return out;
+  }
+
+  private static boolean gapStart(RawLine line, int offset) {
+    if (line.gapAt != null) for (int at : line.gapAt) if (at == offset) return true;
+    return false;
+  }
+
   private List<RawLine> lines(Paragraph p, float width) {
     return lines(p, width, false);
   }
@@ -830,6 +864,7 @@ public final class LayoutEngine {
         float est = metrics.height(TextStyle.DEFAULT);
         for (int guard = 0; guard < 64; guard++) {
           float[] cut = band.cut(bandY, est);
+          if (p.format.rtl) cut = mirrorCut(cut, width);
           if (cut[2] <= bandY) {
             line.lead += Math.max(0, cut[0] - left);
             line.cutRight = Math.max(0, cut[1] - p.format.rightIndent);
@@ -990,13 +1025,18 @@ public final class LayoutEngine {
       // A right-to-left paragraph is laid out from its start edge as if mirrored (Wordcraft
       // para.rs break_lines): tabs, indents and alignment are measured from the right, so each
       // tab-delimited segment and each tab moves to its mirrored extent before reordering.
-      boolean mirror = p.format.rtl && line.gapAt == null && !(dropped && out.size() < dropLines);
+      // Lines beside floats (mirrored cuts above) and beside a drop cap mirror too, as Wordcraft
+      // lays the whole paragraph out from its start edge.
+      boolean mirror = p.format.rtl;
+      line.mirrored = mirror;
       float lineW = line.width;
       if (mirror) for (Span sp : line.spans) lineW = Math.max(lineW, sp.x + sp.width);
       if (levels != null || mirror) {
         int from = 0;
         for (int i = 0; i <= line.spans.size(); i++)
-          if (i == line.spans.size() || "\t".equals(line.spans.get(i).text)) {
+          if (i == line.spans.size()
+              || "\t".equals(line.spans.get(i).text)
+              || mirror && i > from && gapStart(line, line.spans.get(i).start)) {
             if (i > from) {
               var segment = line.spans.subList(from, i);
               if (mirror) {
@@ -1012,11 +1052,12 @@ public final class LayoutEngine {
               }
               if (levels != null) Bidi.reorder(segment, levels, p.format.rtl);
             }
-            if (mirror && i < line.spans.size()) {
+            if (mirror && i < line.spans.size() && "\t".equals(line.spans.get(i).text)) {
               var tab = line.spans.get(i);
               line.spans.set(i, tab.placed(lineW - tab.x - tab.width, true));
             }
-            from = i + 1;
+            // A float gap starts the next segment with this span; a tab is its own.
+            from = i < line.spans.size() && !"\t".equals(line.spans.get(i).text) ? i : i + 1;
           }
         if (mirror) {
           java.util.Collections.sort(line.spans, (u, v) -> Float.compare(u.x, v.x));
@@ -1620,6 +1661,7 @@ public final class LayoutEngine {
     raw.height = line.height;
     raw.clipped = line.clipped;
     raw.markerOffset = line.markerOffset;
+    raw.mirrored = line.rtl;
     raw.spans.addAll(line.spans);
     raw.barTabs = line.barTabs;
     return raw;
@@ -1725,7 +1767,7 @@ public final class LayoutEngine {
                 + first
                 + ("center".equals(p.align) ? extra / 2 : "right".equals(p.align) ? extra : 0);
         // Right to left: mirrored from the note area's right edge.
-        x = p.format.rtl && line.gapAt == null ? spec.contentWidth() - lx - line.width : lx;
+        x = p.format.rtl ? spec.contentWidth() - lx - line.width : lx;
       }
 
       float height() {
@@ -2028,6 +2070,7 @@ public final class LayoutEngine {
           c.end = l.end;
           c.width = l.width;
           c.markerOffset = l.markerOffset;
+          c.mirrored = l.mirrored;
           c.clipped = l.clipped;
           c.lead = l.lead;
           c.baseline = l.baseline;
@@ -2102,11 +2145,15 @@ public final class LayoutEngine {
         if ("right".equals(p.align) && l.gapAt == null)
           x += spec.contentWidth() - indent - p.format.rightIndent - firstIndent - l.lead - l.cutRight - l.width;
         // Right to left: indents and alignment are measured from the right edge (mirrored).
-        if (p.format.rtl && l.gapAt == null) x = 2 * spec.left + spec.contentWidth() - x - l.width;
+        if (p.format.rtl) x = 2 * spec.left + spec.contentWidth() - x - l.width;
         current.add(new Line(index, -1, -1, p.id, pages.size(), x, y, l, marker));
         // After the first line, so caret lookups for offset 0 find the text line first.
-        if (l.drop != null)
-          current.add(new Line(index, -1, -1, p.id, pages.size(), spec.left + indent + l.dropX, y, l.drop, ""));
+        if (l.drop != null) {
+          float dropX = spec.left + indent + l.dropX;
+          // Right to left: the letter hangs at the start (right) edge, as in Wordcraft.
+          if (p.format.rtl) dropX = 2 * spec.left + spec.contentWidth() - dropX - l.drop.width;
+          current.add(new Line(index, -1, -1, p.id, pages.size(), dropX, y, l.drop, ""));
+        }
         marker = "";
         y += l.height;
         segBottom = y;
@@ -2537,6 +2584,8 @@ public final class LayoutEngine {
             float extra = width - indent - first - p.format.rightIndent - line.lead - line.cutRight - line.width;
             if ("center".equals(p.align)) x += extra / 2;
             if ("right".equals(p.align)) x += extra;
+            // Right to left: mirrored within the cell's content box, as body lines in the column.
+            if (p.format.rtl) x = 2 * format.horizontalPadding + width - x - line.width;
             lines.add(line);
             paragraphs.add(p);
             ids.add(p.id);
