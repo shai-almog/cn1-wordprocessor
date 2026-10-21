@@ -5627,6 +5627,10 @@ public class WordProcessor {
       case "View" -> {
         pane.add(settingsHeading("Show in document"));
         pane.add(settingsFlag("Comments", "showComments"));
+        // Track Changes Options > Balloons (Wordcraft's BalloonMode).
+        pane.add(formRow("Balloons", settingsChoice("balloons",
+            new String[] {"Show revisions in balloons", "Show all revisions inline", "Comments and formatting in balloons"},
+            new String[] {"revisions", "inline", "commentsAndFormatting"})));
         pane.add(settingsFlag("Hide ink annotations", "hideInk"));
         pane.add(settingsHeading("Always show these formatting marks"));
         pane.add(settingsFlag("Hidden text", "showHiddenText"));

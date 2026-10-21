@@ -1322,10 +1322,85 @@ public final class EditorSurface extends Container
       }
       return Math.max(24, (getWidth() - row) / 2) + before - getScrollX();
     }
+    // With balloons shown the page and its markup area are centred together (Wordcraft).
+    int markup = balloonsShown() ? Math.round(Balloons.MARKUP_AREA * scale()) : 0;
     return Math.max(
             reflow ? OfficeTheme.px(8) : 24,
-            (getWidth() - Math.round(layout().pages.get(page).spec.width * scale())) / 2)
+            (getWidth() - Math.round(layout().pages.get(page).spec.width * scale()) - markup) / 2)
         - getScrollX();
+  }
+
+  /**
+   * Wordcraft's balloons_shown: markup shown in the page view (one page across, not reflowed or
+   * draft), comments shown, the balloon mode not inline, and a balloon to show.
+   */
+  boolean balloonsShown() {
+    if (reflow || draft || across > 1 || !"all".equals(markup) || "inline".equals(Balloons.mode())
+        || !AppOptions.flag("showComments")) return false;
+    for (java.util.List<Balloons.Card> cards : balloons()) if (!cards.isEmpty()) return true;
+    return false;
+  }
+
+  private LayoutEngine.Result balloonSource;
+  private String balloonMode;
+  private java.util.List<java.util.List<Balloons.Card>> balloonCards;
+
+  /** The balloon cards of the current layout, measured with the editor's fonts. */
+  private java.util.List<java.util.List<Balloons.Card>> balloons() {
+    var result = layout();
+    if (balloonSource != result || !Balloons.mode().equals(balloonMode)) {
+      balloonSource = result;
+      balloonMode = Balloons.mode();
+      final float zoom = this.zoom;
+      balloonCards =
+          Balloons.layout(
+              session.document(),
+              result,
+              new LayoutEngine.Metrics() {
+                public float width(String text, TextStyle style) {
+                  return font(style, zoom).stringWidth(text) / scale();
+                }
+
+                public float height(TextStyle style) {
+                  return font(style, zoom).getHeight() / scale();
+                }
+              },
+              Balloons.mode());
+    }
+    return balloonCards;
+  }
+
+  /** Draws a page's balloons in the markup area right of the page at (x, y). */
+  private void paintBalloons(Graphics g, int p, int x, int y, float scale) {
+    var all = balloons();
+    if (p >= all.size()) return;
+    for (Balloons.Card card : all.get(p)) {
+      int ax = x + Math.round(card.anchorX * scale), ay = y + Math.round(card.anchorY * scale);
+      int edge = x + Math.round(balloonSource.pages.get(p).spec.width * scale);
+      int cx = x + Math.round(card.x * scale), cy = y + Math.round(card.top * scale);
+      int cw = Math.round(card.width * scale), ch = Math.round(card.height * scale);
+      g.setColor(card.color);
+      for (int dx = ax; dx < edge; dx += 6) g.drawLine(dx, ay, Math.min(edge, dx + 3), ay);
+      g.drawLine(edge, ay, cx, cy + Math.round(8 * scale));
+      g.setColor(darkPage ? 0x2b2b2b : 0xffffff);
+      g.fillRect(cx, cy, cw, ch);
+      g.setColor(card.color);
+      g.drawRect(cx, cy, cw, ch);
+      g.fillRect(cx, cy, Math.max(1, Math.round(Balloons.STRIPE * scale)), ch);
+      for (Balloons.Item it : card.items) {
+        int ix = cx + Math.round(it.x * scale), iy = cy + Math.round(it.y * scale);
+        if (it.text == null) {
+          g.setColor(it.color);
+          g.drawLine(ix, iy, ix + Math.round(it.width * scale), iy);
+          continue;
+        }
+        var style = TextStyle.DEFAULT.with("size", String.valueOf(it.size));
+        if (it.bold) style = style.with("bold", "true");
+        g.setFont(font(style, zoom));
+        g.setColor(it.bold ? it.color : ink(it.color));
+        g.drawString(it.text, ix, iy);
+      }
+    }
   }
 
   private int pageY(int page) {
@@ -1607,6 +1682,7 @@ public final class EditorSurface extends Container
               : draft || page.decor.pageColor < 0 ? 0xffffff : page.decor.pageColor);
       g.fillRect(x, y, pw, ph);
       if (!draft) paintDecor(g, page, x, y, scale);
+      if (balloonsShown()) paintBalloons(g, p, x, y, scale);
       if (gridlines) {
         g.setColor(darkPage ? 0x3a4654 : 0xd8e4f0);
         int left = x + Math.round(page.spec.left * scale),

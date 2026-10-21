@@ -153,6 +153,18 @@ final class OfficeCommands implements Commands.Extension {
           option("printMarkup", String.valueOf(a.containsKey("value") ? Boolean.TRUE.equals(a.get("value")) : !AppOptions.flag("printMarkup")));
           return Json.object("value", AppOptions.flag("printMarkup"));
         });
+    c.query("review.balloons", "value?:string",
+        "Markup balloons (Wordcraft BalloonMode): revisions (deletions, formatting and comments in"
+            + " balloons), inline (everything in the text) or commentsAndFormatting",
+        (s, a) -> {
+          if (a.containsKey("value")) {
+            String v = Commands.str(a, "value");
+            if (!Balloons.MODES.contains(v))
+              throw new IllegalArgumentException("`balloons`: revisions|inline|commentsAndFormatting");
+            option("balloons", v);
+          }
+          return Json.object("value", Balloons.mode());
+        });
     c.query("review.hideInk", "value?:boolean",
         "Hide Ink: hide or show ink drawings on screen without deleting them", (s, a) -> {
           option("hideInk", String.valueOf(a.containsKey("value") ? Boolean.TRUE.equals(a.get("value")) : !AppOptions.flag("hideInk")));

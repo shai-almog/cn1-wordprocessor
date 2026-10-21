@@ -350,11 +350,25 @@ public final class PdfExporter {
           }
           groupIds.put(pic.picture(), ids);
         }
+    // Print Markup: comment balloons in a markup area beside each page, as Wordcraft's PDF
+    // writer (comment_balloons): the page grows by the area and is scaled down to its paper.
+    List<List<Balloons.Card>> balloons = null;
+    if (document != null && AppOptions.flag("printMarkup") && !document.comments.isEmpty()) {
+      balloons = Balloons.layout(document, layout, new PdfMetrics());
+      boolean any = false;
+      for (List<Balloons.Card> cards : balloons) any |= !cards.isEmpty();
+      if (!any) balloons = null;
+    }
     int pageIndex = 0;
     for (LayoutEngine.Page page : layout.pages) {
       var spec = page.spec;
       StringBuilder content = new StringBuilder(), imageResources = new StringBuilder(),
           annotations = new StringBuilder();
+      if (balloons != null) {
+        float s = spec.width / (spec.width + Balloons.MARKUP_AREA);
+        content.append("q ").append(n(s)).append(" 0 0 ").append(n(s)).append(" 0 ")
+            .append(n(spec.height * (1 - s))).append(" cm\n");
+      }
       int pageNumber = pageIndex;
       var furniture = Collections.newSetFromMap(new IdentityHashMap<LayoutEngine.Line, Boolean>());
       furniture.addAll(page.header);
@@ -635,6 +649,10 @@ public final class PdfExporter {
         imageIndex = groupImages(content, imageResources, pic, groupIds.get(pic.picture()), spec.height, imageIndex);
         content.append("EMC\n");
       }
+      if (balloons != null) {
+        balloonCards(content, balloons.get(pageIndex), spec);
+        content.append("Q\n");
+      }
       int pageId = 7 + pageIndex++ * 2;
       objects.set(
           pageId - 1,
@@ -745,6 +763,45 @@ public final class PdfExporter {
           .append(name).append(" Do Q\n");
     }
     return imageIndex;
+  }
+
+  /** Wordcraft's balloon cards: leader, white card outlined and striped in the author colour. */
+  private static void balloonCards(StringBuilder c, List<Balloons.Card> cards, PageSpec spec) throws IOException {
+    float h = spec.height, pw = spec.width;
+    for (Balloons.Card card : cards) {
+      String rgb = color(card.color);
+      // Leader: dashed along the text to the page edge, then on to the card.
+      c.append("q ").append(rgb).append(" RG 0.5 w [2 2] 0 d ").append(n(card.anchorX)).append(' ')
+          .append(n(h - card.anchorY)).append(" m ").append(n(pw)).append(' ').append(n(h - card.anchorY))
+          .append(" l S [] 0 d ").append(n(pw)).append(' ').append(n(h - card.anchorY)).append(" m ")
+          .append(n(card.x)).append(' ').append(n(h - card.top - 8)).append(" l S\n");
+      c.append("1 1 1 rg ").append(n(card.x)).append(' ').append(n(h - card.top - card.height)).append(' ')
+          .append(n(card.width)).append(' ').append(n(card.height)).append(" re B\n");
+      c.append(rgb.replace(" RG", "")).append(" rg ").append(n(card.x)).append(' ')
+          .append(n(h - card.top - card.height)).append(' ').append(n(Balloons.STRIPE)).append(' ')
+          .append(n(card.height)).append(" re f Q\n");
+      for (Balloons.Item it : card.items) {
+        float x = card.x + it.x, y = h - card.top - it.y;
+        if (it.text == null) {
+          c.append("q ").append(color(it.color)).append(" RG 0.25 w ").append(n(x)).append(' ').append(n(y))
+              .append(" m ").append(n(x + it.width)).append(' ').append(n(y)).append(" l S Q\n");
+          continue;
+        }
+        var safe = new StringBuilder();
+        for (int i = 0; i < it.text.length(); i++) {
+          char ch = it.text.charAt(i);
+          try {
+            winAnsi(ch);
+            safe.append(ch);
+          } catch (IOException notWinAnsi) {
+            safe.append('?');
+          }
+        }
+        c.append("q ").append(color(it.color)).append(" rg BT /").append(it.bold ? "F1 " : "F0 ").append(n(it.size))
+            .append(" Tf ").append(n(x)).append(' ').append(n(y - it.size)).append(" Td (")
+            .append(literal(safe.toString())).append(") Tj ET Q\n");
+      }
+    }
   }
 
   static String n(float f) {

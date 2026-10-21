@@ -37,6 +37,8 @@ public final class AppOptions {
     d.put("ribbon.custom", "");
     d.put("keys.custom", "");
     d.put("printMarkup", "true");
+    // Review > Markup > Balloons (Wordcraft BalloonMode): revisions, inline or commentsAndFormatting.
+    d.put("balloons", "commentsAndFormatting");
     d.put("showComments", "true");
     d.put("hideInk", "false");
     // Display > Hidden text: shown without turning on every formatting mark (Wordcraft marks.hidden).
