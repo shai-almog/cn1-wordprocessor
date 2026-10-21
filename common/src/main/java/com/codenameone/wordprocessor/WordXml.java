@@ -490,7 +490,10 @@ final class WordXml {
       }
       open(shape, out, "Picture", "http://schemas.openxmlformats.org/drawingml/2006/picture");
       out.append("<pic:pic><pic:blipFill><a:blip r:embed=\"").append(rel("image", path, false))
-          .append("\"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill></pic:pic>");
+          .append("\"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill>");
+      String turn = turn(shape, false, false);
+      if (!turn.isEmpty()) out.append("<pic:spPr>").append(turn).append("</pic:spPr>");
+      out.append("</pic:pic>");
       close(out);
     }
 
@@ -513,14 +516,18 @@ final class WordXml {
       if (!(weight > 0)) weight = .75f;
       long[] size = size(Xml.attr(shape, "style", ""));
       float dx = 0, dy = 0;
+      boolean lineH = false, lineV = false;
       if ("line".equals(prst)) {
         float[] a = point(Xml.attr(shape, "from", "0,0")), b = point(Xml.attr(shape, "to", "0,0"));
         size = new long[] {Math.max(1, Math.round(Math.abs(b[0] - a[0]) * 12700)), Math.max(1, Math.round(Math.abs(b[1] - a[1]) * 12700))};
         dx = Math.min(a[0], b[0]);
         dy = Math.min(a[1], b[1]);
+        // Drawn top-left to bottom-right; flipped for the other directions (as Wordcraft).
+        lineH = b[0] < a[0];
+        lineV = b[1] < a[1];
       }
       open(shape, out, "Shape", "http://schemas.microsoft.com/office/word/2010/wordprocessingShape", size, dx, dy);
-      out.append("<wps:wsp><wps:cNvSpPr/><wps:spPr><a:prstGeom prst=\"").append(prst).append("\"/>")
+      out.append("<wps:wsp><wps:cNvSpPr/><wps:spPr>").append(turn(shape, lineH, lineV)).append("<a:prstGeom prst=\"").append(prst).append("\"/>")
           .append(fill == null ? "<a:noFill/>" : "<a:solidFill><a:srgbClr val=\"" + fill + "\"/></a:solidFill>")
           .append("<a:ln w=\"").append(Math.round(weight * 12700)).append("\">")
           .append(stroke == null ? "<a:noFill/>" : "<a:solidFill><a:srgbClr val=\"" + stroke + "\"/></a:solidFill>")
@@ -529,10 +536,34 @@ final class WordXml {
       return true;
     }
 
+    /**
+     * As Wordcraft's vml_spin: the style's rotation (degrees, or 65536ths of one with an fd
+     * suffix) and flip (x, y), XOR the line's own direction flips, as an a:xfrm; "" for none.
+     */
+    String turn(Element shape, boolean flipH, boolean flipV) {
+      String style = Xml.attr(shape, "style", "");
+      String r = styleValue(style, "rotation").trim();
+      float deg = 0;
+      try {
+        if (r.endsWith("fd")) deg = Float.parseFloat(r.substring(0, r.length() - 2)) / 65536f;
+        else if (!r.isEmpty()) deg = Float.parseFloat(r);
+      } catch (NumberFormatException junk) {
+        deg = 0;
+      }
+      String flip = styleValue(style, "flip");
+      flipH ^= flip.indexOf('x') >= 0;
+      flipV ^= flip.indexOf('y') >= 0;
+      long rot = Math.round((((deg % 360) + 360) % 360) * 60000.0);
+      if (rot == 0 && !flipH && !flipV) return "";
+      return "<a:xfrm" + (rot == 0 ? "" : " rot=\"" + rot + "\"") + (flipH ? " flipH=\"1\"" : "")
+          + (flipV ? " flipV=\"1\"" : "") + "/>";
+    }
+
     void textBox(Element shape, Element box, StringBuilder out) {
       Element content = Xml.child(box, "txbxContent");
       open(shape, out, "Text Box", "http://schemas.microsoft.com/office/word/2010/wordprocessingShape");
-      out.append("<wps:wsp><wps:cNvSpPr txBox=\"1\"/><wps:spPr><a:prstGeom prst=\"rect\"/></wps:spPr><wps:txbx><w:txbxContent>");
+      out.append("<wps:wsp><wps:cNvSpPr txBox=\"1\"/><wps:spPr>").append(turn(shape, false, false))
+          .append("<a:prstGeom prst=\"rect\"/></wps:spPr><wps:txbx><w:txbxContent>");
       boolean run = inRun;
       inRun = false;
       if (content != null) children(content, out);

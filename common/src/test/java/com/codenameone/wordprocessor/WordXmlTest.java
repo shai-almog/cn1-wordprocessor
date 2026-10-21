@@ -175,6 +175,43 @@ public class WordXmlTest {
     }
   }
 
+  /** As Wordcraft's vml_spin: VML rotation (degrees or fd) and flips, and a line's direction. */
+  @Test
+  public void word2003VmlRotationAndFlips() throws Exception {
+    String xml = "<?xml version=\"1.0\"?><w:wordDocument xmlns:w=\"" + W2003 + "\""
+        + " xmlns:v=\"urn:schemas-microsoft-com:vml\"><w:body>"
+        + "<w:p><w:r><w:pict><w:binData w:name=\"wordml://1.png\">" + PNG + "</w:binData>"
+        + "<v:shape style=\"width:36pt;height:36pt;rotation:30;flip:x\"><v:imagedata src=\"wordml://1.png\"/></v:shape>"
+        + "</w:pict></w:r></w:p>"
+        + "<w:p><w:r><w:pict><v:rect style=\"width:50pt;height:30pt;rotation:5898240fd;flip:y\" fillcolor=\"red\"/>"
+        + "</w:pict></w:r></w:p>"
+        + "<w:p><w:r><w:pict><v:line from=\"100pt,0\" to=\"0,50pt\"/></w:pict></w:r></w:p>"
+        + "</w:body></w:wordDocument>";
+    var opened = open(xml);
+    var pics = new java.util.ArrayList<Picture>();
+    for (Block b : opened.document.blocks) if (b instanceof Picture pic) pics.add(pic);
+    assertEquals(opened.warnings.toString(), 3, pics.size());
+    assertEquals(30, pics.get(0).look.rotation);
+    assertTrue(pics.get(0).look.flipH);
+    Drawing rect = pics.get(1).drawing;
+    assertEquals(90, rect.num("rotation", 0), .01f);
+    assertTrue(rect.flag("flipV"));
+    // The 50 x 30 rectangle turned a quarter: its outline spans 30 wide and 50 tall about the centre.
+    var ops = DrawingOps.build(rect, 50, 30);
+    float minX = Float.MAX_VALUE, maxX = -Float.MAX_VALUE;
+    for (var p : ops.paths) for (int k = 0; k < p.points().length; k += 2) {
+      minX = Math.min(minX, p.points()[k]);
+      maxX = Math.max(maxX, p.points()[k]);
+    }
+    assertEquals(30, maxX - minX, 1f);
+    // Drawn from top right to bottom left: flipped horizontally.
+    Drawing line = pics.get(2).drawing;
+    assertTrue(line.flag("flipH"));
+    assertFalse(line.flag("flipV"));
+    var lp = DrawingOps.build(line, 100, 50).paths.get(0).points();
+    assertEquals(100, lp[0], .5f);
+  }
+
   @Test
   public void word2003VmlFloatsAndShapes() throws Exception {
     String xml = "<?xml version=\"1.0\"?><w:wordDocument xmlns:w=\"" + W2003 + "\""

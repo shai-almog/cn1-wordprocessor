@@ -135,7 +135,8 @@ public final class DrawingOps {
           Ops child = build(Drawing.decode(f.get(4)), Float.parseFloat(f.get(2)), Float.parseFloat(f.get(3)));
           float mw = Float.parseFloat(f.get(2)), mh = Float.parseFloat(f.get(3));
           // A member's own a:xfrm rot turns it about its centre, as Wordcraft's group members.
-          rotate(child, 0, 0, 0, mw / 2, mh / 2, Drawing.decode(f.get(4)).num("rotation", 0));
+          Drawing member = Drawing.decode(f.get(4));
+          if (!turnsItself(member.kind)) rotate(child, 0, 0, 0, mw / 2, mh / 2, member.num("rotation", 0));
           for (Path p : child.paths) offset(p.points, x, y);
           for (Text t : child.texts)
             ops.texts.add(new Text(t.text, t.x + x, t.y + y, t.width, t.size, t.color, t.bold, t.italic, t.align, t.outline, t.rotation, t.spin));
@@ -158,8 +159,36 @@ public final class DrawingOps {
     } else if ("icon".equals(k)) icon(ops, d, w, h);
     else if ("signature".equals(k)) signature(ops, d, w, h);
     else if ("object".equals(k)) object(ops, d, w, h);
+    if (turnsItself(k)) {
+      // A shape's own a:xfrm (or VML style) flips and turn, about its frame's centre.
+      if (d.flag("flipH") || d.flag("flipV")) mirror(ops, w, h, d.flag("flipH"), d.flag("flipV"));
+      rotate(ops, 0, 0, 0, w / 2, h / 2, d.num("rotation", 0));
+    }
     effects(ops, d);
     return ops;
+  }
+
+  /** Kinds whose rotation and flips build() applies (group members and standalone shapes). */
+  static boolean turnsItself(String kind) {
+    return "shape".equals(kind) || "textBox".equals(kind) || "picture".equals(kind);
+  }
+
+  /** Mirrors the primitives across the frame's vertical (h) and/or horizontal (v) centre line. */
+  static void mirror(Ops ops, float w, float h, boolean flipH, boolean flipV) {
+    for (Path p : ops.paths)
+      for (int k = 0; k + 1 < p.points.length; k += 2) {
+        if (flipH) p.points[k] = w - p.points[k];
+        if (flipV) p.points[k + 1] = h - p.points[k + 1];
+      }
+    for (int i = 0; i < ops.texts.size(); i++) {
+      Text t = ops.texts.get(i);
+      ops.texts.set(i, new Text(t.text, flipH ? w - t.x - t.width : t.x, flipV ? h - t.y - t.size : t.y, t.width, t.size,
+          t.color, t.bold, t.italic, t.align, t.outline, t.rotation, t.spin));
+    }
+    for (int i = 0; i < ops.images.size(); i++) {
+      Image m = ops.images.get(i);
+      ops.images.set(i, new Image(m.data, flipH ? w - m.x - m.width : m.x, flipV ? h - m.y - m.height : m.y, m.width, m.height, m.rotation));
+    }
   }
 
   /**

@@ -433,6 +433,14 @@ final class DocxDrawings {
     boolean box = nv != null && "1".equals(Xml.attr(nv, "txBox", ""));
     Drawing d = Drawing.of(box ? "textBox" : "shape");
     Element spPr = Xml.child(wsp, "spPr");
+    Element turn = spPr == null ? null : Xml.child(spPr, "xfrm");
+    if (turn != null) {
+      // As Wordcraft's xfrm_spin: rot (60000ths of a degree, clockwise), flipH and flipV.
+      float rot = Xml.number(Xml.attr(turn, "rot", "0")) / 60000f;
+      if (rot % 360 != 0) d = d.with("rotation", FloatPosition.num(rot));
+      if ("1".equals(Xml.attr(turn, "flipH", "")) || "true".equals(Xml.attr(turn, "flipH", ""))) d = d.with("flipH", "true");
+      if ("1".equals(Xml.attr(turn, "flipV", "")) || "true".equals(Xml.attr(turn, "flipV", ""))) d = d.with("flipV", "true");
+    }
     if (spPr != null) {
       Element geom = Xml.child(spPr, "prstGeom");
       if (!box && geom != null) d = d.with("shape", shapeName(Xml.attr(geom, "prst", "rect")));
