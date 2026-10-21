@@ -757,8 +757,15 @@ public class SimulatorUiTest {
           call(app, "updateStatus");
           assertEquals(Boolean.TRUE, thumbs[4].getClientProperty("selected"));
           assertNull(thumbs[2].getClientProperty("selected"));
-          // A preview draws the layout's shapes.
-          assertTrue(hasColor(WordProcessor.smartArtPreview("matrix", "accent2", 46, 31), 0xed7d31));
+          // A preview draws the layout's shapes, in Wordcraft's default theme accents.
+          assertTrue(hasColor(WordProcessor.smartArtPreview("matrix", "accent2", 46, 31), 0xe97132));
+          // ... or the document theme's (Wordcraft's doc.settings.theme_colors).
+          session.documentProperties(session.document().properties.withSetting("theme.accents",
+              "112233,445566,778899,AABBCC,DDEEFF,123456"));
+          assertTrue(hasColor(WordProcessor.smartArtPreview("matrix", "accent2",
+              DocxTheme.accents(session.document().properties), 46, 31), 0x445566));
+          call(app, "updateStatus");
+          assertTrue(hasColor(thumbs[0].getIcon(), 0x112233));
           // Ribbon item commands act on the Text Pane's current item, else the last (Wordcraft).
           new Commands().execute(session, "smartArt.textPane", Json.object("nodes", "A\nB\nC"));
           Method rb = WordProcessor.class.getDeclaredMethod("smartArtRibbon");

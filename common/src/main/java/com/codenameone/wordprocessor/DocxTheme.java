@@ -18,6 +18,24 @@ final class DocxTheme {
       "accent3", "accent4", "accent5", "accent6", "hyperlink", "followedHyperlink"};
   private static final String[] LOGICAL = {"text1", "background1", "text2", "background2"};
 
+  /** Wordcraft's default theme accents 1-6 (wordcraft_doc::THEME_COLORS, the Office 2023 theme). */
+  static final String[] DEFAULT_ACCENTS = {"156082", "E97132", "196B24", "0F9ED5", "A02B93", "4EA72E"};
+
+  /** The document's theme accents 1-6 from its "theme.accents" setting, else Wordcraft's defaults. */
+  static int[] accents(DocumentProperties p) {
+    String[] got = p == null ? new String[0] : p.setting("theme.accents", "").split(",");
+    int[] out = new int[6];
+    for (int i = 0; i < 6; i++) {
+      String v = i < got.length && got[i].length() == 6 ? got[i] : DEFAULT_ACCENTS[i];
+      try {
+        out[i] = Integer.parseInt(v, 16);
+      } catch (NumberFormatException e) {
+        out[i] = Integer.parseInt(DEFAULT_ACCENTS[i], 16);
+      }
+    }
+    return out;
+  }
+
   String majorFont = "", minorFont = "";
   final String[] colors = new String[12];
   final int[] map = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};

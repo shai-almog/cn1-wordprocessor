@@ -41,7 +41,11 @@ public class DocxThemeTest {
       zip.closeEntry();
     }
     zip.finish();
-    var p = Docx.read(new ByteArrayInputStream(out.toByteArray())).document.paragraph(0);
+    var doc = Docx.read(new ByteArrayInputStream(out.toByteArray())).document;
+    // The theme's accents are kept for SmartArt previews, Wordcraft's defaults filling the rest.
+    assertArrayEquals(new int[] {0x4472c4, 0xed7d31, 0x196b24, 0x0f9ed5, 0xa02b93, 0x4ea72e},
+        DocxTheme.accents(doc.properties));
+    var p = doc.paragraph(0);
     assertEquals("Calibri Light", p.text.styleAt(0).font);
     assertEquals(0x4472c4, p.text.styleAt(0).color);
     assertEquals("Calibri", p.text.styleAt(1).font);

@@ -195,7 +195,7 @@ public final class Docx {
         document
             .notes(NoteFormats.read(settings, warnings))
             .bibliography(BibliographyFormats.read(parts, warnings))
-            .properties(TableStyles.store(styles.withDefaultLang(DocxProperties.read(parts, settings, warnings)),
+            .properties(TableStyles.store(styles.withThemeAccents(styles.withDefaultLang(DocxProperties.read(parts, settings, warnings))),
                 TableStyles.readDocx(parts.containsKey("word/styles.xml") ? Xml.parse(parts.get("word/styles.xml")) : null)));
     document = TableStyles.applyAll(document);
     int compat = compatibilityMode(settings);

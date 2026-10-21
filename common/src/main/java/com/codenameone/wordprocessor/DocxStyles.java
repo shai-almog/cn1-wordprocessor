@@ -57,6 +57,22 @@ final class DocxStyles {
   }
 
   /** The w:docDefaults run language as the document "lang" setting (Wordcraft doc_lang). */
+  /**
+   * The theme's accent1-6 as the "theme.accents" setting (comma-separated hex), as Wordcraft
+   * keeps doc.settings.theme_colors for its SmartArt and colour previews; unchanged without a theme.
+   */
+  DocumentProperties withThemeAccents(DocumentProperties p) {
+    var b = new StringBuilder();
+    boolean any = false;
+    for (int i = 4; i < 10; i++) {
+      String c = theme.colors[i];
+      any |= c != null;
+      if (b.length() > 0) b.append(',');
+      b.append(c == null ? DocxTheme.DEFAULT_ACCENTS[i - 4] : c);
+    }
+    return any ? p.withSetting("theme.accents", b.toString()) : p;
+  }
+
   DocumentProperties withDefaultLang(DocumentProperties p) {
     Element lang = runDefaults == null ? null : Xml.child(runDefaults, "lang");
     String value = lang == null ? "" : Xml.attr(lang, "val", "");

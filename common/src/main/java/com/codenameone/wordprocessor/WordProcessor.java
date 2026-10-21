@@ -5151,7 +5151,7 @@ public class WordProcessor {
         final int k = i;
         var b = button(SMART_ART_LAYOUT_NAMES[i], () -> layout.setSelectedIndex(k));
         b.setName("Pick " + SMART_ART_LAYOUT_NAMES[i]);
-        b.setIcon(smartArtPreview(SMART_ART_LAYOUTS[i], "colorful", OfficeTheme.px(72), OfficeTheme.px(48)));
+        b.setIcon(smartArtPreview(SMART_ART_LAYOUTS[i], "colorful", DocxTheme.accents(session.document().properties), OfficeTheme.px(72), OfficeTheme.px(48)));
         b.setTextPosition(Component.BOTTOM);
         picker.add(b);
       }
@@ -5198,6 +5198,7 @@ public class WordProcessor {
   private ComboBox<String> smartArtRibbonColors;
   private boolean syncingSmartArt;
   private String smartArtThumbColors = "colorful";
+  private String smartArtThumbTheme = "";
   /** The Text Pane's current item (Wordcraft's smart_art_item), or -1 for none. */
   int smartArtItem = -1;
 
@@ -5268,16 +5269,20 @@ public class WordProcessor {
     ribbon.setTabVisible("SmartArt Design", got != null);
     if (got == null || smartArtRibbonColors == null) return;
     String layout = String.valueOf(got.get("layout")), colors = String.valueOf(got.get("colors"));
+    String theme = session.document().properties.setting("theme.accents", "");
+    int[] accents = DocxTheme.accents(session.document().properties);
     syncingSmartArt = true;
     try {
       for (int i = 0; i < smartArtThumbs.length; i++) {
         var b = smartArtThumbs[i];
         boolean on = SMART_ART_LAYOUTS[i].equals(layout);
         b.getAllStyles().setBorder(com.codename1.ui.plaf.Border.createLineBorder(on ? 2 : 1, on ? OfficeTheme.ACCENT : 0xc8c8c8));
-        if (!colors.equals(smartArtThumbColors)) b.setIcon(smartArtPreview(SMART_ART_LAYOUTS[i], colors, OfficeTheme.px(46), OfficeTheme.px(31)));
+        if (!colors.equals(smartArtThumbColors) || !theme.equals(smartArtThumbTheme))
+          b.setIcon(smartArtPreview(SMART_ART_LAYOUTS[i], colors, accents, OfficeTheme.px(46), OfficeTheme.px(31)));
         b.putClientProperty("selected", on ? Boolean.TRUE : null);
       }
       smartArtThumbColors = colors;
+      smartArtThumbTheme = theme;
       int c = java.util.Arrays.asList(SMART_ART_COLORS).indexOf(colors);
       if (c >= 0 && smartArtRibbonColors.getSelectedIndex() != c) smartArtRibbonColors.setSelectedIndex(c);
     } finally {
@@ -5285,13 +5290,16 @@ public class WordProcessor {
     }
   }
 
-  private static final int[] SMART_ART_ACCENTS = {0x4472c4, 0xed7d31, 0xa5a5a5, 0xffc000, 0x5b9bd5, 0x70ad47};
-
   /**
    * A layout preview drawn in code, as Wordcraft's dialogs_smart_art::preview: the layout's shapes
    * in unit-square coordinates of the square in the middle of the thumbnail, in the colors' accents.
    */
   static Image smartArtPreview(String layout, String colors, int w, int h) {
+    return smartArtPreview(layout, colors, DocxTheme.accents(null), w, h);
+  }
+
+  /** {@link #smartArtPreview} in the given theme accents 1-6 (Wordcraft's theme_colors). */
+  static Image smartArtPreview(String layout, String colors, int[] accents, int w, int h) {
     var img = Image.createImage(w, h, 0);
     var g = img.getGraphics();
     g.setAntiAliased(true);
@@ -5299,7 +5307,7 @@ public class WordProcessor {
     int s = Math.min(w, h) - 2 * inset;
     int ox = (w - s) / 2, oy = (h - s) / 2;
     int base = colors.startsWith("accent") ? Math.max(0, Math.min(5, colors.charAt(colors.length() - 1) - '1')) : -1;
-    var t = new Thumb(g, ox, oy, s, base);
+    var t = new Thumb(g, ox, oy, s, base, accents);
     switch (layout) {
       case "list": {
         double[][] at = {{0, .18}, {.35, .18}, {.7, .18}, {.175, .55}, {.525, .55}};
@@ -5384,9 +5392,11 @@ public class WordProcessor {
   private static final class Thumb {
     final Graphics g;
     final int ox, oy, s, base;
+    final int[] accents;
 
-    Thumb(Graphics g, int ox, int oy, int s, int base) {
+    Thumb(Graphics g, int ox, int oy, int s, int base, int[] accents) {
       this.g = g;
+      this.accents = accents;
       this.ox = ox;
       this.oy = oy;
       this.s = s;
@@ -5394,7 +5404,7 @@ public class WordProcessor {
     }
 
     int col(int k) {
-      return SMART_ART_ACCENTS[base >= 0 ? base : k % 6];
+      return accents[base >= 0 ? base : k % 6];
     }
 
     int x(double v) {
