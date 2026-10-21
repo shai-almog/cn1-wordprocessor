@@ -39,20 +39,43 @@ public final class ZoteroBridge implements Zotero.Handler {
     this.host = host;
   }
 
-  /** A Zotero field located in the body: block index, offset and field. */
+  /**
+   * A Zotero field located in the body: its start mark (block, offset), and the end mark
+   * (endBlock, endOffset). The result is the text between them, as Wordcraft's FieldStart and
+   * FieldEnd hold it. A legacy atomic field has its end at its own offset; a start whose end
+   * mark was deleted ends with its paragraph ({@link #hasEnd} false).
+   */
   static final class Located {
     final int block, offset;
     final InlineField field;
+    int endBlock, endOffset;
+    boolean hasEnd;
 
     Located(int block, int offset, InlineField field) {
       this.block = block;
       this.offset = offset;
       this.field = field;
+      endBlock = block;
+      endOffset = offset;
     }
+
+    boolean atomic() {
+      return !field.rangeStart();
+    }
+
+    /** True if (b, o) lies at the start mark or in the text before the end mark. */
+    boolean holds(int b, int o) {
+      return compare(b, o, block, offset) >= 0 && compare(b, o, endBlock, endOffset) <= 0;
+    }
+  }
+
+  static int compare(int b1, int o1, int b2, int o2) {
+    return b1 != b2 ? Integer.compare(b1, b2) : Integer.compare(o1, o2);
   }
 
   static List<Located> fields(Document d) {
     var out = new ArrayList<Located>();
+    final Located[] open = {null};
     for (int i = 0; i < d.blocks.size(); i++) {
       if (!(d.blocks.get(i) instanceof Paragraph p) || !p.text.hasFields()) continue;
       final int block = i;
@@ -61,11 +84,92 @@ public final class ZoteroBridge implements Zotero.Handler {
             public void run(int offset, String text, TextStyle style) {}
 
             public void field(int offset, InlineField f, TextStyle style) {
-              if (Zotero.is(f)) out.add(new Located(block, offset, f));
+              if (f.rangeEnd() && open[0] != null) {
+                open[0].endBlock = block;
+                open[0].endOffset = offset;
+                open[0].hasEnd = true;
+                open[0] = null;
+              } else if (Zotero.is(f)) {
+                close(d, open[0]);
+                var l = new Located(block, offset, f);
+                out.add(l);
+                open[0] = f.rangeStart() ? l : null;
+              }
             }
           });
     }
+    close(d, open[0]);
     return out;
+  }
+
+  private static void close(Document d, Located l) {
+    if (l == null) return;
+    l.endBlock = l.block;
+    l.endOffset = ((Paragraph) d.blocks.get(l.block)).text.length();
+  }
+
+  /** The text between a range field's marks, paragraphs joined by newlines. */
+  static String text(Document d, Located f) {
+    if (f.atomic()) return f.field.result;
+    var b = new StringBuilder();
+    for (int i = f.block; i <= f.endBlock; i++) {
+      if (!(d.blocks.get(i) instanceof Paragraph p)) continue;
+      int from = i == f.block ? f.offset + 1 : 0, to = i == f.endBlock ? f.endOffset : p.text.length();
+      if (i > f.block) b.append('\n');
+      for (int k = from; k < to; k++) if (!p.text.objectAt(k)) b.append(p.text.charAt(k));
+    }
+    return b.toString();
+  }
+
+  /**
+   * Turns atomic Zotero fields in body paragraphs into range fields: a start mark, the result as
+   * ordinary runs (keeping its formatted pieces) and an end mark; newlines in a bibliography's
+   * result become paragraphs. Returns {@code d} itself when there is nothing to convert.
+   */
+  public static Document expand(Document d) {
+    Sequence<Block> blocks = d.blocks;
+    long next = d.nextId;
+    boolean changed = false;
+    for (int i = blocks.size() - 1; i >= 0; i--) {
+      if (!(blocks.get(i) instanceof Paragraph p) || !p.text.hasFields()) continue;
+      final var atomic = new ArrayList<Object[]>();
+      p.text.visit(
+          new RichText.Visitor() {
+            public void run(int offset, String text, TextStyle style) {}
+
+            public void field(int offset, InlineField f, TextStyle style) {
+              if (Zotero.is(f) && !f.rangeStart() && style.revision == null)
+                atomic.add(new Object[] {offset, f, style});
+            }
+          });
+      if (atomic.isEmpty()) continue;
+      RichText t = p.text;
+      for (int k = atomic.size() - 1; k >= 0; k--) {
+        int at = (Integer) atomic.get(k)[0];
+        var f = (InlineField) atomic.get(k)[1];
+        var style = (TextStyle) atomic.get(k)[2];
+        RichText r = RichText.field(f.start(), style);
+        var pieces = f.piecesOf(f.result);
+        if (pieces == null) pieces = InlineField.plainPieces(f.result);
+        for (InlineField.Piece piece : pieces)
+          if (!piece.text.isEmpty()) r = r.concat(RichText.of(piece.text.replace('\r', ' '), piece.style(style)));
+        r = r.concat(RichText.field(InlineField.end(), style));
+        t = t.replace(at, at + 1, r);
+      }
+      // Split at the newlines a bibliography's entries left, one paragraph each.
+      var parts = new ArrayList<RichText>();
+      int from = 0, length = t.length();
+      for (int k = 0; k < length; k++)
+        if (t.charAt(k) == '\n' && !t.objectAt(k)) {
+          parts.add(t.slice(from, k));
+          from = k + 1;
+        }
+      parts.add(t.slice(from, length));
+      blocks = blocks.set(i, p.text(parts.get(0)));
+      for (int k = 1; k < parts.size(); k++) blocks = blocks.insert(i + k, p.copy("p" + next++, parts.get(k)));
+      changed = true;
+    }
+    return changed ? d.blocks(blocks, next) : d;
   }
 
   private List<Located> sync() {
@@ -157,22 +261,30 @@ public final class ZoteroBridge implements Zotero.Handler {
         var list = sync();
         for (int k = 0; k < list.size(); k++) {
           Located f = list.get(k);
-          if (f.block == sel.startBlock()
-              && f.offset >= sel.start()
-              && f.offset < Math.max(sel.end(), sel.start() + 1)
-              && (sel.startBlock() == sel.endBlock()))
-            if (!sel.collapsed() || f.offset == sel.start()) return triple(ids.get(k), f);
+          // The caret at the start mark or anywhere in the field's text, or a selection that
+          // overlaps the field, as Wordcraft's cursor_in_field.
+          boolean in = sel.collapsed()
+              ? f.holds(sel.startBlock(), sel.start())
+              : compare(sel.startBlock(), sel.start(), f.endBlock, f.endOffset) <= 0
+                  && compare(sel.endBlock(), sel.end(), f.block, f.offset) > 0;
+          if (in) return triple(ids.get(k), f);
         }
         return null;
       }
       case "Document_insertField": {
         requireInText(num(a, 2, 0));
         sync();
-        session.insertField(new InlineField(Zotero.stored("TEMP"), PLACEHOLDER, false, false));
+        // A start mark, the placeholder as ordinary text and an end mark, as one undo step.
+        session.transact(
+            s -> {
+              session.insertField(new InlineField(Zotero.stored("TEMP"), "", false, false).start());
+              session.replace(PLACEHOLDER);
+              session.insertField(InlineField.end());
+            });
         var sel = session.selection();
         var list = fields(session.document());
         for (int k = 0; k < list.size(); k++)
-          if (list.get(k).block == sel.block && list.get(k).offset == sel.caret - 1) {
+          if (list.get(k).endBlock == sel.block && list.get(k).endOffset == sel.caret - 1) {
             long id = nextId++;
             ids.add(Math.min(k, ids.size()), id);
             caretAfter = id;
@@ -212,7 +324,7 @@ public final class ZoteroBridge implements Zotero.Handler {
           int k = ids.indexOf(caretAfter);
           var list = sync();
           if (k >= 0 && k < list.size())
-            session.select(list.get(k).block, list.get(k).offset + 1, list.get(k).offset + 1);
+            session.select(list.get(k).endBlock, list.get(k).endOffset + 1, list.get(k).endOffset + 1);
         }
         caretAfter = null;
         return null;
@@ -220,43 +332,59 @@ public final class ZoteroBridge implements Zotero.Handler {
       case "Field_delete": {
         int k = index(arg(a, 1));
         Located f = fields(session.document()).get(k);
-        session.select(f.block, f.offset, f.offset + 1);
+        session.selectRange(f.block, f.offset, f.endBlock, f.endOffset + (f.hasEnd || f.atomic() ? 1 : 0));
         session.replace("");
         ids.remove(k);
         return null;
       }
       case "Field_select": {
         Located f = fields(session.document()).get(index(arg(a, 1)));
-        session.select(f.block, f.offset, f.offset + 1);
+        session.selectRange(f.block, f.offset, f.endBlock, f.endOffset + (f.hasEnd || f.atomic() ? 1 : 0));
         return null;
       }
       case "Field_removeCode": {
         int k = index(arg(a, 1));
         Located f = fields(session.document()).get(k);
-        session.select(f.block, f.offset, f.offset + 1);
-        session.replace(f.field.result);
+        session.transact(
+            s -> {
+              if (f.hasEnd) {
+                session.select(f.endBlock, f.endOffset, f.endOffset + 1);
+                session.replace("");
+              }
+              session.select(f.block, f.offset, f.offset + 1);
+              session.replace(f.atomic() ? f.field.result : "");
+            });
         ids.remove(k);
         return null;
       }
       case "Field_getText":
-        return fields(session.document()).get(index(arg(a, 1))).field.result;
+        return text(session.document(), fields(session.document()).get(index(arg(a, 1))));
       case "Field_setText": {
-        int k = index(arg(a, 1));
-        Located f = fields(session.document()).get(k);
-        var rich = runs(str(a, 2), bool(a, 3));
-        // The field keeps the result's formatted runs (as Wordcraft keeps them between its marks).
-        replaceField(f, f.field.result(plain(str(a, 2), bool(a, 3)), formats(rich)));
-        if (Zotero.code(f.field.instruction).regionMatches(true, 0, "BIBL", 0, 4)) {
-          // As Wordcraft's set_text: the bibliography's paragraph takes the Bibliography style.
-          ensureBibliographyStyle();
-          var keep = session.selection();
-          session.transact(
-              s -> {
-                session.select(f.block, f.offset, f.offset + 1);
+        final int k = index(arg(a, 1));
+        final var rich = runs(str(a, 2), bool(a, 3));
+        // As Wordcraft's set_text: the text between the marks is replaced by the formatted
+        // runs, newlines starting paragraphs; one undo step.
+        session.transact(
+            s -> {
+              Located f = fields(session.document()).get(k);
+              if (f.atomic()) {
+                replaceField(f, f.field.start());
+                session.select(f.block, f.offset + 1, f.offset + 1);
+                session.insertField(InlineField.end());
+                f = fields(session.document()).get(k);
+              }
+              session.selectRange(f.block, f.offset + 1, f.endBlock, f.endOffset);
+              insertRich(rich);
+              if (Zotero.code(f.field.instruction).regionMatches(true, 0, "BIBL", 0, 4)) {
+                // The bibliography's paragraphs take the Bibliography style.
+                ensureBibliographyStyle();
+                var end = session.selection();
+                session.selectRange(f.block, f.offset, end.block, end.caret);
                 session.applyStyle(BIB_STYLE);
-                session.selectRange(keep.anchorBlock, keep.anchor, keep.block, keep.caret);
-              });
-        }
+              }
+              Located g = fields(session.document()).get(k);
+              session.select(g.endBlock, g.endOffset + (g.hasEnd ? 1 : 0), g.endOffset + (g.hasEnd ? 1 : 0));
+            });
         return null;
       }
       case "Field_setCode": {

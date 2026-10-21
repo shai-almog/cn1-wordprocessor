@@ -15,6 +15,16 @@ public final class InlineField {
    */
   public final String formats;
 
+  /**
+   * {@link #formats} of a range field's start mark. As Wordcraft's FieldStart/FieldEnd, a Zotero
+   * field is a start mark (instruction, empty result) and an {@link #END} mark with the result as
+   * ordinary editable text between them, possibly spanning paragraphs (bibliography entries).
+   */
+  public static final String RANGE = "range";
+
+  /** Instruction of a range field's end mark. */
+  public static final String END = "FIELD_END";
+
   public static final int BOLD = 1, ITALIC = 2, UNDERLINE = 4, SMALL_CAPS = 8, SUPER = 16, SUB = 32;
 
   public InlineField(String instruction, String result, boolean locked, boolean showCode) {
@@ -32,6 +42,26 @@ public final class InlineField {
     this.locked = locked;
     this.showCode = showCode;
     this.formats = formats == null || formats.length() > 200000 ? "" : formats;
+  }
+
+  /** True for the start mark of a range field (its result is the text up to its end mark). */
+  public boolean rangeStart() {
+    return RANGE.equals(formats);
+  }
+
+  /** True for a range field's end mark. */
+  public boolean rangeEnd() {
+    return END.equals(instruction);
+  }
+
+  /** The start mark of a range field with this instruction. */
+  public InlineField start() {
+    return new InlineField(instruction, "", locked, false, RANGE);
+  }
+
+  /** A range field's end mark. */
+  public static InlineField end() {
+    return new InlineField(END, "", false, false, "");
   }
 
   /** A formatted piece of the result: its text (as displayed) and flags. */
@@ -68,7 +98,7 @@ public final class InlineField {
 
   /** As {@link #pieces()}, slicing {@code shown} (the result or its display, same length). */
   public java.util.List<Piece> piecesOf(String shown) {
-    if (formats.isEmpty()) return null;
+    if (formats.isEmpty() || rangeStart()) return null;
     var out = new java.util.ArrayList<Piece>();
     int at = 0, i = 0;
     while (i < formats.length() && at < shown.length()) {
@@ -107,6 +137,7 @@ public final class InlineField {
   }
 
   public String display() {
+    if (rangeEnd() || (rangeStart() && !showCode)) return "";
     if (showCode && instruction.startsWith(ContentControl.PREFIX)) {
       // Design mode shows the control's title (or type) as a tag around its content.
       ContentControl c = ContentControl.parse(instruction);

@@ -351,7 +351,8 @@ public final class Session {
   }
 
   public Session(Document d) {
-    document = d;
+    // Zotero fields are edited as range fields (marks around ordinary text), as Wordcraft does.
+    document = d == null ? null : ZoteroBridge.expand(d);
     mergeData = MergeData.EMPTY;
     selectFirst();
   }
@@ -807,7 +808,7 @@ public final class Session {
     cell = null;
     integratedSource = null;
     insertionStyle = null;
-    document = d;
+    document = ZoteroBridge.expand(d);
     mergeData = MergeData.EMPTY;
     synchronized (SessionMap.DOCUMENT_KEYS) {
       for (Object key : SessionMap.DOCUMENT_KEYS) attachments.remove(key);

@@ -94,7 +94,10 @@ public class ZoteroTest {
     assertEquals("Claim (Doe, 2020)", d.paragraph(0).text.plainText());
     assertEquals(Zotero.PREFIX + CODE, d.paragraph(0).text.fieldAt(6).instruction);
     assertTrue(d.properties.setting(Zotero.PREFS_SETTING, "").contains("value=\"Field\""));
-    assertEquals(7, s.selection().caret);
+    // The caret ends after the citation's end mark: "Claim " + start + text + end.
+    assertEquals(19, s.selection().caret);
+    assertTrue(d.paragraph(0).text.fieldAt(6).rangeStart());
+    assertTrue(d.paragraph(0).text.fieldAt(18).rangeEnd());
 
     var bytes = new ByteArrayOutputStream();
     Docx.write(d, bytes);
@@ -178,7 +181,11 @@ public class ZoteroTest {
     var fields = (List<?>) b.handle("Document_getFields", Arrays.<Object>asList(1L));
     assertEquals(Arrays.asList(1L, 2L), fields.get(0));
     b.handle("Field_setText", Arrays.<Object>asList(1L, 2L, "{\\rtf Doe. Title.\\par Roe. Other.\\par}", true));
-    assertEquals("Doe. Title.\nRoe. Other.", s.document().paragraph(0).text.fieldAt(4).result);
+    // As Wordcraft: the bibliography is a range field whose entries are real paragraphs.
+    assertTrue(s.document().paragraph(0).text.fieldAt(4).rangeStart());
+    assertEquals("Roe. Other.", s.document().paragraph(1).text.plainText());
+    assertEquals("Bibliography", s.document().paragraph(1).style);
+    assertEquals("Doe. Title.\nRoe. Other.", b.handle("Field_getText", Arrays.<Object>asList(1L, 2L)));
     s.select(0, 1, 2);
     assertEquals(Arrays.asList(1L, CODE, 0), b.handle("Document_cursorInField", Arrays.<Object>asList(1L)));
     b.handle("Field_removeCode", Arrays.<Object>asList(1L, 1L));
@@ -280,7 +287,9 @@ public class ZoteroTest {
     s.insertField(new InlineField(Zotero.PREFIX + CODE, "(X)", false, false));
     var fields = (List<?>) b.handle("Document_getFields", Arrays.<Object>asList(1L));
     b.handle("Field_setText", Arrays.<Object>asList(1L, fields.get(0) instanceof List<?> l ? l.get(0) : 1L, "{\\rtf {\\i Ibid.}}", true));
-    assertEquals("5:2", s.document().paragraph(1).text.fieldAt(4).formats);
+    assertTrue(s.document().paragraph(1).text.fieldAt(4).rangeStart());
+    assertTrue(s.document().paragraph(1).text.styleAt(5).italic);
+    assertEquals("Ibid.", b.handle("Field_getText", Arrays.<Object>asList(1L, fields.get(0) instanceof List<?> l ? l.get(0) : 1L)));
   }
 
   @Test
@@ -293,47 +302,79 @@ public class ZoteroTest {
     b.handle("Application_getActiveDocument", Arrays.<Object>asList(3L));
     b.handle("Document_getFields", Arrays.<Object>asList(1L));
     b.handle("Field_setText", Arrays.<Object>asList(1L, 1L, "{\\rtf Doe, {\\i Title}{\\super 2}}", true));
-    InlineField f = s.document().paragraph(0).text.fieldAt(4);
-    assertEquals("Doe, Title2", f.result);
-    assertEquals("5:0;5:2;1:16", f.formats);
-    assertFalse(s.document().paragraph(0).text.styleAt(4).italic); // the field run itself stays plain
-    var pieces = f.pieces();
-    assertEquals(3, pieces.size());
-    assertTrue(pieces.get(1).style(TextStyle.DEFAULT).italic);
+    // The result is ordinary formatted text between the start mark (4) and end mark (16).
+    var t = s.document().paragraph(0).text;
+    assertTrue(t.fieldAt(4).rangeStart() && t.fieldAt(16).rangeEnd());
+    assertEquals("Doe, Title2", b.handle("Field_getText", Arrays.<Object>asList(1L, 1L)));
+    assertFalse(t.styleAt(5).italic);
+    assertTrue(t.styleAt(10).italic);
+    assertEquals("superscript", t.styleAt(15).script);
 
-    // Layout draws each run in its style; the field's width is the sum of the styled runs.
+    // Layout draws each run in its style; the marks take no width.
     var metrics = new PdfMetrics();
     var lines = new LayoutEngine(metrics).layout(s.document(), 0).pages.get(0).allLines();
-    var spans = new ArrayList<LayoutEngine.Span>();
-    for (LayoutEngine.Span sp : lines.get(0).spans) if (sp.start >= 4) spans.add(sp);
-    assertEquals(3, spans.size());
-    assertEquals(InlineField.OBJECT, spans.get(0).text);
-    assertTrue(spans.get(1).style.italic && "Title".equals(spans.get(1).displayText));
-    assertEquals("superscript", spans.get(2).style.script);
-    TextStyle base = spans.get(0).style; // the first run is unformatted
-    float sum = metrics.width("Doe, ", base) + spans.get(1).width + spans.get(2).width;
-    assertEquals(sum, spans.get(0).width, .01f);
-    assertEquals(spans.get(1).x, spans.get(0).x + metrics.width("Doe, ", base), .01f);
-    assertEquals(spans.get(1).width, metrics.width("Title", base.with("italic", "true")), .01f);
-    assertNotEquals(metrics.width("Doe, Title2", base), sum, .01f);
+    boolean title = false;
+    for (LayoutEngine.Span sp : lines.get(0).spans) {
+      if (InlineField.OBJECT.equals(sp.text)) assertEquals(0f, sp.width, .01f);
+      title |= sp.style.italic && sp.text.contains("Title");
+    }
+    assertTrue(title);
 
-    // DOCX: formatted runs between separate and end, read back into the same field.
+    // DOCX: formatted runs between separate and end, read back as a field with that formatting.
     var out = new ByteArrayOutputStream();
     Docx.write(s.document(), out);
     String xml = docPart(out.toByteArray(), "word/document.xml");
     int sep = xml.indexOf("fldCharType=\"separate\""), end = xml.indexOf("fldCharType=\"end\"");
     String between = xml.substring(sep, end);
     assertTrue(between, between.contains("<w:i/>") && between.contains("superscript") && between.contains(">Title<"));
-    InlineField back = Docx.read(new ByteArrayInputStream(out.toByteArray())).document.paragraph(0).text.fieldAt(4);
+    Document read = Docx.read(new ByteArrayInputStream(out.toByteArray())).document;
+    InlineField back = read.paragraph(0).text.fieldAt(4);
     assertEquals("Doe, Title2", back.result);
-    assertEquals(f.formats, back.formats);
-    // The native format (and so copy/paste) keeps it too.
-    assertEquals(f.formats, DocumentXml.read(DocumentXml.write(s.document())).paragraph(0).text.fieldAt(4).formats);
+    assertEquals("5:0;5:2;1:16", back.formats);
+    // Opened in the editor, it is the same range field again.
+    var reopened = new Session(read);
+    assertEquals(t.toString(), reopened.document().paragraph(0).text.toString());
+    assertTrue(reopened.document().paragraph(0).text.styleAt(10).italic);
+    // The native format (and so copy/paste) keeps the marks and runs.
+    var nat = DocumentXml.read(DocumentXml.write(s.document())).paragraph(0).text;
+    assertTrue(nat.fieldAt(4).rangeStart() && nat.fieldAt(16).rangeEnd() && nat.styleAt(10).italic);
 
-    // One undo step restores the old plain result.
+    // One undo step restores the old atomic result.
     s.undo();
     assertEquals("(X)", s.document().paragraph(0).text.fieldAt(4).result);
     assertEquals("", s.document().paragraph(0).text.fieldAt(4).formats);
+  }
+
+  @Test
+  public void caretMovesAndTypesInsideACitation() throws Exception {
+    var s = new Session(Document.empty());
+    s.replace("See ");
+    s.select(0, 4, 4);
+    s.insertField(new InlineField(Zotero.PREFIX + CODE, "(Doe)", false, false));
+    // A document opened with an atomic citation edits it as a range field.
+    s.loadDocument(s.document());
+    var t = s.document().paragraph(0).text;
+    assertTrue(t.fieldAt(4).rangeStart() && t.fieldAt(10).rangeEnd());
+    // The caret steps through the citation's characters, as in Wordcraft.
+    assertEquals(6, Graphemes.next(t, 5));
+    var b = new ZoteroBridge(s, HOST);
+    b.handle("Application_getActiveDocument", Arrays.<Object>asList(3L));
+    s.select(0, 9, 9);
+    assertEquals(Arrays.asList(1L, CODE, 0), b.handle("Document_cursorInField", Arrays.<Object>asList(1L)));
+    s.replace(" 2020");
+    assertEquals("(Doe 2020)", b.handle("Field_getText", Arrays.<Object>asList(1L, 1L)));
+    // Distinct caret positions inside the citation lay out at increasing x.
+    var engine = new LayoutEngine(new PdfMetrics());
+    var line = engine.layout(s.document(), 0).pages.get(0).allLines().get(0);
+    float last = -1;
+    for (LayoutEngine.Span sp : line.spans)
+      if (sp.start > 4 && !InlineField.OBJECT.equals(sp.text)) {
+        assertTrue(sp.x > last);
+        last = sp.x;
+      }
+    // After the end mark the caret is outside the field.
+    s.select(0, 16, 16);
+    assertEquals(null, b.handle("Document_cursorInField", Arrays.<Object>asList(1L)));
   }
 
   @Test
@@ -357,7 +398,11 @@ public class ZoteroTest {
     Document back = Docx.read(new ByteArrayInputStream(out.toByteArray())).document;
     InlineField f = back.paragraph(0).text.fieldAt(4);
     assertEquals("Doe. Title.\nRoe. Other.", f.result);
-    assertEquals(s.document().paragraph(0).text.fieldAt(4).formats, f.formats);
     assertEquals(1, ZoteroBridge.fields(back).size());
+    // In the editor the imported bibliography is again one paragraph per entry.
+    var opened = new Session(back).document();
+    assertEquals(2, opened.blocks.size());
+    assertEquals("Roe. Other.", opened.paragraph(1).text.plainText());
+    assertTrue(opened.paragraph(0).text.styleAt(10).italic);
   }
 }

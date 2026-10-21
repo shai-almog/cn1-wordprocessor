@@ -246,6 +246,20 @@ final class DocxFields {
   }
 
   static void write(StringBuilder b, InlineField field, TextStyle style, DocxLinks links) {
+    if (field.rangeEnd()) {
+      // A range field's end mark; its result was written as the runs before it.
+      b.append("<w:r><w:fldChar w:fldCharType=\"end\"/></w:r>");
+      return;
+    }
+    if (field.rangeStart()) {
+      // A range field's start mark: begin, code and separate; the paragraphs' own runs follow.
+      b.append("<w:r><w:fldChar w:fldCharType=\"begin\" w:fldLock=\"")
+          .append(field.locked ? 1 : 0)
+          .append("\"/></w:r><w:r><w:instrText xml:space=\"preserve\">")
+          .append(Xml.escape(field.instruction))
+          .append("</w:instrText></w:r><w:r><w:fldChar w:fldCharType=\"separate\"/></w:r>");
+      return;
+    }
     if (Equation.inline(field)) {
       // An inline equation is m:oMath directly in the paragraph (no m:oMathPara).
       b.append(Equation.omml(Equation.fromLinear(Equation.inlineText(field))));

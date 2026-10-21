@@ -45,7 +45,7 @@ public final class DocumentFields {
   /** pageFormat is the section's page-number format, used by PAGE fields without a \* switch. */
   public static InlineField resolve(
       InlineField field, String title, int page, int count, Map<String, String> values, String pageFormat) {
-    if (field.locked) return field;
+    if (field.locked || field.rangeStart() || field.rangeEnd()) return field;
     var tokens = tokens(field.instruction);
     if (tokens.isEmpty()) return field;
     String kind = tokens.get(0).toUpperCase(), result = null;
