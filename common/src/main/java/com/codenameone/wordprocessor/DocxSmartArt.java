@@ -266,6 +266,15 @@ final class DocxSmartArt {
     return Integer.toHexString(0x1000000 | (rgb & 0xffffff)).substring(1).toUpperCase();
   }
 
+  /** a:xfrm rot (60000ths of a degree, clockwise, 0..360) for a shape recorded with a rotation. */
+  private static String rotation(Object[] s) {
+    if (s.length <= 10 || !(s[10] instanceof Float)) return "";
+    float deg = (Float) s[10] % 360;
+    if (deg < 0) deg += 360;
+    long rot = Math.round(deg * 60000.0);
+    return rot == 0 || rot >= 21600000 ? "" : " rot=\"" + rot + "\"";
+  }
+
   /**
    * The cached dsp:drawing of a SmartArt drawing laid out at w x h points: the node shapes the
    * app draws, its hierarchy/spoke connector lines and the cycle ring, each with its fill, outline and text.
@@ -283,6 +292,7 @@ final class DocxSmartArt {
       int fill = (Integer) s[5], line = (Integer) s[6], text = (Integer) s[7];
       b.append("<dsp:sp modelId=\"").append(modelId(0x10000 + k++)).append("\"><dsp:nvSpPr><dsp:cNvPr id=\"0\" name=\"\"/>")
           .append("<dsp:cNvSpPr/></dsp:nvSpPr><dsp:spPr><a:xfrm").append(s.length > 9 && Boolean.TRUE.equals(s[9]) ? " flipH=\"1\"" : "")
+          .append(rotation(s))
           .append("><a:off x=\"").append(emu(x)).append("\" y=\"")
           .append(emu(y)).append("\"/><a:ext cx=\"").append(emu(sw)).append("\" cy=\"").append(emu(sh))
           .append("\"/></a:xfrm><a:prstGeom prst=\"").append(s[0]).append("\"><a:avLst/></a:prstGeom>");

@@ -328,6 +328,12 @@ public class ChartSmartArtTest {
     for (Object[] s : cycle.shapes) if ("ellipse".equals(s[0])) circles++;
     assertEquals(4, arrows);
     assertEquals(4, circles);
+    // The cached dsp drawing saves the arrows as rightArrow shapes turned with a:xfrm rot
+    // (the first, between 12 and 3 o'clock, points along the circle at 45 degrees).
+    String dsp = DocxSmartArt.drawingXml(Drawing.of("smartArt").with("layout", "cycle").with("nodes", "One\nTwo\nThree\nFour"), 300, 300);
+    assertEquals(4, count(dsp, "prst=\"rightArrow\""));
+    assertTrue(dsp, dsp.contains("<a:xfrm rot=\"2700000\">"));
+    assertEquals(4, count(dsp, "<a:xfrm rot=\""));
   }
 
   private static int openPaths(DrawingOps.Ops ops) {

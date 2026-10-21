@@ -799,7 +799,12 @@ public final class DrawingOps {
             p[i + 1] = y + ax * sin + ay * cos;
           }
           int c = smartColor(d, k);
-          ops.fill(p, ((((c >> 16) & 255) * 6 / 10) << 16) | ((((c >> 8) & 255) * 6 / 10) << 8) | ((c & 255) * 6 / 10), -1, 0);
+          int dark = ((((c >> 16) & 255) * 6 / 10) << 16) | ((((c >> 8) & 255) * 6 / 10) << 8) | ((c & 255) * 6 / 10);
+          ops.fill(p, dark, -1, 0);
+          // Recorded for the cached dsp drawing: an unrotated box round the centre, turned by
+          // a:xfrm rot (clockwise degrees), as Wordcraft's cached cycle arrows.
+          ops.shapes.add(new Object[] {"rightArrow", x - len / 2, y - thick / 2, len, thick, dark, -1, -1, "",
+              false, (float) Math.toDegrees(rot)});
         }
       }
     }
