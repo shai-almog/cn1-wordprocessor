@@ -22,6 +22,11 @@ public final class UiSmoke {
     require("replacement".equals(session.document().plainText()), "Cross-paragraph select all");
     editor.onKeyCommand(TextInputClient.KEY_UNDO, 0);
     require("first\nsecond".equals(session.document().plainText()), "Undo input");
+    session.select(0, 0, 0);
+    editor.onKeyCommand(TextInputClient.KEY_WORD_RIGHT, TextInputClient.MOD_SHIFT);
+    require(session.selection().anchor == 0 && session.selection().caret > 0, "Option+Shift+Right selects a word");
+    editor.onKeyCommand(TextInputClient.KEY_WORD_LEFT, TextInputClient.MOD_SHIFT);
+    require(session.selection().caret == 0, "Option+Shift+Left shrinks the word selection");
     session.select(1, 6, 6);
     editor.setComposingText("k", 1);
     editor.setComposingText("漢", 1);

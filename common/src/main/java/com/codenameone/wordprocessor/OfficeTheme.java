@@ -358,6 +358,13 @@ final class OfficeTheme {
       if (fg != colors[i * 4 + 2]) styles[i].setFgColor(colors[i * 4 + 2]);
       if (bg != colors[i * 4 + 3]) styles[i].setBgColor(colors[i * 4 + 3]);
     }
+    // The framework's text editors paint their own colors rather than the style's, so a
+    // white field stayed white in dark mode. Hand them the mapped style colors.
+    if (root instanceof com.codename1.ui.editor.EditorView field) {
+      if (styles[0].getBgTransparency() != 0) field.setBackgroundColor(styles[0].getBgColor());
+      field.setTextColor(styles[0].getFgColor());
+      field.setSelectionColor(chrome(0xb3d4fc));
+    }
     var icon = (int[]) root.getClientProperty(ICON);
     if (icon != null && icon[3] != chrome(icon[2]) && root instanceof Button button) {
       icon[3] = chrome(icon[2]);

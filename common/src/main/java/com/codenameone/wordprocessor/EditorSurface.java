@@ -1885,6 +1885,9 @@ public final class EditorSurface extends Container
     placeCaret(x, y);
   }
 
+  private long lastClick;
+  private int clicks, lastClickBlock = -1, lastClickOffset;
+
   private void placeCaret(int x, int y) {
     finishComposing();
     var line = lineAt(x, y);
@@ -1923,6 +1926,25 @@ public final class EditorSurface extends Container
     rememberLine(line);
     dragBlock = block;
     dragAnchor = offset;
+    // Double click (or tap) selects the word, triple selects the paragraph, as in the
+    // framework's EditorView.
+    long now = System.currentTimeMillis();
+    clicks = now - lastClick < 400 && block == lastClickBlock && Math.abs(offset - lastClickOffset) <= 1
+        ? clicks + 1 : 1;
+    lastClick = now;
+    lastClickBlock = block;
+    lastClickOffset = offset;
+    if (clicks >= 2) {
+      var text = lineParagraph(line).text.toString();
+      int a = clicks == 2 ? Math.min(offset, text.length()) : 0, z = clicks == 2 ? a : text.length();
+      if (clicks == 2) {
+        while (a > 0 && isWordChar(text.charAt(a - 1))) a--;
+        while (z < text.length() && isWordChar(text.charAt(z))) z++;
+        if (a == z && z < text.length()) z++;
+      }
+      session.select(block, a, z);
+      dragBlock = -1;
+    }
     dragTable = line.row < 0 ? -1 : line.block;
     dragRow = line.row;
     dragColumn = line.column;
@@ -2532,6 +2554,17 @@ public final class EditorSurface extends Container
 
   @Override
   public void onKeyCommand(int command, int modifiers) {
+    // macOS sends Option+arrow as spatial word moves and Page Up/Down without a caret move.
+    if (command == KEY_WORD_LEFT || command == KEY_WORD_RIGHT) {
+      command = command == KEY_WORD_LEFT ? KEY_LEFT : KEY_RIGHT;
+      modifiers |= MOD_ALT;
+    } else if (command == KEY_SCROLL_PAGE_UP || command == KEY_SCROLL_PAGE_DOWN) {
+      int page = Math.max(1, getHeight() - getStyle().getVerticalPadding());
+      int y = getScrollY() + (command == KEY_SCROLL_PAGE_UP ? -page : page);
+      setScrollY(Math.max(0, Math.min(y, Math.max(0, getScrollDimension().getHeight() - getHeight()))));
+      repaint();
+      return;
+    }
     session.breakTypingGroup();
     finishComposing();
     var x = session.selection();

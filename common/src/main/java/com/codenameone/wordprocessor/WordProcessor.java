@@ -4927,10 +4927,12 @@ public class WordProcessor {
   /**
    * The menu bar, following Word for Mac: application, File, Edit, View, Insert, Format, Tools,
    * Table, Window and Help. The Mac gets it natively with submenus and check marks; other desktops
-   * get the same items through the framework's menu bridge. Phones and tablets use the ribbon.
+   * get the same items through the framework's menu bridge. Phones and tablets get them in the
+   * side menu.
    */
+  private final java.util.List<Command> sideMenu = new ArrayList<>();
+
   private void installMenu() {
-    if (OfficeTheme.mobile()) return;
     final int cmd = AppMenus.CMD, shift = AppMenus.CMD | AppMenus.SHIFT, alt = AppMenus.CMD | AppMenus.ALT;
     var m = new AppMenus();
     m.menu(APP_NAME)
@@ -5176,7 +5178,15 @@ public class WordProcessor {
         bar.check(id, on);
       }
     };
-    if (!m.install(mac)) {
+    if (OfficeTheme.mobile()) {
+      // Phones and tablets have no menu bar: the same entries go in the hamburger side menu.
+      for (Command c : sideMenu) form.getToolbar().removeCommand(c);
+      sideMenu.clear();
+      for (Command c : m.commands(r -> r)) {
+        form.getToolbar().addCommandToSideMenu(c);
+        sideMenu.add(c);
+      }
+    } else if (!m.install(mac)) {
       var commands = m.commands(r -> r);
       if (form.getToolbar() instanceof OfficeTitleBar title) title.nativeMenu(commands);
     }
@@ -6471,9 +6481,15 @@ public class WordProcessor {
     for (Map.Entry<String, Container> entry : styleTiles.entrySet()) {
       boolean selected = entry.getKey().replace(" ", "").equals(selectedStyle.replace(" ", ""));
       var tile = entry.getValue();
+      // Only restyle on a change, in the active appearance: writing the light color on every
+      // caret move flashed the tile white in dark mode until the next appearance pass, so map
+      // the light color right away.
+      if (Boolean.valueOf(selected).equals(tile.getClientProperty("styleTile.selected"))) continue;
+      tile.putClientProperty("styleTile.selected", Boolean.valueOf(selected));
       tile.getAllStyles().setBgColor(OfficeTheme.CHECKED);
       tile.getAllStyles().setBgTransparency(selected ? 255 : 0);
       tile.getAllStyles().setBorder(OfficeBorder.of(selected ? OfficeTheme.ACCENT : -1, 3));
+      OfficeTheme.applyAppearance(tile);
     }
     syncingControls = false;
     ribbon.repaint();
