@@ -91,6 +91,10 @@ public class MetafilePicturesTest {
   }
 
   static byte[] emfSample() {
+    return emfSample(0x00CC0020);
+  }
+
+  static byte[] emfSample(int rop) {
     Out body = new Out();
     emf(body, 39, 1, 0, 0x0000ff); // red brush ih 1
     emf(body, 37, 1);
@@ -114,7 +118,7 @@ public class MetafilePicturesTest {
     // StretchDIBits into 10..40 x 60..90.
     byte[] d = dib();
     int off = 8 + 72;
-    body.u32(81, off + d.length).u32(0, 0, 0, 0, 10, 60, 0, 0, 2, 2, off, 40, off + 40, 16, 0, 0x00CC0020, 30, 30);
+    body.u32(81, off + d.length).u32(0, 0, 0, 0, 10, 60, 0, 0, 2, 2, off, 40, off + 40, 16, 0, rop, 30, 30);
     body.bytes(d);
     emf(body, 14, 0, 16, 20);
     byte[] records = body.get();
@@ -161,6 +165,20 @@ public class MetafilePicturesTest {
     assertEquals(BLUE, at(r, 0.17, 0.67));
     assertEquals(GREEN, at(r, 0.33, 0.83));
     assertEquals(0, at(r, 0.05, 0.05) >>> 24);
+  }
+
+  @Test(timeout = 20000)
+  public void emfRasterOperationsDrawAsOverWhitePaper() throws Exception {
+    // As Wordcraft's dib::prepare: SRCAND leaves white source pixels out (they keep the paper),
+    // SRCPAINT/SRCINVERT leave black ones out; plain copy keeps every pixel.
+    var copy = PictureCodecs.decode(emfSample(0x00CC0020));
+    assertEquals(0xffffffff, at(copy, 0.33, 0.67));
+    var and = PictureCodecs.decode(emfSample(0x008800C6));
+    assertEquals(0, at(and, 0.33, 0.67) >>> 24);
+    assertEquals(BLUE, at(and, 0.17, 0.67));
+    var paint = PictureCodecs.decode(emfSample(0x00EE0086));
+    assertEquals(0xffffffff, at(paint, 0.33, 0.67));
+    assertEquals(GREEN, at(paint, 0.33, 0.83));
   }
 
   @Test(timeout = 60000)

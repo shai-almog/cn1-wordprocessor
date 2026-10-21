@@ -10,8 +10,8 @@ import java.util.Arrays;
  * restore, pens, brushes and stock objects, lines, polylines, polygons, poly-polygons, Beziers,
  * rectangles, rounded rectangles (drawn square), ellipses, arcs/chords/pies, EMF path brackets and
  * DIB bitmaps (StretchDIBits, DIBStretchBlt, DIBBitBlt, BitBlt/StretchBlt/AlphaBlend, pattern
- * fills). Text, regions, clipping, ROP modes other than plain copy and hatch/pattern brushes (painted
- * as their solid color) are not rendered. Unknown or malformed records are skipped; every count,
+ * fills; SRCAND/SRCPAINT/SRCINVERT drawn as over white paper). Text, regions, clipping, other ROP
+ * modes and hatch/pattern brushes (painted as their solid color) are not rendered. Unknown or malformed records are skipped; every count,
  * allocation and amount of fill work is bounded.
  */
 final class MetafileDecoder {
@@ -269,7 +269,7 @@ final class MetafileDecoder {
             patternFill(dx, dy, dw, dh);
             break;
           }
-          blit(packedDib(dib, recEnd), dx, dy, dw, dh, sx, sy, sw, sh);
+          blit(packedDib(dib, recEnd), dx, dy, dw, dh, sx, sy, sw, sh, s32(p));
           break;
         }
         case 0x0940: {
@@ -279,7 +279,7 @@ final class MetafileDecoder {
             patternFill(dx, dy, dw, dh);
             break;
           }
-          blit(packedDib(p + 16, recEnd), dx, dy, dw, dh, sx, sy, dw, dh);
+          blit(packedDib(p + 16, recEnd), dx, dy, dw, dh, sx, sy, dw, dh, s32(p));
           break;
         }
         default: break;
@@ -493,7 +493,9 @@ final class MetafileDecoder {
             if (type == 76 || type == 77) patternFill(dx, dy, dw, dh);
             break;
           }
-          blit(splitDib(p - 8, offBmi, cbBmi, offBits, cbBits), dx, dy, dw, dh, sx, sy, sw, sh);
+          // BitBlt/StretchBlt carry their raster operation at record offset 40; AlphaBlend has none.
+          blit(splitDib(p - 8, offBmi, cbBmi, offBits, cbBits), dx, dy, dw, dh, sx, sy, sw, sh,
+              type == 114 ? SRCCOPY : s32(p + 32));
           break;
         }
         case 81: {
@@ -501,14 +503,14 @@ final class MetafileDecoder {
           int sw = s32(p + 32), sh = s32(p + 36);
           int offBmi = s32(p + 40), cbBmi = s32(p + 44), offBits = s32(p + 48), cbBits = s32(p + 52);
           int dw = s32(p + 64), dh = s32(p + 68);
-          blit(splitDib(p - 8, offBmi, cbBmi, offBits, cbBits), dx, dy, dw, dh, sx, sy, sw, sh);
+          blit(splitDib(p - 8, offBmi, cbBmi, offBits, cbBits), dx, dy, dw, dh, sx, sy, sw, sh, s32(p + 60));
           break;
         }
         case 80: {
           int dx = s32(p + 16), dy = s32(p + 20), sx = s32(p + 24), sy = s32(p + 28);
           int w = s32(p + 32), h = s32(p + 36);
           int offBmi = s32(p + 40), cbBmi = s32(p + 44), offBits = s32(p + 48), cbBits = s32(p + 52);
-          blit(splitDib(p - 8, offBmi, cbBmi, offBits, cbBits), dx, dy, w, h, sx, sy, w, h);
+          blit(splitDib(p - 8, offBmi, cbBmi, offBits, cbBits), dx, dy, w, h, sx, sy, w, h, SRCCOPY);
           break;
         }
         default: break;
@@ -642,9 +644,18 @@ final class MetafileDecoder {
       fillDevice(new double[][] {map(rect(dx, dy, dx + dw, dy + dh))}, c, false);
     }
 
+    /**
+     * Stretches a bitmap into the destination. The picture has no destination pixels, so raster
+     * operations are drawn as they look over white paper, as Wordcraft's dib::prepare: SRCAND leaves
+     * white source pixels out, SRCPAINT and SRCINVERT leave black ones out, others copy.
+     */
+    private static final int SRCCOPY = 0x00CC0020, SRCAND = 0x008800C6, SRCPAINT = 0x00EE0086,
+        SRCINVERT = 0x00660046;
+
     private void blit(PictureCodecs.Raster r, double dx, double dy, double dw, double dh, int sx, int sy,
-        int sw, int sh) {
+        int sw, int sh, int rop) {
       if (r == null || sw == 0 || sh == 0) return;
+      int skip = rop == SRCAND ? 0xffffff : rop == SRCPAINT || rop == SRCINVERT ? 0 : -1;
       double[] q = map(new double[] {dx, dy, dx + dw, dy + dh});
       double x0 = q[0], y0 = q[1], x1 = q[2], y1 = q[3];
       int ax = (int) Math.max(0, Math.floor(Math.min(x0, x1))), bx = (int) Math.min(width, Math.ceil(Math.max(x0, x1)));
@@ -660,6 +671,7 @@ final class MetafileDecoder {
           int sxx = sx + (int) Math.floor(u * sw);
           if (sxx < 0 || sxx >= r.width) continue;
           int c = r.argb[syy * r.width + sxx];
+          if ((c & 0xffffff) == skip) continue;
           blend(y * width + x, c, 1);
         }
       }
