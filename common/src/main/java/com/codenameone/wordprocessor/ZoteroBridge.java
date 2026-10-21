@@ -11,7 +11,9 @@ import java.util.List;
  * Document_complete.
  *
  * <p>Limits (see docs/STATUS.md): citations live in body paragraphs only (not table cells,
- * footnotes or endnotes), so note styles are rejected; field results are plain text.
+ * footnotes or endnotes), so note styles are rejected. Document_insertText keeps Zotero's rich
+ * formatting as runs and paragraphs; a field is one atomic run, so its result keeps only the
+ * formatting shared by the whole result.
  */
 public final class ZoteroBridge implements Zotero.Handler {
   public static final int PROTOCOL_VERSION = 3;
@@ -189,7 +191,7 @@ public final class ZoteroBridge implements Zotero.Handler {
         return Arrays.asList(new ArrayList<Object>(ids), codes, notes);
       }
       case "Document_insertText": {
-        session.replace(plain(str(a, 1), true));
+        insertRich(runs(str(a, 1), true));
         return null;
       }
       case "Document_setBibliographyStyle":
@@ -241,7 +243,18 @@ public final class ZoteroBridge implements Zotero.Handler {
       case "Field_setText": {
         int k = index(arg(a, 1));
         Located f = fields(session.document()).get(k);
+        var rich = runs(str(a, 2), bool(a, 3));
         replaceField(f, f.field.result(plain(str(a, 2), bool(a, 3))));
+        if (bool(a, 3)) {
+          // The field is one atomic run: apply the formatting its whole result shares.
+          var keep = session.selection();
+          session.transact(
+              s -> {
+                session.select(f.block, f.offset, f.offset + 1);
+                for (String[] kv : uniform(rich)) session.format(kv[0], kv[1]);
+                session.selectRange(keep.anchorBlock, keep.anchor, keep.block, keep.caret);
+              });
+        }
         return null;
       }
       case "Field_setCode": {
@@ -262,35 +275,123 @@ public final class ZoteroBridge implements Zotero.Handler {
     session.mapFields((paragraph, at, field) -> pid.equals(paragraph) && at == f.offset ? value : field);
   }
 
+  /** One formatted piece of a Zotero rich result; newlines inside separate paragraphs. */
+  static final class Run {
+    final StringBuilder text = new StringBuilder();
+    boolean bold, italic, underline, smallCaps;
+    String script = "baseline";
+
+    Run copy() {
+      var r = new Run();
+      r.bold = bold;
+      r.italic = italic;
+      r.underline = underline;
+      r.smallCaps = smallCaps;
+      r.script = script;
+      return r;
+    }
+
+    boolean sameFormat(Run o) {
+      return bold == o.bold && italic == o.italic && underline == o.underline
+          && smallCaps == o.smallCaps && script.equals(o.script);
+    }
+
+    String[][] format() {
+      return new String[][] {
+        {"bold", "" + bold}, {"italic", "" + italic}, {"underline", "" + underline},
+        {"smallCaps", "" + smallCaps}, {"script", script}
+      };
+    }
+  }
+
   /** Plain text from Zotero's RTF ("rich") or HTML results; paragraph breaks become newlines. */
   static String plain(String s, boolean rich) {
     if (!rich) return s;
     var b = new StringBuilder();
+    for (Run r : runs(s, true)) b.append(r.text);
+    return b.toString();
+  }
+
+  /**
+   * Formatted runs from Zotero's RTF or HTML results: bold, italic, underline, superscript,
+   * subscript and small caps are kept; trailing paragraph breaks are dropped.
+   */
+  static List<Run> runs(String s, boolean rich) {
+    var out = new ArrayList<Run>();
+    Run cur = new Run();
+    if (!rich) {
+      cur.text.append(s);
+      out.add(cur);
+      return out;
+    }
     boolean html = s.indexOf('<') >= 0 && s.indexOf("{\\rtf") < 0;
+    var stack = new ArrayList<Run>();
+    var tags = new ArrayList<String>();
+    out.add(cur);
     for (int i = 0; i < s.length(); i++) {
       char c = s.charAt(i);
+      Run next = null;
       if (html) {
         if (c == '<') {
           int end = s.indexOf('>', i);
           if (end < 0) break;
-          String tag = s.substring(i + 1, end).toLowerCase();
-          if (tag.startsWith("/p") || tag.startsWith("br") || tag.startsWith("/div")) b.append('\n');
+          String tag = s.substring(i + 1, end).trim();
+          String lower = tag.toLowerCase();
           i = end;
+          if (lower.startsWith("/")) {
+            String name = tagName(lower.substring(1));
+            if ("p".equals(name) || "div".equals(name)) append(out, cur, '\n');
+            int k = tags.lastIndexOf(name);
+            if (k >= 0) {
+              next = stack.get(k).copy();
+              while (tags.size() > k) {
+                tags.remove(tags.size() - 1);
+                stack.remove(stack.size() - 1);
+              }
+            }
+          } else {
+            String name = tagName(lower);
+            if ("br".equals(name)) {
+              append(out, cur, '\n');
+              continue;
+            }
+            if (lower.endsWith("/")) continue;
+            tags.add(name);
+            stack.add(cur.copy());
+            next = cur.copy();
+            if ("i".equals(name) || "em".equals(name) || "cite".equals(name)) next.italic = true;
+            else if ("b".equals(name) || "strong".equals(name)) next.bold = true;
+            else if ("u".equals(name)) next.underline = true;
+            else if ("sup".equals(name)) next.script = "superscript";
+            else if ("sub".equals(name)) next.script = "subscript";
+            String style = lower.replace(" ", "");
+            if (style.indexOf("font-style:italic") >= 0) next.italic = true;
+            if (style.indexOf("font-style:normal") >= 0) next.italic = false;
+            if (style.indexOf("font-weight:bold") >= 0) next.bold = true;
+            if (style.indexOf("font-weight:normal") >= 0) next.bold = false;
+            if (style.indexOf("font-variant:small-caps") >= 0) next.smallCaps = true;
+            if (style.indexOf("font-variant:normal") >= 0) next.smallCaps = false;
+            if (style.indexOf("text-decoration:underline") >= 0) next.underline = true;
+            if (style.indexOf("vertical-align:super") >= 0) next.script = "superscript";
+            if (style.indexOf("vertical-align:sub") >= 0) next.script = "subscript";
+          }
         } else if (c == '&') {
           int end = s.indexOf(';', i);
           String e = end > i && end - i < 8 ? s.substring(i + 1, end) : "";
           String r = "amp".equals(e) ? "&" : "lt".equals(e) ? "<" : "gt".equals(e) ? ">"
               : "quot".equals(e) ? "\"" : "nbsp".equals(e) ? "\u00a0" : null;
-          if (r == null) b.append(c);
+          if (r == null) append(out, cur, c);
           else {
-            b.append(r);
+            append(out, cur, r.charAt(0));
             i = end;
           }
-        } else b.append(c);
-      } else if (c == '{' || c == '}') {
-        // group markers
+        } else if (c != '\r' && c != '\n') append(out, cur, c);
+      } else if (c == '{') {
+        stack.add(cur.copy());
+      } else if (c == '}') {
+        if (!stack.isEmpty()) next = stack.remove(stack.size() - 1).copy();
       } else if (c == '\\') {
-        if (i + 1 < s.length() && "\\{}".indexOf(s.charAt(i + 1)) >= 0) b.append(s.charAt(++i));
+        if (i + 1 < s.length() && "\\{}".indexOf(s.charAt(i + 1)) >= 0) append(out, cur, s.charAt(++i));
         else {
           int j = i + 1;
           while (j < s.length() && ((s.charAt(j) >= 'a' && s.charAt(j) <= 'z') || (s.charAt(j) >= 'A' && s.charAt(j) <= 'Z'))) j++;
@@ -300,25 +401,110 @@ public final class ZoteroBridge implements Zotero.Handler {
             k++;
             while (k < s.length() && s.charAt(k) >= '0' && s.charAt(k) <= '9') k++;
           }
+          boolean on = !"0".equals(s.substring(j, k));
           if ("uc".equals(word) || word.isEmpty()) {
             // skip
           } else if ("u".equals(word)) {
             try {
               int v = Integer.parseInt(s.substring(j, k));
-              b.append((char) (v < 0 ? v + 65536 : v));
+              append(out, cur, (char) (v < 0 ? v + 65536 : v));
               if (k < s.length() && s.charAt(k) == '?') k++;
             } catch (NumberFormatException ignored) {
             }
-          } else if ("par".equals(word) || "line".equals(word)) b.append('\n');
-          else if ("tab".equals(word)) b.append('\t');
-          else if ("rtf".equals(word)) b.setLength(0);
+          } else if ("par".equals(word) || "line".equals(word)) append(out, cur, '\n');
+          else if ("tab".equals(word)) append(out, cur, '\t');
+          else if ("rtf".equals(word)) {
+            out.clear();
+            cur = new Run();
+            out.add(cur);
+          } else if ("i".equals(word)) (next = cur.copy()).italic = on;
+          else if ("b".equals(word)) (next = cur.copy()).bold = on;
+          else if ("ul".equals(word)) (next = cur.copy()).underline = on;
+          else if ("ulnone".equals(word)) (next = cur.copy()).underline = false;
+          else if ("scaps".equals(word)) (next = cur.copy()).smallCaps = on;
+          else if ("super".equals(word)) (next = cur.copy()).script = "superscript";
+          else if ("sub".equals(word)) (next = cur.copy()).script = "subscript";
+          else if ("nosupersub".equals(word)) (next = cur.copy()).script = "baseline";
+          else if ("plain".equals(word)) next = new Run();
           if (k < s.length() && s.charAt(k) == ' ') k++;
           i = k - 1;
         }
-      } else if (c != '\r' && c != '\n') b.append(c);
+      } else if (c != '\r' && c != '\n') append(out, cur, c);
+      if (next != null && !next.sameFormat(cur)) {
+        if (cur.text.length() == 0) out.remove(out.size() - 1);
+        cur = next;
+        out.add(cur);
+      }
     }
-    String r = b.toString();
-    while (r.endsWith("\n")) r = r.substring(0, r.length() - 1);
-    return r;
+    // Drop trailing paragraph breaks and empty runs.
+    for (int k = out.size() - 1; k >= 0; k--) {
+      var t = out.get(k).text;
+      while (t.length() > 0 && t.charAt(t.length() - 1) == '\n') t.setLength(t.length() - 1);
+      if (t.length() > 0) break;
+      if (out.size() > 1) out.remove(k);
+    }
+    return out;
+  }
+
+  private static String tagName(String tag) {
+    int e = 0;
+    while (e < tag.length() && tag.charAt(e) > ' ' && tag.charAt(e) != '/') e++;
+    return tag.substring(0, e);
+  }
+
+  private static void append(List<Run> out, Run cur, char c) {
+    cur.text.append(c);
+  }
+
+  /**
+   * Replaces the selection with formatted runs as one undo step; each newline starts a new
+   * paragraph (bibliography entries), the caret ends after the text.
+   */
+  private void insertRich(final List<Run> runs) {
+    session.transact(
+        s -> {
+          var all = new StringBuilder();
+          for (Run r : runs) all.append(r.text);
+          var x = session.selection();
+          int block = x.startBlock(), at = x.start();
+          session.replace(all.toString());
+          var end = session.selection();
+          for (Run r : runs) {
+            String t = r.text.toString();
+            int i = 0;
+            while (i < t.length()) {
+              int nl = t.indexOf('\n', i);
+              int stop = nl < 0 ? t.length() : nl;
+              if (stop > i) {
+                session.select(block, at, at + (stop - i));
+                for (String[] kv : r.format()) session.format(kv[0], kv[1]);
+              }
+              at += stop - i;
+              if (nl < 0) break;
+              block++;
+              at = 0;
+              i = nl + 1;
+            }
+          }
+          session.select(end.block, end.caret, end.caret);
+        });
+  }
+
+  /** Formatting shared by every visible character of a result, for an atomic field's run. */
+  static List<String[]> uniform(List<Run> runs) {
+    var out = new ArrayList<String[]>();
+    String[][] first = null;
+    boolean[] same = null;
+    for (Run r : runs) {
+      if (r.text.toString().trim().isEmpty()) continue;
+      String[][] f = r.format();
+      if (first == null) {
+        first = f;
+        same = new boolean[f.length];
+        Arrays.fill(same, true);
+      } else for (int k = 0; k < f.length; k++) same[k] &= f[k][1].equals(first[k][1]);
+    }
+    if (first != null) for (int k = 0; k < first.length; k++) if (same[k]) out.add(first[k]);
+    return out;
   }
 }

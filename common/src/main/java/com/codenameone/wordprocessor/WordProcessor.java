@@ -7223,7 +7223,22 @@ public class WordProcessor {
                                       : "adoc".equals(ext)
                                           ? RichTextFormat.ASCIIDOC
                                           : RichTextFormat.PLAIN_TEXT;
-                      document = TextFormats.read(new String(bytes, "UTF-8"), format).title(name);
+                      // External pictures resolve against the opened file; failures are reported.
+                      var pictureWarnings = new ArrayList<String>();
+                      document =
+                          TextFormats.read(
+                                  new String(bytes, "UTF-8"),
+                                  format,
+                                  path,
+                                  TextFormats.NETWORK_IMAGES,
+                                  pictureWarnings)
+                              .title(name);
+                      if (!pictureWarnings.isEmpty()
+                          && !showDialog(
+                              "Pictures not loaded",
+                              new SpanLabelCompat(join(pictureWarnings)),
+                              "Open",
+                              "Cancel")) return;
                       source = null;
                     }
                     forgetFile();

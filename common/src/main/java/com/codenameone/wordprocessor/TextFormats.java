@@ -20,9 +20,95 @@ public final class TextFormats {
    * Imports text; when {@code blocks} is set, HTML/Markdown/RTF tables and data/hex pictures are
    * lifted out first (see {@link TextBlocks}) and re-inserted where their marker lands.
    */
+  /** Loads an external picture of at most {@code limit} bytes. */
+  public interface ImageSource {
+    byte[] fetch(String url, int limit) throws java.io.IOException;
+  }
+
+  /**
+   * Codename One networking for http/https pictures and FileSystemStorage for file: and local
+   * paths. Blocking: on the EDT it uses addToQueueAndWait (invokeAndBlock), so callers that
+   * import synchronously keep working.
+   */
+  public static final ImageSource NETWORK_IMAGES =
+      (url, limit) -> {
+        String lower = url.toLowerCase();
+        if (lower.startsWith("http://") || lower.startsWith("https://")) {
+          final java.io.IOException[] failure = new java.io.IOException[1];
+          final byte[][] body = new byte[1][];
+          var request =
+              new com.codename1.io.ConnectionRequest(url, false) {
+                @Override
+                protected void readResponse(java.io.InputStream input) throws java.io.IOException {
+                  try {
+                    body[0] = readLimited(input, limit);
+                  } catch (java.io.IOException e) {
+                    failure[0] = e;
+                  }
+                }
+
+                @Override
+                protected void handleErrorResponseCode(int code, String message) {
+                  failure[0] = new java.io.IOException("HTTP " + code);
+                }
+
+                @Override
+                protected void handleException(Exception err) {
+                  failure[0] = new java.io.IOException(err.getMessage());
+                }
+              };
+          request.setFailSilently(true);
+          request.setTimeout(15000);
+          com.codename1.io.NetworkManager.getInstance().addToQueueAndWait(request);
+          if (failure[0] != null) throw failure[0];
+          if (body[0] == null) throw new java.io.IOException("No response");
+          return body[0];
+        }
+        String path = url;
+        var fs = com.codename1.io.FileSystemStorage.getInstance();
+        if (!fs.exists(path) && lower.startsWith("file:")) {
+          path = url.substring(5);
+          while (path.startsWith("//")) path = path.substring(1);
+        }
+        if (!fs.exists(path)) throw new java.io.IOException("Not found");
+        if (fs.getLength(path) > limit) throw new java.io.IOException("Larger than " + (limit >> 20) + " MB");
+        try (var in = fs.openInputStream(path)) {
+          return readLimited(in, limit);
+        }
+      };
+
+  static byte[] readLimited(java.io.InputStream in, int limit) throws java.io.IOException {
+    var out = new java.io.ByteArrayOutputStream();
+    byte[] buffer = new byte[8192];
+    for (int n; (n = in.read(buffer)) > 0; ) {
+      if (out.size() + n > limit) throw new java.io.IOException("Larger than " + (limit >> 20) + " MB");
+      out.write(buffer, 0, n);
+    }
+    return out.toByteArray();
+  }
+
+  /**
+   * Imports text whose external pictures (http/https/file, or paths relative to {@code base})
+   * are fetched through {@code images}; pictures that fail are left out and described in
+   * {@code warnings}.
+   */
+  public static Document read(
+      String text, RichTextFormat format, String base, ImageSource images, java.util.List<String> warnings) {
+    return read(text, format, true, base, images, warnings);
+  }
+
   static Document read(String text, RichTextFormat format, boolean blocks) {
+    return read(text, format, blocks, null, null, null);
+  }
+
+  static Document read(
+      String text, RichTextFormat format, boolean blocks, String base, ImageSource images,
+      java.util.List<String> warnings) {
     TextBlocks extracted = new TextBlocks(format);
+    extracted.base = base;
+    extracted.images = images;
     if (blocks) text = extracted.extract(text);
+    if (warnings != null) warnings.addAll(extracted.warnings);
     int count = extracted.blocks.size();
     HtmlImporter.Result r = RichTextImporter.parse(text, format);
     String[] lines = TextUtil.split(r.getText(), '\n');

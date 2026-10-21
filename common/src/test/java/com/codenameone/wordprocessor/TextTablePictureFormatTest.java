@@ -156,4 +156,28 @@ public class TextTablePictureFormatTest {
     };
     for (String r : rtf) assertNotNull(r, TextFormats.read(r, RichTextFormat.RTF));
   }
+
+  @Test
+  public void markdownColspanUsesMultiMarkdownPipes() throws Exception {
+    var rows = new ArrayList<List<Sequence<Paragraph>>>();
+    String[][] text = {{"H", "", "Z"}, {"a", "b", "c"}};
+    for (int r = 0; r < 2; r++) {
+      var row = new ArrayList<Sequence<Paragraph>>();
+      for (int c = 0; c < 3; c++) row.add(cell("m" + r + c, text[r][c]));
+      rows.add(row);
+    }
+    var merges = new ArrayList<Table.Merge>();
+    merges.add(new Table.Merge(0, 0, 1, 2));
+    var d = new Document(new Sequence<Block>().append(new Table("t1", rows, merges)), PageSpec.A4, "M", 100);
+    String md = TextFormats.write(d, RichTextFormat.MARKDOWN);
+    assertTrue(md, md.contains("| H || Z |"));
+    Table t = table(TextFormats.read(md, RichTextFormat.MARKDOWN));
+    assertEquals(3, t.columns());
+    assertEquals(2, t.span(0, 0).columns);
+    assertEquals("Z", Table.cellText(t.cell(0, 2)));
+    assertEquals("c", Table.cellText(t.cell(1, 2)));
+    // An empty cell written with a space is still an ordinary empty cell.
+    Table plain = table(TextFormats.read("| a | | c |\n|---|---|---|\n| 1 | 2 | 3 |", RichTextFormat.MARKDOWN));
+    assertEquals(1, plain.span(0, 0).columns);
+  }
 }

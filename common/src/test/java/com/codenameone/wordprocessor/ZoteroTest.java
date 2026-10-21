@@ -219,4 +219,34 @@ public class ZoteroTest {
     assertEquals("a & b\nc", ZoteroBridge.plain("<div>a &amp; b</div><div>c</div>", true));
     assertNotNull(Zotero.Command.named("removeCodes"));
   }
+
+  @Test
+  public void richResultsKeepFormatting() throws Exception {
+    var runs = ZoteroBridge.runs("{\\rtf Doe, {\\i Title}, {\\scaps x}{\\super 2}\\b B\\b0 .}", true);
+    var text = new StringBuilder();
+    for (var r : runs) text.append(r.text);
+    assertEquals("Doe, Title, x2B.", text.toString());
+    assertTrue(runs.get(1).italic && "Title".equals(runs.get(1).text.toString()));
+    assertTrue(runs.get(3).smallCaps && runs.get(4).script.equals("superscript") && runs.get(5).bold);
+    var html = ZoteroBridge.runs("<div class=\"csl-entry\">A <i>B</i> <span style=\"font-variant: small-caps\">c</span><sub>1</sub></div>", true);
+    assertTrue(html.get(1).italic && html.get(3).smallCaps && "subscript".equals(html.get(4).script));
+
+    var s = new Session(Document.empty());
+    s.replace("X");
+    s.select(0, 1, 1);
+    var b = new ZoteroBridge(s, HOST);
+    b.handle("Application_getActiveDocument", Arrays.<Object>asList(3L));
+    b.handle("Document_insertText", Arrays.<Object>asList(1L, "<div>Doe, <i>Title</i>.</div><div>Roe<sup>2</sup></div>"));
+    assertEquals("XDoe, Title.", s.document().paragraph(0).text.plainText());
+    assertEquals("Roe2", s.document().paragraph(1).text.plainText());
+    assertTrue(s.document().paragraph(0).text.styleAt(7).italic);
+    assertFalse(s.document().paragraph(0).text.styleAt(2).italic);
+    assertEquals("superscript", s.document().paragraph(1).text.styleAt(3).script);
+
+    s.select(1, 4, 4);
+    s.insertField(new InlineField(Zotero.PREFIX + CODE, "(X)", false, false));
+    var fields = (List<?>) b.handle("Document_getFields", Arrays.<Object>asList(1L));
+    b.handle("Field_setText", Arrays.<Object>asList(1L, fields.get(0) instanceof List<?> l ? l.get(0) : 1L, "{\\rtf {\\i Ibid.}}", true));
+    assertTrue(s.document().paragraph(1).text.styleAt(4).italic);
+  }
 }

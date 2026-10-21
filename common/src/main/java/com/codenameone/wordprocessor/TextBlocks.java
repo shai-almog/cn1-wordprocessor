@@ -24,6 +24,13 @@ final class TextBlocks {
   final RichTextFormat format;
   long next = 1;
 
+  /** Where relative image paths resolve (the source file or page), or null. */
+  String base;
+  /** Fetches http/https/file pictures; null leaves external pictures out. */
+  TextFormats.ImageSource images;
+  /** External pictures that couldn't be loaded. */
+  final List<String> warnings = new ArrayList<String>();
+
   TextBlocks(RichTextFormat format) {
     this.format = format;
   }
@@ -161,6 +168,60 @@ final class TextBlocks {
     }
   }
 
+  /** Largest external picture fetched during import. */
+  static final int MAX_EXTERNAL_PICTURE = 20 * 1024 * 1024;
+
+  /** A data: picture, or an http/https/file/relative one fetched through {@link #images}. */
+  private String sourcePicture(String uri, float w, float h, String alt) {
+    String data = dataPicture(uri, w, h, alt);
+    if (data != null || images == null) return data;
+    String u = resolve(base, uri.trim().replace("&amp;", "&"));
+    if (u == null) return null;
+    try {
+      String mark = picture(images.fetch(u, MAX_EXTERNAL_PICTURE), w, h, alt);
+      if (mark.isEmpty()) warnings.add("Picture " + u + " isn't a supported image");
+      return mark;
+    } catch (Exception e) {
+      warnings.add("Couldn't load picture " + u + (e.getMessage() == null ? "" : ": " + e.getMessage()));
+      return "";
+    }
+  }
+
+  /** Resolves an image reference against the source; null when it isn't fetchable. */
+  static String resolve(String base, String uri) {
+    String lower = uri.toLowerCase();
+    if (lower.startsWith("http://") || lower.startsWith("https://") || lower.startsWith("file:")) return uri;
+    int colon = uri.indexOf(':'), slash0 = uri.indexOf('/');
+    if (uri.isEmpty() || uri.startsWith("#") || colon > 1 && (slash0 < 0 || colon < slash0)) return null;
+    if (base == null) return uri.startsWith("/") ? uri : null;
+    if (uri.startsWith("/")) {
+      int host = base.indexOf("://");
+      int slash = host < 0 ? -1 : base.indexOf('/', host + 3);
+      return host >= 0 && base.toLowerCase().startsWith("http") ? (slash < 0 ? base : base.substring(0, slash)) + uri : uri;
+    }
+    String dir = base.substring(0, base.lastIndexOf('/') + 1);
+    String path = dir + uri;
+    // Collapse "./" and "dir/../" segments.
+    int scheme = path.indexOf("://");
+    String head = "", rest = path;
+    if (scheme >= 0) {
+      int slash = path.indexOf('/', scheme + 3);
+      if (slash < 0) return path;
+      head = path.substring(0, slash);
+      rest = path.substring(slash);
+    }
+    var parts = new ArrayList<String>();
+    for (String seg : TextUtil.split(rest, '/')) {
+      if (".".equals(seg)) continue;
+      if ("..".equals(seg)) {
+        if (parts.size() > 1) parts.remove(parts.size() - 1);
+      } else parts.add(seg);
+    }
+    var b = new StringBuilder(head);
+    for (int i = 0; i < parts.size(); i++) b.append(i == 0 ? "" : "/").append(parts.get(i));
+    return b.toString();
+  }
+
   private String dataPicture(String uri, float w, float h, String alt) {
     String lower = uri.trim().toLowerCase();
     if (!lower.startsWith("data:image/")) return null;
@@ -274,7 +335,7 @@ final class TextBlocks {
         int e = tagEnd(text, lt);
         String t = text.substring(lt, e + 1);
         String src = attr(t, "src");
-        String mark = src == null ? null : dataPicture(src, length(t, "width"), length(t, "height"), attr(t, "alt"));
+        String mark = src == null ? null : sourcePicture(src, length(t, "width"), length(t, "height"), attr(t, "alt"));
         if (mark != null) {
           out.append(text, i, lt).append(mark);
           i = e + 1;
@@ -378,7 +439,8 @@ final class TextBlocks {
         code = !code;
         cur.append(c);
       } else if (c == '|' && !code) {
-        cells.add(cur.toString().trim());
+        // A bare "||" (no space) is a MultiMarkdown colspan; null marks the spanned column.
+        cells.add(cur.length() == 0 && !cells.isEmpty() ? null : cur.toString().trim());
         cur.setLength(0);
       } else cur.append(c);
     }
@@ -408,10 +470,16 @@ final class TextBlocks {
           if (l.trim().length() == 0 || l.indexOf('|') < 0) break;
           List<String> raw = pipeCells(l);
           var row = new ArrayList<Spec>();
-          for (int c = 0; c < head.size() && c < MAX_COLUMNS; c++) {
+          int k = 0;
+          for (int c = 0; c < head.size() && c < MAX_COLUMNS; c++, k++) {
+            if (k < raw.size() && raw.get(k) == null && !row.isEmpty()) {
+              row.get(row.size() - 1).columns++;
+              continue;
+            }
             Spec s = new Spec();
-            s.source = c < raw.size() ? raw.get(c).replace("<br>", "\n\n").replace("<br/>", "\n\n") : "";
-            String d = c < delim.size() ? delim.get(c) : "";
+            String v = k < raw.size() && raw.get(k) != null ? raw.get(k) : "";
+            s.source = v.replace("<br>", "\n\n").replace("<br/>", "\n\n");
+            String d = c < delim.size() && delim.get(c) != null ? delim.get(c) : "";
             s.align = d.startsWith(":") && d.endsWith(":") && d.length() > 1 ? "center" : d.endsWith(":") ? "right" : "";
             row.add(s);
           }
@@ -440,7 +508,7 @@ final class TextBlocks {
       String target = line.substring(close + 2, end).trim();
       int space = target.indexOf(' ');
       if (space > 0) target = target.substring(0, space);
-      String mark = dataPicture(target, -1, -1, line.substring(i + 2, close).replace("\\]", "]").replace("\\[", "["));
+      String mark = sourcePicture(target, -1, -1, line.substring(i + 2, close).replace("\\]", "]").replace("\\[", "["));
       if (mark != null) {
         out.append(line, from, i).append(mark);
         from = end + 1;
@@ -644,6 +712,11 @@ final class TextBlocks {
     for (int r = 0; r < t.rows(); r++) {
       b.append('|');
       for (int c = 0; c < t.columns(); c++) {
+        if (t.covered(r, c) && t.span(r, c).column < c && t.span(r, c).row == r) {
+          // MultiMarkdown colspan: a cell's extra columns are bare pipes after it ("| a ||").
+          b.append('|');
+          continue;
+        }
         b.append(' ');
         if (!t.covered(r, c)) {
           boolean first = true;
