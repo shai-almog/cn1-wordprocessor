@@ -322,8 +322,8 @@ new file. Import only.
   comments part, as Wordcraft's wordml2003 annotation. Limitations: other VML shapes (Wordcraft's
   read_vml reads only line/rect/roundrect/oval), linked (non-`binData`) pictures (Wordcraft maps only
   `binData` names to media) and undecodable picture data are dropped with a warning (as in Wordcraft).
-  The comment model has no date field, so a comment's date is not shown or saved back (Wordcraft keeps
-  `Comment.date`; this applies to .docx comments too). Namespace prefixes are matched by the
+  Comment dates are kept on the comment (Wordcraft's `Comment.date`), shown in the Comments dialog and
+  written back as DOCX `w:date` and native `date`. Namespace prefixes are matched by the
   conventional `w:`/`wx:`/`aml:` names, not by resolved URIs.
 
 Turned table cells (`w:textDirection` btLr/tbRl) turn everything they hold as Wordcraft's `TurnedCell`: text lines, pictures (kept at their size, centred on their turned place and drawn turned a quarter) and nested tables' lines and cell boxes. Nested tables' own cells inside a cell do not turn independently yet (their text direction is ignored).

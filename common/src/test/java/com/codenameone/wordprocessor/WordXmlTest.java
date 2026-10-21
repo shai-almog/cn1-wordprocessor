@@ -84,6 +84,11 @@ public class WordXmlTest {
     var d = opened.document;
     String commentsPart = new String(WordXml.parts(xml.getBytes("UTF-8"), new java.util.HashSet<String>()).get("word/comments.xml"), "UTF-8");
     assertTrue(commentsPart, commentsPart.contains("w:date=\"2005-01-02T03:04:00Z\""));
+    // The date reaches the comment model as Wordcraft's Comment.date and survives a DOCX round trip.
+    assertEquals("2005-01-02T03:04:00Z", d.comments.get(0).date);
+    var docxOut = new java.io.ByteArrayOutputStream();
+    Docx.write(d, docxOut);
+    assertEquals("2005-01-02T03:04:00Z", Docx.read(new java.io.ByteArrayInputStream(docxOut.toByteArray())).document.comments.get(0).date);
     String warnings = opened.warnings.toString();
     var item = d.paragraph(0);
     assertEquals("Item", item.text.toString());
