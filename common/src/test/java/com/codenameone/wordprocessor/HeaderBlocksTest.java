@@ -113,6 +113,31 @@ public class HeaderBlocksTest {
     assertEquals(1, p.header.size());
   }
 
+  /** As Wordcraft's layout_box: header text wraps per line beside a header float. */
+  @Test
+  public void headerTextWrapsAroundHeaderFloats() {
+    // Paragraph-anchored at a column offset, and a column-aligned Square float.
+    for (String position : new String[] {"column,,0;paragraph,,0", ""}) {
+      var look = Picture.Look.NONE.wrap("square", "").position(position);
+      var logo = new Picture("i9", OdtTest.PNG, 60, 40, "", "left", look);
+      var story =
+          new Sequence<Block>()
+              .append(logo)
+              .append(new Paragraph("h1", RichText.of("head ".repeat(60))).with("after", "0"));
+      var p = engine().layout(twoPages(PageFurniture.EMPTY.blocks("header", story)), 0).pages.get(1);
+      var pic = p.furniturePictures.get(0);
+      boolean beside = false, below = false;
+      for (LayoutEngine.Line l : p.header) {
+        if (l.y < pic.y() + pic.height()) {
+          assertTrue(position, l.x >= pic.x() + pic.width());
+          beside = true;
+        } else if (l.x < pic.x() + pic.width()) below = true;
+      }
+      assertTrue(position, beside);
+      assertTrue(position, below);
+    }
+  }
+
   @Test
   public void docxRoundTripsHeaderTablesNestedTablesAndPictures() throws Exception {
     var d =

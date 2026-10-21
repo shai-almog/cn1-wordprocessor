@@ -1407,28 +1407,17 @@ public final class LayoutEngine {
 
   private StoryLayout story(Document doc, Sequence<Block> blocks, int page, float available) {
     var out = new StoryLayout();
-    float y = 0;
-    var numbering = new ListNumbers();
     var spec = doc.page;
-    for (Block block : blocks) {
-      if (block instanceof Paragraph p) {
-        y += p.before;
-        var marker = numbering.next(p);
-        for (RawLine line : lines(p, spec.contentWidth())) {
-          float indent = p.indent + (line.start == 0 ? p.format.firstIndent : 0),
-              x = spec.left + indent;
-          float remaining = spec.contentWidth() - indent - p.format.rightIndent - line.width;
-          if ("center".equals(p.align)) x += remaining / 2;
-          else if ("right".equals(p.align)) x += remaining;
-          out.lines.add(new Line(-1, -1, -1, p.id, page, x, y, line, marker));
-          marker = "";
-          y += line.height;
-          if (y > available + .01f) break;
-        }
-        y += p.after;
-        continue;
-      }
-      numbering.reset();
+    // The story is laid out as one box like Wordcraft's layout_box: its floats wrap the text that
+    // follows them per line, and paragraph/column floats sit at their position settings.
+    var region = new PageSpec(spec.width, 100000, 0, spec.right, 0, spec.left);
+    var scratch = new Builder();
+    scratch.beginSection(
+        0,
+        doc.lastSection.page(region).furniture(PageFurniture.EMPTY).columns(Columns.ONE),
+        region);
+    for (int i = 0; i < blocks.size(); i++) {
+      Block block = blocks.get(i);
       if (block instanceof Picture picture && !"inline".equals(picture.wrap())) {
         var pos = FloatPosition.parse(picture.position());
         if (pos != null && !"paragraph".equals(pos.vRel) && !"line".equals(pos.vRel)) {
@@ -1445,33 +1434,23 @@ public final class LayoutEngine {
           continue;
         }
       }
-      // Tables and pictures use the body's layout in a scratch region as tall as needed.
-      var region = new PageSpec(spec.width, 100000, 0, spec.right, 0, spec.left);
-      var scratch = new Builder();
-      scratch.beginSection(
-          0,
-          doc.lastSection.page(region).furniture(PageFurniture.EMPTY).columns(Columns.ONE),
-          region);
-      if (block instanceof Table t) scratch.table(t, -1);
+      if (block instanceof Paragraph p)
+        scratch.paragraph(p, -1, i + 1 < blocks.size() && blocks.get(i + 1) instanceof Paragraph n ? n : null);
+      else if (block instanceof Table t) scratch.table(t, -1);
       else if (block instanceof Picture picture) scratch.picture(picture, -1);
-      float advance = scratch.y;
-      scratch.finish();
-      var laid = scratch.pages.get(0);
-      for (Line l : laid.lines) {
-        var raw = raw(l);
-        out.lines.add(new Line(-1, -1, -1, l.paragraphId, page, l.x, y + l.y, raw, l.marker));
-      }
-      for (Box x : laid.boxes)
-        out.boxes.add(
-            new Box(-1, x.row, x.column, page, x.x, y + x.y, x.width, x.height, x.format)
-                .at(x.path));
-      for (PlacedPicture x : laid.pictures)
-        out.pictures.add(
-            new PlacedPicture(x.picture(), -1, page, x.x(), y + x.y(), x.width(), x.height()));
-      if (block instanceof Table) for (Box x : laid.boxes) advance = Math.max(advance, x.y + x.height);
-      y += advance;
     }
-    out.height = y;
+    float height = scratch.y;
+    scratch.finish();
+    var laid = scratch.pages.get(0);
+    for (Line l : laid.lines)
+      out.lines.add(new Line(-1, -1, -1, l.paragraphId, page, l.x, l.y, raw(l), l.marker));
+    for (Box x : laid.boxes) {
+      out.boxes.add(new Box(-1, x.row, x.column, page, x.x, x.y, x.width, x.height, x.format).at(x.path));
+      height = Math.max(height, x.y + x.height);
+    }
+    for (PlacedPicture x : laid.pictures)
+      out.pictures.add(new PlacedPicture(x.picture(), -1, page, x.x(), x.y(), x.width(), x.height()));
+    out.height = height;
     return out;
   }
 
@@ -1838,7 +1817,7 @@ public final class LayoutEngine {
       }
       List<RawLine> ls;
       final float base = y + p.before;
-      if (index >= 0 && floatsBelow(base)) {
+      if (floatsBelow(base)) {
         band = (top, h) -> {
           float[] c = cut(base + top, h);
           c[2] -= base;
@@ -2140,6 +2119,14 @@ public final class LayoutEngine {
       numbering.reset();
       String wrap = p.wrap();
       FloatPosition pos = "inline".equals(wrap) ? null : FloatPosition.parse(p.position());
+      if (pos == null && ("square".equals(wrap) || "tight".equals(wrap) || "through".equals(wrap) || "topBottom".equals(wrap))) {
+        // Aligned in its column at the anchor paragraph (Wordcraft's default float): placed like
+        // any positioned float, with text beside it per line.
+        float scale = Math.min(1, Math.min(spec.contentWidth() / p.width, (spec.height - spec.top - spec.bottom) / p.height));
+        room(p.height * scale);
+        String a = "center".equals(p.align) ? "center" : "right".equals(p.align) ? "end" : "start";
+        pos = new FloatPosition("column", a, 0, "paragraph", "", 0);
+      }
       if (pos != null) {
         positioned(p, index, pos, wrap);
         return;
@@ -2182,6 +2169,15 @@ public final class LayoutEngine {
 
     void table(Table t, int index) {
       clearWrap();
+      // As Wordcraft's below(): a table in the text flow starts below the floats in its way.
+      for (boolean moved = true; moved; ) {
+        moved = false;
+        for (Excl e : excl)
+          if (e.page == pages.size() && e.y0 <= y + .01f && e.y1 > y + .01f && e.x1 > spec.left && e.x0 < spec.left + spec.contentWidth()) {
+            y = e.y1;
+            moved = true;
+          }
+      }
       mergedTable(t, index);
     }
 

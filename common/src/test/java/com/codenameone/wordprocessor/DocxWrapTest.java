@@ -197,4 +197,21 @@ public class DocxWrapTest {
     assertEquals("page,,160;page,,100;largest", back.position());
     assertEquals("right", FloatPosition.sideOf(back.wrapSide("right").position()));
   }
+
+  /** A column-aligned paragraph float wraps per line: lines below it return to the full width. */
+  @Test
+  public void columnAlignedFloatWrapsPerLine() {
+    Drawing d = Drawing.of("shape").with("wrap", "square");
+    var page = engine().layout(doc(Picture.drawing("i1", d, 100, 60, "", "right"), "word ".repeat(200)), 0).pages.get(0);
+    var pic = page.pictures.get(0);
+    assertEquals(280, pic.x(), .01f);
+    boolean beside = false, full = false;
+    for (var l : page.lines) {
+      if (l.y < pic.y() + pic.height()) {
+        assertTrue(l.x + l.width <= pic.x());
+        beside = true;
+      } else if (l.width > 300) full = true;
+    }
+    assertTrue(beside && full);
+  }
 }
