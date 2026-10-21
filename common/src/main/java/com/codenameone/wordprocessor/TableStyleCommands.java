@@ -175,6 +175,28 @@ final class TableStyleCommands implements Commands.Extension {
         });
   }
 
+  /**
+   * A table whose cells changed position (row/column inserted or deleted, rows sorted) with
+   * its style materialized again for the new positions, as Wordcraft keeps the w:tblStyle
+   * reference live and derives the conditional regions (header row, bands, first/last column,
+   * total row) at layout. Cell shading or borders set directly in a styled table are
+   * re-derived too, since this model stores the style's result in the cells.
+   */
+  static Table restyled(Document d, Table t) {
+    String style = t.format.prop("style", "");
+    if (style.isEmpty()) return t;
+    try {
+      if (spec(d, style, true) == null) {
+        var def = TableStyles.resolve(d, style);
+        return def == null ? t : TableStyles.apply(def, t, false);
+      }
+      String[] spec = spec(d, style);
+      return spec == null ? t : t.format(apply(spec, t.format));
+    } catch (RuntimeException unknown) {
+      return t;
+    }
+  }
+
   static void applyStyle(Session s, String style) {
     Table t = table(s);
     if (spec(s.document(), style, true) == null) {

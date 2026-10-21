@@ -2710,6 +2710,8 @@ public final class Session {
           } else if ("deleteRow".equals(action)) next = table.deleteRow(index);
           else if ("deleteColumn".equals(action)) next = table.deleteColumn(index);
           else throw new IllegalArgumentException("Unknown table operation");
+          // The style reference stays live (Wordcraft): bands, header and total rows re-derive.
+          next = TableStyleCommands.restyled(document, next);
           document = document.blocks(document.blocks.set(block, next), id);
         });
   }
@@ -2786,7 +2788,10 @@ public final class Session {
           var t = (Table) document.blocks.get(block);
           document =
               document.blocks(
-                  document.blocks.set(block, t.sorted(column, descending, header, numeric)),
+                  document.blocks.set(
+                      block,
+                      TableStyleCommands.restyled(
+                          document, t.sorted(column, descending, header, numeric))),
                   document.nextId);
         });
   }

@@ -24,6 +24,37 @@ public class TableStyleCommandsTest {
   }
 
   @Test
+  public void styleRederivesAfterStructuralEdits() {
+    var s = new Session(Document.empty());
+    run(s, "table.insert", "rows", 4, "columns", 3);
+    int block = indexOfTable(s);
+    s.enterCell(block, 1, 1);
+    run(s, "table.newStyle", "name", "Ocean", "header", "003366", "band", "cce0ff", "border", "336699", "width", 1, "sides", "horizontal");
+    run(s, "table.style", "style", "Ocean");
+    // A row inserted under the header: bands follow the new positions (Wordcraft's live style).
+    s.tableStructure(block, "insertRow", 1);
+    Table t = table(s);
+    assertEquals(5, t.rows());
+    assertEquals(0x003366, t.format.cell(0, 1).background);
+    assertEquals(0xcce0ff, t.format.cell(1, 1).background);
+    assertEquals(0xffffff, t.format.cell(2, 1).background);
+    assertEquals(0xcce0ff, t.format.cell(3, 1).background);
+    // Deleting the header row makes the next row the styled header.
+    s.tableStructure(block, "deleteRow", 0);
+    t = table(s);
+    assertEquals(0x003366, t.format.cell(0, 1).background);
+    assertEquals(0xcce0ff, t.format.cell(1, 1).background);
+    // Sorting re-derives the bands for the sorted rows.
+    s.setCell(block, 1, 0, "b");
+    s.setCell(block, 2, 0, "a");
+    s.sortTable(block, 0, false, true, false);
+    t = table(s);
+    assertEquals(0x003366, t.format.cell(0, 1).background);
+    assertEquals(0xcce0ff, t.format.cell(1, 1).background);
+    assertEquals(0xffffff, t.format.cell(2, 1).background);
+  }
+
+  @Test
   public void customStylesLookAndRoundTrip() throws Exception {
     var s = new Session(Document.empty());
     run(s, "table.insert", "rows", 4, "columns", 3);
