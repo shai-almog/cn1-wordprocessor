@@ -145,8 +145,8 @@ final class FileCommands implements Commands.Extension {
   }
 
   private static boolean hasText(PageFurniture f) {
-    for (Sequence<Paragraph> story : f.stories.values())
-      for (Paragraph p : story) if (!p.text.plainText().trim().isEmpty()) return true;
+    for (String key : f.stories.keySet())
+      if (!Table.blockText(f.blocks(key)).trim().isEmpty()) return true;
     return false;
   }
 
@@ -204,12 +204,7 @@ final class FileCommands implements Commands.Extension {
   }
 
   private static PageFurniture furniture(PageFurniture in, Session.ParagraphMap f) {
-    var out = in;
-    for (var e : in.stories.entrySet()) {
-      var mapped = paragraphs(e.getValue(), f);
-      if (mapped != e.getValue()) out = out.story(e.getKey(), mapped);
-    }
-    return out;
+    return in.map(f::map);
   }
 
   /** Deletes hidden runs everywhere {@link #everyParagraph} reaches, as one undo step. */

@@ -146,7 +146,7 @@ final class DocxLists {
     for (Section.Range section : d.sectionRanges())
       for (String key : PageFurniture.KEYS) {
         reset();
-        for (Paragraph para : section.raw.furniture.get(key)) add(para);
+        for (Paragraph para : section.raw.furniture.allParagraphs(key)) add(para);
       }
     for (Note note : Notes.all(d)) {
       reset();

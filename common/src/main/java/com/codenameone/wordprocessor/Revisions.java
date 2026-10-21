@@ -193,7 +193,9 @@ public final class Revisions {
     var furniture = section.furniture;
     for (String key : PageFurniture.KEYS)
       if (furniture.stories.containsKey(key))
-        furniture = furniture.story(key, resolveParagraphs(furniture.get(key), id, accept));
+        furniture =
+            furniture.blocks(
+                key, resolveBlocks(furniture.blocks(key), id, accept, new LinkedHashMap<>()));
     return section.furniture(furniture);
   }
 

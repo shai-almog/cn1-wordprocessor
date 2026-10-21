@@ -202,7 +202,7 @@ public final class Docx {
     return new Opened(document, warnings, parts);
   }
 
-  private static Table readTable(
+  static Table readTable(
       Element table,
       long[] id,
       Set<String> warnings,
@@ -1125,7 +1125,7 @@ static final char COLUMN_BREAK = '\u000B';
         page, furniture, start, pageStart, NoteFormats.read(e, warnings), columns, decor);
   }
 
-  private static void writeTable(
+  static void writeTable(
       StringBuilder b,
       Table t,
       float available,

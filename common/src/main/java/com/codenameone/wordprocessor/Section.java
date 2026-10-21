@@ -86,7 +86,7 @@ public final class Section {
   /** Absent story entries link to the previous section; an explicit empty entry unlinks. */
   public Section resolved(PageFurniture previous) {
     var stories =
-        new LinkedHashMap<String, Sequence<Paragraph>>(previous.stories);
+        new LinkedHashMap<String, Sequence<Block>>(previous.stories);
     stories.putAll(furniture.stories);
     return furniture(
         new PageFurniture(
@@ -100,7 +100,7 @@ public final class Section {
   public Section linked() {
     return furniture(
         new PageFurniture(
-            Collections.<String, Sequence<Paragraph>>emptyMap(),
+            Collections.<String, Sequence<Block>>emptyMap(),
             furniture.differentFirst,
             furniture.differentEven,
             furniture.headerDistance,

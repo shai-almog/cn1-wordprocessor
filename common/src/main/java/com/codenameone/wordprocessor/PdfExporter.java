@@ -332,7 +332,7 @@ public final class PdfExporter {
     int fontDictionary = objects.size();
     var imageIds = new HashMap<Picture, Integer>();
     for (LayoutEngine.Page page : layout.pages)
-      for (LayoutEngine.PlacedPicture pic : page.pictures)
+      for (LayoutEngine.PlacedPicture pic : page.paintedPictures())
         if (pic.picture().drawing == null && !imageIds.containsKey(pic.picture()))
           imageIds.put(pic.picture(), PdfPictures.add(objects, pic.picture()));
     int pageIndex = 0;
@@ -368,7 +368,7 @@ public final class PdfExporter {
             .append(n(spec.height - n[0] - 9)).append(" Tm (").append(label).append(") Tj ET\n");
       }
       for (LayoutEngine.Frame frame : page.frames) frame(content, frame, spec.height);
-      for (LayoutEngine.PlacedPicture pic : LayoutEngine.byDepth(page.pictures, false)) {
+      for (LayoutEngine.PlacedPicture pic : LayoutEngine.byDepth(page.paintedPictures(), false)) {
         int figure = structure.mcid(pageNumber, structure.figure(pic.picture().alt));
         content.append("/Figure << /MCID ").append(figure).append(" >> BDC\n");
         if (pic.picture().drawing != null) {
@@ -386,7 +386,7 @@ public final class PdfExporter {
         picture(content, pic, spec.height, name);
         content.append("EMC\n");
       }
-      for (LayoutEngine.Box b : page.boxes) {
+      for (LayoutEngine.Box b : page.paintedBoxes()) {
         content
             .append(color(b.format.background))
             .append(" rg ")
@@ -602,7 +602,7 @@ public final class PdfExporter {
               .append(' ')
               .append(n(spec.height - line.y - line.height))
               .append(" l S\n");
-      for (LayoutEngine.PlacedPicture pic : LayoutEngine.byDepth(page.pictures, true)) {
+      for (LayoutEngine.PlacedPicture pic : LayoutEngine.byDepth(page.paintedPictures(), true)) {
         int figure = structure.mcid(pageNumber, structure.figure(pic.picture().alt));
         content.append("/Figure << /MCID ").append(figure).append(" >> BDC\n");
         PdfDrawings.paint(content, pic, spec.height, fonts, null);

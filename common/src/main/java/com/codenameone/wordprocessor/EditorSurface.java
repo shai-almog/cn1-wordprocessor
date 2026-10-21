@@ -1548,7 +1548,7 @@ public final class EditorSurface extends Container
             y + Math.round(rule[1] * scale),
             x + Math.round(rule[0] * scale),
             y + Math.round(rule[2] * scale));
-      for (LayoutEngine.PlacedPicture pic : LayoutEngine.byDepth(page.pictures, false)) {
+      for (LayoutEngine.PlacedPicture pic : LayoutEngine.byDepth(page.paintedPictures(), false)) {
         if (pic.picture().drawing != null) {
           paintDrawing(g, pic, x + Math.round(pic.x() * scale), y + Math.round(pic.y() * scale), scale);
           continue;
@@ -1578,7 +1578,7 @@ public final class EditorSurface extends Container
             Math.round(pic.height() * scale),
             scale);
       }
-      for (LayoutEngine.Box box : page.boxes) {
+      for (LayoutEngine.Box box : page.paintedBoxes()) {
         int bx = x + Math.round(box.x * scale),
             by = y + Math.round(box.y * scale),
             bw = Math.round(box.width * scale),
@@ -1814,7 +1814,7 @@ public final class EditorSurface extends Container
         }
         if (line.clipped) g.setClip(clipX, clipY, clipW, clipH);
       }
-      for (LayoutEngine.PlacedPicture pic : LayoutEngine.byDepth(page.pictures, true))
+      for (LayoutEngine.PlacedPicture pic : LayoutEngine.byDepth(page.paintedPictures(), true))
         paintDrawing(g, pic, x + Math.round(pic.x() * scale), y + Math.round(pic.y() * scale), scale);
     }
     if (OfficeTheme.mobile() && !exporting && session.cellSelection() == null && !selection.collapsed()) {

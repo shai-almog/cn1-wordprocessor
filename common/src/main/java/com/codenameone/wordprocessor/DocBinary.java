@@ -312,6 +312,27 @@ final class DocBinary {
         "word/_rels/document.xml.rels",
         ZipParts.utf8(xmlDecl() + "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">"
             + rels + "</Relationships>"));
+    // Header/footer parts resolve r:ids against their own relationships part; give each the
+    // document relationships its pictures and links use.
+    for (String name : new ArrayList<String>(parts.keySet())) {
+      if (!name.startsWith("word/header") && !name.startsWith("word/footer")) continue;
+      String xml = new String(parts.get(name), "UTF-8");
+      var own = new StringBuilder();
+      String all = rels.toString();
+      for (int at = all.indexOf("<Relationship "); at >= 0; at = all.indexOf("<Relationship ", at + 1)) {
+        int end = all.indexOf("/>", at);
+        if (end < 0) break;
+        String one = all.substring(at, end + 2);
+        int q = one.indexOf("Id=\"");
+        String id = one.substring(q + 4, one.indexOf('"', q + 4));
+        if (xml.indexOf("=\"" + id + "\"") >= 0) own.append(one);
+      }
+      if (own.length() > 0)
+        parts.put(
+            "word/_rels/" + name.substring(5) + ".rels",
+            ZipParts.utf8(xmlDecl() + "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">"
+                + own + "</Relationships>"));
+    }
     parts.put(
         "_rels/.rels",
         ZipParts.utf8(xmlDecl() + "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">"

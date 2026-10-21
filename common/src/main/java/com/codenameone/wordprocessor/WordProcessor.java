@@ -1488,6 +1488,13 @@ public class WordProcessor {
                         })))));
   }
 
+  /** A header/footer story as an editable document body: it must end with a paragraph. */
+  static Sequence<Block> editableStory(Sequence<Block> story) {
+    if (story.size() > 0 && story.get(story.size() - 1) instanceof Paragraph) return story;
+    return story.append(
+        new Paragraph(story.size() == 0 ? "part1" : "partEnd", new RichText()).with("after", "0"));
+  }
+
   private void editFurniture(boolean footerPart) {
     final var active = session.activeSection();
     final var original = active.resolved.furniture;
@@ -1509,10 +1516,7 @@ public class WordProcessor {
     even.setSelected(original.differentEven);
     EditField headerDistance = field("" + original.headerDistance),
         footerDistance = field("" + original.footerDistance);
-    var blocks = new Sequence<Block>();
-    for (Paragraph para : original.get(current[0])) blocks = blocks.append(para);
-    if (blocks.size() == 0)
-      blocks = blocks.append(new Paragraph("part1", new RichText()).with("after", "0"));
+    var blocks = editableStory(original.blocks(current[0]));
     final var part =
         new Session(
             new Document(
@@ -1532,12 +1536,7 @@ public class WordProcessor {
         e -> {
           if (linked.isSelected()) {
             view.stopInput();
-            var linkedBlocks = new Sequence<Block>();
-            for (Paragraph para : inherited.get(current[0]))
-              linkedBlocks = linkedBlocks.append(para);
-            if (linkedBlocks.size() == 0)
-              linkedBlocks =
-                  linkedBlocks.append(new Paragraph("part1", new RichText()).with("after", "0"));
+            var linkedBlocks = editableStory(inherited.blocks(current[0]));
             part.loadDocument(
                 new Document(
                         linkedBlocks, part.document().page, "Header/footer", part.document().nextId)
@@ -1549,23 +1548,24 @@ public class WordProcessor {
     final Runnable capture =
         () -> {
           view.stopInput();
-          var paragraphs = new Sequence<Paragraph>();
-          for (Block b : part.document().blocks)
-            if (b instanceof Paragraph paragraph) paragraphs = paragraphs.append(paragraph);
+          // Header tables and pictures are edited in place like body ones (cell paths and all).
+          var story = part.document().blocks;
           if (linked.isSelected()) {
-            var base = inherited.get(current[0]);
-            boolean unchanged = base.size() == paragraphs.size();
-            for (int i = 0; unchanged && i < base.size(); i++)
-              unchanged = base.get(i) == paragraphs.get(i);
-            if (!unchanged
-                && !(base.size() == 0
-                    && paragraphs.size() == 1
-                    && paragraphs.get(0).text.length() == 0)) linked.setSelected(false);
+            var base = inherited.blocks(current[0]);
+            var shown = editableStory(base);
+            boolean unchanged = shown.size() == story.size();
+            for (int i = 0; unchanged && i < shown.size(); i++)
+              unchanged =
+                  shown.get(i) == story.get(i)
+                      || i >= base.size()
+                          && story.get(i) instanceof Paragraph p
+                          && p.text.length() == 0;
+            if (!unchanged) linked.setSelected(false);
           }
           draft[0] =
               linked.isSelected()
                   ? draft[0].inherit(current[0])
-                  : draft[0].story(current[0], paragraphs);
+                  : draft[0].blocks(current[0], story);
         };
     variant.addActionListener(
         e -> {
@@ -1575,12 +1575,9 @@ public class WordProcessor {
               selected == 0
                   ? (footerPart ? "footer" : "header")
                   : (selected == 1 ? "first" : "even") + (footerPart ? "Footer" : "Header");
-          var next = new Sequence<Block>();
           linked.setSelected(active.first > 0 && !draft[0].stories.containsKey(current[0]));
           PageFurniture source = linked.isSelected() ? inherited : draft[0];
-          for (Paragraph para : source.get(current[0])) next = next.append(para);
-          if (next.size() == 0)
-            next = next.append(new Paragraph("part1", new RichText()).with("after", "0"));
+          var next = editableStory(source.blocks(current[0]));
           part.loadDocument(
               new Document(next, part.document().page, "Header/footer", part.document().nextId)
                   .styles(session.document().styles)

@@ -46,7 +46,7 @@ final class DocxTabs {
       }
     for (Section.Range section : document.sectionRanges())
       for (String key : PageFurniture.KEYS)
-        for (Paragraph p : section.raw.furniture.get(key)) result.add(p);
+        for (Paragraph p : section.raw.furniture.allParagraphs(key)) result.add(p);
     for (Note note : Notes.all(document)) for (Paragraph p : note.paragraphs) result.add(p);
     return result;
   }

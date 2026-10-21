@@ -4,7 +4,10 @@ import com.codename1.xml.Element;
 import java.io.*;
 import java.util.*;
 
-/** Single-section paragraph header/footer parts, with scoped relationships. */
+/**
+ * Header/footer parts holding any body block (paragraphs, tables, pictures), with scoped
+ * relationships.
+ */
 final class DocxFurniture {
   private static final String W = "http://schemas.openxmlformats.org/wordprocessingml/2006/main",
       R = "http://schemas.openxmlformats.org/officeDocument/2006/relationships",
@@ -75,7 +78,7 @@ final class DocxFurniture {
             && !"External".equals(Xml.attr(rel, "TargetMode", "")))
           targets.put(Xml.attr(rel, "Id", ""), Xml.attr(rel, "Target", ""));
       }
-    var stories = new LinkedHashMap<String, Sequence<Paragraph>>();
+    var stories = new LinkedHashMap<String, Sequence<Block>>();
     for (Element ref : Xml.children(section, null)) {
       String kind = Xml.local(ref);
       if (!"headerReference".equals(kind) && !"footerReference".equals(kind)) continue;
@@ -100,22 +103,37 @@ final class DocxFurniture {
         warnings.add("Missing header/footer part");
         continue;
       }
-      var paragraphs = new Sequence<Paragraph>();
+      var blocks = new ArrayList<Block>();
       var relPath =
           path.substring(0, path.lastIndexOf('/') + 1)
               + "_rels/"
               + path.substring(path.lastIndexOf('/') + 1)
               + ".rels";
       var links = new DocxLinks(parts, relPath);
+      var pictures = new DocxPictures(parts, relPath);
       var comments = new DocxComments(Collections.<String, byte[]>emptyMap());
       comments.bookmarks.supported = false;
       for (Element child : Xml.children(Xml.parse(data), null)) {
-        if ("p".equals(Xml.local(child)))
-          paragraphs =
-              paragraphs.append(
-                  Docx.paragraph(child, id, warnings, lists, styles, links, comments));
-        else warnings.add("Header/footer content: " + Xml.local(child));
+        String name = Xml.local(child);
+        if ("p".equals(name)) {
+          // As in the body: pictures (inline or floating) follow their paragraph as blocks.
+          var paragraphWarnings = new LinkedHashSet<String>();
+          var p = Docx.paragraph(child, id, paragraphWarnings, lists, styles, links, comments);
+          paragraphWarnings.remove("Run feature: drawing");
+          warnings.addAll(paragraphWarnings);
+          var images = pictures.read(child, id, warnings);
+          if (images.isEmpty() || p.text.length() > 0) blocks.add(p);
+          Element props = Xml.child(child, "pPr"), jc = props == null ? null : Xml.child(props, "jc");
+          String align = jc == null ? "left" : Xml.attr(jc, "val", "left");
+          if (!"center".equals(align) && !"right".equals(align)) align = "left";
+          for (Picture image : images)
+            blocks.add(image.resize(image.width, image.height, image.alt, align));
+        } else if ("tbl".equals(name)) {
+          Table table = Docx.readTable(child, id, warnings, lists, styles, links, comments);
+          if (table != null) blocks.add(table);
+        } else if (!"sectPr".equals(name)) warnings.add("Header/footer content: " + name);
       }
+      var paragraphs = Sequence.<Block>of(blocks);
       stories.put(key, paragraphs);
     }
     Element margin = Xml.child(section, "pgMar");
@@ -169,11 +187,21 @@ final class DocxFurniture {
               .append("\" xmlns:r=\"")
               .append(R)
               .append("\">");
-      for (Paragraph para : document.furniture.get(key))
-        Docx.writeParagraph(b, para, lists, tabs, links, new DocxComments(Document.empty()));
-      if (document.furniture.get(key).size() == 0) b.append("<w:p/>");
+      var pictures = new DocxPictures(parts, relPath);
+      var story = document.furniture.blocks(key);
+      for (Block block : story)
+        if (block instanceof Paragraph para)
+          Docx.writeParagraph(b, para, lists, tabs, links, new DocxComments(Document.empty()));
+        else if (block instanceof Table t)
+          Docx.writeTable(
+              b, t, document.page.contentWidth(), lists, tabs, links, new DocxComments(Document.empty()));
+        else if (block instanceof Picture picture) pictures.write(b, picture);
+      // A story must end with a paragraph (ECMA-376 17.10.1), as table cells must.
+      if (story.size() == 0 || !(story.get(story.size() - 1) instanceof Paragraph))
+        b.append("<w:p/>");
       parts.put(path, b.append("</w:").append(tag).append(">").toString().getBytes("UTF-8"));
       links.packageParts(parts);
+      pictures.packageParts();
       relationship(parts, ids.get(key), kind, path.substring(5));
       contentType(parts, path, kind);
     }

@@ -75,52 +75,8 @@ public final class DocumentXml {
     for (Block block : d.blocks) {
       if (block instanceof Paragraph paragraph) paragraph(b, paragraph);
       else if (block instanceof Table t) table(b, t);
-      else if (block instanceof Picture picture) {
-        b.append("<picture id=\"")
-            .append(Xml.escape(picture.id()))
-            .append("\" width=\"")
-            .append(picture.width)
-            .append("\" height=\"")
-            .append(picture.height)
-            .append("\" align=\"")
-            .append(picture.align)
-            .append("\" alt=\"")
-            .append(Xml.escape(picture.alt))
-            .append("\"");
-        var look = picture.look;
-        if (!Picture.Look.NONE.equals(look))
-          b.append(" crop=\"")
-              .append(look.cropLeft)
-              .append(',')
-              .append(look.cropTop)
-              .append(',')
-              .append(look.cropRight)
-              .append(',')
-              .append(look.cropBottom)
-              .append("\" border=\"")
-              .append(look.borderColor)
-              .append(',')
-              .append(look.borderWidth)
-              .append("\" rotation=\"")
-              .append(look.rotation)
-              .append("\" flip=\"")
-              .append(look.flipH ? "h" : "")
-              .append(look.flipV ? "v" : "")
-              .append('"');
-        if (look != null && look.adjusted())
-          b.append(" adjust=\"").append(look.brightness).append(',').append(look.contrast).append(',')
-              .append(look.transparency).append(',').append(look.colorMode).append(',')
-              .append(look.effect).append(',').append(look.backgroundTolerance).append('"');
-        if (look != null && !"inline".equals(look.wrap))
-          b.append(" wrap=\"").append(look.wrap).append("\" wrapPolygon=\"").append(Xml.attribute(look.wrapPolygon)).append('"');
-        if (look != null && !look.position.isEmpty())
-          b.append(" position=\"").append(Xml.attribute(look.position)).append('"');
-        if (picture.drawing != null)
-          b.append(" drawing=\"").append(Xml.attribute(controlsOut(picture.drawing.encode()))).append('"');
-        b.append(">")
-            .append(com.codename1.util.Base64.encodeNoNewline(picture.originalBytes()))
-            .append("</picture>");
-      } else throw new IllegalArgumentException("Unknown block");
+      else if (block instanceof Picture picture) picture(b, picture);
+      else throw new IllegalArgumentException("Unknown block");
     }
     for (Bookmark mark : d.bookmarks.values()) {
       b.append("<bookmark name=\"")
@@ -164,6 +120,53 @@ public final class DocumentXml {
     return b.append("</document>").toString();
   }
 
+  private static void picture(StringBuilder b, Picture picture) {
+    b.append("<picture id=\"")
+        .append(Xml.escape(picture.id()))
+        .append("\" width=\"")
+        .append(picture.width)
+        .append("\" height=\"")
+        .append(picture.height)
+        .append("\" align=\"")
+        .append(picture.align)
+        .append("\" alt=\"")
+        .append(Xml.escape(picture.alt))
+        .append("\"");
+    var look = picture.look;
+    if (!Picture.Look.NONE.equals(look))
+      b.append(" crop=\"")
+          .append(look.cropLeft)
+          .append(',')
+          .append(look.cropTop)
+          .append(',')
+          .append(look.cropRight)
+          .append(',')
+          .append(look.cropBottom)
+          .append("\" border=\"")
+          .append(look.borderColor)
+          .append(',')
+          .append(look.borderWidth)
+          .append("\" rotation=\"")
+          .append(look.rotation)
+          .append("\" flip=\"")
+          .append(look.flipH ? "h" : "")
+          .append(look.flipV ? "v" : "")
+          .append('"');
+    if (look != null && look.adjusted())
+      b.append(" adjust=\"").append(look.brightness).append(',').append(look.contrast).append(',')
+          .append(look.transparency).append(',').append(look.colorMode).append(',')
+          .append(look.effect).append(',').append(look.backgroundTolerance).append('"');
+    if (look != null && !"inline".equals(look.wrap))
+      b.append(" wrap=\"").append(look.wrap).append("\" wrapPolygon=\"").append(Xml.attribute(look.wrapPolygon)).append('"');
+    if (look != null && !look.position.isEmpty())
+      b.append(" position=\"").append(Xml.attribute(look.position)).append('"');
+    if (picture.drawing != null)
+      b.append(" drawing=\"").append(Xml.attribute(controlsOut(picture.drawing.encode()))).append('"');
+    b.append(">")
+        .append(com.codename1.util.Base64.encodeNoNewline(picture.originalBytes()))
+        .append("</picture>");
+  }
+
   private static void page(StringBuilder b, PageSpec p) {
     b.append("<page width=\"")
         .append(p.width)
@@ -193,10 +196,30 @@ public final class DocumentXml {
     for (String key : PageFurniture.KEYS)
       if (furniture.stories.containsKey(key)) {
         b.append("<story key=\"").append(key).append("\">");
-        for (Paragraph para : furniture.get(key)) paragraph(b, para);
+        // Version 1 files held paragraphs only; tables and pictures are added as in the body.
+        for (Block block : furniture.blocks(key))
+          if (block instanceof Paragraph para) paragraph(b, para);
+          else if (block instanceof Table t) table(b, t);
+          else if (block instanceof Picture picture) picture(b, picture);
         b.append("</story>");
       }
     b.append("</furniture>");
+  }
+
+  private static Picture readPicture(Element c, Set<String> ids) throws IOException {
+    var picture =
+        new Picture(
+            id(c, ids),
+            com.codename1.util.Base64.decode(Xml.text(c).getBytes("UTF-8")),
+            f(c, "width"),
+            f(c, "height"),
+            Xml.attr(c, "alt", ""),
+            Xml.attr(c, "align", "left"),
+            pictureAdjust(c, pictureLook(c))
+                .wrap(Xml.attr(c, "wrap", "inline"), Xml.attr(c, "wrapPolygon", "")).position(Xml.attr(c, "position", "")));
+    if (!Xml.attr(c, "drawing", "").isEmpty())
+      picture = picture.drawing(Drawing.decode(controlsIn(Xml.attr(c, "drawing", ""))));
+    return picture;
   }
 
   private static PageSpec readPage(Element page) throws IOException {
@@ -212,16 +235,19 @@ public final class DocumentXml {
 
   private static PageFurniture readFurniture(Element e, Set<String> ids) throws IOException {
     if (e == null) return PageFurniture.EMPTY;
-    var stories = new LinkedHashMap<String, Sequence<Paragraph>>();
+    var stories = new LinkedHashMap<String, Sequence<Block>>();
     for (Element story : Xml.children(e, "story")) {
       String key = Xml.attr(story, "key", "");
       if (stories.containsKey(key)) throw new IOException("Duplicate header/footer story");
-      var paragraphs = new Sequence<Paragraph>();
+      var blocks = new Sequence<Block>();
       // Header and footer stories are separate id spaces: both start at hf0.
       var storyIds = new HashSet<String>();
-      for (Element para : Xml.children(story, "p"))
-        paragraphs = paragraphs.append(readParagraph(para, storyIds));
-      stories.put(key, paragraphs);
+      // Unknown story elements from newer versions are skipped, not fatal.
+      for (Element c : Xml.children(story, null))
+        if ("p".equals(Xml.local(c))) blocks = blocks.append(readParagraph(c, storyIds));
+        else if ("table".equals(Xml.local(c))) blocks = blocks.append(readTable(c, storyIds));
+        else if ("picture".equals(Xml.local(c))) blocks = blocks.append(readPicture(c, storyIds));
+      stories.put(key, blocks);
     }
     return new PageFurniture(
         stories, flag(e, "first"), flag(e, "even"), f(e, "header"), f(e, "footer"));
@@ -414,22 +440,7 @@ public final class DocumentXml {
         else if ("table".equals(Xml.local(c))) {
           blocks = blocks.append(readTable(c, ids));
         } else if ("picture".equals(Xml.local(c))) {
-          blocks =
-              blocks.append(
-                  new Picture(
-                      id(c, ids),
-                      com.codename1.util.Base64.decode(Xml.text(c).getBytes("UTF-8")),
-                      f(c, "width"),
-                      f(c, "height"),
-                      Xml.attr(c, "alt", ""),
-                      Xml.attr(c, "align", "left"),
-                      pictureAdjust(c, pictureLook(c)).wrap(Xml.attr(c, "wrap", "inline"), Xml.attr(c, "wrapPolygon", "")).position(Xml.attr(c, "position", ""))));
-          if (!Xml.attr(c, "drawing", "").isEmpty()) {
-            var last = (Picture) blocks.get(blocks.size() - 1);
-            blocks =
-                blocks.set(
-                    blocks.size() - 1, last.drawing(Drawing.decode(controlsIn(Xml.attr(c, "drawing", "")))));
-          }
+          blocks = blocks.append(readPicture(c, ids));
         } else if ("bookmark".equals(Xml.local(c))) {
           var mark =
               new Bookmark(

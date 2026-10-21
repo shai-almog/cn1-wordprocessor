@@ -372,13 +372,10 @@ public final class MailMerge {
       var result = value;
       for (String key : PageFurniture.KEYS)
         if (value.stories.containsKey(key)) {
-          var story = value.get(key);
           var cursor = new Cursor(record, end);
-          for (int i = 0; i < story.size(); i++) {
-            Paragraph old = story.get(i), updated = paragraph(old, cursor);
-            if (old != updated) story = story.set(i, updated);
-          }
-          if (story != value.get(key)) result = result.story(key, story);
+          // Fields in header tables merge too, in reading order.
+          var story = PageFurniture.mapBlocks(value.blocks(key), p -> paragraph(p, cursor));
+          if (story != value.blocks(key)) result = result.blocks(key, story);
         }
       return result;
     }

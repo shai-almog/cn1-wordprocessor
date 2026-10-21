@@ -6,7 +6,9 @@ import java.util.*;
 
 /** Embedded, paragraph-level DrawingML pictures. External images are never fetched. */
 final class DocxPictures {
-  private static final String RELS = "word/_rels/document.xml.rels";
+  private static final String MAIN_RELS = "word/_rels/document.xml.rels";
+  /** The relationships part of the story read or written: the main document or a header. */
+  private final String RELS;
   private static final String NS = "http://schemas.openxmlformats.org/package/2006/relationships";
   private final Map<String, byte[]> parts;
   private final Map<String, String> targets = new HashMap<>();
@@ -21,7 +23,12 @@ final class DocxPictures {
   private final Map<String, String[]> diagrams = new LinkedHashMap<>();
 
   DocxPictures(Map<String, byte[]> parts) throws IOException {
+    this(parts, MAIN_RELS);
+  }
+
+  DocxPictures(Map<String, byte[]> parts, String rels) throws IOException {
     this.parts = parts;
+    RELS = rels;
     if (parts.containsKey(RELS))
       for (Element e : Xml.children(Xml.parse(parts.get(RELS)), null)) {
         String id = Xml.attr(e, "Id", "");

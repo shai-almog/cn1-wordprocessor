@@ -741,6 +741,11 @@ public class DocBinaryTest {
     for (var e : parts.entrySet()) if (e.getKey().startsWith("word/header")) header += new String(e.getValue(), "UTF-8");
     assertTrue(header, header.contains("<wp:anchor") && header.contains("prst=\"ellipse\""));
     Document m = DocBinary.read(groupsAndHeaderFloat().build()).document;
+    // The header float is a header block now, not dropped by the model.
+    Picture headerFloat = null;
+    for (Sequence<Block> story : m.furniture.stories.values())
+      for (Block b : story) if (b instanceof Picture p && p.drawing != null) headerFloat = p;
+    assertNotNull(m.furniture.stories.keySet().toString(), headerFloat);
     Picture g = null;
     for (Block b : m.blocks) if (b instanceof Picture p && p.drawing != null && p.drawing.flag("group")) g = p;
     assertNotNull(m.plainText(), g);

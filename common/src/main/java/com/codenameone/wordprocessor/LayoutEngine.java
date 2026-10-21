@@ -271,6 +271,27 @@ public final class LayoutEngine {
     /** Column separator lines as {x, top, bottom} in points. */
     public final List<float[]> columnRules = new ArrayList<>();
 
+    /** Header and footer table cells and pictures; not hit-tested as body content. */
+    public final List<Box> furnitureBoxes = new ArrayList<>();
+
+    public final List<PlacedPicture> furniturePictures = new ArrayList<>();
+
+    /** Body and header/footer cells, in paint order. */
+    public List<Box> paintedBoxes() {
+      if (furnitureBoxes.isEmpty()) return boxes;
+      var out = new ArrayList<Box>(furnitureBoxes);
+      out.addAll(boxes);
+      return out;
+    }
+
+    /** Body and header/footer pictures; header/footer ones first, as Word paints them under. */
+    public List<PlacedPicture> paintedPictures() {
+      if (furniturePictures.isEmpty()) return pictures;
+      var out = new ArrayList<PlacedPicture>(furniturePictures);
+      out.addAll(pictures);
+      return out;
+    }
+
     /** Paragraph border/shading boxes, painted under the text. */
     public final List<Frame> frames = new ArrayList<>();
 
@@ -1168,9 +1189,9 @@ public final class LayoutEngine {
       for (int side = 0; side < 2; side++)
         heights[i][side] =
             furnitureHeight(
+                context,
                 resolvedFurniture(
-                    context, side == 1, 0, 1, section.pageStart == 0 ? 1 : section.pageStart),
-                section.page.contentWidth());
+                    context, side == 1, 0, 1, section.pageStart == 0 ? 1 : section.pageStart));
     }
     Builder b = null;
     PageSpec[] bodies = new PageSpec[ranges.size()];
@@ -1201,9 +1222,9 @@ public final class LayoutEngine {
         for (int side = 0; side < 2; side++) {
           float actual =
               furnitureHeight(
+                  context,
                   resolvedFurniture(
-                      context, side == 1, page.sectionPage, b.pages.size(), page.number),
-                  context.page.contentWidth());
+                      context, side == 1, page.sectionPage, b.pages.size(), page.number));
           if (actual > heights[page.section][side] + .01f) {
             heights[page.section][side] = actual;
             grow = true;
@@ -1228,6 +1249,26 @@ public final class LayoutEngine {
         float free = page.spec.height - page.spec.bottom - bottom;
         if (free > 0) dy = "center".equals(vAlign) ? free / 2 : free;
       }
+      var header =
+          furnitureLines(
+              context,
+              false,
+              i,
+              page.sectionPage,
+              page.number,
+              b.pages.size(),
+              body.top - context.furniture.headerDistance,
+              warnings);
+      var footer =
+          furnitureLines(
+              context,
+              true,
+              i,
+              page.sectionPage,
+              page.number,
+              b.pages.size(),
+              body.bottom - context.furniture.footerDistance,
+              warnings);
       var rebuilt =
           new Page(
               page.spec,
@@ -1237,25 +1278,13 @@ public final class LayoutEngine {
               dy == 0 ? page.lines : shiftLines(page.lines, dy),
               dy == 0 ? page.boxes : shiftBoxes(page.boxes, dy),
               dy == 0 ? page.pictures : shiftPictures(page.pictures, dy),
-              furnitureLines(
-                  context,
-                  false,
-                  i,
-                  page.sectionPage,
-                  page.number,
-                  b.pages.size(),
-                  body.top - context.furniture.headerDistance,
-                  warnings),
-              furnitureLines(
-                  context,
-                  true,
-                  i,
-                  page.sectionPage,
-                  page.number,
-                  b.pages.size(),
-                  body.bottom - context.furniture.footerDistance,
-                  warnings),
+              Collections.unmodifiableList(header.lines),
+              Collections.unmodifiableList(footer.lines),
               page.notes);
+      rebuilt.furnitureBoxes.addAll(header.boxes);
+      rebuilt.furnitureBoxes.addAll(footer.boxes);
+      rebuilt.furniturePictures.addAll(header.pictures);
+      rebuilt.furniturePictures.addAll(footer.pictures);
       rebuilt.columnRules.addAll(page.columnRules);
       for (Frame f : page.frames)
         rebuilt.frames.add(
@@ -1299,31 +1328,120 @@ public final class LayoutEngine {
         original.width, original.height, top, original.right, bottom, original.left);
   }
 
-  private Sequence<Paragraph> resolvedFurniture(
+  private Sequence<Block> resolvedFurniture(
       Document doc, boolean footer, int page, int count, int number) {
-    var result = new Sequence<Paragraph>();
-    for (Paragraph p : doc.furniture.get(doc.furniture.key(footer, page, number))) {
-      var resolved =
-          p.text.mapFields(
-              (offset, field) ->
-                  DocumentFields.resolve(
-                      field, doc.title, number, count, Collections.<String, String>emptyMap(),
-                      doc.lastSection.decor.numberFormat));
-      result = result.append(resolved == p.text ? p : p.text(resolved));
-    }
-    return result;
+    // Fields resolve at any depth: Word headers often hold PAGE in a table cell.
+    return PageFurniture.mapBlocks(
+        doc.furniture.shown(doc.furniture.key(footer, page, number)),
+        p -> {
+          var resolved =
+              p.text.mapFields(
+                  (offset, field) ->
+                      DocumentFields.resolve(
+                          field, doc.title, number, count, Collections.<String, String>emptyMap(),
+                          doc.lastSection.decor.numberFormat));
+          return resolved == p.text ? p : p.text(resolved);
+        });
   }
 
-  private float furnitureHeight(Sequence<Paragraph> paragraphs, float width) {
-    float height = 0;
-    for (Paragraph p : paragraphs) {
-      height += p.before + p.after;
-      for (RawLine line : lines(p, width)) height += line.height;
-    }
-    return height;
+  /** A header or footer story laid out from y = 0 at the page's content margins. */
+  private static final class StoryLayout {
+    final List<Line> lines = new ArrayList<>();
+    final List<Box> boxes = new ArrayList<>();
+    final List<PlacedPicture> pictures = new ArrayList<>();
+    /** Floats anchored to the page or its margins: already in page coordinates. */
+    final List<PlacedPicture> anchored = new ArrayList<>();
+    float height;
   }
 
-  private List<Line> furnitureLines(
+  private StoryLayout story(Document doc, Sequence<Block> blocks, int page, float available) {
+    var out = new StoryLayout();
+    float y = 0;
+    var numbering = new ListNumbers();
+    var spec = doc.page;
+    for (Block block : blocks) {
+      if (block instanceof Paragraph p) {
+        y += p.before;
+        var marker = numbering.next(p);
+        for (RawLine line : lines(p, spec.contentWidth())) {
+          float indent = p.indent + (line.start == 0 ? p.format.firstIndent : 0),
+              x = spec.left + indent;
+          float remaining = spec.contentWidth() - indent - p.format.rightIndent - line.width;
+          if ("center".equals(p.align)) x += remaining / 2;
+          else if ("right".equals(p.align)) x += remaining;
+          out.lines.add(new Line(-1, -1, -1, p.id, page, x, y, line, marker));
+          marker = "";
+          y += line.height;
+          if (y > available + .01f) break;
+        }
+        y += p.after;
+        continue;
+      }
+      numbering.reset();
+      if (block instanceof Picture picture && !"inline".equals(picture.wrap())) {
+        var pos = FloatPosition.parse(picture.position());
+        if (pos != null && !"paragraph".equals(pos.vRel) && !"line".equals(pos.vRel)) {
+          // As in Word, a header float anchored to the page or a margin is placed on the page.
+          var paper = new Builder();
+          paper.beginSection(
+              0,
+              doc.lastSection.page(spec).furniture(PageFurniture.EMPTY).columns(Columns.ONE),
+              spec);
+          paper.picture(picture, -1);
+          for (PlacedPicture x : paper.pictures)
+            out.anchored.add(
+                new PlacedPicture(x.picture(), -1, page, x.x(), x.y(), x.width(), x.height()));
+          continue;
+        }
+      }
+      // Tables and pictures use the body's layout in a scratch region as tall as needed.
+      var region = new PageSpec(spec.width, 100000, 0, spec.right, 0, spec.left);
+      var scratch = new Builder();
+      scratch.beginSection(
+          0,
+          doc.lastSection.page(region).furniture(PageFurniture.EMPTY).columns(Columns.ONE),
+          region);
+      if (block instanceof Table t) scratch.table(t, -1);
+      else if (block instanceof Picture picture) scratch.picture(picture, -1);
+      float advance = scratch.y;
+      scratch.finish();
+      var laid = scratch.pages.get(0);
+      for (Line l : laid.lines) {
+        var raw = raw(l);
+        out.lines.add(new Line(-1, -1, -1, l.paragraphId, page, l.x, y + l.y, raw, l.marker));
+      }
+      for (Box x : laid.boxes)
+        out.boxes.add(
+            new Box(-1, x.row, x.column, page, x.x, y + x.y, x.width, x.height, x.format)
+                .at(x.path));
+      for (PlacedPicture x : laid.pictures)
+        out.pictures.add(
+            new PlacedPicture(x.picture(), -1, page, x.x(), y + x.y(), x.width(), x.height()));
+      if (block instanceof Table) for (Box x : laid.boxes) advance = Math.max(advance, x.y + x.height);
+      y += advance;
+    }
+    out.height = y;
+    return out;
+  }
+
+  private static RawLine raw(Line line) {
+    var raw = new RawLine();
+    raw.start = line.start;
+    raw.end = line.end;
+    raw.width = line.width;
+    raw.height = line.height;
+    raw.clipped = line.clipped;
+    raw.markerOffset = line.markerOffset;
+    raw.spans.addAll(line.spans);
+    raw.barTabs = line.barTabs;
+    return raw;
+  }
+
+  private float furnitureHeight(Document doc, Sequence<Block> blocks) {
+    return blocks.size() == 0 ? 0 : story(doc, blocks, 0, Float.MAX_VALUE).height;
+  }
+
+  private StoryLayout furnitureLines(
       Document doc,
       boolean footer,
       int page,
@@ -1332,32 +1450,10 @@ public final class LayoutEngine {
       int count,
       float available,
       Set<String> warnings) {
-    var paragraphs = resolvedFurniture(doc, footer, sectionPage, count, number);
-    var result = new ArrayList<Line>();
-    float y = 0;
-    var numbering = new ListNumbers();
-    boolean overflow = false;
-    story:
-    for (Paragraph p : paragraphs) {
-      y += p.before;
-      var marker = numbering.next(p);
-      for (RawLine line : lines(p, doc.page.contentWidth())) {
-        if (y + line.height > available + .01f) {
-          overflow = true;
-          break story;
-        }
-        float indent = p.indent + (line.start == 0 ? p.format.firstIndent : 0),
-            x = doc.page.left + indent;
-        float remaining = doc.page.contentWidth() - indent - p.format.rightIndent - line.width;
-        if ("center".equals(p.align)) x += remaining / 2;
-        else if ("right".equals(p.align)) x += remaining;
-        result.add(new Line(-1, -1, -1, p.id, page, x, y, line, marker));
-        marker = "";
-        y += line.height;
-      }
-      y += p.after;
-    }
-    if (overflow || paragraphs.size() > 0 && y > available + .01f)
+    var blocks = resolvedFurniture(doc, footer, sectionPage, count, number);
+    var laid = story(doc, blocks, page, available);
+    float y = laid.height;
+    if (blocks.size() > 0 && y > available + .01f)
       warnings.add(
           (footer ? "Footer" : "Header")
               + " on page "
@@ -1366,21 +1462,21 @@ public final class LayoutEngine {
               + " edge.");
     float start =
         footer ? doc.page.height - doc.furniture.footerDistance - y : doc.furniture.headerDistance;
-    var placed = new ArrayList<Line>();
-    for (Line line : result) {
-      var raw = new RawLine();
-      raw.start = line.start;
-      raw.end = line.end;
-      raw.width = line.width;
-      raw.height = line.height;
-      raw.clipped = line.clipped;
-      raw.markerOffset = line.markerOffset;
-      raw.spans.addAll(line.spans);
-      raw.barTabs = line.barTabs;
-      placed.add(
-          new Line(-1, -1, -1, line.paragraphId, page, line.x, start + line.y, raw, line.marker));
+    var placed = new StoryLayout();
+    placed.height = y;
+    for (Line line : laid.lines) {
+      if (line.y + line.height > available + .01f) continue;
+      placed.lines.add(
+          new Line(-1, -1, -1, line.paragraphId, page, line.x, start + line.y, raw(line), line.marker));
     }
-    return Collections.unmodifiableList(placed);
+    for (Box x : laid.boxes)
+      placed.boxes.add(
+          new Box(-1, x.row, x.column, page, x.x, start + x.y, x.width, x.height, x.format).at(x.path));
+    for (PlacedPicture x : laid.pictures)
+      placed.pictures.add(
+          new PlacedPicture(x.picture(), -1, page, x.x(), start + x.y(), x.width(), x.height()));
+    placed.pictures.addAll(laid.anchored);
+    return placed;
   }
 
   private final class Builder {

@@ -238,7 +238,7 @@ final class CatalogNavigationCommands implements Commands.Extension {
           PageFurniture f =
               link
                   ? range.raw.furniture.inherit(key)
-                  : range.raw.furniture.story(key, range.resolved.furniture.get(key));
+                  : range.raw.furniture.blocks(key, range.resolved.furniture.blocks(key));
           s.section(range.raw.furniture(f));
           return link;
         });

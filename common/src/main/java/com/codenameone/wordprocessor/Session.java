@@ -1799,18 +1799,12 @@ public final class Session {
       ParagraphStyle style,
       ParagraphStyle old,
       boolean deleting) {
-    var result = furniture;
-    for (String key : PageFurniture.KEYS)
-      if (furniture.stories.containsKey(key)) {
-        Sequence<Paragraph> previous = furniture.get(key), next = previous;
-        for (int i = 0; i < previous.size(); i++) {
-          var p = previous.get(i);
-          if (p.style.equals(id))
-            next = next.set(i, deleting ? p.with("style", "Normal") : style.apply(p, old, true));
-        }
-        if (next != previous) result = result.story(key, next);
-      }
-    return result;
+    // Paragraphs inside header/footer tables follow the style too.
+    return furniture.map(
+        p ->
+            !p.style.equals(id)
+                ? p
+                : deleting ? p.with("style", "Normal") : style.apply(p, old, true));
   }
 
   private Sequence<Block> updateStyledBlocks(
@@ -2137,15 +2131,9 @@ public final class Session {
     leaveCell();
     transact(
         s -> {
-          long next = document.nextId;
-          var updated = value;
-          for (String key : PageFurniture.KEYS)
-            if (value.stories.containsKey(key)) {
-              var paragraphs = new Sequence<Paragraph>();
-              for (Paragraph para : value.get(key))
-                paragraphs = paragraphs.append(para.copy("p" + next++, para.text));
-              updated = updated.story(key, paragraphs);
-            }
+          long[] ids = {document.nextId};
+          var updated = value.map(para -> para.copy("p" + ids[0]++, para.text));
+          long next = ids[0];
           document =
               document
                   .blocks(document.blocks, next)
@@ -2987,14 +2975,9 @@ public final class Session {
               inserted.add(copy);
               var section = fragment.sections.get(p.id);
               if (section != null) {
-                var furniture = section.furniture;
-                for (String key : PageFurniture.KEYS)
-                  if (furniture.stories.containsKey(key)) {
-                    var story = new Sequence<Paragraph>();
-                    for (Paragraph para : furniture.get(key))
-                      story = story.append(para.copy("p" + id++, para.text));
-                    furniture = furniture.story(key, story);
-                  }
+                long[] ids = {id};
+                var furniture = section.furniture.map(para -> para.copy("p" + ids[0]++, para.text));
+                id = ids[0];
                 pastedSections.put(copy.id, section.furniture(furniture));
               }
             } else if (source instanceof Table table) {
