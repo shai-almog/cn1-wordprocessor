@@ -29,7 +29,13 @@ final class TableFormats {
           .append("\" fixed=\"")
           .append(size.fixed ? "true" : "false")
           .append("\"");
+    RevisionFormats.attributes(b, f.revision(), "format-");
     b.append(">");
+    if (f.revision() != null && f.previous() != null) {
+      b.append("<previousFormat>");
+      nativeXml(b, f.previous());
+      b.append("</previousFormat>");
+    }
     for (int c = 0; c < f.columns(); c++)
       b.append("<column width=\"").append(f.column(c)).append("\"/>");
     for (int r = 0; r < f.rows(); r++) {
@@ -104,8 +110,11 @@ final class TableFormats {
                 number(props, "indent", 0),
                 !"false".equals(Xml.attr(props, "fixed", "true"))));
     for (String key : TableFormat.PROPS) f = f.withProp(key, Xml.attr(props, "opt-" + key, ""));
-    return f.headerRows(Integer.parseInt(Xml.attr(props, "headers", "0")))
+    f = f.headerRows(Integer.parseInt(Xml.attr(props, "headers", "0")))
         .altText(Xml.attr(props, "title", ""), Xml.attr(props, "description", ""));
+    Revision change = RevisionFormats.nativeRead(props, "format-");
+    Element prior = Xml.child(props, "previousFormat");
+    return change == null || prior == null ? f : f.formatRevision(change, nativeRead(prior, rows, columns));
   }
 
   static void sizingXml(StringBuilder b, TableFormat f) {
@@ -206,6 +215,94 @@ final class TableFormats {
 
   static void rowXml(StringBuilder b, TableFormat f, int r) {
     b.append("<w:trPr>");
+    rowInner(b, f, r);
+    var before = f.previous();
+    if (f.revision() != null && before != null && r < before.rows()) {
+      var now = new StringBuilder();
+      var old = new StringBuilder();
+      rowInner(now, f, r);
+      rowInner(old, before, r);
+      if (!now.toString().equals(old.toString()))
+        change(b, "trPrChange", "trPr", f.revision(), old.toString());
+    }
+    b.append("</w:trPr>");
+  }
+
+  /** A tracked property change element (w:tblPrChange, w:trPrChange, w:tcPrChange). */
+  static void change(StringBuilder b, String name, String props, Revision r, String inner) {
+    b.append("<w:").append(name).append(" w:id=\"").append(Xml.escape(r.id))
+        .append("\" w:author=\"").append(Xml.escape(r.author))
+        .append("\" w:date=\"").append(Xml.escape(r.date)).append("\"><w:")
+        .append(props).append('>').append(inner).append("</w:").append(props).append("></w:")
+        .append(name).append('>');
+  }
+
+  /**
+   * The prior table properties a tracked change carries: the table read again with each
+   * w:tblPrChange/w:trPrChange/w:tcPrChange's old properties in place of the current ones
+   * (merges kept from the current cell properties), null when there is none. Wordcraft reads
+   * one revision per element; the first found becomes the table's.
+   */
+  static Table readTracked(Element tbl, Table read, Table skeleton) {
+    var swaps = new ArrayList<Element[]>();
+    Revision[] found = {null};
+    collectChange(swaps, found, Xml.child(tbl, "tblPr"), "tblPrChange", "tblPr");
+    for (Element tr : Xml.children(tbl, "tr")) {
+      collectChange(swaps, found, Xml.child(tr, "trPr"), "trPrChange", "trPr");
+      for (Element tc : Xml.children(tr, "tc")) collectChange(swaps, found, Xml.child(tc, "tcPr"), "tcPrChange", "tcPr");
+    }
+    if (found[0] == null) return read;
+    var saved = new ArrayList<List<Element>>();
+    for (Element[] swap : swaps) {
+      var current = new ArrayList<Element>();
+      for (int i = swap[0].getNumChildren() - 1; i >= 0; i--) {
+        var child = (Element) swap[0].getChildAt(i);
+        String n = Xml.local(child);
+        if ("gridSpan".equals(n) || "vMerge".equals(n) || "hMerge".equals(n)) continue;
+        current.add(0, child);
+        swap[0].removeChildAt(i);
+      }
+      saved.add(current);
+      var old = new ArrayList<Element>();
+      for (int i = 0; i < swap[1].getNumChildren(); i++) old.add((Element) swap[1].getChildAt(i));
+      for (Element e : old) swap[1].removeChildAt(swap[1].getChildIndex(e));
+      for (Element e : old) swap[0].addChild(e);
+    }
+    Table previous;
+    try {
+      previous = readDocx(tbl, skeleton, new HashSet<String>());
+    } finally {
+      for (int k = 0; k < swaps.size(); k++) {
+        Element[] swap = swaps.get(k);
+        var old = new ArrayList<Element>();
+        for (int i = swap[0].getNumChildren() - 1; i >= 0; i--) {
+          var child = (Element) swap[0].getChildAt(i);
+          String n = Xml.local(child);
+          if ("gridSpan".equals(n) || "vMerge".equals(n) || "hMerge".equals(n)) continue;
+          old.add(0, child);
+          swap[0].removeChildAt(i);
+        }
+        for (Element e : old) swap[1].addChild(e);
+        for (Element e : saved.get(k)) swap[0].addChild(e);
+      }
+    }
+    return read.format(read.format.formatRevision(found[0], previous.format));
+  }
+
+  private static void collectChange(List<Element[]> out, Revision[] found, Element pr, String change, String props) {
+    Element ch = pr == null ? null : Xml.child(pr, change);
+    if (ch == null) return;
+    if (found[0] == null)
+      found[0] = new Revision(Xml.attr(ch, "id", "0"), "format", Xml.attr(ch, "author", ""), Xml.attr(ch, "date", ""));
+    Element old = Xml.child(ch, props);
+    if (old == null) {
+      old = new Element("w:" + props);
+      ch.addChild(old);
+    }
+    out.add(new Element[] {pr, old});
+  }
+
+  private static void rowInner(StringBuilder b, TableFormat f, int r) {
     if (r < f.headerRows) b.append("<w:tblHeader/>");
     if (f.minHeight(r) > 0)
       b.append("<w:trHeight w:val=\"")
@@ -214,7 +311,6 @@ final class TableFormats {
           .append(f.row(r).rule)
           .append("\"/>");
     if (!f.row(r).allowBreak) b.append("<w:cantSplit/>");
-    b.append("</w:trPr>");
   }
 
   static void cellXml(StringBuilder b, TableFormat.Cell v, float width) {
@@ -316,7 +412,8 @@ final class TableFormats {
             && !"bidiVisual".equals(name)
             && !"tblStyle".equals(name)
             && !"tblpPr".equals(name)
-            && !"tblOverlap".equals(name))
+            && !"tblOverlap".equals(name)
+            && !"tblPrChange".equals(name))
           warnings.add("Table property requires conversion: " + name);
       }
       Element width = Xml.child(props, "tblW");
@@ -401,7 +498,8 @@ final class TableFormats {
         for (Element property : Xml.children(rp, null))
           if (!"tblHeader".equals(Xml.local(property))
               && !"trHeight".equals(Xml.local(property))
-              && !"cantSplit".equals(Xml.local(property)))
+              && !"cantSplit".equals(Xml.local(property))
+              && !"trPrChange".equals(Xml.local(property)))
             warnings.add("Table row property: " + Xml.local(property));
       }
       c = 0;

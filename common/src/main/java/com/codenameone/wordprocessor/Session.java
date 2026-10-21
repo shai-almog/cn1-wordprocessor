@@ -733,6 +733,7 @@ public final class Session {
     long old = revision;
     transactionDepth++;
     try {
+      var bodyBefore = document.trackChanges ? document() : null;
       edit.apply(this);
       // A cell of a table inside a note story stays where it is (its path is note-relative).
       int[] notePath = cell != null && cell.top().note != null ? new int[0] : cellPath();
@@ -742,6 +743,7 @@ public final class Session {
       var noteStyle = insertionStyle;
       if (notePath.length > 0) leaveCell();
       document = Notes.normalize(document);
+      if (bodyBefore != null && cell == null) trackTableProperties(bodyBefore);
       if (notePath.length > 0) enterCellPath(notePath);
       selection = noteSelection;
       cells = noteCells;
@@ -1202,6 +1204,38 @@ public final class Session {
     });
   }
 
+  /**
+   * With Track Changes on, a body table whose properties changed in this edit records the change
+   * (w:tblPrChange/trPrChange/tcPrChange) keeping the properties before it, as Wordcraft tracks
+   * table property edits as fmt_change. Row/column insertion and deletion (a different grid)
+   * and resolving a change are not property edits.
+   */
+  private void trackTableProperties(Document before) {
+    if (!document.trackChanges || !trackFormatting || document.blocks == before.blocks) return;
+    var old = new HashMap<String, Table>();
+    for (Block b : before.blocks) if (b instanceof Table t) old.put(t.id(), t);
+    if (old.isEmpty()) return;
+    var blocks = document.blocks;
+    for (int i = 0; i < blocks.size(); i++) {
+      if (!(blocks.get(i) instanceof Table t)) continue;
+      var prior = old.get(t.id());
+        if (prior == null || prior.format == t.format) continue;
+      var was = prior.format;
+      var now = t.format;
+      if (was.rows() != now.rows() || was.columns() != now.columns()) continue;
+      if (was.revision() != null && now.revision() == null) continue;
+      if (now.revision() != null && now.revision() != was.revision()) continue;
+      var a = new StringBuilder();
+      var c = new StringBuilder();
+      TableFormats.nativeXml(a, was.formatRevision(null, null));
+      TableFormats.nativeXml(c, now.formatRevision(null, null));
+      if (a.toString().equals(c.toString())) continue;
+      var change = was.revision() != null ? was.revision() : newRevision("format");
+      blocks = blocks.set(i, t.format(now.tracked(was, change)));
+    }
+    if (blocks != document.blocks) document = document.blocks(blocks, document.nextId);
+  }
+
   private Revision newRevision(String kind) {
     Calendar utc = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
     var date =
@@ -1232,6 +1266,7 @@ public final class Session {
     }
     leaveCell();
     transact(
+
         s -> {
           var before = document;
           var moves = id == null ? Collections.<String>emptySet() : Revisions.moveNames(document, id);

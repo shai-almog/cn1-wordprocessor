@@ -298,7 +298,8 @@ public final class Docx {
                 && !"tcBorders".equals(name)
                 && !"tcMar".equals(name)
                 && !"shd".equals(name)
-                && !"vAlign".equals(name)) warnings.add("Table cell property: " + name);
+                && !"vAlign".equals(name)
+                && !"tcPrChange".equals(name)) warnings.add("Table cell property: " + name);
           }
         for (Element child : Xml.children(cell, null))
           if (!"p".equals(Xml.local(child))
@@ -318,7 +319,8 @@ public final class Docx {
     for (int[] span : spans)
       if (span[2] > 1 || span[3] > 1)
         merges.add(new Table.Merge(span[0], span[1], span[2], span[3]));
-    return TableFormats.readDocx(table, Table.of("t" + id[0]++, rows, merges), warnings);
+    var skeleton = Table.of("t" + id[0]++, rows, merges);
+    return TableFormats.readTracked(table, TableFormats.readDocx(table, skeleton, warnings), skeleton);
   }
 
   /** Placeholder for w:br type="column" while runs are read; never stored in a document. */
@@ -1200,6 +1202,14 @@ static final char COLUMN_BREAK = '\u000B';
       TableFormats.sizingXml(b, t.format);
       float tableWidth = t.format.preferredWidth(available);
       TableFormats.alternativeXml(b, t.format);
+      var before = t.format.previous();
+      if (t.format.revision() != null && before != null) {
+        var old = new StringBuilder();
+        TableFormats.floatXml(old, before);
+        TableFormats.sizingXml(old, before);
+        TableFormats.alternativeXml(old, before);
+        TableFormats.change(b, "tblPrChange", "tblPr", t.format.revision(), old.toString());
+      }
       b.append("</w:tblPr><w:tblGrid>");
       for (int c = 0; c < t.columns(); c++)
         b.append("<w:gridCol w:w=\"")
@@ -1223,6 +1233,17 @@ static final char COLUMN_BREAK = '\u000B';
             b.append("<w:gridSpan w:val=\"").append(span.columns).append("\"/>");
           if (span.rows > 1)
             b.append(r == span.row ? "<w:vMerge w:val=\"restart\"/>" : "<w:vMerge/>");
+          if (before != null && t.format.revision() != null && span.row < before.rows() && span.column < before.columns()) {
+            var now = new StringBuilder();
+            var old = new StringBuilder();
+            TableFormats.cellXml(now, t.format.cell(span.row, span.column), cellWidth);
+            TableFormats.cellXml(old, before.cell(span.row, span.column), cellWidth);
+            var oldFlow = before.direction(span.row, span.column);
+            if (!flow.equals(oldFlow)) now.append(flow);
+            if (!"lrTb".equals(oldFlow)) old.append("<w:textDirection w:val=\"").append(oldFlow).append("\"/>");
+            if (!now.toString().equals(old.toString()))
+              TableFormats.change(b, "tcPrChange", "tcPr", t.format.revision(), old.toString());
+          }
           b.append("</w:tcPr>");
           // Nested tables are written inside the cell as Word stores them (w:tc/w:tbl).
           if (span.row == r)

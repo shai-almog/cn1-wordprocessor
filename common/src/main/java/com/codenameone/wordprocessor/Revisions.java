@@ -39,6 +39,7 @@ public final class Revisions {
       var block = d.blocks.get(b);
       if (block instanceof Paragraph paragraph) collect(changes, paragraph, "", b, -1, -1);
       else if (block instanceof Table table) {
+        tableChange(changes, table, "", b);
         for (int r = 0; r < table.rows(); r++)
           for (int c = 0; c < table.columns(); c++)
             if (!table.covered(r, c))
@@ -60,11 +61,22 @@ public final class Revisions {
   private static void collectBlocks(List<Change> out, Sequence<Block> blocks, String story, int block, int row, int col) {
     for (Block b : blocks) {
       if (b instanceof Paragraph p) collect(out, p, story, block, row, col);
-      else if (b instanceof Table t)
+      else if (b instanceof Table t) {
+        tableChange(out, t, story, block);
         for (int r = 0; r < t.rows(); r++)
           for (int c = 0; c < t.columns(); c++)
             if (!t.covered(r, c)) collectBlocks(out, t.blocks(r, c), story, block, row, col);
+      }
     }
+  }
+
+  /**
+   * A tracked table property change (w:tblPrChange/trPrChange/tcPrChange), listed as Wordcraft
+   * lists a table's fmt_change; located at the table's first cell paragraph.
+   */
+  private static void tableChange(List<Change> out, Table t, String story, int block) {
+    if (t.format.revision() == null) return;
+    out.add(new Change(t.format.revision(), t.cell(0, 0).get(0), "Table properties", story, block, -1, -1, 0, 0));
   }
 
   private static void collect(
@@ -161,6 +173,7 @@ public final class Revisions {
     for (int b = selection.endBlock(); b >= selection.startBlock(); b--) {
       var block = blocks.get(b);
       if (block instanceof Table table) {
+        if (table.format.revision() != null) table = table.format(table.format.review(null, accept));
         for (int r = 0; r < table.rows(); r++)
           for (int c = 0; c < table.columns(); c++)
             if (!table.covered(r, c))
@@ -290,6 +303,7 @@ public final class Revisions {
       if (block instanceof Paragraph p) {
         block = p.text(p.text.review(id, accept)).reviewFormat(id, accept);
       } else if (block instanceof Table t) {
+        if (t.format.review(id, accept) != t.format) t = t.format(t.format.review(id, accept));
         for (int r = 0; r < t.rows(); r++)
           for (int c = 0; c < t.columns(); c++)
             if (!t.covered(r, c)) t = t.setCell(r, c, resolveParagraphs(t.cell(r, c), id, accept));

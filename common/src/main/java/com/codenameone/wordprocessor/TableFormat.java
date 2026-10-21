@@ -165,13 +165,13 @@ public final class TableFormat {
   public TableFormat altText(String title, String description) {
     if (title == null || description == null)
       throw new IllegalArgumentException("Missing table alternative text");
-    return new TableFormat(
-        cells, columns, heights, headerRows, alt(title), alt(description), sizing, props);
+    return keep(new TableFormat(
+        cells, columns, heights, headerRows, alt(title), alt(description), sizing, props));
   }
 
   public TableFormat sizing(Sizing value) {
     if (value == null) throw new IllegalArgumentException("Missing table sizing");
-    return new TableFormat(cells, columns, heights, headerRows, title, description, value, props);
+    return keep(new TableFormat(cells, columns, heights, headerRows, title, description, value, props));
   }
 
   /** Preferred total width before content-driven adjustment. */
@@ -230,14 +230,14 @@ public final class TableFormat {
     var copy = cells.clone();
     copy[row] = cells[row].clone();
     copy[row][column] = value;
-    return new TableFormat(copy, columns, heights, headerRows, title, description, sizing, props);
+    return keep(new TableFormat(copy, columns, heights, headerRows, title, description, sizing, props));
   }
 
   public TableFormat column(int column, float weight) {
     if (!valid(weight, .000001f, 10000)) throw new IllegalArgumentException("Invalid column width");
     var copy = columns.clone();
     copy[column] = weight;
-    return new TableFormat(cells, copy, heights, headerRows, title, description, sizing, props);
+    return keep(new TableFormat(cells, copy, heights, headerRows, title, description, sizing, props));
   }
 
   public TableFormat columnFraction(int column, float fraction) {
@@ -250,7 +250,7 @@ public final class TableFormat {
     for (int c = 0; c < columns(); c++)
       copy[c] =
           total * (c == column ? fraction : columnFraction(c) * (1 - fraction) / (1 - previous));
-    return new TableFormat(cells, copy, heights, headerRows, title, description, sizing, props);
+    return keep(new TableFormat(cells, copy, heights, headerRows, title, description, sizing, props));
   }
 
   public TableFormat minHeight(int row, float height) {
@@ -261,7 +261,7 @@ public final class TableFormat {
     if (value == null) throw new IllegalArgumentException("Missing row formatting");
     var copy = heights.clone();
     copy[row] = value;
-    return new TableFormat(cells, columns, copy, headerRows, title, description, sizing, props);
+    return keep(new TableFormat(cells, columns, copy, headerRows, title, description, sizing, props));
   }
 
   public TableFormat distributeColumns() {
@@ -269,7 +269,7 @@ public final class TableFormat {
     float total = 0;
     for (float width : columns) total += width;
     Arrays.fill(equal, total / columns.length);
-    return new TableFormat(cells, equal, heights, headerRows, title, description, sizing, props);
+    return keep(new TableFormat(cells, equal, heights, headerRows, title, description, sizing, props));
   }
 
   public TableFormat distributeRows() {
@@ -280,12 +280,12 @@ public final class TableFormat {
       equal[r] =
           new Row(
               height, "exact".equals(heights[r].rule) ? "exact" : "atLeast", heights[r].allowBreak);
-    return new TableFormat(cells, columns, equal, headerRows, title, description, sizing, props);
+    return keep(new TableFormat(cells, columns, equal, headerRows, title, description, sizing, props));
   }
 
   public TableFormat headerRows(int count) {
     if (count < 0 || count > rows()) throw new IllegalArgumentException("Invalid header row count");
-    return new TableFormat(cells, columns, heights, count, title, description, sizing, props);
+    return keep(new TableFormat(cells, columns, heights, count, title, description, sizing, props));
   }
 
   TableFormat change(boolean row, int at, boolean insert) {
@@ -306,11 +306,61 @@ public final class TableFormat {
     }
     int headers = headerRows;
     if (row && at < headers) headers += insert ? 1 : -1;
-    return out.headerRows(Math.min(headers, nr)).altText(title, description).sizing(sizing).props(props);
+    var result = out.headerRows(Math.min(headers, nr)).altText(title, description).sizing(sizing).props(props);
+    // The tracked prior properties follow the same row/column change so they stay aligned.
+    if (revision != null && previous != null && previous.rows() == rows() && previous.columns() == columns()) {
+      result.revision = revision;
+      result.previous = previous.change(row, at, insert);
+    }
+    return result;
+  }
+
+  /**
+   * Tracked table property change (w:tblPrChange, w:trPrChange, w:tcPrChange; Wordcraft
+   * TableProps/RowProps/CellProps fmt_change): the revision and the whole table's properties
+   * before it. One revision covers the table, its rows and cells (Wordcraft keeps one per
+   * element; ids of separate row/cell changes are merged into the table's on read).
+   */
+  public Revision revision() {
+    return revision;
+  }
+
+  public TableFormat previous() {
+    return previous;
+  }
+
+  private Revision revision;
+  private TableFormat previous;
+
+  public TableFormat formatRevision(Revision value, TableFormat before) {
+    var out = new TableFormat(cells, columns, heights, headerRows, title, description, sizing, props);
+    if (value != null && before != null) {
+      out.revision = value;
+      out.previous = before.revision == null ? before : before.formatRevision(null, null);
+    }
+    return out;
+  }
+
+  /** Accept keeps the current properties, reject restores the prior ones (id null: any). */
+  public TableFormat review(String id, boolean accept) {
+    if (revision == null || id != null && !id.equals(revision.id)) return this;
+    return accept ? formatRevision(null, null) : previous;
+  }
+
+  /** Records a property edit as a tracked change, keeping the oldest prior properties. */
+  public TableFormat tracked(TableFormat before, Revision change) {
+    if (before.revision != null) return formatRevision(before.revision, before.previous);
+    return formatRevision(change, before);
+  }
+
+  private TableFormat keep(TableFormat out) {
+    out.revision = revision;
+    out.previous = previous;
+    return out;
   }
 
   private TableFormat props(java.util.TreeMap<String, String> value) {
-    return new TableFormat(cells, columns, heights, headerRows, title, description, sizing, value);
+    return keep(new TableFormat(cells, columns, heights, headerRows, title, description, sizing, value));
   }
 
   public String prop(String key, String fallback) {
@@ -386,7 +436,7 @@ public final class TableFormat {
       copy[r] = cells[order[r]];
       h[r] = heights[order[r]];
     }
-    return new TableFormat(copy, columns, h, headerRows, title, description, sizing, props);
+    return keep(new TableFormat(copy, columns, h, headerRows, title, description, sizing, props));
   }
 
   private static int original(int n, int at, boolean insert) {
