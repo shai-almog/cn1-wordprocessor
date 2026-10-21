@@ -57,14 +57,15 @@ public final class MailMerge {
   public static void refresh(Session s) {
     s.transact(
         x -> {
-          int cell = x.cellBlock(), row = x.cellRow(), col = x.cellColumn();
+          int cell = x.cellBlock();
+          int[] path = x.cellPath();
           var selection = x.selection();
           var transform =
               new Transform(x.document(), x.mergeData(), false, x.document().nextId, "");
           var value = transform.document(x.mergeData().record, x.mergeData().rows.size());
           if (value != x.document()) {
             x.replaceDocument(value);
-            if (cell >= 0) x.enterCell(cell, row, col);
+            if (cell >= 0) x.enterCellPath(path);
             x.selectRange(
                 selection.anchorBlock, selection.anchor, selection.block, selection.caret);
           }

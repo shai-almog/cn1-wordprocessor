@@ -123,10 +123,7 @@ public final class MixedRange {
    * when it lies in another story (into, out of or past a table); null otherwise or at an end.
    */
   public static Pos adjacent(Document body, int[] path, int block, boolean forward) {
-    var all = new ArrayList<Covered>();
-    var first = new Pos(new int[0], -1, 0);
-    var last = new Pos(new int[] {Integer.MAX_VALUE}, 0, 0);
-    walk(body.blocks, new int[0], 0, Integer.MAX_VALUE, first, last, all);
+    var all = paragraphs(body);
     for (int i = 0; i < all.size(); i++) {
       var c = all.get(i);
       if (c.block != block || !Arrays.equals(c.path, path)) continue;
@@ -137,6 +134,26 @@ public final class MixedRange {
       return new Pos(n.path, n.block, 0);
     }
     return null;
+  }
+
+  /** The cell path (Session.cellPath) of a laid-out line: empty for body lines. */
+  public static int[] linePath(LayoutEngine.Line line) {
+    if (line.row < 0) return new int[0];
+    int[] out = new int[3 + line.path.length];
+    out[0] = line.block;
+    out[1] = line.row;
+    out[2] = line.column;
+    System.arraycopy(line.path, 0, out, 3, line.path.length);
+    return out;
+  }
+
+  /** Every paragraph of the body and its table cells (any depth) in document order. */
+  public static List<Covered> paragraphs(Document body) {
+    var all = new ArrayList<Covered>();
+    var first = new Pos(new int[0], -1, 0);
+    var last = new Pos(new int[] {Integer.MAX_VALUE}, 0, 0);
+    walk(body.blocks, new int[0], 0, Integer.MAX_VALUE, first, last, all);
+    return all;
   }
 
   /** The body with {@code edit} applied to every covered paragraph. */

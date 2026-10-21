@@ -117,21 +117,15 @@ public final class DocumentIndex {
         s.insertField(field); count[0] = 1;
       } else {
         s.leaveCell();
-        for (int b = 0; b < s.document().blocks.size(); b++) {
-          var block = s.document().blocks.get(b);
-          if (block instanceof Paragraph p) {
-            int at = match(p, search, instruction);
-            if (at >= 0) { s.select(b, at, at); s.insertField(field); count[0]++; }
-          } else if (block instanceof Table table) {
-            for (int r = 0; r < table.rows(); r++) for (int c = 0; c < table.columns(); c++) {
-              var span = table.span(r, c);
-              if (span.row != r || span.column != c) continue;
-              for (int p = 0; p < table.cell(r, c).size(); p++) {
-                int at = match(table.cell(r, c).get(p), search, instruction);
-                if (at >= 0) { s.enterCell(b, r, c); s.select(p, at, at); s.insertField(field); s.leaveCell(); count[0]++; }
-              }
-            }
-          }
+        // Every paragraph of the body and of table cells at any depth, in document order.
+        for (MixedRange.Covered c : MixedRange.paragraphs(s.document())) {
+          int at = match(c.paragraph, search, instruction);
+          if (at < 0) continue;
+          s.enterCellPath(c.path);
+          s.select(c.block, at, at);
+          s.insertField(field);
+          s.leaveCell();
+          count[0]++;
         }
       }
     });
@@ -182,11 +176,14 @@ public final class DocumentIndex {
     var selection = session.selection();
     var anchor = session.editingDocument().blocks.get(selection.anchorBlock).id();
     var focus = session.editingDocument().blocks.get(selection.block).id();
-    String table = session.inCell() ? session.document().blocks.get(session.cellBlock()).id() : null;
-    int row = session.cellRow(), column = session.cellColumn();
+    String table = session.inCell() ? session.document().blocks.get(session.rootCellBlock()).id() : null;
+    int[] path = session.cellPath();
     session.transact(s -> {
       s.leaveCell(); insert(s, options, paginator, kind);
-      if (table != null) s.enterCell(ReviewComment.block(s.document(), table), row, column);
+      if (table != null) {
+        path[0] = ReviewComment.block(s.document(), table);
+        s.enterCellPath(path);
+      }
       int a = ReviewComment.block(s.editingDocument(), anchor), f = ReviewComment.block(s.editingDocument(), focus);
       if (a >= 0 && f >= 0 && s.editingDocument().blocks.get(a) instanceof Paragraph && s.editingDocument().blocks.get(f) instanceof Paragraph)
         s.selectRange(a, Math.min(selection.anchor, s.editingDocument().paragraph(a).text.length()),

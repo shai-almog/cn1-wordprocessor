@@ -91,11 +91,15 @@ public final class Citations {
       if (range == null || DocumentIndex.marker(s.document().paragraph(range[0]), "BIBLIOGRAPHY").locked) return;
       var selected = s.selection();
       String anchor = s.editingDocument().blocks.get(selected.anchorBlock).id(), focus = s.editingDocument().blocks.get(selected.block).id();
-      String table = s.inCell() ? s.document().blocks.get(s.cellBlock()).id() : null;
-      int row = s.cellRow(), column = s.cellColumn();
+      // The outermost table is found again by id (the bibliography may shift body blocks).
+      String table = s.inCell() ? s.document().blocks.get(s.rootCellBlock()).id() : null;
+      int[] path = s.cellPath();
       var title = s.document().paragraph(range[0]).text.plainText();
       s.leaveCell(); bibliography(s, title);
-      if (table != null) s.enterCell(ReviewComment.block(s.document(), table), row, column);
+      if (table != null) {
+        path[0] = ReviewComment.block(s.document(), table);
+        s.enterCellPath(path);
+      }
       int a = ReviewComment.block(s.editingDocument(), anchor), f = ReviewComment.block(s.editingDocument(), focus);
       if (a >= 0 && f >= 0 && s.editingDocument().blocks.get(a) instanceof Paragraph && s.editingDocument().blocks.get(f) instanceof Paragraph)
         s.selectRange(a, Math.min(selected.anchor, s.editingDocument().paragraph(a).text.length()), f, Math.min(selected.caret, s.editingDocument().paragraph(f).text.length()));

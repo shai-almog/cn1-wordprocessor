@@ -1120,7 +1120,7 @@ public final class Session {
           var selected = selection;
           if (block >= 0) leaveCell();
           document = document.properties(value);
-          if (block >= 0) enterCell(block, row, column);
+          if (block >= 0) enterCellPath(path);
           else selection = selected;
         });
   }
@@ -1149,11 +1149,12 @@ public final class Session {
     transact(
         s -> {
           int block = cellBlock(), row = cellRow(), column = cellColumn();
+          int[] blockPath = cellPath();
           var selected = selection;
           var style = insertionStyle;
           if (block >= 0) leaveCell();
           document = document.bibliography(value);
-          if (block >= 0) enterCell(block, row, column);
+          if (block >= 0) enterCellPath(blockPath);
           selection = selected;
           insertionStyle = style;
         });
@@ -1182,12 +1183,13 @@ public final class Session {
   public void trackChanges(final boolean enabled) {
     transact(s -> {
       int block = cellBlock(), row = cellRow(), column = cellColumn();
+      int[] blockPath = cellPath();
       var selected = selection;
       var range = cells;
       var style = insertionStyle;
       leaveCell();
       document = document.trackChanges(enabled);
-      if (block >= 0) enterCell(block, row, column);
+      if (block >= 0) enterCellPath(blockPath);
       selection = selected;
       cells = range;
       insertionStyle = style;
@@ -1720,6 +1722,7 @@ public final class Session {
     transact(
         s -> {
           int table = cellBlock(), row = cellRow(), column = cellColumn();
+          int[] tablePath = cellPath();
           var selected = selection;
           leaveCell();
           var old = document.styles.get(style.id);
@@ -1735,7 +1738,7 @@ public final class Session {
                       updateStyledFurniture(document.furniture, style.id, style, old, false));
           updateSectionStyles(style.id, style, old, false);
           if (table >= 0) {
-            enterCell(table, row, column);
+            enterCellPath(tablePath);
             selectRange(selected.anchorBlock, selected.anchor, selected.block, selected.caret);
           }
           insertionStyle =
@@ -2011,6 +2014,7 @@ public final class Session {
     transact(
         s -> {
           int cb = cellBlock(), cr = cellRow(), cc = cellColumn();
+          int[] cbPath = cellPath();
           var saved = selection;
           var savedStyle = insertionStyle;
           leaveCell();
@@ -2030,7 +2034,7 @@ public final class Session {
           }
           root = root.sections(sections, tail);
           document = root;
-          if (cb >= 0) enterCell(cb, cr, cc);
+          if (cb >= 0) enterCellPath(cbPath);
           selection = saved;
           insertionStyle = savedStyle;
         });
@@ -2157,6 +2161,7 @@ public final class Session {
     transact(
         s -> {
           int block = cellBlock(), row = cellRow(), column = cellColumn();
+          int[] blockPath = cellPath();
           var selected = selection;
           var selectedCells = cells;
           var selectedStyle = insertionStyle;
@@ -2194,7 +2199,7 @@ public final class Session {
                     }
                     return note.paragraphs(story);
                   });
-          if (block >= 0) enterCell(block, row, column);
+          if (block >= 0) enterCellPath(blockPath);
           selection = selected;
           cells = selectedCells;
           insertionStyle = selectedStyle;
@@ -2346,6 +2351,7 @@ public final class Session {
     transact(
         s -> {
           int block = cellBlock(), row = cellRow(), column = cellColumn();
+          int[] blockPath = cellPath();
           var selected = selection;
           leaveCell();
           final boolean[] found = {false};
@@ -2366,7 +2372,7 @@ public final class Session {
               next = Math.max(next, Long.parseLong(p.id.substring(1)) + 1);
           }
           document = document.blocks(document.blocks, next);
-          if (block >= 0) enterCell(block, row, column);
+          if (block >= 0) enterCellPath(blockPath);
           selection = selected;
         });
   }

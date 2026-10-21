@@ -20,38 +20,49 @@ final class ProofingCommands implements Commands.Extension {
   private static final SessionMap<Set<String>> ONCE = SessionMap.forDocument();
 
   /**
-   * An issue: in body paragraph {@code block} (row -1), or in paragraph {@code block} of the cell
-   * (row, column) of the table at body block {@code table}.
+   * An issue in paragraph {@code block} of the story at cell {@code path} (Session.cellPath:
+   * empty for the body, block/row/column triples for cells of tables at any depth).
    */
-  private record Found(int table, int row, int column, int block, Proofing.Issue issue, String word) {
-    Found(int block, Proofing.Issue issue, String word) {
-      this(block, -1, -1, block, issue, word);
-    }
-
-    /** Document order: table block, row, column, paragraph, offset. */
+  private record Found(int[] path, int block, Proofing.Issue issue, String word) {
+    /** Document order: the cell path, paragraph, offset. */
     long[] key() {
-      return new long[] {table, row, column, row < 0 ? 0 : block, issue.start()};
+      long[] k = new long[path.length + 2];
+      for (int i = 0; i < path.length; i++) k[i] = path[i];
+      k[path.length] = block;
+      k[path.length + 1] = issue.start();
+      return k;
     }
 
     String once() {
-      return row < 0 ? block + ":" + issue.start() + ":" + word : table + "/" + row + "/" + column + "/" + block + ":" + issue.start() + ":" + word;
+      var b = new StringBuilder();
+      for (int i = 0; i < path.length; i++) {
+        if (i > 0) b.append('/');
+        b.append(path[i]);
+      }
+      if (path.length > 0) b.append('/');
+      return b.append(block).append(':').append(issue.start()).append(':').append(word).toString();
     }
 
     /** Selects the issue's text, entering or leaving its cell. */
     void select(Session s) {
-      if (row < 0) {
+      if (path.length == 0) {
         if (s.inCell()) s.leaveCell();
-      } else s.enterCell(table, row, column);
+      } else s.enterCellPath(path);
       s.select(block, issue.start(), issue.end());
     }
 
     Map<String, Object> map() {
       var m = new LinkedHashMap<String, Object>();
-      m.put("block", Integer.valueOf(row < 0 ? block : table));
-      if (row >= 0) {
-        m.put("row", Integer.valueOf(row));
-        m.put("column", Integer.valueOf(column));
+      m.put("block", Integer.valueOf(path.length == 0 ? block : path[0]));
+      if (path.length > 0) {
+        m.put("row", Integer.valueOf(path[1]));
+        m.put("column", Integer.valueOf(path[2]));
         m.put("paragraph", Integer.valueOf(block));
+      }
+      if (path.length > 3) {
+        var list = new ArrayList<Object>();
+        for (int v : path) list.add(Integer.valueOf(v));
+        m.put("path", list);
       }
       m.put("start", Integer.valueOf(issue.start()));
       m.put("end", Integer.valueOf(issue.end()));
@@ -80,42 +91,34 @@ final class ProofingCommands implements Commands.Extension {
       once = ONCE.get(s);
     }
     var out = new ArrayList<Found>();
-    for (int b = 0; b < d.blocks.size(); b++) {
-      if (d.blocks.get(b) instanceof Table table) {
-        for (int r = 0; r < table.rows(); r++)
-          for (int c = 0; c < table.columns(); c++) {
-            if (table.covered(r, c)) continue;
-            int k = 0;
-            for (Paragraph p : table.cell(r, c)) proof(p, o, once, out, b, r, c, k++);
-          }
-        continue;
-      }
-      if (!(d.blocks.get(b) instanceof Paragraph)) continue;
-      proof(d.paragraph(b), o, once, out, b, -1, -1, b);
-    }
+    for (MixedRange.Covered c : MixedRange.paragraphs(d)) proof(c.paragraph, o, once, out, c.path, c.block);
     return out;
   }
 
-  private static void proof(Paragraph p, Proofing.Options o, Set<String> once, List<Found> out, int table, int row, int column, int block) {
+  private static void proof(Paragraph p, Proofing.Options o, Set<String> once, List<Found> out, int[] path, int block) {
     var t = p.text;
     var text = t.plainText();
     for (Proofing.Issue i : Proofing.check(text, o, off -> t.styleAt(off).characters.lang)) {
-      var f = new Found(table, row, column, block, i, text.substring(i.start(), i.end()));
+      var f = new Found(path, block, i, text.substring(i.start(), i.end()));
       if (once == null || !once.contains(f.once())) out.add(f);
     }
   }
 
   private static int compare(long[] a, long[] b) {
-    for (int i = 0; i < a.length; i++) if (a[i] != b[i]) return a[i] < b[i] ? -1 : 1;
-    return 0;
+    for (int i = 0; i < Math.min(a.length, b.length); i++) if (a[i] != b[i]) return a[i] < b[i] ? -1 : 1;
+    return Integer.compare(a.length, b.length);
   }
 
   /** The selection's end (or caret, when at) as a document-order key like Found.key(). */
   private static long[] here(Session s, boolean end) {
     var sel = s.selection();
     int b = end ? sel.endBlock() : sel.block, off = end ? sel.end() : sel.caret;
-    if (s.inCell()) return new long[] {s.cellBlock(), s.cellRow(), s.cellColumn(), b, off};
-    return new long[] {b, -1, -1, 0, off};
+    int[] path = s.inCell() ? s.cellPath() : new int[0];
+    long[] k = new long[path.length + 2];
+    for (int i = 0; i < path.length; i++) k[i] = path[i];
+    k[path.length] = b;
+    k[path.length + 1] = off;
+    return k;
   }
 
   private static Object spelling(Session s, Map<String, Object> a) {
@@ -210,7 +213,8 @@ final class ProofingCommands implements Commands.Extension {
     long[] at = here(s, false);
     for (Found f : all) {
       long[] k = f.key();
-      boolean same = k[0] == at[0] && k[1] == at[1] && k[2] == at[2] && k[3] == at[3];
+      boolean same = k.length == at.length;
+      for (int i = 0; same && i < k.length - 1; i++) same = k[i] == at[i];
       if (word != null ? f.word.equals(word) : same && at[4] >= f.issue.start() && at[4] <= f.issue.end()) return f;
     }
     return null;

@@ -545,7 +545,7 @@ final class CatalogNavigationCommands implements Commands.Extension {
 
   private static Table table(Session s) {
     if (!s.inCell()) throw new IllegalArgumentException("The caret is not in a table");
-    return (Table) s.document().blocks.get(s.cellBlock());
+    return (Table) s.levelDocument().blocks.get(s.cellBlock());
   }
 
   private static void cells(Session s, CellEdit edit) {

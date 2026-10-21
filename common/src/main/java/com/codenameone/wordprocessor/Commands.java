@@ -997,7 +997,7 @@ public final class Commands {
           (s, a) -> {
             if (!s.inCell()) throw new IllegalArgumentException("Click inside a table first");
             int block = s.cellBlock(), row = s.cellRow(), col = s.cellColumn();
-            var t = (Table) s.document().blocks.get(block);
+            var t = (Table) s.levelDocument().blocks.get(block);
             s.selectCells(
                 block,
                 "Column".equals(scope) || "Table".equals(scope) ? 0 : row,
@@ -1015,8 +1015,9 @@ public final class Commands {
           (s, a) -> {
             if (!s.inCell()) throw new IllegalArgumentException("Click inside a table first");
             int block = s.cellBlock(), row = s.cellRow(), col = s.cellColumn();
-            var table = (Table) s.document().blocks.get(block);
+            var table = (Table) s.levelDocument().blocks.get(block);
             var selected = s.cellSelection();
+            int[] path = s.cellPath();
             int first =
                 selected == null
                     ? (rows ? row : col)
@@ -1024,10 +1025,17 @@ public final class Commands {
             int last = selected == null ? first : rows ? selected.lastRow : selected.lastColumn;
             if (last - first + 1 == (rows ? table.rows() : table.columns())) s.deleteTable(block);
             else {
-              for (int i = last; i >= first; i--)
+              // Each structure edit leaves for the story holding the table, so the next one is
+              // made from the table's first cell again (it works at any nesting depth).
+              int[] first00 = java.util.Arrays.copyOf(path, path.length);
+              first00[path.length - 2] = 0;
+              first00[path.length - 1] = 0;
+              for (int i = last; i >= first; i--) {
+                s.enterCellPath(first00);
                 s.tableStructure(block, rows ? "deleteRow" : "deleteColumn", i);
-              table = (Table) s.document().blocks.get(block);
-              s.enterCell(
+              }
+              table = (Table) s.editingDocument().blocks.get(block);
+              s.enterNestedCell(
                   block,
                   Math.min(rows ? first : row, table.rows() - 1),
                   Math.min(rows ? col : first, table.columns() - 1));
@@ -1050,7 +1058,7 @@ public final class Commands {
               x.firstColumn,
               x.lastRow - x.firstRow + 1,
               x.lastColumn - x.firstColumn + 1);
-          s.enterCell(x.block, x.firstRow, x.firstColumn);
+          s.enterNestedCell(x.block, x.firstRow, x.firstColumn);
           return null;
         });
     edit("edit.pasteText", "text:string",
@@ -1319,57 +1327,63 @@ public final class Commands {
   public static List<Map<String, Object>> find(Document d, String needle) {
     if (needle.isEmpty()) throw new IllegalArgumentException("Search text is empty");
     var out = new ArrayList<Map<String, Object>>();
-    for (int i = 0; i < d.blocks.size(); i++) {
-      var b = d.blocks.get(i);
-      if (b instanceof Paragraph paragraph1) findParagraph(out, paragraph1, needle, i, -1, -1, 0);
-      else if (b instanceof Table t) {
-        for (int r = 0; r < t.rows(); r++)
-          for (int c = 0; c < t.columns(); c++) {
-            if (t.covered(r, c)) continue;
-            int p = 0;
-            for (Paragraph paragraph : t.cell(r, c))
-              findParagraph(out, paragraph, needle, i, r, c, p++);
-          }
-      }
-    }
+    // Body and cell paragraphs at any table depth, in document order.
+    for (MixedRange.Covered c : MixedRange.paragraphs(d))
+      findParagraph(out, c.paragraph, needle, c.path, c.block);
     return out;
   }
 
+  /**
+   * A match is at "block" (body paragraph, or the outermost table) and, inside a cell, "row",
+   * "column" and "paragraph" (block index in the cell's story); a cell of a nested table also
+   * carries "path", the full cell path (Session.cellPath).
+   */
   private static void findParagraph(
-      List<Map<String, Object>> out,
-      Paragraph p,
-      String needle,
-      int block,
-      int row,
-      int column,
-      int paragraph) {
+      List<Map<String, Object>> out, Paragraph p, String needle, int[] path, int paragraph) {
     var text = p.text.toString();
     int start = 0;
     while ((start = text.indexOf(needle, start)) >= 0) {
       var match =
-          Json.object("block", block, "start", start, "end", start + needle.length());
-      if (row >= 0) {
-        match.put("row", row);
-        match.put("column", column);
+          Json.object(
+              "block", path.length > 0 ? path[0] : paragraph,
+              "start", start,
+              "end", start + needle.length());
+      if (path.length > 0) {
+        match.put("row", path[1]);
+        match.put("column", path[2]);
         match.put("paragraph", paragraph);
+      }
+      if (path.length > 3) {
+        var list = new ArrayList<Object>();
+        for (int v : path) list.add(Integer.valueOf(v));
+        match.put("path", list);
       }
       out.add(match);
       start += needle.length();
     }
   }
 
+  /** A match's cell path: empty in the body. */
+  static int[] matchPath(Map<String, Object> match) {
+    if (match.get("path") instanceof List<?> list) {
+      int[] out = new int[list.size()];
+      for (int i = 0; i < out.length; i++) out[i] = ((Number) list.get(i)).intValue();
+      return out;
+    }
+    if (!match.containsKey("row")) return new int[0];
+    return new int[] {integer(match, "block"), integer(match, "row"), integer(match, "column")};
+  }
+
   public static Paragraph matchedParagraph(Document d, Map<String, Object> match) {
     return match.containsKey("row")
-        ? ((Table) d.blocks.get(integer(match, "block")))
-            .cell(integer(match, "row"), integer(match, "column"))
-            .get(integer(match, "paragraph"))
+        ? (Paragraph) MixedRange.story(d, matchPath(match)).get(integer(match, "paragraph"))
         : d.paragraph(integer(match, "block"));
   }
 
   public static void selectMatch(Session s, Map<String, Object> match) {
     int block = integer(match, "block");
     if (match.containsKey("row")) {
-      s.enterCell(block, integer(match, "row"), integer(match, "column"));
+      s.enterCellPath(matchPath(match));
       block = integer(match, "paragraph");
     } else s.leaveCell();
     s.select(block, integer(match, "start"), integer(match, "end"));
@@ -1377,26 +1391,15 @@ public final class Commands {
 
   public static boolean followsSelection(Session s, Map<String, Object> match) {
     var x = s.selection();
-    int[] current = {
-      s.inCell() ? s.cellBlock() : x.block,
-      s.cellRow(),
-      s.cellColumn(),
-      s.inCell() ? x.block : 0,
-      x.end()
-    };
-    int[] found = {
-      integer(match, "block"),
-      integer(match, "row", -1),
-      integer(match, "column", -1),
-      integer(match, "paragraph", 0),
-      integer(match, "start")
-    };
-    for (int i = 0; i < current.length; i++) {
-      if (found[i] > current[i]) return true;
-      if (found[i] < current[i]) return false;
-    }
-    return true;
+    var current = new MixedRange.Pos(s.inCell() ? s.cellPath() : new int[0], x.block, x.end());
+    var found =
+        new MixedRange.Pos(
+            matchPath(match),
+            match.containsKey("row") ? integer(match, "paragraph") : integer(match, "block"),
+            integer(match, "start"));
+    return MixedRange.compare(found, current) >= 0;
   }
+
 
   private static CitationSource citationSource(Map<?, ?> values) {
     var data = new LinkedHashMap<String, String>();

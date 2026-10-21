@@ -100,4 +100,25 @@ public class MixedSelectionTest {
     s.undo();
     assertFalse(NestedTableTest.inner(s).cell(0, 0).get(0).text.styleAt(0).bold);
   }
+
+  @Test
+  public void findAndTableCommandsWorkInNestedCells() {
+    var s = NestedTableTest.sample();
+    var c = new Commands();
+    var matches = Commands.find(s.document(), "inner");
+    assertEquals(1, matches.size());
+    s.leaveCell();
+    Commands.selectMatch(s, matches.get(0));
+    assertArrayEquals(INNER, s.cellPath());
+    assertEquals("inner", s.selectedText());
+    assertEquals("inner", Commands.matchedParagraph(s.document(), matches.get(0)).text.toString());
+    assertFalse(Commands.followsSelection(s, matches.get(0)));
+    c.execute(s, "table.deleteRows");
+    assertEquals(1, NestedTableTest.inner(s).rows());
+    assertEquals(2, NestedTableTest.outer(s).rows());
+    assertEquals(2, s.cellDepth());
+    c.execute(s, "table.deleteTable");
+    for (Block b : NestedTableTest.outer(s).blocks(0, 0)) assertFalse(b instanceof Table);
+    assertEquals(2, NestedTableTest.outer(s).rows());
+  }
 }

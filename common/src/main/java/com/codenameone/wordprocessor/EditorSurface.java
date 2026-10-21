@@ -2005,13 +2005,7 @@ public final class EditorSurface extends Container
 
   /** The cell path (Session.cellPath) of a line: empty for body lines. */
   static int[] linePath(LayoutEngine.Line line) {
-    if (line.row < 0) return new int[0];
-    int[] out = new int[3 + line.path.length];
-    out[0] = line.block;
-    out[1] = line.row;
-    out[2] = line.column;
-    System.arraycopy(line.path, 0, out, 3, line.path.length);
-    return out;
+    return MixedRange.linePath(line);
   }
 
   private static boolean samePath(LayoutEngine.Box box, LayoutEngine.Line line) {

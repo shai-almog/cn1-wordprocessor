@@ -741,8 +741,15 @@ public final class PdfExporter {
     Block b = d.blocks.get(line.block);
     Paragraph p = null;
     if (line.row < 0 && b instanceof Paragraph q) p = q;
-    else if (line.row >= 0 && b instanceof Table t)
-      for (Paragraph q : t.cell(line.row, line.column)) if (q.id.equals(line.paragraphId)) p = q;
+    else if (line.row >= 0 && b instanceof Table) {
+      // The line's cell may belong to a nested table: follow its full cell path.
+      try {
+        for (Block q : MixedRange.story(d, MixedRange.linePath(line)))
+          if (q instanceof Paragraph para && para.id.equals(line.paragraphId)) p = para;
+      } catch (RuntimeException e) {
+        p = null;
+      }
+    }
     if (p == null || at < 0 || at >= p.text.length()) return null;
     var f = p.text.fieldAt(at);
     return Equation.inline(f) ? f : null;

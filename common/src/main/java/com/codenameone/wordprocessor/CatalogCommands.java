@@ -477,7 +477,7 @@ final class CatalogCommands implements Commands.Extension {
     c.edit("table.deleteTable", "",
         "Delete the table at the caret", (s, a) -> {
           int block = tableBlock(s);
-          s.leaveCell();
+          // deleteTable leaves for the story holding the table (body or enclosing cell).
           s.deleteTable(block);
           return null;
         });
@@ -589,7 +589,6 @@ final class CatalogCommands implements Commands.Extension {
               action.endsWith("Row")
                   ? s.cellRow() + (after ? 1 : 0)
                   : s.cellColumn() + (after ? 1 : 0);
-          s.leaveCell();
           s.tableStructure(block, action, index);
           return null;
         });
