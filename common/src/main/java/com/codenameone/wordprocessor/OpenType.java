@@ -269,6 +269,17 @@ final class OpenType {
       }
       return i + count;
     }
+    if (type == 3) {
+      // AlternateSubst: a feature turned on with value 1 picks the first alternate, as HarfBuzz.
+      if (index >= font.u16(sub + 4)) return -1;
+      int set = sub + font.u16(sub + 6 + 2 * index);
+      if (font.u16(set) == 0) return -1;
+      int id = font.u16(set + 2);
+      if (id >= font.glyphs) return -1;
+      g.id = id;
+      g.flags |= SUBSTITUTED;
+      return i + 1;
+    }
     if (type == 4) {
       if (index >= font.u16(sub + 4)) return -1;
       int set = sub + font.u16(sub + 6 + 2 * index);
@@ -569,17 +580,26 @@ final class OpenType {
     var right = buffer.get(j);
     int ri = font.coverage(sub + font.u16(sub + 2), right.id);
     if (ri < 0 || ri >= count) return -1;
-    // EntryExitRecord: entry anchor offset, then exit anchor offset.
-    int la = font.u16(sub + 6 + 4 * li + (rtl ? 0 : 2)),
-        ra = font.u16(sub + 6 + 4 * ri + (rtl ? 2 : 0));
+    // EntryExitRecord: entry anchor offset, then exit anchor offset. The buffer is in logical
+    // order: glyph i's exit anchor meets glyph j's entry anchor, as HarfBuzz's CursivePos.
+    int la = font.u16(sub + 6 + 4 * li + 2), ra = font.u16(sub + 6 + 4 * ri);
     if (la == 0 || ra == 0) return -1;
-    int lx = font.s16(sub + la + 2), ly = font.s16(sub + la + 4),
-        rx = font.s16(sub + ra + 2), ry = font.s16(sub + ra + 4);
-    left.adv = lx + left.dx;
-    int d = rx + right.dx;
-    right.adv -= d;
-    right.dx -= d;
-    right.dy = left.dy + ly - ry;
+    var cur = left;
+    var next = right;
+    int exitX = font.s16(sub + la + 2), exitY = font.s16(sub + la + 4),
+        entryX = font.s16(sub + ra + 2), entryY = font.s16(sub + ra + 4);
+    if (rtl) {
+      int d = exitX + cur.dx;
+      cur.adv -= d;
+      cur.dx -= d;
+      next.adv = entryX + next.dx;
+    } else {
+      cur.adv = exitX + cur.dx;
+      int d = entryX + next.dx;
+      next.adv -= d;
+      next.dx -= d;
+    }
+    next.dy = cur.dy + exitY - entryY;
     return j;
   }
 

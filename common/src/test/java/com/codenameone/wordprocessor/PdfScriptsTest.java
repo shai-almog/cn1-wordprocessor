@@ -490,9 +490,8 @@ public class PdfScriptsTest {
         visual(mongolian, "\u182e\u1823\u1829\u182d\u1823\u182f", false, 0));
     assertEquals("9|1465|12", visual(mongolian, "\u1820\u180b\u1820", false, 0));
     var nko = new PdfFonts.TrueType(installed("NotoSansNKo-Regular.ttf"));
-    // hb-shape gives 51|67|129|3|82|128|93; this shaper's visual order keeps a mark (51, the
-    // gbasi tone) after its base.
-    assertEquals("67|51|129|3|82|128|93",
+    // As hb-shape, the RTL visual order puts the gbasi tone mark (51) before its base.
+    assertEquals("51|67|129|3|82|128|93",
         visual(nko, "\u07d2\u07de\u07cf \u07de\u07ca\u07eb", true, 0));
     var adlam = new PdfFonts.TrueType(installed("NotoSansAdlam-Regular.ttf"));
     assertEquals("259|143|255|180|3", visual(adlam,
@@ -513,5 +512,38 @@ public class PdfScriptsTest {
         false, 0, PdfShaping.NO_DOTTED_CIRCLE);
     assertEquals(3, off.size());
     for (var g : off) assertNotEquals(0x25cc, g.cp);
+  }
+
+  private static String hbRtl(PdfFonts.TrueType font, String text) throws IOException {
+    var out = new StringBuilder();
+    for (var g : PdfShaping.shapeRun(font, new OpenType(font), text, 0, text.length(), true, true,
+        0, 0)) {
+      out.append(out.length() > 0 ? "|" : "").append(g.id);
+      if (g.dx != 0 || g.dy != 0) out.append('@').append(g.dx).append(',').append(g.dy);
+      out.append('+').append(g.adv);
+    }
+    return out.toString();
+  }
+
+  @Test
+  public void syriacAndHistoricJoiningScriptsMatchHarfBuzz() throws Exception {
+    // hb-shape 14.2.1 --no-clusters with the macOS Noto faces. Syriac takes HarfBuzz's Arabic
+    // shaper: Alaph after a joining letter is fina, after a non-joining one fin2, after
+    // Dalath/Rish fin3; a mark sits before its base in RTL visual order.
+    var syriac = new PdfFonts.TrueType(installed("NotoSansSyriac-Regular.ttf"));
+    assertEquals("260+986|18@-75,0+655|9+930", hbRtl(syriac, "\u0710\u0712\u0710"));
+    assertEquals("10+930|27+539", hbRtl(syriac, "\u0715\u0710"));
+    assertEquals("11+930|9+930", hbRtl(syriac, "\u0710\u0710"));
+    assertEquals("260+986|21+571|141@266,-23+0|18@-75,0+655",
+        hbRtl(syriac, "\u0712\u0730\u0713\u0710"));
+    // Mandaic, Manichaean and Psalter Pahlavi join inside the Universal Shaping Engine.
+    assertEquals("20+687|17+492|11+775",
+        hbRtl(new PdfFonts.TrueType(installed("NotoSansMandaic-Regular.ttf")), "\u0841\u0842\u0843"));
+    assertEquals("69+999|67+706|65+633",
+        hbRtl(new PdfFonts.TrueType(installed("NotoSansManichaean-Regular.ttf")),
+            "\ud802\udec0\ud802\udec1\ud802\udec2"));
+    assertEquals("29+849|31+448|28+608",
+        hbRtl(new PdfFonts.TrueType(installed("NotoSansPsalterPahlavi-Regular.ttf")),
+            "\ud802\udf80\ud802\udf82\ud802\udf81"));
   }
 }

@@ -39,13 +39,17 @@ final class UseShaper {
     "newa", 0x11400, 0x1147f, "tirh", 0x11480, 0x114df, "sidd", 0x11580, 0x115ff,
     "modi", 0x11600, 0x1165f, "takr", 0x11680, 0x116cf, "ahom", 0x11700, 0x1174f,
     "dogr", 0x11800, 0x1184f, "kawi", 0x11f00, 0x11f5f, "mong", 0x1800, 0x18af,
-    "nko ", 0x07c0, 0x07ff, "adlm", 0x1e900, 0x1e95f, "rohg", 0x10d00, 0x10d3f
+    "nko ", 0x07c0, 0x07ff, "adlm", 0x1e900, 0x1e95f, "rohg", 0x10d00, 0x10d3f,
+    "mand", 0x0840, 0x085f, "mani", 0x10ac0, 0x10aff, "phlp", 0x10b80, 0x10baf,
+    "sogd", 0x10f30, 0x10f6f, "ougr", 0x10f70, 0x10faf, "chrs", 0x10fb0, 0x10fdf
   };
 
   /** USE scripts HarfBuzz gives Arabic-style joining (has_arabic_joining) with joining data here. */
   static boolean arabicJoining(String script) {
     return "mong".equals(script) || "nko ".equals(script) || "phag".equals(script)
-        || "adlm".equals(script) || "rohg".equals(script);
+        || "adlm".equals(script) || "rohg".equals(script) || "mand".equals(script)
+        || "mani".equals(script) || "phlp".equals(script) || "sogd".equals(script)
+        || "ougr".equals(script) || "chrs".equals(script);
   }
 
   /** The OpenType tag of the USE script of a code point, or null. */

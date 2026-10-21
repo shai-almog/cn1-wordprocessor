@@ -116,7 +116,8 @@ final class PdfShaping {
   // ---------------------------------------------------------------- OpenType shaping
 
   private static final int GLOBAL = 1, ISOL = 2, FINA = 4, MEDI = 8, INIT = 16, RPHF = 32,
-      HALF = 64, POST = 128, LJMO = 256, VJMO = 512, TJMO = 1024;
+      HALF = 64, POST = 128, LJMO = 256, VJMO = 512, TJMO = 1024, FIN2 = 2048, FIN3 = 4096,
+      MED2 = 8192;
   private static final int MERGED = 8;
 
   /** Indic scripts by Unicode block (U+0900 + 0x80 k): OpenType tag, then the version 2 tag. */
@@ -148,6 +149,7 @@ final class PdfShaping {
         || cp >= 0x08a0 && cp <= 0x08ff || cp >= 0xfb50 && cp <= 0xfdff
         || cp >= 0xfe70 && cp <= 0xfeff) return "arab";
     if (cp >= 0x0590 && cp <= 0x05ff || cp >= 0xfb1d && cp <= 0xfb4f) return "hebr";
+    if (cp >= 0x0700 && cp <= 0x074f || cp >= 0x0860 && cp <= 0x086f) return "syrc";
     if (cp >= 0x0900 && cp <= 0x0d7f) return INDIC[2 * ((cp - 0x0900) >> 7)];
     if (cp >= 0xa8e0 && cp <= 0xa8ff) return "deva";
     if (cp >= 0x0e00 && cp <= 0x0e7f) return "thai";
@@ -161,7 +163,7 @@ final class PdfShaping {
   }
 
   private static boolean isUse(String script) {
-    return !"arab".equals(script) && !"hebr".equals(script) && !"thai".equals(script)
+    return !"arab".equals(script) && !"syrc".equals(script) && !"hebr".equals(script) && !"thai".equals(script)
         && !"lao ".equals(script) && !"hang".equals(script) && !"khmr".equals(script)
         && !"mymr".equals(script);
   }
@@ -316,6 +318,10 @@ final class PdfShaping {
       scripts = new String[] {"arab"};
       if (ot.hasScript(true, "arab")) arabicMasks(buffer);
       else presentationForms(font, buffer);
+    } else if ("syrc".equals(script)) {
+      // HarfBuzz's Arabic shaper, with the Syriac fin2/fin3/med2 forms after Alaph.
+      scripts = new String[] {"syrc"};
+      arabicMasks(buffer, false);
     } else if ("hebr".equals(script)) scripts = new String[] {"hebr"};
     else if (block >= 0) {
       scripts = ot.hasScript(true, INDIC[2 * block + 1]) ? new String[] {INDIC[2 * block + 1]}
@@ -403,6 +409,11 @@ final class PdfShaping {
         gsub(ot, scripts, buffer, new String[] {"fina"}, FINA);
         gsub(ot, scripts, buffer, new String[] {"medi"}, MEDI);
         gsub(ot, scripts, buffer, new String[] {"init"}, INIT);
+      } else if ("syrc".equals(script)) {
+        int[] order = {ISOL, FINA, FIN2, FIN3, MEDI, MED2, INIT};
+        String[] tags = {"isol", "fina", "fin2", "fin3", "medi", "med2", "init"};
+        for (int k = 0; k < order.length; k++)
+          gsub(ot, scripts, buffer, new String[] {tags[k]}, order[k]);
       }
       gsub(ot, scripts, buffer, new String[] {"rlig"}, all);
       gsub(ot, scripts, buffer, new String[] {"calt", "liga", "clig"}, all);
@@ -420,7 +431,6 @@ final class PdfShaping {
       g.adv = gdef && ot.glyphClass(g.id) == 3 ? 0 : font.advance(g.id);
     }
     clusters(buffer);
-    if (rtl) reverse(buffer, ot);
     var features = new ArrayList<String>();
     if (kerning) features.add("kern");
     features.add("curs");
@@ -435,11 +445,48 @@ final class PdfShaping {
     int[] masks = new int[f.length];
     Arrays.fill(masks, all);
     ot.rtl = rtl;
+    // GPOS runs in logical order, as HarfBuzz, so pair and contextual lookups see the font's
+    // sequences; the run is then put in visual order.
     ot.apply(false, scripts, buffer, f, masks);
+    if (rtl) reverse(buffer, ot);
     if (kerning && ot.lookups(false, scripts, "kern").length == 0)
       for (int i = 0; i + 1 < buffer.size(); i++)
         buffer.get(i).adv += font.kern(buffer.get(i).id, buffer.get(i + 1).id);
+    if (rtl && (use || "syrc".equals(script))) marksBeforeBase(buffer, ot);
     return buffer;
+  }
+
+  /**
+   * HarfBuzz's visual order for an RTL run reverses glyph by glyph, so a mark comes before its
+   * base; {@link #reverse} keeps clusters base-first for GPOS. This reorders each cluster as
+   * HarfBuzz does and moves offsets so every glyph keeps its drawn position.
+   */
+  private static void marksBeforeBase(List<OpenType.Glyph> buffer, OpenType ot) {
+    for (int i = 0; i < buffer.size(); ) {
+      int j = i + 1;
+      while (j < buffer.size()) {
+        var g = buffer.get(j);
+        if ((g.flags & MERGED) == 0 && ot.glyphClass(g.id) != 3 && !mark(g.cp)) break;
+        j++;
+      }
+      if (j - i > 1) {
+        int n = j - i, pen = 0;
+        int[] x = new int[n];
+        var group = new ArrayList<OpenType.Glyph>(buffer.subList(i, j));
+        for (int k = 0; k < n; k++) {
+          x[k] = pen + group.get(k).dx;
+          pen += group.get(k).adv;
+        }
+        pen = 0;
+        for (int k = n - 1; k >= 0; k--) {
+          var g = group.get(k);
+          g.dx = x[k] - pen;
+          pen += g.adv;
+          buffer.set(i + n - 1 - k, g);
+        }
+      }
+      i = j;
+    }
   }
 
   /** The GSUB script tags HarfBuzz looks for when deciding between GSUB and 'morx'. */
@@ -489,10 +536,50 @@ final class PdfShaping {
   }
 
   /**
+   * Joining types of Syriac, Mandaic, Manichaean, Psalter Pahlavi, Sogdian, Old Uyghur and
+   * Chorasmian from harfrust's arabic table (Unicode 17 ArabicShaping): start, end, type, sorted
+   * by start; 'A' is Syriac Alaph and 'G' the Dalath/Rish group, which take fin2/fin3/med2.
+   */
+  private static final int[] JOINING = {
+      0x70f, 0x70f, 'T', 0x710, 0x710, 'A', 0x711, 0x711, 'T', 0x712, 0x714, 'D', 0x715, 0x716,
+      'G', 0x717, 0x719, 'R', 0x71a, 0x71d, 'D', 0x71e, 0x71e, 'R', 0x71f, 0x727, 'D', 0x728,
+      0x728, 'R', 0x729, 0x729, 'D', 0x72a, 0x72a, 'G', 0x72b, 0x72b, 'D', 0x72c, 0x72c, 'R',
+      0x72d, 0x72e, 'D', 0x72f, 0x72f, 'G', 0x730, 0x74a, 'T', 0x74d, 0x74d, 'R', 0x74e, 0x74f,
+      'D', 0x840, 0x840, 'R', 0x841, 0x845, 'D', 0x846, 0x847, 'R', 0x848, 0x848, 'D', 0x849,
+      0x849, 'R', 0x84a, 0x853, 'D', 0x854, 0x854, 'R', 0x855, 0x855, 'D', 0x856, 0x858, 'R',
+      0x859, 0x85b, 'T', 0x860, 0x860, 'D', 0x862, 0x865, 'D', 0x867, 0x867, 'R', 0x868, 0x868,
+      'D', 0x869, 0x86a, 'R', 0x10ac0, 0x10ac4, 'D', 0x10ac5, 0x10ac5, 'R', 0x10ac7, 0x10ac7, 'R',
+      0x10ac9, 0x10aca, 'R', 0x10acd, 0x10acd, 'L', 0x10ace, 0x10ad2, 'R', 0x10ad3, 0x10ad6, 'D',
+      0x10ad7, 0x10ad7, 'L', 0x10ad8, 0x10adc, 'D', 0x10add, 0x10add, 'R', 0x10ade, 0x10ae0, 'D',
+      0x10ae1, 0x10ae1, 'R', 0x10ae4, 0x10ae4, 'R', 0x10ae5, 0x10ae6, 'T', 0x10aeb, 0x10aee, 'D',
+      0x10aef, 0x10aef, 'R', 0x10b80, 0x10b80, 'D', 0x10b81, 0x10b81, 'R', 0x10b82, 0x10b82, 'D',
+      0x10b83, 0x10b85, 'R', 0x10b86, 0x10b88, 'D', 0x10b89, 0x10b89, 'R', 0x10b8a, 0x10b8b, 'D',
+      0x10b8c, 0x10b8c, 'R', 0x10b8d, 0x10b8d, 'D', 0x10b8e, 0x10b8f, 'R', 0x10b90, 0x10b90, 'D',
+      0x10b91, 0x10b91, 'R', 0x10ba9, 0x10bac, 'R', 0x10bad, 0x10bae, 'D', 0x10f30, 0x10f32, 'D',
+      0x10f33, 0x10f33, 'R', 0x10f34, 0x10f44, 'D', 0x10f46, 0x10f50, 'T', 0x10f51, 0x10f53, 'D',
+      0x10f54, 0x10f54, 'R', 0x10f70, 0x10f73, 'D', 0x10f74, 0x10f75, 'R', 0x10f76, 0x10f81, 'D',
+      0x10f82, 0x10f85, 'T', 0x10fb0, 0x10fb0, 'D', 0x10fb2, 0x10fb3, 'D', 0x10fb4, 0x10fb6, 'R',
+      0x10fb8, 0x10fb8, 'D', 0x10fb9, 0x10fba, 'R', 0x10fbb, 0x10fbc, 'D', 0x10fbd, 0x10fbd, 'R',
+      0x10fbe, 0x10fbf, 'D', 0x10fc1, 0x10fc1, 'D', 0x10fc2, 0x10fc3, 'R', 0x10fc4, 0x10fc4, 'D',
+      0x10fc9, 0x10fc9, 'R', 0x10fca, 0x10fca, 'D', 0x10fcb, 0x10fcb, 'L'
+  };
+
+  /**
    * Unicode joining types (D dual, R right, L left, T transparent) of the Arabic-joining USE
    * scripts: Mongolian, N'Ko, Phags-pa, Adlam and Hanifi Rohingya; 0 when non-joining or other.
    */
   private static char joiningUse(int cp) {
+    if (cp >= 0x0700 && cp <= 0x074f || cp >= 0x0840 && cp <= 0x086f
+        || cp >= 0x10ac0 && cp <= 0x10fdf) {
+      int lo = 0, hi = JOINING.length / 3 - 1;
+      while (lo <= hi) {
+        int mid = (lo + hi) >>> 1;
+        if (cp < JOINING[3 * mid]) hi = mid - 1;
+        else if (cp > JOINING[3 * mid + 1]) lo = mid + 1;
+        else return (char) JOINING[3 * mid + 2];
+      }
+      return 0;
+    }
     if (cp >= 0x1800 && cp <= 0x18af) {
       if (cp >= 0x180b && cp <= 0x180d || cp == 0x180f || cp == 0x1885 || cp == 0x1886
           || cp == 0x18a9) return 'T';
@@ -526,30 +613,53 @@ final class PdfShaping {
    * take their base's form, as HarfBuzz.
    */
   private static void arabicMasks(List<OpenType.Glyph> buffer, boolean isolateNonJoining) {
+    int prev = -1, state = 0;
+    int[] action = new int[buffer.size()];
+    Arrays.fill(action, NONE);
     for (int i = 0; i < buffer.size(); i++) {
       var g = buffer.get(i);
       char t = joining(g.cp);
-      if (t != 'D' && t != 'R' && t != 'L') {
-        if (t != 'T' && isolateNonJoining) g.mask |= ISOL;
-        if (i > 0 && (g.cp >= 0x180b && g.cp <= 0x180d || g.cp == 0x180f))
-          g.mask |= buffer.get(i - 1).mask & (ISOL | INIT | MEDI | FINA);
-        continue;
-      }
-      boolean prev = t != 'L' && joinsTo(buffer, i, -1);
-      boolean next = t != 'R' && joinsTo(buffer, i, 1);
-      g.mask |= prev && next ? MEDI : prev ? FINA : next ? INIT : ISOL;
+      if (t == 'T') continue;
+      int column = t == 'L' ? 1 : t == 'R' ? 2 : t == 'D' || t == 'C' ? 3 : t == 'A' ? 4
+          : t == 'G' ? 5 : 0;
+      int[] entry = JOIN_STATES[state][column];
+      if (entry[0] != NONE && prev >= 0) action[prev] = entry[0];
+      action[i] = entry[1];
+      prev = i;
+      state = entry[2];
+    }
+    for (int i = 0; i < buffer.size(); i++) {
+      var g = buffer.get(i);
+      int a = action[i];
+      if (a == NONE && isolateNonJoining && joining(g.cp) == 0) a = ISOL;
+      if (a == NONE && i > 0 && (g.cp >= 0x180b && g.cp <= 0x180d || g.cp == 0x180f))
+        g.mask |= buffer.get(i - 1).mask & (ISOL | INIT | MEDI | FINA);
+      if (a != NONE) g.mask |= a;
     }
   }
 
-  /** Whether the nearest non-transparent neighbour in direction {@code step} joins toward i. */
-  private static boolean joinsTo(List<OpenType.Glyph> buffer, int i, int step) {
-    for (int j = i + step; j >= 0 && j < buffer.size(); j += step) {
-      char t = joining(buffer.get(j).cp);
-      if (t == 'T') continue;
-      return t == 'D' || t == 'C' || (step > 0 ? t == 'R' : t == 'L');
-    }
-    return false;
-  }
+  private static final int NONE = 0;
+
+  /**
+   * HarfBuzz's Arabic joining state machine: per state, per joining class (U, L, R, D, Alaph,
+   * Dalath/Rish), the action for the previous letter, the action for this one and the next state.
+   */
+  private static final int[][][] JOIN_STATES = {
+    {{NONE, NONE, 0}, {NONE, ISOL, 2}, {NONE, ISOL, 1}, {NONE, ISOL, 2}, {NONE, ISOL, 1},
+        {NONE, ISOL, 6}},
+    {{NONE, NONE, 0}, {NONE, ISOL, 2}, {NONE, ISOL, 1}, {NONE, ISOL, 2}, {NONE, FIN2, 5},
+        {NONE, ISOL, 6}},
+    {{NONE, NONE, 0}, {NONE, ISOL, 2}, {INIT, FINA, 1}, {INIT, FINA, 3}, {INIT, FINA, 4},
+        {INIT, FINA, 6}},
+    {{NONE, NONE, 0}, {NONE, ISOL, 2}, {MEDI, FINA, 1}, {MEDI, FINA, 3}, {MEDI, FINA, 4},
+        {MEDI, FINA, 6}},
+    {{NONE, NONE, 0}, {NONE, ISOL, 2}, {MED2, ISOL, 1}, {MED2, ISOL, 2}, {MED2, FIN2, 5},
+        {MED2, ISOL, 6}},
+    {{NONE, NONE, 0}, {NONE, ISOL, 2}, {ISOL, ISOL, 1}, {ISOL, ISOL, 2}, {ISOL, FIN2, 5},
+        {ISOL, ISOL, 6}},
+    {{NONE, NONE, 0}, {NONE, ISOL, 2}, {NONE, ISOL, 1}, {NONE, ISOL, 2}, {NONE, FIN3, 5},
+        {NONE, ISOL, 6}}
+  };
 
   /** Fallback for faces without Arabic GSUB: Unicode presentation forms the cmap covers. */
   private static void presentationForms(PdfFonts.TrueType font, List<OpenType.Glyph> buffer)
