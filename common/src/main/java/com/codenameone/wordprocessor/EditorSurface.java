@@ -2563,11 +2563,8 @@ public final class EditorSurface extends Container
 
   @Override
   public void onKeyCommand(int command, int modifiers) {
-    // macOS sends Option+arrow as spatial word moves and Page Up/Down without a caret move.
-    if (command == KEY_WORD_LEFT || command == KEY_WORD_RIGHT) {
-      command = command == KEY_WORD_LEFT ? KEY_LEFT : KEY_RIGHT;
-      modifiers |= MOD_ALT;
-    } else if (command == KEY_SCROLL_PAGE_UP || command == KEY_SCROLL_PAGE_DOWN) {
+    // macOS sends Option+Page Up/Down as a viewport scroll without a caret move.
+    if (command == KEY_SCROLL_PAGE_UP || command == KEY_SCROLL_PAGE_DOWN) {
       int page = Math.max(1, getHeight() - getStyle().getVerticalPadding());
       int y = getScrollY() + (command == KEY_SCROLL_PAGE_UP ? -page : page);
       setScrollY(Math.max(0, Math.min(y, Math.max(0, getScrollDimension().getHeight() - getHeight()))));
@@ -2582,7 +2579,33 @@ public final class EditorSurface extends Container
     if (readOnly() && (command == KEY_BACKSPACE || command == KEY_DELETE || command == KEY_TAB))
       return;
     if (moveCellSelection(command, extend)) return;
-    boolean word = (modifiers & (MOD_CTRL | MOD_ALT)) != 0;
+    // Resolve navigation keys the way Codename One's editors do (EditKeys), then express the
+    // move in the logical commands below; left/right are already spatial-to-logical here.
+    var move = EditKeys.move(command, modifiers, p.format.rtl);
+    if (move != EditKeys.Move.NONE) {
+      int shift = modifiers & MOD_SHIFT;
+      switch (move) {
+        case CHAR_BACK -> { command = KEY_LEFT; modifiers = shift; }
+        case CHAR_FORWARD -> { command = KEY_RIGHT; modifiers = shift; }
+        case WORD_BACK -> { command = KEY_LEFT; modifiers = shift | MOD_ALT; }
+        case WORD_FORWARD -> { command = KEY_RIGHT; modifiers = shift | MOD_ALT; }
+        case LINE_START -> { command = KEY_HOME; modifiers = shift; }
+        case LINE_END -> { command = KEY_END; modifiers = shift; }
+        case LINE_UP -> { command = KEY_UP; modifiers = shift; }
+        case LINE_DOWN -> { command = KEY_DOWN; modifiers = shift; }
+        case PARAGRAPH_UP -> { command = KEY_UP; modifiers = shift | MOD_ALT; }
+        case PARAGRAPH_DOWN -> { command = KEY_DOWN; modifiers = shift | MOD_ALT; }
+        case PARAGRAPH_START -> { command = KEY_HOME; modifiers = shift | MOD_ALT; }
+        case PARAGRAPH_END -> { command = KEY_END; modifiers = shift | MOD_ALT; }
+        case DOCUMENT_START -> { command = KEY_HOME; modifiers = shift | MOD_CTRL; }
+        case DOCUMENT_END -> { command = KEY_END; modifiers = shift | MOD_CTRL; }
+        default -> {}
+      }
+    }
+    boolean word =
+        move != EditKeys.Move.NONE
+            ? (modifiers & MOD_ALT) != 0
+            : EditKeys.wordDelete(modifiers);
     boolean paragraphMove = word && (command == KEY_UP || command == KEY_DOWN);
     boolean vertical =
         !paragraphMove
@@ -2593,9 +2616,6 @@ public final class EditorSurface extends Container
     if (!vertical) verticalSelection = null;
     LayoutEngine.Line targetLine = null;
     int caret = x.caret, block = x.block;
-    // In a right-to-left paragraph the left arrow moves toward the end of the text.
-    if (p.format.rtl && (command == KEY_LEFT || command == KEY_RIGHT))
-      command = command == KEY_LEFT ? KEY_RIGHT : KEY_LEFT;
     switch (command) {
       case KEY_BACKSPACE:
         if (word) TextNavigation.deleteWord(session, false);
