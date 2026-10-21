@@ -188,8 +188,23 @@ public final class LayoutEngine {
     return (d == null ? 0 : d.num("z", 0)) + ("behind".equals(p.picture.wrap()) ? -10000 : 0);
   }
 
+  /**
+   * A placed object. In a table cell {@code block} indexes the innermost cell's blocks and
+   * {@code cell} is that cell's path from the body (block, row, column triples, as
+   * Session.cellPath); {@code frame} is then the page position of its float reference
+   * {originX, originY, cell content width}: the cell content's left and the anchor paragraph top.
+   */
   public record PlacedPicture(
-      Picture picture, int block, int page, float x, float y, float width, float height) {}
+      Picture picture, int block, int page, float x, float y, float width, float height,
+      int[] cell, float[] frame) {
+    public PlacedPicture(Picture picture, int block, int page, float x, float y, float width, float height) {
+      this(picture, block, page, x, y, width, height, NO_PATH, null);
+    }
+
+    public boolean inCell() {
+      return cell.length > 0;
+    }
+  }
 
   /** One page's share of a bordered or shaded paragraph, in points. */
   public static final class Frame {
@@ -2207,7 +2222,13 @@ public final class LayoutEngine {
       final List<InnerBox> inner = new ArrayList<InnerBox>();
       /** Pictures and drawings in this cell (nested cells too) with their cell-relative frames. */
       final List<Picture> pics = new ArrayList<Picture>();
+      /** {x, y, w, h, originX, originY, contentWidth} per picture, cell-relative. */
       final List<float[]> picBoxes = new ArrayList<float[]>();
+      /** Each picture's index in its cell's blocks and that cell's path below this cell. */
+      final List<Integer> picIndex = new ArrayList<Integer>();
+      final List<int[]> picPaths = new ArrayList<int[]>();
+      /** Tight/Through outlines of {@link #floats} (null for a rectangle). */
+      final List<float[]> floatOutlines = new ArrayList<float[]>();
       /** The cell's floats text wraps around, as {x0, y0, x1, y1, topBottom, side} in cell space. */
       final List<float[]> floats = new ArrayList<float[]>();
       final List<String> floatSides = new ArrayList<String>();
@@ -2238,6 +2259,8 @@ public final class LayoutEngine {
             continue;
           }
           if (content.get(k) instanceof Picture pic) {
+            picIndex.add(k);
+            picPaths.add(prefix);
             picture(pic, width);
             continue;
           }
@@ -2281,6 +2304,7 @@ public final class LayoutEngine {
           height += p.after;
         }
         for (float[] f : floats) height = Math.max(height, f[3]);
+        for (float[] r : picBoxes) height = Math.max(height, r[1] + r[3]);
         height += format.verticalPadding;
       }
 
@@ -2293,30 +2317,55 @@ public final class LayoutEngine {
         String wrap = pic.wrap();
         float w = Math.min(pic.width, Math.max(1, available)), h = pic.height * (pic.width > 0 ? w / pic.width : 1);
         FloatPosition f = "inline".equals(wrap) ? null : FloatPosition.parse(pic.position());
+        float ox = format.horizontalPadding, oy = height;
         if ("inline".equals(wrap)) {
           float x = format.horizontalPadding;
           if ("center".equals(pic.align)) x += (available - w) / 2;
           else if ("right".equals(pic.align)) x += available - w;
           pics.add(pic);
-          picBoxes.add(new float[] {x, height, w, h});
+          picBoxes.add(new float[] {x, height, w, h, ox, oy, available});
           height += h;
           return;
         }
-        float x = format.horizontalPadding, y = height;
+        // As Wordcraft's float_rect without a page frame: horizontally the cell column is the
+        // reference whatever the relation; vertically the anchor paragraph's top with no extent,
+        // so Center hangs the object half above it and Bottom/End wholly above it.
         String ha = f == null ? ("right".equals(pic.align) ? "end" : "center".equals(pic.align) ? "center" : "") : f.hAlign;
+        float x = ox, y = oy;
         if ("center".equals(ha)) x += (available - w) / 2;
         else if ("end".equals(ha) || "right".equals(ha) || "outside".equals(ha)) x += available - w;
         else if (f != null && ha.isEmpty()) x += f.x;
-        if (f != null && f.vAlign.isEmpty()) y += f.y;
-        x = Math.max(0, x);
-        y = Math.max(0, y);
+        String va = f == null ? "" : f.vAlign;
+        if (f != null && va.isEmpty()) y += f.y;
+        else if ("center".equals(va)) y -= h / 2;
+        else if ("bottom".equals(va) || "end".equals(va) || "outside".equals(va)) y -= h;
         pics.add(pic);
-        picBoxes.add(new float[] {x, y, w, h});
+        picBoxes.add(new float[] {x, y, w, h, ox, oy, available});
+        boolean topBottom = "topBottom".equals(wrap) || "topAndBottom".equals(wrap);
+        boolean tight = "tight".equals(wrap) || "through".equals(wrap);
         if (!"front".equals(wrap) && !"behind".equals(wrap)) {
-          float d = "topAndBottom".equals(wrap) ? 0 : 9;
-          floats.add(new float[] {x - d, y, x + w + d, y + h, "topAndBottom".equals(wrap) ? 1 : 0});
+          float[] outline = tight ? WrapOutline.parse(pic.wrapPolygon()) : null;
+          // A rotated object keeps text clear of its rotated bounds (Wordcraft's wrap_area).
+          float[] r = outline == null ? rotatedBounds(x, y, w, h, rotation(pic)) : new float[] {x, y, w, h};
+          float d = topBottom ? 0 : 9;
+          floats.add(new float[] {r[0] - d, r[1], r[0] + r[2] + d, r[1] + r[3], topBottom ? 1 : 0, x, y, w, h, d});
           floatSides.add(f == null ? "bothSides" : f.side);
+          floatOutlines.add(outline);
         }
+      }
+
+      /** Clockwise rotation in degrees of a picture (its look) or drawing. */
+      private float rotation(Picture p) {
+        return p.drawing != null ? p.drawing.num("rotation", 0) : p.look == null ? 0 : p.look.rotation;
+      }
+
+      /** The bounds {x, y, w, h} of the w x h box at x, y turned by deg about its centre. */
+      private float[] rotatedBounds(float x, float y, float w, float h, float deg) {
+        if (deg % 360 == 0) return new float[] {x, y, w, h};
+        double r = Math.toRadians(deg);
+        float c = (float) Math.abs(Math.cos(r)), sn = (float) Math.abs(Math.sin(r));
+        float bw = w * c + h * sn, bh = w * sn + h * c;
+        return new float[] {x + (w - bw) / 2, y + (h - bh) / 2, bw, bh};
       }
 
       /** As {@link #cut} for the cell's own floats, in content coordinates of width {@code inner}. */
@@ -2331,6 +2380,14 @@ public final class LayoutEngine {
           if (e[1] >= yA + h || e[3] <= yA) continue;
           if (e[4] != 0) return new float[] {0, 0, e[3]};
           float x0 = e[0] - pad, x1 = e[2] - pad;
+          float[] outline = floatOutlines.get(i);
+          if (outline != null && e[8] > 0) {
+            // Tight/Through: text follows the wrap outline's extent over the line band.
+            float[] r = WrapOutline.extent(outline, (yA - e[6]) / e[8], (yA + h - e[6]) / e[8]);
+            if (r == null) continue;
+            x0 = e[5] + r[0] * e[7] - e[9] - pad;
+            x1 = e[5] + r[1] * e[7] + e[9] - pad;
+          }
           String side = floatSides.get(i);
           if (!"bothSides".equals(side)) {
             boolean textLeft = "left".equals(side) || (!"right".equals(side) && x0 - left >= right - x1);
@@ -2414,7 +2471,10 @@ public final class LayoutEngine {
           for (int i = 0; i < sub.pics.size(); i++) {
             float[] r = sub.picBoxes.get(i);
             pics.add(sub.pics.get(i));
-            picBoxes.add(new float[] {sub.left + r[0], top + shift + r[1], r[2], r[3]});
+            picIndex.add(sub.picIndex.get(i));
+            picPaths.add(sub.picPaths.get(i));
+            picBoxes.add(
+                new float[] {sub.left + r[0], top + shift + r[1], r[2], r[3], sub.left + r[4], top + shift + r[5], r[6]});
           }
           for (int i = 0; i < sub.lines.size(); i++) {
             lines.add(sub.lines.get(i));
@@ -2624,12 +2684,20 @@ public final class LayoutEngine {
         }
         for (int i = 0; i < cell.pics.size(); i++) {
           float[] r = cell.picBoxes.get(i);
-          float picTop = top + cell.shift + r[1];
-          // Drawn on the page where its top shows (block -1: painted, not body-selectable).
-          if (picTop >= first - .01f && picTop < end - .01f)
+          float picTop = top + cell.shift + r[1], anchor = top + cell.shift + r[5];
+          // Drawn on the page where its anchor paragraph shows.
+          if (anchor >= first - .01f && anchor < end - .01f) {
+            int[] inner = cell.picPaths.get(i), path = new int[3 + inner.length];
+            path[0] = index;
+            path[1] = cell.span.row;
+            path[2] = cell.span.column;
+            System.arraycopy(inner, 0, path, 3, inner.length);
+            float ox = spec.left + cell.left;
             pictures.add(
                 new PlacedPicture(
-                    cell.pics.get(i), -1, pages.size(), spec.left + cell.left + r[0], y + picTop - first, r[2], r[3]));
+                    cell.pics.get(i), cell.picIndex.get(i), pages.size(), ox + r[0], y + picTop - first, r[2], r[3],
+                    path, new float[] {ox + r[4], y + anchor - first, r[6]}));
+          }
         }
         for (int i = 0; i < cell.lines.size(); i++) {
           float lineY = top + cell.shift + cell.ys.get(i);

@@ -284,6 +284,18 @@ public final class Picture implements Block {
   }
 
   /**
+   * Floats the object in its table cell at x, y: offsets from the cell's content left and the
+   * anchor paragraph's top (Word's layoutInCell; Square wrapped if it was inline).
+   */
+  public Picture movedInCell(float x, float y) {
+    String side = FloatPosition.sideOf(position());
+    String pos = new FloatPosition("column", "", x, "paragraph", "", y, side).toString();
+    String w = "inline".equals(wrap()) ? "square" : wrap();
+    if (drawing != null) return drawing(drawing.with("wrap", w).with("position", pos));
+    return look(look.wrap(w, look.wrapPolygon).position(pos));
+  }
+
+  /**
    * As Wordcraft's arrange.wrapText: text flows on {@code side} of the float. A one-sided wrap is
    * carried by the position, so a paragraph-placed float gets its own column/paragraph place.
    */

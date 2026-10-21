@@ -459,6 +459,70 @@ public class SimulatorUiTest {
   }
 
   @Test
+  public void clickSelectsDragsAndFormatsACellPictureThroughItsCellPath() throws Exception {
+    final int[][] at = new int[2][];
+    final int[] picked = {-1};
+    final Object[] saved = new Object[1];
+    edt(() -> ((Form) field(app, "form")).show());
+    for (int i = 0; i < 100 && Display.getInstance().getCurrent() != field(app, "form"); i++)
+      Thread.sleep(50);
+    edt(
+        () -> {
+          load("Body");
+          var s = session();
+          s.select(0, 4, 4);
+          s.insertTable(1, 2);
+          s.replace("cell");
+          // Insert Picture with the caret in a cell inserts into the cell.
+          int k = s.insertPicture(Picture.drawing("pending", Drawing.of("shape").with("shape", "rect"), 60, 30, "box", "left"));
+          assertTrue(s.inCell());
+          assertTrue(s.editingDocument().blocks.get(k) instanceof Picture);
+          s.leaveCell();
+          Form form = (Form) field(app, "form");
+          form.revalidate();
+          editor().resetScroll();
+          editor().refresh();
+          var pe = EditorSurface.class.getDeclaredField("pictureEditor");
+          pe.setAccessible(true);
+          saved[0] = pe.get(editor());
+          editor().setPictureEditor(b -> picked[0] = b);
+          LayoutEngine.PlacedPicture pic = null;
+          for (var page : editor().layout().pages) for (var p : page.pictures) if (p.inCell()) pic = p;
+          assertNotNull(pic);
+          at[0] = editor().screenPointForTest(pic.page(), pic.x() + pic.width() / 2, pic.y() + pic.height() / 2);
+          at[1] = new int[] {k};
+        });
+    Thread.sleep(450);
+    edt(
+        () -> {
+          var editor = editor();
+          editor.pointerPressed(at[0][0], at[0][1]);
+          editor.pointerReleased(at[0][0], at[0][1]);
+          var s = session();
+          assertTrue("click selects the cell picture in its cell", s.inCell());
+          assertEquals(at[1][0], picked[0]);
+          new Commands().execute(s, "picture.border", Json.object("color", "ff0000", "width", 2));
+          var p = (Picture) s.editingDocument().blocks.get(picked[0]);
+          assertEquals(0xff0000, p.look.borderColor);
+          // A drag moves it within its cell: Square wrapped, offset from the cell's content.
+          editor.pointerPressed(at[0][0], at[0][1]);
+          editor.pointerDragged(at[0][0] + 20, at[0][1]);
+          editor.pointerReleased(at[0][0] + 20, at[0][1]);
+          p = (Picture) session().editingDocument().blocks.get(picked[0]);
+          assertEquals("square", p.wrap());
+          assertTrue(p.position(), FloatPosition.parse(p.position()).x > 0);
+          session().undo();
+          session().undo();
+          Picture back = null;
+          for (Block b : ((Table) session().document().blocks.get(1)).blocks(0, 0)) if (b instanceof Picture x) back = x;
+          assertNotNull(back);
+          assertEquals("inline", back.wrap());
+          assertTrue(back.look.borderColor != 0xff0000);
+          editor.setPictureEditor((EditorSurface.PictureEditor) saved[0]);
+        });
+  }
+
+  @Test
   public void clickEntersNestedTableCellAndDrawsItsCaret() throws Exception {
     final int[] point = new int[2];
     final int[][] path = new int[1][];

@@ -115,7 +115,7 @@ public final class EditorSurface extends Container
    */
   private boolean clickEquation(LayoutEngine.PlacedPicture pic, float px, float py) {
     var d = pic.picture().drawing;
-    if (readOnly() || d == null || !"equation".equals(d.kind)) return false;
+    if (readOnly() || d == null || !"equation".equals(d.kind) || pic.inCell()) return false;
     var e = EquationEditing.at(session, pic.block());
     if (e == null) return false;
     e.hit(d, pic.width(), pic.height(), fontMetrics, px - pic.x(), py - pic.y());
@@ -168,6 +168,14 @@ public final class EditorSurface extends Container
   }
 
   /** Test hook: a click at page-point ({@code px}, {@code py}) on the display equation in {@code block}. */
+  /** Test hook: the pointer position over page point (px, py) of {@code page}. */
+  int[] screenPointForTest(int page, float px, float py) {
+    return new int[] {
+      Math.round(viewportX() + pageX(page) + px * scale()),
+      Math.round(viewportY() - getScrollY() + pageY(page) + py * scale())
+    };
+  }
+
   boolean clickEquationForTest(int block, float px, float py) {
     for (var page : layout().pages)
       for (LayoutEngine.PlacedPicture pic : page.pictures)
@@ -636,7 +644,7 @@ public final class EditorSurface extends Container
                 "Edit picture",
                 (component, argument) -> {
                   stopInput();
-                  if (pictureEditor != null && pic.block() >= 0) pictureEditor.edit(pic.block());
+                  if (pictureEditor != null && selectObject(pic)) pictureEditor.edit(pic.block());
                   return true;
                 }));
         nodes.add(node);
@@ -2205,10 +2213,10 @@ public final class EditorSurface extends Container
       float px = (x - viewportX() - pageX(page)) / scale();
       float py = (y - viewportY() + getScrollY() - pageY(page)) / scale();
       for (LayoutEngine.PlacedPicture pic : layout().pages.get(page).pictures) {
-        if (pic.block() < 0) continue; // table-cell pictures are drawn, not body objects
         if (px < pic.x() || px > pic.x() + pic.width() || py < pic.y() || py > pic.y() + pic.height()) continue;
         var d = pic.picture().drawing;
         if (d == null || !("ink".equals(d.kind) || "canvas".equals(d.kind))) continue;
+        if (!selectObject(pic)) continue; // ink strokes go to the object in its cell story
         inkBlock = pic.block();
         inkPage = page;
         inkPicture = pic;
@@ -2302,9 +2310,9 @@ public final class EditorSurface extends Container
       float px = (x - viewportX() - pageX(page)) / scale();
       float py = (y - viewportY() + getScrollY() - pageY(page)) / scale();
       for (LayoutEngine.PlacedPicture pic : layout().pages.get(page).pictures) {
-        if (pic.block() >= 0
-            && px >= pic.x() && px <= pic.x() + pic.width() && py >= pic.y() && py <= pic.y() + pic.height()) {
+        if (px >= pic.x() && px <= pic.x() + pic.width() && py >= pic.y() && py <= pic.y() + pic.height()) {
           stopInput();
+          if (!selectObject(pic)) continue;
           if (clickEquation(pic, px, py)) return;
           // Pressing an object may start dragging it (Wordcraft's arrange.bounds drag).
           movePic = pic;
@@ -2367,6 +2375,35 @@ public final class EditorSurface extends Container
     changed.run();
   }
 
+  /**
+   * Makes the story holding a placed object the edited one, as Wordcraft's object selection
+   * carries its path: a table-cell object enters its cell (so picture commands, ink, delete and
+   * replace address it by its index in the cell) with the caret after it; a body object leaves any
+   * cell. False when the object cannot be selected (a cell of a header or footer table).
+   */
+  boolean selectObject(LayoutEngine.PlacedPicture pic) {
+    if (!pic.inCell()) {
+      session.leaveCell();
+      return true;
+    }
+    int[] path = pic.cell();
+    var body = session.document().blocks;
+    if (path[0] >= body.size() || !(body.get(path[0]) instanceof Table)) return false;
+    try {
+      session.enterCellPath(path);
+    } catch (RuntimeException ex) {
+      return false;
+    }
+    var cell = session.editingDocument().blocks;
+    if (pic.block() >= cell.size() || cell.get(pic.block()) != pic.picture()) return false;
+    for (int j = pic.block() + 1; j < cell.size() && j <= pic.block() + 2; j++)
+      if (cell.get(j) instanceof Paragraph) {
+        session.select(j, 0, 0);
+        break;
+      }
+    return true;
+  }
+
   /** The object being dragged to a new position, its page and the grab offset in points. */
   private LayoutEngine.PlacedPicture movePic;
   private int movePage, movePressX, movePressY, moveX, moveY;
@@ -2399,6 +2436,19 @@ public final class EditorSurface extends Container
     movePic = null;
     moving = false;
     if (pic == null || Math.abs(x - movePressX) + Math.abs(y - movePressY) < OfficeTheme.px(4)) return false;
+    if (pic.inCell()) {
+      // A cell object moves within its cell (Word's layoutInCell), measured from the cell's
+      // content left and its anchor paragraph's top.
+      if (!selectObject(pic)) return false;
+      var cellBlock = session.editingDocument().blocks.get(pic.block());
+      float[] f = pic.frame();
+      float cx = (x - movePressX) / scale() + pic.x() - f[0], cy = (y - movePressY) / scale() + pic.y() - f[1];
+      cx = Math.max(0, Math.min(Math.max(0, f[2] - pic.width()), cx));
+      session.replacePicture(pic.block(), ((Picture) cellBlock).movedInCell(cx, cy));
+      refresh();
+      changed.run();
+      return true;
+    }
     var block = session.document().blocks.get(pic.block());
     if (!(block instanceof Picture)) return false;
     int to = pageAt(x, y);

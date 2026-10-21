@@ -508,12 +508,19 @@ final class DrawingCommands implements Commands.Extension {
     c.edit("arrange.bounds", "block?:integer,x:number,y:number,page?:integer",
         "Move an object to page point x, y (points) on its anchor's page, or on page (0-based) re-anchored to the paragraph there: it floats there, Square wrapped if it was inline", (s, a) -> {
           int block = block(s, a);
+          if (s.inCell()) {
+            // A cell object stays in its cell (Word's layoutInCell): x, y are offsets from the
+            // cell's content left and the anchor paragraph's top.
+            Picture next = picture(s, block).movedInCell(Commands.number(a, "x", 0), Commands.number(a, "y", 0));
+            s.replacePicture(block, next);
+            return next.position();
+          }
           if (a.get("page") != null) {
             int page = (int) Commands.number(a, "page", 0);
             var layout = c.layoutEngine().layout(s.document(), s.revision());
             int now = -1;
             for (int i = 0; i < layout.pages.size() && now < 0; i++)
-              for (LayoutEngine.PlacedPicture x : layout.pages.get(i).pictures) if (x.block() == block) now = i;
+              for (LayoutEngine.PlacedPicture x : layout.pages.get(i).pictures) if (!x.inCell() && x.block() == block) now = i;
             if (page != now) {
               Document moved = Picture.reanchored(s.document(), layout, block, page,
                   Commands.number(a, "x", 0), Commands.number(a, "y", 0));
@@ -581,7 +588,7 @@ final class DrawingCommands implements Commands.Extension {
 
   private static int block(Session s, Map<String, Object> a) {
     if (a.containsKey("block")) return Commands.integer(a, "block");
-    var d = s.document();
+    var d = s.editingDocument();
     int b = s.selection().block;
     if (b < d.blocks.size() && d.blocks.get(b) instanceof Picture) return b;
     for (int i = b - 1; i >= 0 && i >= b - 2; i--) if (d.blocks.get(i) instanceof Picture) return i;
@@ -589,9 +596,10 @@ final class DrawingCommands implements Commands.Extension {
   }
 
   private static Picture picture(Session s, int block) {
-    if (block < 0 || block >= s.document().blocks.size() || !(s.document().blocks.get(block) instanceof Picture))
+    var d = s.editingDocument(); // a table cell's blocks while a cell object is selected
+    if (block < 0 || block >= d.blocks.size() || !(d.blocks.get(block) instanceof Picture))
       throw new IllegalArgumentException("Select an object");
-    return (Picture) s.document().blocks.get(block);
+    return (Picture) d.blocks.get(block);
   }
 
   private static Drawing drawing(Session s, Map<String, Object> a) {

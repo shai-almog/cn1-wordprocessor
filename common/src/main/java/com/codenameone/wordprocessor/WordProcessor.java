@@ -1804,7 +1804,8 @@ public class WordProcessor {
   }
 
   private void editPicture(int block) {
-    var pic = (Picture) session.document().blocks.get(block);
+    // The edited story: a table cell's blocks when a cell picture was selected.
+    var pic = (Picture) session.editingDocument().blocks.get(block);
     EditField width = field(Float.toString(pic.width)),
         height = field(Float.toString(pic.height)),
         alt = field(pic.alt);
@@ -1835,8 +1836,8 @@ public class WordProcessor {
                 }));
     if (showDialog("Picture", content, "Apply", "Cancel")) {
       try {
-        if (block >= session.document().blocks.size()
-            || session.document().blocks.get(block) != pic) return;
+        if (block >= session.editingDocument().blocks.size()
+            || session.editingDocument().blocks.get(block) != pic) return;
         float w = Float.parseFloat(width.getText()), h = Float.parseFloat(height.getText());
         if (aspect.isSelected()) {
           if (w != pic.width) h = w * pic.height / pic.width;

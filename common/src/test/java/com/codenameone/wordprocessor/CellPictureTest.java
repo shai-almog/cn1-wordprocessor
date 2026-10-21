@@ -60,7 +60,7 @@ public class CellPictureTest {
   public void cellPicturesFlowInlineAndFloatsWrapCellText() {
     var page = engine().layout(doc(), 0).pages.get(0);
     var placed = new ArrayList<LayoutEngine.PlacedPicture>();
-    for (LayoutEngine.PlacedPicture p : page.pictures) if (p.block() < 0) placed.add(p);
+    for (LayoutEngine.PlacedPicture p : page.pictures) if (p.inCell()) placed.add(p);
     assertEquals(2, placed.size());
     var inline = placed.get(0);
     var floating = placed.get(1);

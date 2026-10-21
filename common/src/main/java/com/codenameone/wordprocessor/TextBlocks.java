@@ -879,10 +879,15 @@ final class TextBlocks {
         b.append(' ');
         if (!t.covered(r, c)) {
           boolean first = true;
-          for (Paragraph p : t.cell(r, c)) {
+          for (Block block : t.blocks(r, c)) {
+            if (block instanceof Table) continue;
             if (!first) b.append("<br>");
             first = false;
-            markdownRuns(b, p);
+            // Cell pictures as images in the cell (Wordcraft's table_md writes a paragraph's
+            // images inline); a drawing, which has no image data here, as its alt text figure.
+            if (block instanceof Picture pic)
+              b.append(pic.drawing == null ? markdownPicture(pic) : "![" + pic.alt.replace(']', ' ').replace('\n', ' ') + "]()");
+            else markdownRuns(b, (Paragraph) block);
           }
         }
         b.append(" |");
@@ -986,7 +991,20 @@ final class TextBlocks {
             rtfTable(b, inner, depth + 1, cellWidth);
             continue;
           }
-          if (!(block instanceof Paragraph p)) continue; // cell pictures: not kept in RTF cells
+          if (block instanceof Picture pic) {
+            // A cell picture as its own cell paragraph holding \pict (Wordcraft's RTF writer
+            // writes a cell's pictures in its paragraphs); drawings have no RTF picture form.
+            if (pic.drawing != null) continue;
+            b.append("\\pard\\plain\\intbl");
+            if (depth > 1) b.append("\\itap").append(depth);
+            b.append(' ');
+            if ("center".equals(pic.align)) b.append("\\qc ");
+            else if ("right".equals(pic.align)) b.append("\\qr ");
+            b.append(rtfPicture(pic));
+            if (n < blocks.size() - 1) b.append("\\par\n");
+            continue;
+          }
+          if (!(block instanceof Paragraph p)) continue;
           b.append("\\pard\\plain\\intbl");
           if (depth > 1) b.append("\\itap").append(depth);
           b.append(' ');

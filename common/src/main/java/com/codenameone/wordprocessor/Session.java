@@ -2467,8 +2467,8 @@ public final class Session {
 
   public void insertPicture(
       final byte[] bytes, final float width, final float height, final String alt) {
-    if (inCell())
-      throw new IllegalArgumentException("Pictures inside table cells are not supported yet");
+    if (noteStory() != null)
+      throw new IllegalArgumentException("Pictures cannot be inserted in a note");
     final var input = new Picture("pending", bytes, width, height, alt, "left");
     transact(
         s -> {
@@ -2487,7 +2487,7 @@ public final class Session {
       final String alt,
       final String align,
       final boolean delete) {
-    leaveCell();
+    pictureStory(block);
     transact(
         s -> {
           var p = (Picture) document.blocks.get(block);
@@ -2503,8 +2503,8 @@ public final class Session {
 
   /** Inserts a prepared picture or drawing at the selection; returns its block index. */
   public int insertPicture(final Picture input) {
-    if (inCell())
-      throw new IllegalArgumentException("Pictures inside table cells are not supported yet");
+    if (noteStory() != null)
+      throw new IllegalArgumentException("Pictures cannot be inserted in a note");
     final int[] at = {0};
     transact(
         s -> {
@@ -2520,11 +2520,22 @@ public final class Session {
     return at[0];
   }
 
+  /**
+   * Picture edits address {@code block} in the story being edited: a table cell's blocks while a
+   * cell picture is selected (as Wordcraft's object paths run through the cell path), else the
+   * body.
+   */
+  private void pictureStory(int block) {
+    if (inCell() && block >= 0 && block < document.blocks.size() && document.blocks.get(block) instanceof Picture)
+      return;
+    leaveCell();
+  }
+
   /** Replaces the picture at {@code block} (same id) as one undo step, keeping the selection. */
   public void replacePicture(final int block, final Picture next) {
     if (!(document.blocks.get(block) instanceof Picture))
       throw new IllegalArgumentException("Select a picture");
-    leaveCell();
+    pictureStory(block);
     transact(s -> document = document.blocks(document.blocks.set(block, next), document.nextId));
   }
 
@@ -2532,7 +2543,7 @@ public final class Session {
   public void pictureLook(final int block, final Picture.Look look) {
     if (!(document.blocks.get(block) instanceof Picture))
       throw new IllegalArgumentException("Select a picture");
-    leaveCell();
+    pictureStory(block);
     transact(
         s ->
             document =

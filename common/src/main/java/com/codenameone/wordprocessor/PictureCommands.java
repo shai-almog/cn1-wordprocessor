@@ -103,9 +103,7 @@ final class PictureCommands implements Commands.Extension {
           var next =
               new Picture(
                   old.id(), out, old.width, old.height, old.alt, old.align, del ? l.crop(0, 0, 0, 0) : l);
-          var keep = s.selection();
-          s.replaceDocument(s.document().blocks(s.document().blocks.set(block, next), s.document().nextId));
-          s.selectRange(keep.anchorBlock, keep.anchor, keep.block, keep.caret);
+          s.replacePicture(block, next);
           return null;
         });
     c.edit("picture.color", "block?:integer,mode:string",
@@ -156,9 +154,7 @@ final class PictureCommands implements Commands.Extension {
                   old.alt,
                   old.align,
                   old.look);
-          var keep = s.selection();
-          s.replaceDocument(s.document().blocks(s.document().blocks.set(block, next), s.document().nextId));
-          s.selectRange(keep.anchorBlock, keep.anchor, keep.block, keep.caret);
+          s.replacePicture(block, next);
           return null;
         });
     c.edit("arrange.rotation", "block?:integer,degrees?:number,flipH?:boolean,flipV?:boolean",
@@ -223,14 +219,21 @@ final class PictureCommands implements Commands.Extension {
   }
 
   private static int block(Session s, Map<String, Object> a) {
-    return Commands.integer(a, "block", s.selection().block);
+    if (a.containsKey("block")) return Commands.integer(a, "block");
+    // The selected object, or the one just before the caret (a selected cell picture leaves the
+    // caret in the paragraph after it, as DrawingCommands' object lookup).
+    var d = s.editingDocument();
+    int b = s.selection().block;
+    for (int i = b; i >= 0 && i >= b - 2 && i < d.blocks.size(); i--) if (d.blocks.get(i) instanceof Picture) return i;
+    return b;
   }
 
   private static Picture picture(Session s, int block) {
-    if (block < 0 || block >= s.document().blocks.size()
-        || !(s.document().blocks.get(block) instanceof Picture))
+    // The story being edited: a table cell's blocks while a cell picture is selected.
+    var d = s.editingDocument();
+    if (block < 0 || block >= d.blocks.size() || !(d.blocks.get(block) instanceof Picture))
       throw new IllegalArgumentException("Select a picture");
-    return (Picture) s.document().blocks.get(block);
+    return (Picture) d.blocks.get(block);
   }
 
   private static float f(Map<String, Object> a, String k, float fallback) {

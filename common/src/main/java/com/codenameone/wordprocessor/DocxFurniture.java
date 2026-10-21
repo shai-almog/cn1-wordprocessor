@@ -129,7 +129,7 @@ final class DocxFurniture {
           for (Picture image : images)
             blocks.add(image.resize(image.width, image.height, image.alt, align));
         } else if ("tbl".equals(name)) {
-          Table table = Docx.readTable(child, id, warnings, lists, styles, links, comments);
+          Table table = Docx.readTable(child, id, warnings, lists, styles, links, comments, pictures);
           if (table != null) blocks.add(table);
         } else if (!"sectPr".equals(name)) warnings.add("Header/footer content: " + name);
       }
@@ -194,7 +194,7 @@ final class DocxFurniture {
           Docx.writeParagraph(b, para, lists, tabs, links, new DocxComments(Document.empty()));
         else if (block instanceof Table t)
           Docx.writeTable(
-              b, t, document.page.contentWidth(), lists, tabs, links, new DocxComments(Document.empty()));
+              b, t, document.page.contentWidth(), lists, tabs, links, new DocxComments(Document.empty()), pictures);
         else if (block instanceof Picture picture) pictures.write(b, picture);
       // A story must end with a paragraph (ECMA-376 17.10.1), as table cells must.
       if (story.size() == 0 || !(story.get(story.size() - 1) instanceof Paragraph))
