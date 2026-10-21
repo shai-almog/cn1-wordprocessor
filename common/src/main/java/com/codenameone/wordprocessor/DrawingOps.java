@@ -481,10 +481,27 @@ public final class DrawingOps {
       if ("doughnut".equals(type)) ops.fill(ellipse(cx, cy, rad / 2, rad / 2), 0xffffff, -1, 0);
       return;
     }
+    // Wordcraft's read/chart.rs groupings: stacked series add up per category, 100% stacked
+    // ones are each category's share of its total (axis 0..100%); clustered side by side.
+    String grouping = "scatter".equals(type) ? "clustered" : d.get("grouping", "clustered");
+    boolean stacked = "stacked".equals(grouping) || "percentStacked".equals(grouping);
+    boolean percent = "percentStacked".equals(grouping);
+    float[][] vals = new float[rows.size()][series + 1];
+    for (int r = 1; r < rows.size(); r++) {
+      float total = 0;
+      for (int s = 1; s <= series; s++) total += Math.abs(vals[r][s] = value(rows.get(r), s));
+      if (percent)
+        for (int s = 1; s <= series; s++) vals[r][s] = total == 0 ? 0 : vals[r][s] / total;
+    }
     float max = 0;
-    for (int r = 1; r < rows.size(); r++)
-      for (int s = 1; s <= series; s++) max = Math.max(max, value(rows.get(r), s));
-    max = nice(max);
+    for (int r = 1; r < rows.size(); r++) {
+      float sum = 0;
+      for (int s = 1; s <= series; s++) {
+        sum += Math.max(0, vals[r][s]);
+        max = Math.max(max, stacked ? sum : vals[r][s]);
+      }
+    }
+    max = percent ? 1 : nice(max);
     float left = 30, right = w - 10, plotTop = top + 4, plotBottom = bottom - 16;
     if ("scatter".equals(type)) {
       scatter(ops, rows, series, max, left, right, plotTop, plotBottom, labels);
@@ -493,7 +510,7 @@ public final class DrawingOps {
     boolean bar = "bar".equals(type);
     for (int i = 0; i <= 4; i++) {
       float f = i / 4f;
-      String label = trim(max * f);
+      String label = percent ? Math.round(100 * f) + "%" : trim(max * f);
       if (bar) {
         float x = left + (right - left) * f;
         ops.line(new float[] {x, plotTop, x, plotBottom}, 0xd9d9d9, .5f, 255);
@@ -511,34 +528,51 @@ public final class DrawingOps {
       if (bar) ops.text(name, 0, start + band / 2 - 5, left - 3, 8, 0x595959, false, "right");
       else ops.text(name, start, plotBottom + 2, band, 8, 0x595959, false, "center");
       if (!"column".equals(type) && !bar) continue;
-      float slot = band * .7f / series;
+      float slot = stacked ? band * .7f : band * .7f / series, base = 0;
       for (int s = 1; s <= series; s++) {
-        float v = max <= 0 ? 0 : value(rows.get(r), s) / max;
+        float v = max <= 0 ? 0 : Math.max(stacked ? 0 : -Float.MAX_VALUE, vals[r][s]) / max;
         int c = PALETTE[(s - 1) % PALETTE.length];
+        float at = stacked ? 0 : slot * (s - 1);
         float[] box =
             bar
-                ? rect(left, start + band * .15f + slot * (s - 1), (right - left) * v, slot)
-                : rect(start + band * .15f + slot * (s - 1), plotBottom - (plotBottom - plotTop) * v, slot, (plotBottom - plotTop) * v);
+                ? rect(left + (right - left) * base, start + band * .15f + at, (right - left) * v, slot)
+                : rect(start + band * .15f + at, plotBottom - (plotBottom - plotTop) * (base + v), slot, (plotBottom - plotTop) * v);
         ops.fill(box, c, -1, 0);
         if (labels) {
-          String l = trim(value(rows.get(r), s));
-          if (bar) ops.text(l, left + (right - left) * v + 2, box[1] + slot / 2 - 4, 30, 8, 0x404040, false, "left");
+          String l = percent ? Math.round(vals[r][s] * 100) + "%" : trim(value(rows.get(r), s));
+          if (stacked)
+            ops.text(l, box[0], box[1] + box[3] / 2 - 4, box[2], 8, 0xffffff, false, "center");
+          else if (bar) ops.text(l, left + (right - left) * v + 2, box[1] + slot / 2 - 4, 30, 8, 0x404040, false, "left");
           else ops.text(l, box[0] - 10, box[1] - 11, slot + 20, 8, 0x404040, false, "center");
         }
+        if (stacked) base += v;
       }
     }
     if ("line".equals(type) || "area".equals(type))
       for (int s = series; s >= 1; s--) {
-        float[] p = new float["area".equals(type) ? cats * 2 + 4 : cats * 2];
+        // Stacked lines and areas plot each series on top of the ones before it; a stacked
+        // area fills down to the previous series' line.
+        boolean fillDown = stacked && "area".equals(type) && s > 1;
+        float[] p = new float[fillDown ? cats * 4 : "area".equals(type) ? cats * 2 + 4 : cats * 2];
         for (int r = 1; r <= cats; r++) {
-          float v = max <= 0 ? 0 : value(rows.get(r), s) / max;
+          float sum = 0, below = 0;
+          if (stacked) {
+            for (int k = 1; k <= s; k++) sum += Math.max(0, vals[r][k]);
+            below = sum - Math.max(0, vals[r][s]);
+          } else sum = vals[r][s];
+          float v = max <= 0 ? 0 : sum / max;
+          if (fillDown) {
+            p[cats * 4 - r * 2] = left + band * (r - .5f);
+            p[cats * 4 - r * 2 + 1] = plotBottom - (plotBottom - plotTop) * (max <= 0 ? 0 : below / max);
+          }
           p[(r - 1) * 2] = left + band * (r - .5f);
           p[(r - 1) * 2 + 1] = plotBottom - (plotBottom - plotTop) * v;
           if (labels)
-            ops.text(trim(value(rows.get(r), s)), p[(r - 1) * 2] - 15, p[(r - 1) * 2 + 1] - 12, 30, 8, 0x404040, false, "center");
+            ops.text(percent ? Math.round(vals[r][s] * 100) + "%" : trim(value(rows.get(r), s)), p[(r - 1) * 2] - 15, p[(r - 1) * 2 + 1] - 12, 30, 8, 0x404040, false, "center");
         }
         int c = PALETTE[(s - 1) % PALETTE.length];
-        if ("area".equals(type)) {
+        if (fillDown) ops.paths.add(new Path(p, true, c, -1, 0, 200));
+        else if ("area".equals(type)) {
           p[cats * 2] = left + band * (cats - .5f);
           p[cats * 2 + 1] = plotBottom;
           p[cats * 2 + 2] = left + band * .5f;

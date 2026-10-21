@@ -179,13 +179,15 @@ final class DrawingCommands implements Commands.Extension {
     // ---------------------------------------------------------------- charts
     c.register(
         "insert.chart",
-        "Insert a chart: " + DrawingOps.CHARTS + "; data is CSV (header row, then categories)",
+        "Insert a chart: " + DrawingOps.CHARTS + ", columnStacked or barStacked; data is CSV (header row, then categories)",
         "type?:string,data?:string,title?:string",
         true,
         (s, a) -> {
           String type = Commands.str(a, "type", "column");
+          String grouping = grouping(type);
+          type = baseType(type);
           if (!DrawingOps.CHARTS.contains(type)) throw new IllegalArgumentException("Unknown chart type: " + type);
-          var d = Drawing.of("chart").with("chartType", type).with("data", DrawingOps.SAMPLE_CHART);
+          var d = Drawing.of("chart").with("chartType", type).with("grouping", grouping).with("data", DrawingOps.SAMPLE_CHART);
           if (a.containsKey("data")) d = d.with("data", chartData(Commands.str(a, "data")));
           if (a.containsKey("title")) d = d.with("title", Commands.str(a, "title")).with("titleSet", "true");
           return insert(s, d, 360, 216, "Chart");
@@ -193,8 +195,10 @@ final class DrawingCommands implements Commands.Extension {
     c.edit("chart.type", "block?:integer,type:string",
         "Change chart type", (s, a) -> {
           String type = Commands.str(a, "type");
+          String grouping = grouping(type);
+          type = baseType(type);
           if (!DrawingOps.CHARTS.contains(type)) throw new IllegalArgumentException("Unknown chart type: " + type);
-          return update(s, a, chart(s, a).with("chartType", type));
+          return update(s, a, chart(s, a).with("chartType", type).with("grouping", grouping));
         });
     c.edit("chart.editData", "block?:integer,data?:string",
         "Read or replace chart data (CSV: header row, then one row per category)", (s, a) -> {
@@ -946,5 +950,14 @@ final class DrawingCommands implements Commands.Extension {
         break;
       }
     return Json.object("block", from, "items", to - from + 1);
+  }
+
+  /** Wordcraft's ChartType ids columnStacked and barStacked: column/bar with stacked grouping. */
+  private static String grouping(String type) {
+    return "columnStacked".equals(type) || "barStacked".equals(type) ? "stacked" : "";
+  }
+
+  private static String baseType(String type) {
+    return "columnStacked".equals(type) ? "column" : "barStacked".equals(type) ? "bar" : type;
   }
 }

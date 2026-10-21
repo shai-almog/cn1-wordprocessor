@@ -168,6 +168,12 @@ final class DocxCharts {
       for (String[] v : values) data.append(',').append(r < v.length ? number(v[r]) : "");
     }
     var d = Drawing.of("chart").with("chartType", type).with("data", data.toString());
+    // Wordcraft's read/chart.rs: stacked and 100% stacked groupings of bar, column, line and
+    // area charts are kept and drawn (series add up, or each category's shares fill 100%).
+    Element grouping = Xml.child(group, "grouping");
+    String g = grouping == null ? "" : Xml.attr(grouping, "val", "");
+    if (("stacked".equals(g) || "percentStacked".equals(g)) && !"pie".equals(type)
+        && !"doughnut".equals(type) && !scatter) d = d.with("grouping", g);
     String title = "";
     Element t = Xml.child(chart, "title");
     Element deleted = Xml.child(chart, "autoTitleDeleted");
@@ -214,6 +220,8 @@ final class DocxCharts {
     if (rows.isEmpty()) rows.add(new String[] {"Category", "Series 1"});
     String[] header = rows.get(0);
     boolean pie = "pie".equals(type) || "doughnut".equals(type), scatter = "scatter".equals(type);
+    String stacking = pie || scatter ? "" : d.get("grouping", "");
+    if (!"stacked".equals(stacking) && !"percentStacked".equals(stacking)) stacking = "";
     int series = pie ? Math.min(1, header.length - 1) : header.length - 1;
     var cats = new ArrayList<String>();
     for (int r = 1; r < rows.size(); r++) cats.add(rows.get(r)[0]);
@@ -230,8 +238,10 @@ final class DocxCharts {
     String tag = "column".equals(type) || "bar".equals(type) ? "barChart" : type + "Chart";
     b.append("<c:").append(tag).append('>');
     if ("barChart".equals(tag))
-      b.append("<c:barDir val=\"").append("bar".equals(type) ? "bar" : "col").append("\"/><c:grouping val=\"clustered\"/>");
-    else if ("line".equals(type) || "area".equals(type)) b.append("<c:grouping val=\"standard\"/>");
+      b.append("<c:barDir val=\"").append("bar".equals(type) ? "bar" : "col").append("\"/><c:grouping val=\"")
+          .append(stacking.isEmpty() ? "clustered" : stacking).append("\"/>");
+    else if ("line".equals(type) || "area".equals(type))
+      b.append("<c:grouping val=\"").append(stacking.isEmpty() ? "standard" : stacking).append("\"/>");
     else if (scatter) b.append("<c:scatterStyle val=\"lineMarker\"/>");
     b.append("<c:varyColors val=\"").append(pie ? 1 : 0).append("\"/>");
     for (int s = 1; s <= series; s++) {
@@ -258,6 +268,8 @@ final class DocxCharts {
         .append("\"/><c:showCatName val=\"0\"/><c:showSerName val=\"0\"/><c:showPercent val=\"0\"/>")
         .append("<c:showBubbleSize val=\"0\"/></c:dLbls>");
     if ("barChart".equals(tag)) b.append("<c:gapWidth val=\"150\"/>");
+    // Stacked bars overlap fully, as Wordcraft's chart_spec writes them.
+    if ("barChart".equals(tag) && !stacking.isEmpty()) b.append("<c:overlap val=\"100\"/>");
     if ("line".equals(type)) b.append("<c:marker val=\"1\"/>");
     if (pie) b.append("<c:firstSliceAng val=\"0\"/>");
     if ("doughnut".equals(type)) b.append("<c:holeSize val=\"50\"/>");
