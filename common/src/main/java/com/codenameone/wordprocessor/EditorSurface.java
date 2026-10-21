@@ -2199,6 +2199,28 @@ public final class EditorSurface extends Container
     return best;
   }
 
+  /** The edited text box story's line nearest a pointer anywhere on its page, or null. */
+  private LayoutEngine.Line nearestStoryLine(int absX, int absY) {
+    hitY = absY;
+    int page = pageAt(absY - viewportY() + getScrollY());
+    float y = (absY - viewportY() + getScrollY() - pageY(page)) / scale();
+    float x = (absX - viewportX() - pageX(page)) / scale();
+    LayoutEngine.Line best = null;
+    float distance = Float.MAX_VALUE;
+    for (LayoutEngine.Line l : layout().pages.get(page).textBoxLines) {
+      if (editingBlock(l) < 0) continue;
+      float[] f = l.toFrame(x, y);
+      float dy = f[1] < l.y ? l.y - f[1] : f[1] > l.y + l.height ? f[1] - l.y - l.height : 0;
+      float dx = f[0] < l.x ? l.x - f[0] : f[0] > l.x + l.width ? f[0] - l.x - l.width : 0;
+      float d = dy * 1000 + dx;
+      if (d < distance) {
+        distance = d;
+        best = l;
+      }
+    }
+    return best;
+  }
+
   private LayoutEngine.Line lineAt(int absX, int absY) {
     hitY = absY;
     int page = pageAt(absY - viewportY() + getScrollY());
@@ -2756,6 +2778,10 @@ public final class EditorSurface extends Container
       return;
     }
     var line = lineAt(x, y);
+    // A drag in a text box's story keeps extending when it leaves the box: to the story's line
+    // nearest the pointer, as Wordcraft keeps a selection in the part it started in.
+    if (dragBlock >= 0 && session.enclosingTextBox() != null && (line == null || editingBlock(line) < 0))
+      line = nearestStoryLine(x, y);
     int[] over = line == null || dragTable < 0 ? null : dragCell(line);
     if (over != null
         && dragBlock >= 0

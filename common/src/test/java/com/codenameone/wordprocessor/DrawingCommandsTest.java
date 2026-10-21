@@ -314,4 +314,24 @@ public class DrawingCommandsTest {
     assertEquals("radial", DocxCharts.layout("urn:microsoft.com/office/officeart/2005/8/layout/radial1"));
     assertEquals("venn", DocxCharts.layout("urn:microsoft.com/office/officeart/2005/8/layout/venn1"));
   }
+
+  @Test
+  public void textDialogEditsAStoryWithoutFlatteningIt() {
+    var s = new Session(TextBoxStoryTest.boxed());
+    run(s, "shape.text", "block", 1, "text", "Bold start\nSecond lines\nThird", "align", "right");
+    var story = ((Picture) s.document().blocks.get(1)).drawing.story;
+    assertNotNull(story);
+    assertEquals(3, story.size());
+    var first = (Paragraph) story.get(0);
+    assertTrue(first.text.styleAt(0).bold);
+    assertFalse(first.text.styleAt(6).bold);
+    assertEquals("p10", first.id);
+    assertEquals("Second lines", ((Paragraph) story.get(1)).text.toString());
+    assertEquals("right", ((Paragraph) story.get(2)).align);
+    assertNotEquals("p11", story.get(2).id());
+    // The comment in the second paragraph still anchors there.
+    assertTrue(ReviewComment.validRange(s.document(), "p11", 0, "p11", 6));
+    s.undo();
+    assertEquals(2, ((Picture) s.document().blocks.get(1)).drawing.story.size());
+  }
 }

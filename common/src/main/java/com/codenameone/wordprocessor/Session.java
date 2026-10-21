@@ -2766,6 +2766,14 @@ public final class Session {
   }
 
   /** Replaces the picture at {@code block} (same id) as one undo step, keeping the selection. */
+  /** As {@link #replacePicture(int, Picture)}, reserving ids up to {@code nextId} (its story's). */
+  public void replacePicture(final int block, final Picture next, final long nextId) {
+    if (!(document.blocks.get(block) instanceof Picture))
+      throw new IllegalArgumentException("Select a picture");
+    pictureStory(block);
+    transact(s -> document = document.blocks(document.blocks.set(block, next), Math.max(nextId, document.nextId)));
+  }
+
   public void replacePicture(final int block, final Picture next) {
     if (!(document.blocks.get(block) instanceof Picture))
       throw new IllegalArgumentException("Select a picture");

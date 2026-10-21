@@ -37,7 +37,7 @@ public final class Drawing {
   /**
    * A text box's (or shape's) own block story, as Wordcraft's text boxes hold a part of blocks:
    * paragraphs with ids, tables and pictures; null for a drawing whose text is the single
-   * "text" property (older files, WordArt, equations and linked boxes).
+   * "text" property (older files, WordArt and equations).
    */
   public final Sequence<Block> story;
 
@@ -234,8 +234,8 @@ public final class Drawing {
     var next = new TreeMap<String, String>(props);
     if (value == null || value.isEmpty()) next.remove(key);
     else next.put(key, value);
-    // Setting the plain text replaces a story whose text it does not match (the single-string
-    // editing paths: linked boxes, the text dialog); other properties keep the story.
+    // Setting the plain text replaces a story whose text it does not match (single-string
+    // paths; the text dialog edits a story through TextBoxes.retext); other properties keep it.
     var keep = story;
     if (keep != null && "text".equals(key) && !plainText(keep).equals(value == null ? "" : value)) keep = null;
     // Replacing a group's members drops their stories.

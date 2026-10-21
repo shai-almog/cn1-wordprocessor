@@ -226,6 +226,44 @@ public final class TextBoxes {
   }
 
   /**
+   * {@code story} showing {@code text} (paragraphs on lines) without flattening it: each line
+   * edits its paragraph in place (the changed middle only, so the runs around it keep their
+   * formatting), extra lines become paragraphs formatted as the last (ids from {@code next}) and
+   * missing lines drop trailing paragraphs. A story holding a table or picture is edited in the
+   * box itself instead.
+   */
+  public static Sequence<Block> retext(Sequence<Block> story, String text, long[] next) {
+    if (Drawing.plainText(story).equals(text)) return story;
+    for (Block b : story)
+      if (!(b instanceof Paragraph))
+        throw new IllegalArgumentException("Edit the text of a box holding a table or picture in the box itself");
+    var lines = DrawingOps.split(text, '\n');
+    var out = new Sequence<Block>();
+    Paragraph last = null;
+    for (int i = 0; i < lines.size(); i++) {
+      String line = lines.get(i);
+      if (i < story.size()) {
+        last = (Paragraph) story.get(i);
+        String was = last.text.toString();
+        if (!was.equals(line)) {
+          int a = 0, n = Math.min(was.length(), line.length());
+          while (a < n && was.charAt(a) == line.charAt(a)) a++;
+          int z = 0;
+          while (z < n - a && was.charAt(was.length() - 1 - z) == line.charAt(line.length() - 1 - z)) z++;
+          var style = last.text.styleAt(a > 0 ? a - 1 : 0);
+          last = last.text(last.text.replace(a, was.length() - z, RichText.of(line.substring(a, line.length() - z), style)));
+        }
+        out = out.append(last);
+      } else {
+        var style = last.text.styleAt(Math.max(0, last.text.length() - 1));
+        last = last.copy("p" + next[0]++, RichText.of(line, style));
+        out = out.append(last);
+      }
+    }
+    return out;
+  }
+
+  /**
    * A copy of {@code story} whose paragraphs (cells included) take fresh ids from {@code next},
    * for a pasted or duplicated text box (ids are unique document-wide, as comments anchor by them).
    */

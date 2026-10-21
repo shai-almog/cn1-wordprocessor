@@ -108,7 +108,27 @@ final class DrawingCommands implements Commands.Extension {
     c.edit(
         "shape.text", "block?:integer,text:string,size?:number,color?:string,bold?:boolean,align?:string",
         "Set the text inside a shape or text box", (s, a) -> {
-          var d = drawing(s, a).with("text", Commands.str(a, "text"));
+          var d = drawing(s, a);
+          if (d.story != null) {
+            // A box holding a block story keeps it (Wordcraft's text box part): the text edits
+            // its paragraphs and the formatting applies to their runs and alignment.
+            long[] next = {s.document().nextId};
+            var story = TextBoxes.retext(d.story, Commands.str(a, "text"), next);
+            var out = new Sequence<Block>();
+            for (Block b : story) {
+              var p = (Paragraph) b;
+              int n = p.text.length();
+              if (a.containsKey("size")) p = p.text(p.text.format(0, n, "size", String.valueOf(clamp(f(a, "size", 11), 1, 400))));
+              if (a.containsKey("color")) p = p.text(p.text.format(0, n, "color", color(Commands.str(a, "color"))));
+              if (a.containsKey("bold")) p = p.text(p.text.format(0, n, "bold", String.valueOf(a.get("bold"))));
+              if (a.containsKey("align")) p = p.with("align", oneOf(Commands.str(a, "align"), "left", "center", "right"));
+              out = out.append(p);
+            }
+            int block = block(s, a);
+            s.replacePicture(block, picture(s, block).drawing(d.story(out)), next[0]);
+            return null;
+          }
+          d = d.with("text", Commands.str(a, "text"));
           if (a.containsKey("size")) d = d.with("fontSize", String.valueOf(clamp(f(a, "size", 11), 1, 400)));
           if (a.containsKey("color")) d = d.with("textColor", color(Commands.str(a, "color")));
           if (a.containsKey("bold")) d = d.with("bold", String.valueOf(a.get("bold")));
