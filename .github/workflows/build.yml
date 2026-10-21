@@ -111,6 +111,7 @@ jobs:
           if [[ -z $id ]]; then echo "::error::MACOS_CERT_P12 holds no valid Developer ID Application identity"; exit 1; fi
           echo "MACOS_SIGN_IDENTITY=$id" >> "$GITHUB_ENV"
       - name: Package
+        timeout-minutes: 60
         env:
           NOTARY_APPLE_ID: ${{ secrets.NOTARY_APPLE_ID }}
           NOTARY_TEAM_ID: ${{ secrets.NOTARY_TEAM_ID }}

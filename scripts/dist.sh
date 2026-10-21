@@ -15,19 +15,22 @@ case $platform in
     # app is ad-hoc signed: it runs on Apple Silicon, but Gatekeeper asks the user to allow it.
     identity=${MACOS_SIGN_IDENTITY:--}
     flags=(--force --deep --timestamp --options runtime); [[ $identity == - ]] && flags=(--force --deep)
-    codesign "${flags[@]}" --sign "$identity" "$staging/Wordprocessor.app"
+    # Apple's timestamp and notary services can stall without returning, and notarytool's own
+    # --timeout does not always fire; bound every network call with a hard wall-clock limit.
+    limit() { local s=$1; shift; perl -e 'alarm shift; exec @ARGV or die "exec: $!"' "$s" "$@"; }
+    limit 600 codesign "${flags[@]}" --sign "$identity" "$staging/Wordprocessor.app"
     codesign --verify --strict --verbose=2 "$staging/Wordprocessor.app"
     ln -s /Applications "$staging/Applications"
-    hdiutil create -quiet -volname Wordprocessor -srcfolder "$staging" -ov -format UDZO "dist/$name.dmg"
+    limit 600 hdiutil create -quiet -volname Wordprocessor -srcfolder "$staging" -ov -format UDZO "dist/$name.dmg"
     if [[ $identity != - ]]; then
-      codesign --force --timestamp --sign "$identity" "dist/$name.dmg"
+      limit 300 codesign --force --timestamp --sign "$identity" "dist/$name.dmg"
       if [[ -n ${NOTARY_APPLE_ID:-} ]]; then
         # Apple can hold a submission for hours (a new team's first ones especially), so wait a
         # bounded time. An unstapled but accepted DMG still passes Gatekeeper online; the staple
         # only adds offline first launch.
         creds=(--apple-id "$NOTARY_APPLE_ID" --team-id "$NOTARY_TEAM_ID" --password "$NOTARY_PASSWORD")
-        if xcrun notarytool submit "dist/$name.dmg" "${creds[@]}" --wait --timeout 20m; then
-          xcrun stapler staple "dist/$name.dmg" \
+        if limit 1500 xcrun notarytool submit "dist/$name.dmg" "${creds[@]}" --wait --timeout 20m; then
+          limit 300 xcrun stapler staple "dist/$name.dmg" \
             || echo "::warning::Notarization did not accept $name.dmg; it is signed but not notarized"
         else
           echo "::warning::Notarization of $name.dmg did not finish in 20 minutes; it is signed, not stapled"
