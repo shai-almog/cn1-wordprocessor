@@ -204,6 +204,32 @@ public class TableRowsLayoutTest {
     unsplittable("a\nb\nc\nd\ne\nf", 6, false);
   }
 
+  @Test
+  public void splittableRowWithAFootnoteSplitsBySpace() {
+    // Wordcraft's split_row: the part that fits is placed whatever notes it anchors; the notes
+    // go below it and continue on the next page when they do not fit.
+    var s = new Session(Document.empty());
+    s.replace("intro");
+    s.insertTable(1, 1);
+    int at = 0;
+    for (int i = 0; i < s.document().blocks.size(); i++) if (s.document().blocks.get(i) instanceof Table) at = i;
+    s.setCell(at, 0, 0, "a\nb\nc\nd\ne\nf\ng\nh\ni\nj");
+    s.enterCell(at, 0, 0);
+    s.insertNote("footnote", "note text", "");
+    s.leaveCell();
+    var d = s.document();
+    var blocks = new Sequence<Block>();
+    for (int i = 0; i < 6; i++) blocks = blocks.append(new Paragraph("f" + i, RichText.of("filler")));
+    for (Block b : d.blocks) blocks = blocks.append(b);
+    var r = engine.layout(d.blocks(blocks, d.nextId).page(new PageSpec(240, 180, 20, 20, 20, 20)), 0);
+    int rowPage = tablePage(r);
+    int rowLines = 0;
+    for (LayoutEngine.Line l : r.pages.get(rowPage).lines) if (l.row == 0) rowLines++;
+    assertTrue("row cut after its note's line", rowLines > 1);
+    assertTrue(rowPage + 1 < r.pages.size());
+    assertFalse(r.pages.get(rowPage).notes.isEmpty() && r.pages.get(rowPage + 1).notes.isEmpty());
+  }
+
   private void unsplittable(String text, int lines, boolean noteWithRow) {
     var s = new Session(Document.empty());
     s.replace("intro");

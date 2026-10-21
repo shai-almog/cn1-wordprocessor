@@ -2270,6 +2270,15 @@ public final class LayoutEngine {
     }
 
     void reserveNotes(List<Note> notes, float anchorHeight) {
+      reserveNotes(notes, anchorHeight, true);
+    }
+
+    /**
+     * Reserves room for the notes anchored in {@code anchorHeight} of text about to be placed.
+     * With {@code move}, the anchor moves to the next page when its notes do not fit with it;
+     * without, as Wordcraft's table_notes, the notes that do not fit continue on the next page.
+     */
+    void reserveNotes(List<Note> notes, float anchorHeight, boolean move) {
       var added = new ArrayList<NoteLine>();
       for (Note note : notes) {
         if (!seenNotes.add(note.id)) continue;
@@ -2283,7 +2292,8 @@ public final class LayoutEngine {
       for (NoteLine value : added) needed += value.height();
       float pageHeight = spec.height - spec.top - spec.bottom;
       float minimum = (footnotes.isEmpty() ? 12 : 0) + added.get(0).height();
-      if (y > spec.top
+      if (move
+          && y > spec.top
           && y + anchorHeight + noteHeight + needed > spec.height - spec.bottom
           && (anchorHeight + needed <= pageHeight
               || y + anchorHeight + noteHeight + minimum > spec.height - spec.bottom)) newPage();
@@ -3538,27 +3548,8 @@ public final class LayoutEngine {
           // them when they do not fit below it).
           boolean whole = keepTogether && (last - first <= available + .01f || y <= spec.top + .01f);
           if (whole) end = last;
-          // End this fragment after the first line containing a new note. This makes
-          // space reservation atomic with its anchor, including vertically merged cells.
-          for (CellLayout cell : group)
-            if (!whole)
-            for (int i = 0; i < cell.lines.size(); i++) {
-              var line = cell.lines.get(i);
-              float top = tops[cell.span.row] + cell.shift + (cell.turn != 0 ? 0 : cell.ys.get(i));
-              if (top < first - .01f || top >= end || top >= tops[cell.span.row + cell.span.rows])
-                continue;
-              final boolean[] hasNote = {false};
-              cell.paragraphs
-                  .get(i)
-                  .text
-                  .slice(line.start, line.end)
-                  .mapNotes(
-                      (offset, note) -> {
-                        if (!seenNotes.contains(note.id)) hasNote[0] = true;
-                        return note;
-                      });
-              if (hasNote[0]) end = Math.min(end, top + line.height);
-            }
+          // A splittable row splits by space alone, as Wordcraft's split_row: the notes of the
+          // part placed go below it and what does not fit continues on the next page.
           boolean changed;
           do {
             changed = false;
@@ -3594,7 +3585,7 @@ public final class LayoutEngine {
                         return note;
                       });
             }
-          reserveNotes(anchors, end - first);
+          reserveNotes(anchors, end - first, whole);
           emitCells(group, index, tops, first, end);
           y += end - first;
           first = end;
