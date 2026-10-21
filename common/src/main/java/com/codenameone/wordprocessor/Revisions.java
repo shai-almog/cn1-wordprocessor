@@ -49,8 +49,7 @@ public final class Revisions {
       for (String key : PageFurniture.KEYS)
         if (section.raw.furniture.stories.containsKey(key))
           collectBlocks(changes, section.raw.furniture.blocks(key), key, section.first, -1, -1);
-    for (Note note : Notes.all(d))
-      for (Paragraph p : note.paragraphs) collect(changes, p, "note:" + note.id, -1, -1, -1);
+    for (Note note : Notes.all(d)) collectBlocks(changes, note.blocks, "note:" + note.id, -1, -1, -1);
     return Collections.unmodifiableList(changes);
   }
 
@@ -251,7 +250,17 @@ public final class Revisions {
     for (Map.Entry<String, Section> entry : sections.entrySet())
       next.put(entry.getKey(), resolveSection(entry.getValue(), id, accept));
     var result = d.blocks(blocks, d.nextId).sections(next, resolveSection(d.lastSection, id, accept));
-    return Notes.map(result, note -> note.paragraphs(resolveParagraphs(note.paragraphs, id, accept)));
+    return Notes.map(result, note -> {
+      // Note stories hold tables and pictures too (resolved like the body's blocks).
+      var resolved = resolveBlocks(note.blocks, id, accept, new LinkedHashMap<>());
+      return sameBlocks(resolved, note.blocks) ? note : note.blocks(resolved);
+    });
+  }
+
+  private static boolean sameBlocks(Sequence<Block> a, Sequence<Block> b) {
+    if (a.size() != b.size()) return false;
+    for (int i = 0; i < a.size(); i++) if (a.get(i) != b.get(i)) return false;
+    return true;
   }
 
   private static Section resolveSection(Section section, String id, boolean accept) {

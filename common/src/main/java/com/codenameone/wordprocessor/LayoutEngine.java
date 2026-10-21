@@ -1319,7 +1319,11 @@ public final class LayoutEngine {
     return layoutOnce(Reflow.document(numbered, width), revision);
   }
 
+  /** The document being laid out: note stories lay out their tables and pictures against it. */
+  private Document noteDocument;
+
   public Result layout(Document doc, long revision) {
+    noteDocument = doc;
     if (!pageRestart(doc)) return layoutOnce(doc, revision);
     Document view = doc == numberedSource ? numberedView : Notes.numbered(doc, null);
     Result result = null;
@@ -1692,8 +1696,21 @@ public final class LayoutEngine {
       final float x, before, after;
       final String marker;
       final boolean beneath;
+      /** A table or picture of the note story, laid out as a header story's blocks are. */
+      final StoryLayout story;
+
+      NoteLine(String id, StoryLayout story) {
+        beneath = "beneathText".equals(noteOptions.footnote.pos);
+        this.id = id;
+        this.story = story;
+        line = null;
+        before = after = 0;
+        marker = "";
+        x = 0;
+      }
 
       NoteLine(Paragraph p, RawLine line, String marker, float before, float after) {
+        story = null;
         beneath = "beneathText".equals(noteOptions.footnote.pos);
         this.id = p.id;
         this.line = line;
@@ -1712,14 +1729,19 @@ public final class LayoutEngine {
       }
 
       float height() {
-        return before + line.height + after;
+        return before + (story != null ? story.height : line.height) + after;
       }
     }
 
     List<NoteLine> noteLines(Note note) {
       var result = new ArrayList<NoteLine>();
       var numbers = new ListNumbers();
-      for (Paragraph p : note.displayedParagraphs()) {
+      for (Block block : note.displayedBlocks()) {
+        if (!(block instanceof Paragraph p)) {
+          if (noteDocument != null)
+            result.add(new NoteLine(note.id, story(noteDocument, new Sequence<Block>().append(block), 0, Float.MAX_VALUE)));
+          continue;
+        }
         var measured = lines(p, spec.contentWidth());
         var marker = numbers.next(p);
         for (int i = 0; i < measured.size(); i++)
@@ -1784,6 +1806,16 @@ public final class LayoutEngine {
       for (NoteLine line : footnotes) beneath &= line.beneath;
       if (beneath) top = Math.min(top, y + 12);
       for (NoteLine value : footnotes) {
+        if (value.story != null) {
+          for (Line l : value.story.lines)
+            result.add(new Line(-2, -1, -1, l.paragraphId, pages.size(), l.x, top + l.y, raw(l), l.marker));
+          for (Box x : value.story.boxes)
+            boxes.add(new Box(-1, x.row, x.column, pages.size(), x.x, top + x.y, x.width, x.height, x.format).at(x.path));
+          for (PlacedPicture x : value.story.pictures)
+            pictures.add(new PlacedPicture(x.picture(), -1, pages.size(), x.x(), top + x.y(), x.width(), x.height()));
+          top += value.story.height;
+          continue;
+        }
         top += value.before;
         result.add(
             new Line(
@@ -2996,7 +3028,11 @@ public final class LayoutEngine {
       if (notes.isEmpty()) return;
       while (!pendingNotes.isEmpty()) newPage();
       if (y > spec.top) y += 12;
-      for (Note note : notes) for (Paragraph p : note.displayedParagraphs()) paragraph(p, -2, null);
+      for (Note note : notes)
+        for (Block block : note.displayedBlocks())
+          if (block instanceof Paragraph p) paragraph(p, -2, null);
+          else if (block instanceof Table t) table(t, -2);
+          else if (block instanceof Picture picture) picture(picture, -2);
       notes.clear();
     }
 

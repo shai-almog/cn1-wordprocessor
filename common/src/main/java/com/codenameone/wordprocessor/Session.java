@@ -126,10 +126,8 @@ public final class Session {
     Notes.Reference ref = null;
     for (Notes.Reference r : Notes.references(document)) if (r.note.id.equals(id)) ref = r;
     if (ref == null) throw new IllegalArgumentException("Unknown note");
-    var paragraphs = new Sequence<Block>();
-    for (Paragraph p : ref.note.paragraphs) paragraphs = paragraphs.append(p);
     var view =
-        new Document(paragraphs, document.page, document.title, document.nextId)
+        new Document(ref.note.blocks, document.page, document.title, document.nextId)
             .styles(document.styles)
             .trackChanges(document.trackChanges);
     var comments = new ArrayList<ReviewComment>();
@@ -159,7 +157,8 @@ public final class Session {
 
   /** Enters a cell of table {@code block} in the story being edited (body or cell). */
   public void enterNestedCell(int block, int row, int column) {
-    if (!inCell()) {
+    // A note story is a story of its own: its tables' cells nest inside it.
+    if (!inCell() && noteStory() == null) {
       enterCell(block, row, column);
       return;
     }
@@ -171,7 +170,7 @@ public final class Session {
   }
 
   private void openCell(int block, int row, int column) {
-    var outer = inCell() ? cell : null;
+    var outer = cell;
     var table = (Table) document.blocks.get(block);
     var owner = table.span(row, column);
     row = owner.row;
@@ -519,11 +518,10 @@ public final class Session {
     if (story == c.initial) return c.root;
     Document out;
     if (c.note != null) {
-      var paragraphs = new Sequence<Paragraph>();
-      for (Block block : story.blocks) paragraphs = paragraphs.append((Paragraph) block);
-      final var notes = paragraphs;
+      // The note story holds any body block (Wordcraft note parts): tables and pictures too.
+      final var notes = story.blocks;
       final String id = c.note;
-      out = Notes.map(c.root, n -> n.id.equals(id) ? n.paragraphs(notes) : n);
+      out = Notes.map(c.root, n -> n.id.equals(id) ? n.blocks(notes) : n);
       out = out.blocks(out.blocks, story.nextId);
     } else {
       var table = (Table) c.root.blocks.get(c.block);
@@ -736,7 +734,8 @@ public final class Session {
     transactionDepth++;
     try {
       edit.apply(this);
-      int[] notePath = cellPath();
+      // A cell of a table inside a note story stays where it is (its path is note-relative).
+      int[] notePath = cell != null && cell.top().note != null ? new int[0] : cellPath();
       var noteCells = cells;
       var noteSpan = span;
       var noteSelection = selection;
@@ -2495,8 +2494,6 @@ public final class Session {
 
   public void insertPicture(
       final byte[] bytes, final float width, final float height, final String alt) {
-    if (noteStory() != null)
-      throw new IllegalArgumentException("Pictures cannot be inserted in a note");
     final var input = new Picture("pending", bytes, width, height, alt, "left");
     transact(
         s -> {
@@ -2531,8 +2528,6 @@ public final class Session {
 
   /** Inserts a prepared picture or drawing at the selection; returns its block index. */
   public int insertPicture(final Picture input) {
-    if (noteStory() != null)
-      throw new IllegalArgumentException("Pictures cannot be inserted in a note");
     final int[] at = {0};
     transact(
         s -> {

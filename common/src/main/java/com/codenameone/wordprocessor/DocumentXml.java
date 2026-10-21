@@ -374,7 +374,11 @@ public final class DocumentXml {
                 .append(Xml.escape(note.label))
                 .append("\">");
             run(o, "", style);
-            for (Paragraph paragraph : note.paragraphs) paragraph(b, paragraph);
+            // Note stories hold tables and pictures as the body does (older files: paragraphs).
+            for (Block block : note.blocks)
+              if (block instanceof Paragraph para) paragraph(b, para);
+              else if (block instanceof Table t) table(b, t);
+              else if (block instanceof Picture picture) picture(b, picture);
             b.append("</note>");
           }
 
@@ -696,8 +700,11 @@ public final class DocumentXml {
         s = s.formatRevision(formatting, RevisionFormats.readStyle(r, "before-"));
       if (note) {
         String noteId = id(node, ids);
-        var story = new Sequence<Paragraph>();
-        for (Element p : Xml.children(node, "p")) story = story.append(readParagraph(p, ids));
+        var story = new Sequence<Block>();
+        for (Element c : Xml.children(node, null))
+          if ("p".equals(Xml.local(c))) story = story.append(readParagraph(c, ids));
+          else if ("table".equals(Xml.local(c))) story = story.append(readTable(c, ids));
+          else if ("picture".equals(Xml.local(c))) story = story.append(readPicture(c, ids));
         text =
             text.concat(
                 RichText.note(

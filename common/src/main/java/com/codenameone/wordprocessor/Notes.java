@@ -98,8 +98,9 @@ public final class Notes {
         var id = "n" + next[0]++;
         while (reserved.contains(id) || !ids.add(id)) id = "n" + next[0]++;
         reserved.add(id);
-        var story = new Sequence<Paragraph>();
-        for (Paragraph p : note.paragraphs) story = story.append(p.copy("p" + next[0]++, p.text));
+        var story = new Sequence<Block>();
+        for (Block b : note.blocks)
+          story = story.append(b instanceof Paragraph p ? p.copy("p" + next[0]++, p.text) : b);
         note = new Note(id, note.kind, note.mark, note.label, story);
       }
       return note;
