@@ -396,6 +396,20 @@ public final class Table implements Block {
     return new Table(id, spans, format, cells);
   }
 
+  /**
+   * The paragraph {@code id} of cell (r, c), or of the nested cell at {@code path} inside it
+   * (block, row, column triples as LayoutEngine.Line#path); null when absent.
+   */
+  public Paragraph paragraph(int r, int c, int[] path, String id) {
+    var content = blocks(r, c);
+    for (int i = 0; i + 2 < path.length; i += 3) {
+      if (path[i] >= content.size() || !(content.get(path[i]) instanceof Table inner)) return null;
+      content = inner.blocks(path[i + 1], path[i + 2]);
+    }
+    for (Block b : content) if (b instanceof Paragraph p && p.id.equals(id)) return p;
+    return null;
+  }
+
   /** A copy with fresh table and paragraph ids at every nesting level (for paste). */
   public Table renumbered(long[] id) {
     var out = new ArrayList<List<Sequence<Block>>>();

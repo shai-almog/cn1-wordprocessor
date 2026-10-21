@@ -224,11 +224,17 @@ public final class Session {
     integratedSource = null;
   }
 
+  /** The story holding the edited cell's table: the body, or the enclosing cell's story. */
+  public Document levelDocument() {
+    if (cell == null || cell.parent == null) return document();
+    return integrate(cell, document);
+  }
+
   /** Tab traverses owning cells; tabbing beyond the final cell adds a row. */
   public void nextCell(boolean backwards) {
     if (!inCell()) return;
     int block = cell.block, row = cell.row, column = cell.column;
-    var table = (Table) document().blocks.get(block);
+    var table = (Table) levelDocument().blocks.get(block);
     int index = row * table.columns() + column;
     for (; ; ) {
       index += backwards ? -1 : 1;
@@ -253,7 +259,7 @@ public final class Session {
 
   /** Select whole cells without changing document content or creating undo history. */
   public void selectCells(int block, int anchorRow, int anchorColumn, int row, int column) {
-    var root = document();
+    var root = levelDocument();
     if (block < 0 || block >= root.blocks.size() || !(root.blocks.get(block) instanceof Table))
       throw new IllegalArgumentException("Select a table");
     var next =
@@ -275,7 +281,7 @@ public final class Session {
     if (range == null) throw new IllegalStateException("Select cells first");
     transact(
         s -> {
-          var table = (Table) document().blocks.get(range.block);
+          var table = (Table) levelDocument().blocks.get(range.block);
           for (int r = range.firstRow; r <= range.lastRow; r++)
             for (int c = range.firstColumn; c <= range.lastColumn; c++) {
               if (table.covered(r, c)) continue;

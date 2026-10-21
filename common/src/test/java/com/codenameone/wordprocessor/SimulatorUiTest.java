@@ -390,6 +390,47 @@ public class SimulatorUiTest {
         });
   }
 
+  @Test
+  public void clickEntersNestedTableCellAndDrawsItsCaret() throws Exception {
+    final int[] point = new int[2];
+    final int[][] path = new int[1][];
+    edt(() -> ((Form) field(app, "form")).show());
+    for (int i = 0; i < 100 && Display.getInstance().getCurrent() != field(app, "form"); i++)
+      Thread.sleep(50);
+    edt(
+        () -> {
+          load("Body");
+          var s = session();
+          s.select(0, 4, 4);
+          s.insertTable(1, 2);
+          s.replace("outer");
+          s.insertTable(2, 2);
+          s.nextCell(false);
+          s.replace("inner");
+          path[0] = s.cellPath();
+          assertEquals(6, path[0].length);
+          Form form = (Form) field(app, "form");
+          form.revalidate();
+          editor().resetScroll();
+          editor().refresh();
+          s.select(0, 2, 2);
+          int[] r = editor().getCaretRect();
+          assertNotNull("caret drawn in the nested cell", r);
+          point[0] = r[0] + 1;
+          point[1] = r[1] + Math.max(1, r[3] / 2);
+          s.leaveCell();
+          editor().refresh();
+        });
+    edt(
+        () -> {
+          var editor = editor();
+          editor.pointerPressed(point[0], point[1]);
+          editor.pointerReleased(point[0], point[1]);
+          assertArrayEquals(path[0], session().cellPath());
+          assertEquals(2, session().selection().caret);
+        });
+  }
+
   // ---- 4. Raw key fallback and the Speech group --------------------------------------------
 
   @Test

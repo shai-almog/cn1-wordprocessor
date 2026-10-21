@@ -627,6 +627,28 @@ public final class EditorSurface extends Container
   private int composingStart = -1, composingEnd = -1;
   private int dragBlock = -1, dragAnchor;
   private int dragTable = -1, dragRow, dragColumn;
+
+  /** The drag's cell path minus its last triple: the story holding the dragged table. */
+  private int[] dragPrefix = new int[0];
+
+  /** Records the pressed cell (innermost table level) for cell-range dragging. */
+  private void dragFrom(LayoutEngine.Line line) {
+    int[] path = linePath(line);
+    int n = path.length;
+    dragTable = n == 0 ? -1 : path[n - 3];
+    dragRow = n == 0 ? -1 : path[n - 2];
+    dragColumn = n == 0 ? -1 : path[n - 1];
+    dragPrefix = n == 0 ? path : java.util.Arrays.copyOf(path, n - 3);
+  }
+
+  /** The line's cell in the dragged table as {row, column}, or null outside it. */
+  private int[] dragCell(LayoutEngine.Line line) {
+    int[] path = linePath(line);
+    int n = path.length;
+    if (n != dragPrefix.length + 3 || path[n - 3] != dragTable) return null;
+    for (int i = 0; i < dragPrefix.length; i++) if (path[i] != dragPrefix[i]) return null;
+    return new int[] {path[n - 2], path[n - 1]};
+  }
   private boolean reflow = OfficeTheme.mobile(), touchMoved, touchSelecting, showMarks;
   private int touchX, touchY, dragHandle;
   private float pinchStart;
@@ -1486,7 +1508,7 @@ public final class EditorSurface extends Container
             bh = Math.round(box.height * scale);
         var selectedCells = session.cellSelection();
         g.setColor(
-            selectedCells != null && selectedCells.contains(box.block, box.row, box.column)
+            selectedCells != null && selectedBox(selectedCells, box)
                 ? 0xc5e9e6
                 : box.format.background);
         g.fillRect(bx, by, bw, bh);
@@ -1866,17 +1888,47 @@ public final class EditorSurface extends Container
     return a.sameStory(b) ? Integer.compare(a.paragraph, b.paragraph) : a.compareTo(b);
   }
 
+  /** Whether {@code box} is a cell of the selected cell range's (possibly nested) table. */
+  private boolean selectedBox(CellSelection range, LayoutEngine.Box box) {
+    int[] at = session.cellPath();
+    int n = at.length;
+    if (n < 3 || box.path.length + 3 != n) return false;
+    int[] full = new int[n];
+    full[0] = box.block;
+    full[1] = box.row;
+    full[2] = box.column;
+    System.arraycopy(box.path, 0, full, 3, box.path.length);
+    for (int i = 0; i < n - 3; i++) if (full[i] != at[i]) return false;
+    return full[n - 3] == range.block && range.contains(range.block, full[n - 2], full[n - 1]);
+  }
+
+  /** The cell path (Session.cellPath) of a line: empty for body lines. */
+  static int[] linePath(LayoutEngine.Line line) {
+    if (line.row < 0) return new int[0];
+    int[] out = new int[3 + line.path.length];
+    out[0] = line.block;
+    out[1] = line.row;
+    out[2] = line.column;
+    System.arraycopy(line.path, 0, out, 3, line.path.length);
+    return out;
+  }
+
+  private static boolean samePath(LayoutEngine.Box box, LayoutEngine.Line line) {
+    return box.block == line.block
+        && box.row == line.row
+        && box.column == line.column
+        && java.util.Arrays.equals(box.path, line.path);
+  }
+
   private int editingBlock(LayoutEngine.Line line) {
     // A note story being edited is not drawn as the editing story (its first line carries the
     // note label), so body lines are not mistaken for it.
     if (session.noteStory() != null) return -1;
     if (!session.inCell()) return line.row < 0 ? line.block : -1;
-    if (line.block != session.cellBlock()
-        || line.row != session.cellRow()
-        || line.column != session.cellColumn()) return -1;
+    if (!java.util.Arrays.equals(linePath(line), session.cellPath())) return -1;
     var d = session.editingDocument();
     for (int i = 0; i < d.blocks.size(); i++)
-      if (d.paragraph(i).id.equals(line.paragraphId)) return i;
+      if (d.blocks.get(i) instanceof Paragraph p && p.id.equals(line.paragraphId)) return i;
     return -1;
   }
 
@@ -1923,9 +1975,10 @@ public final class EditorSurface extends Container
 
   private Paragraph lineParagraph(LayoutEngine.Line line) {
     if (line.row < 0) return session.document().paragraph(line.block);
-    for (Paragraph p :
-        ((Table) session.document().blocks.get(line.block)).cell(line.row, line.column))
-      if (p.id.equals(line.paragraphId)) return p;
+    var p =
+        ((Table) session.document().blocks.get(line.block))
+            .paragraph(line.row, line.column, line.path, line.paragraphId);
+    if (p != null) return p;
     throw new IllegalStateException("Missing cell paragraph");
   }
 
@@ -2080,9 +2133,8 @@ public final class EditorSurface extends Container
         if (px < box.x || px > box.x + box.width || py < box.y || py > box.y + box.height) continue;
         float best = Float.MAX_VALUE;
         for (LayoutEngine.Line candidate : layout().pages.get(page).lines) {
-          if (candidate.block != box.block
-              || candidate.row != box.row
-              || candidate.column != box.column) continue;
+          // Nested cell boxes follow their outer cell's box, so the innermost box wins.
+          if (!samePath(box, candidate)) continue;
           float distance = Math.abs(py - candidate.y - candidate.height / 2);
           if (distance < best) {
             best = distance;
@@ -2094,7 +2146,7 @@ public final class EditorSurface extends Container
     if (line == null) return;
     stopInput();
     if (line.row < 0 && clickInlineEquation(line, x, y)) return;
-    if (line.row >= 0) session.enterCell(line.block, line.row, line.column);
+    if (line.row >= 0) session.enterCellPath(linePath(line));
     else session.leaveCell();
     int block = editingBlock(line), offset = offsetAt(line, x);
     if (block < 0) return;
@@ -2121,9 +2173,7 @@ public final class EditorSurface extends Container
       session.select(block, a, z);
       dragBlock = -1;
     }
-    dragTable = line.row < 0 ? -1 : line.block;
-    dragRow = line.row;
-    dragColumn = line.column;
+    dragFrom(line);
     startInput();
     refresh();
     changed.run();
@@ -2154,13 +2204,11 @@ public final class EditorSurface extends Container
       return;
     }
     var line = lineAt(x, y);
-    if (line != null
+    int[] over = line == null || dragTable < 0 ? null : dragCell(line);
+    if (over != null
         && dragBlock >= 0
-        && dragTable >= 0
-        && line.block == dragTable
-        && line.row >= 0
-        && (line.row != dragRow || line.column != dragColumn || session.cellSelection() != null)) {
-      session.selectCells(dragTable, dragRow, dragColumn, line.row, line.column);
+        && (over[0] != dragRow || over[1] != dragColumn || session.cellSelection() != null)) {
+      session.selectCells(dragTable, dragRow, dragColumn, over[0], over[1]);
       rememberLine(line);
       refresh();
       changed.run();
@@ -2203,7 +2251,7 @@ public final class EditorSurface extends Container
     }
     var line = lineAt(x, y);
     if (line == null) return;
-    if (line.row >= 0) session.enterCell(line.block, line.row, line.column);
+    if (line.row >= 0) session.enterCellPath(linePath(line));
     else session.leaveCell();
     var text = lineParagraph(line).text.toString();
     int offset = Math.min(offsetAt(line, x), text.length());
@@ -2212,9 +2260,7 @@ public final class EditorSurface extends Container
     session.select(editingBlock(line), a, z);
     dragBlock = editingBlock(line);
     dragAnchor = a;
-    dragTable = line.row < 0 ? -1 : line.block;
-    dragRow = line.row;
-    dragColumn = line.column;
+    dragFrom(line);
     touchSelecting = true;
     startInput();
     refresh();
@@ -2738,7 +2784,7 @@ public final class EditorSurface extends Container
           || (command == KEY_RIGHT || command == KEY_DOWN) && end)) return false;
     }
     int tableBlock = session.cellBlock();
-    var table = (Table) session.document().blocks.get(tableBlock);
+    var table = (Table) session.levelDocument().blocks.get(tableBlock);
     if (range != null && !extend) {
       boolean end = command == KEY_RIGHT || command == KEY_DOWN;
       session.enterCell(
