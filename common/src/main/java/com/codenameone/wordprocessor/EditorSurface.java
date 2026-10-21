@@ -2089,6 +2089,9 @@ public final class EditorSurface extends Container
     if (input == null) startInput();
   }
 
+  /** Test hook: the JUnit simulator has no text input API; skip the modal warning there. */
+  static boolean quietWithoutInput;
+
   public void startInput() {
     requestFocus();
     // Explicit focus entry rebinds the editor after a native field or dialog
@@ -2103,6 +2106,7 @@ public final class EditorSurface extends Container
       }
     }
     if (input == null) {
+      if (quietWithoutInput) return;
       Dialog.show(
           "Keyboard unavailable",
           "This port does not expose the low-level text input API required by the document canvas.",

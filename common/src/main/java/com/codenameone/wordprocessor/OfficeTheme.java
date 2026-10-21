@@ -12,7 +12,11 @@ final class OfficeTheme {
       CANVAS = 0xe6e6e6, BORDER = 0xe1e1e1, BORDER_STRONG = 0xc8c8c8, INPUT_BORDER = 0x8a8a8a,
       DIM = 0x616161, GROUP_LABEL = 0x707070, HOVER = 0xe6e6e6, PRESSED = 0xd6d6d6, CHECKED = 0xdde3f8;
 
+  /** Test hook: forces the phone/tablet layout (true), desktop (false), or detection (null). */
+  static Boolean mobileOverride;
+
   static boolean mobile() {
+    if (mobileOverride != null) return mobileOverride.booleanValue();
     return !Display.getInstance().isDesktop()
         && ("ios".equals(Display.getInstance().getPlatformName())
             || "and".equals(Display.getInstance().getPlatformName())
@@ -115,6 +119,9 @@ final class OfficeTheme {
     }
     b.getPressedStyle().setBgColor(ACCENT_TEXT);
     b.getAllStyles().setBorder(OfficeBorder.of(-1, 4));
+    // The accent fill with white text reads in every appearance (as Word's dark Share button);
+    // mapping it turned the label near-black on a dimmed blue.
+    b.putClientProperty(FIXED_COLORS, Boolean.TRUE);
     var glyph = b.getClientProperty("officeTheme.icon");
     if (glyph instanceof int[] ints) icon(b, (char) ints[0], ints[1], 0xffffff);
   }
@@ -328,7 +335,13 @@ final class OfficeTheme {
    * Recolors a chrome tree for the active appearance. Components that paint the document
    * (and anything inside the page, such as cell editors) keep their own background only.
    */
+  private static final String FIXED_COLORS = "officeTheme.fixed";
+
   static void applyAppearance(Component root) {
+    if (root.getClientProperty(FIXED_COLORS) != null) {
+      recurse(root);
+      return;
+    }
     Style[] styles = {
       root.getUnselectedStyle(), root.getSelectedStyle(), root.getPressedStyle(),
       root.getDisabledStyle()
