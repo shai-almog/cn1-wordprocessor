@@ -82,6 +82,14 @@ final class PdfDrawings {
       float x = ox + t.x(), baseline = oy - t.y() - t.size();
       if ("center".equals(t.align())) x += (t.width() - width) / 2;
       else if ("right".equals(t.align())) x += t.width() - width;
+      if (t.spin() != 0) {
+        // Letters turned with their rotated group (clockwise on the page) about the box centre.
+        double a = Math.toRadians(-t.spin());
+        float cos = (float) Math.cos(a), sin = (float) Math.sin(a);
+        float cx = ox + t.x() + t.width() / 2, cy = oy - t.y() - t.size() / 2;
+        c.append("q ").append(n(cos)).append(' ').append(n(sin)).append(' ').append(n(-sin)).append(' ').append(n(cos))
+            .append(' ').append(n(cx - cx * cos + cy * sin)).append(' ').append(n(cy - cx * sin - cy * cos)).append(" cm ");
+      }
       c.append("BT ").append(rgb(t.color())).append(" rg ");
       if (t.outline() >= 0) c.append(rgb(t.outline())).append(" RG 0.75 w 2 Tr ");
       if (shown == null) c.append(t.bold() ? "/F1 " : "/F0 ").append(n(t.size())).append(" Tf ");
@@ -96,6 +104,7 @@ final class PdfDrawings {
             .append(n(baseline));
       if (shown != null) c.append(" Tm ").append(shown).append(" ET\n");
       else c.append(" Tm (").append(s).append(") Tj ET\n");
+      if (t.spin() != 0) c.append("Q\n");
     }
     c.append("Q\n");
   }

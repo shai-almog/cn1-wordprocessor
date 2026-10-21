@@ -264,6 +264,10 @@ public final class EditorSurface extends Container
       int width = f.stringWidth(t.text());
       int tx = px + Math.round(t.x() * scale), ty = py + Math.round(t.y() * scale);
       int box = Math.round(t.width() * scale);
+      float spin = t.spin();
+      int scx = px + Math.round((t.x() + t.width() / 2) * scale), scy = py + Math.round((t.y() + t.size() / 2) * scale);
+      if (spin != 0) g.rotate((float) Math.toRadians(spin), scx, scy);
+      try {
       if (t.rotation() != 0) {
         float cx = px + t.x() * scale, cy = py + t.y() * scale;
         g.rotate((float) Math.toRadians(t.rotation()), Math.round(cx), Math.round(cy));
@@ -282,6 +286,9 @@ public final class EditorSurface extends Container
       }
       g.setColor(t.color());
       g.drawString(t.text(), tx, ty);
+      } finally {
+        if (spin != 0) g.rotate((float) -Math.toRadians(spin), scx, scy);
+      }
     }
     g.setAntiAliased(aa);
   }

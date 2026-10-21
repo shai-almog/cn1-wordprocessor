@@ -61,7 +61,13 @@ public final class DrawingOps {
   /** One line of text placed in a box; renderers align it with real font metrics. */
   public record Text(
       String text, float x, float y, float width, float size, int color, boolean bold,
-      boolean italic, String align, int outline, int rotation) {}
+      boolean italic, String align, int outline, int rotation, float spin) {
+    public Text(
+        String text, float x, float y, float width, float size, int color, boolean bold,
+        boolean italic, String align, int outline, int rotation) {
+      this(text, x, y, width, size, color, bold, italic, align, outline, rotation, 0);
+    }
+  }
 
   public static final class Ops {
     public final List<Path> paths = new ArrayList<>();
@@ -132,7 +138,7 @@ public final class DrawingOps {
           rotate(child, 0, 0, 0, mw / 2, mh / 2, Drawing.decode(f.get(4)).num("rotation", 0));
           for (Path p : child.paths) offset(p.points, x, y);
           for (Text t : child.texts)
-            ops.texts.add(new Text(t.text, t.x + x, t.y + y, t.width, t.size, t.color, t.bold, t.italic, t.align, t.outline, t.rotation));
+            ops.texts.add(new Text(t.text, t.x + x, t.y + y, t.width, t.size, t.color, t.bold, t.italic, t.align, t.outline, t.rotation, t.spin));
           for (Image m : child.images)
             ops.images.add(new Image(m.data, m.x + x, m.y + y, m.width, m.height, m.rotation));
           ops.paths.addAll(child.paths);
@@ -176,8 +182,9 @@ public final class DrawingOps {
       Text t = ops.texts.get(i);
       float dx = t.x + t.width / 2 - cx, dy = t.y + t.size / 2 - cy;
       float nx = cx + dx * cos - dy * sin, ny = cy + dx * sin + dy * cos;
+      // As Wordcraft's Draw::Rotated: the letters turn with the shape (spin about the box centre).
       ops.texts.set(i, new Text(t.text, nx - t.width / 2, ny - t.size / 2, t.width, t.size, t.color, t.bold, t.italic,
-          t.align, t.outline, t.rotation));
+          t.align, t.outline, t.rotation, (t.spin + deg) % 360));
     }
     for (int i = image; i < ops.images.size(); i++) {
       Image m = ops.images.get(i);
