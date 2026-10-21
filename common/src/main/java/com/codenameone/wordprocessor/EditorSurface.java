@@ -92,9 +92,44 @@ public final class EditorSurface extends Container
 
   /** Inserts a Structures gallery template in the equation being edited. */
   public void equationTemplate(String linear) {
+    equationTemplate(linear, "");
+  }
+
+  /** A Structures template with its forced n-ary limit placement ("" keeps the default). */
+  public void equationTemplate(String linear, String limits) {
     if (equation == null && !editEquation()) return;
-    equation.insertTemplate(linear);
+    equation.insertTemplate(linear, limits);
     didEdit();
+  }
+
+  /** Applies a structure action (Insert Row Below, Remove Brackets, ...) at the equation caret. */
+  public boolean equationStructure(int level, String action) {
+    if (equation == null || !equation.structure(level, action)) return false;
+    didEdit();
+    return true;
+  }
+
+  /**
+   * A click on a display equation: in-place editing starts with the caret at the clicked slot
+   * position, as Wordcraft's equation_hit. False when (px, py) (page points) is not on one.
+   */
+  private boolean clickEquation(LayoutEngine.PlacedPicture pic, float px, float py) {
+    var d = pic.picture().drawing;
+    if (readOnly() || d == null || !"equation".equals(d.kind)) return false;
+    var e = EquationEditing.at(session, pic.block());
+    if (e == null) return false;
+    e.hit(d, pic.width(), pic.height(), fontMetrics, px - pic.x(), py - pic.y());
+    equation = e;
+    repaint();
+    return true;
+  }
+
+  /** Test hook: a click at page-point ({@code px}, {@code py}) on the display equation in {@code block}. */
+  boolean clickEquationForTest(int block, float px, float py) {
+    for (var page : layout().pages)
+      for (LayoutEngine.PlacedPicture pic : page.pictures)
+        if (pic.block() == block) return clickEquation(pic, pic.x() + px, pic.y() + py);
+    return false;
   }
 
   /** Keys while an equation is edited in place; true when consumed. */
@@ -1980,6 +2015,7 @@ public final class EditorSurface extends Container
       for (LayoutEngine.PlacedPicture pic : layout().pages.get(page).pictures) {
         if (px >= pic.x() && px <= pic.x() + pic.width() && py >= pic.y() && py <= pic.y() + pic.height()) {
           stopInput();
+          if (clickEquation(pic, px, py)) return;
           if (pictureEditor != null) pictureEditor.edit(pic.block());
           return;
         }
@@ -2684,12 +2720,13 @@ public final class EditorSurface extends Container
       repaint();
       return;
     }
-    session.breakTypingGroup();
     finishComposing();
     if (equation != null) {
+      // Moving inside an equation keeps its typing undo group, as Wordcraft's pure equation.move.
       if (equationKey(command, modifiers)) return;
       endEquation(false);
     }
+    session.breakTypingGroup();
     var x = session.selection();
     var p = session.editingDocument().paragraph(x.block);
     boolean extend = (modifiers & MOD_SHIFT) != 0;

@@ -1,6 +1,8 @@
 package com.codenameone.wordprocessor;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -471,6 +473,47 @@ public class SimulatorUiTest {
           m.setAccessible(true);
           Container insert = (Container) m.invoke(app);
           assertNotNull("SmartArt button", named(insert, "SmartArt"));
+        });
+  }
+
+  @Test
+  public void equationTabAndInEquationCaret() throws Exception {
+    edt(
+        () -> {
+          Method m = WordProcessor.class.getDeclaredMethod("equationRibbon");
+          m.setAccessible(true);
+          Container tab = (Container) m.invoke(app);
+          for (String n : new String[] {"Edit in Place", "Structure\u2026", "Done"}) assertNotNull(n, named(tab, n));
+          var session = session();
+          session.replaceDocument(Document.empty());
+          new Commands().execute(session, "insert.equation", Json.object("text", "a/b", "display", true));
+          editor().refresh();
+          int block = -1;
+          for (int i = 0; i < session.document().blocks.size(); i++)
+            if (session.document().blocks.get(i) instanceof Picture) block = i;
+          // A click on the equation enters it with the caret at the clicked slot (the
+          // denominator, below the middle), through the editor's own click handling.
+          var e0 = EquationEditing.at(session, block);
+          var d = ((Picture) session.document().blocks.get(block)).drawing;
+          e0.editor.pos = new EquationEditor.Pos(new int[] {0, 1}, 1);
+          LayoutEngine.PlacedPicture pic = null;
+          for (var page : editor().layout().pages)
+            for (var p : page.pictures) if (p.block() == block) pic = p;
+          assertNotNull(pic);
+          float[] den = e0.caret(d, pic.width(), pic.height(), new PdfMetrics());
+          assertTrue(editor().clickEquationForTest(block, den[0], den[1] + den[2] / 2));
+          var e = editor().equationEditing();
+          assertNotNull(e);
+          assertArrayEquals(new int[] {0, 1}, e.editor.pos.path);
+          editor().commitText("2");
+          assertEquals("a/(b2)", ((Picture) session.document().blocks.get(block)).drawing.get("text", ""));
+          // Up moves to the numerator; Escape leaves.
+          key(TextInputClient.KEY_UP, 0);
+          assertArrayEquals(new int[] {0, 0}, editor().equationEditing().editor.pos.path);
+          assertTrue(editor().equationStructure(0, "frac.skewed"));
+          assertTrue(((Picture) session.document().blocks.get(block)).drawing.get("text", "").contains("\u2044"));
+          editor().endEquation(false);
+          assertNull(editor().equationEditing());
         });
   }
 }

@@ -216,11 +216,43 @@ public final class Session {
 
   /** End a typing undo group at an explicit command, focus or selection boundary. */
   public void breakTypingGroup() {
+    groupKey = null;
+    groupUndo = null;
+    groupDocument = null;
     typedDocument = null;
     typedSelection = null;
     typedCell = null;
     typingUndo = null;
     typedLength = 0;
+  }
+
+  private Object groupKey;
+  private State groupUndo;
+  private Document groupDocument;
+
+  /**
+   * Runs {@code edit} as one undo step joined to the previous call with the same {@code key}
+   * while nothing else happened in between (Wordcraft's "Typing" group for typing inside an
+   * equation). Any other edit, command or {@link #breakTypingGroup} starts a new step.
+   */
+  public void transactGrouped(Object key, Edit edit) {
+    boolean join = key != null && key.equals(groupKey) && groupDocument == document && !undo.isEmpty()
+        && undo.get(undo.size() - 1) == groupUndo;
+    State group = join ? groupUndo : null;
+    breakTypingGroup();
+    var before = document;
+    typingEdit = true;
+    mergingTyping = join;
+    try {
+      transact(edit);
+      if (document != before && !undo.isEmpty()) {
+        groupKey = key;
+        groupUndo = join ? group : undo.get(undo.size() - 1);
+        groupDocument = document;
+      }
+    } finally {
+      typingEdit = mergingTyping = false;
+    }
   }
 
   /**

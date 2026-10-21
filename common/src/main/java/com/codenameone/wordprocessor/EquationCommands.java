@@ -12,7 +12,12 @@ public final class EquationCommands implements Commands.Extension {
             + " newline: 'type:<text>' (Math AutoCorrect and build-up on space/relations as in Word),"
             + " 'template:<linear>' (a Structures gallery template; the caret goes to its first empty"
             + " slot), 'left', 'right', 'up', 'down', 'home', 'end', 'next', 'prev' (Tab between empty"
-            + " slots), 'backspace', 'delete', 'enter' (build up)", (s, a) -> {
+            + " slots), 'backspace', 'delete', 'enter' (build up), 'limits:<undOvr|subSup>:<linear>' (a"
+            + " template with forced limit placement), 'structure:<action>' (the innermost structure"
+            + " offering it: matrix.rowAbove/rowBelow/colBefore/colAfter/deleteRow/deleteCol, frac.bar/"
+            + "skewed/linear/noBar, rad.toggleDegree, nary.limitsSide/limitsUnder/toggleLower/toggleUpper,"
+            + " delim.addSeparator/deleteArgument, script.removeSub/removeSup/addSub/addSup, eqarr.rowAbove/"
+            + "rowBelow/deleteRow, group.flip, bar.flip, remove)", (s, a) -> {
           var e = EquationEditing.at(s, a.containsKey("block") ? Commands.integer(a, "block") : -1);
           if (e == null) throw new IllegalArgumentException("Select an equation");
           e.normalText = Commands.flag(a, "normal", false);
@@ -20,6 +25,15 @@ public final class EquationCommands implements Commands.Extension {
           for (String step : TextUtil.split(Commands.str(a, "steps"), '\n')) {
             if (step.startsWith("type:")) ed.type(step.substring(5), e.normalText);
             else if (step.startsWith("template:")) ed.insertTemplate(step.substring(9), "");
+            else if (step.startsWith("limits:")) {
+              // limits:<undOvr|subSup>:<linear>, a template with forced n-ary limit placement.
+              String rest = step.substring(7);
+              int colon = rest.indexOf(':');
+              if (colon < 0) throw new IllegalArgumentException("limits:<undOvr|subSup>:<linear>");
+              ed.insertTemplate(rest.substring(colon + 1), rest.substring(0, colon));
+            } else if (step.startsWith("structure:")) {
+              if (!structure(ed, step.substring(10))) throw new IllegalArgumentException("Not available here: " + step);
+            }
             else if ("backspace".equals(step)) ed.deleteBack();
             else if ("delete".equals(step)) ed.deleteForward();
             else if ("enter".equals(step)) ed.finish();
@@ -34,6 +48,13 @@ public final class EquationCommands implements Commands.Extension {
     c.query("equation.gallery", "",
         "The Equation tab's Structures galleries (id, label, sections of templates) and Symbols sets",
         (s, a) -> gallery());
+  }
+
+  /** Applies {@code action} to the innermost structure around the caret that offers it. */
+  static boolean structure(EquationEditor ed, String action) {
+    for (String[] a : ed.structureActions())
+      if (a[1].equals(action)) return ed.applyStructure(Integer.parseInt(a[0]), action);
+    return false;
   }
 
   private static boolean move(EquationEditor ed, String dir) {

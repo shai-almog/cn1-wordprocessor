@@ -347,11 +347,17 @@ final class EquationEditor {
     pos = pos.with(pos.off + text.length());
   }
 
-  /** Inserts a structure template in linear form; the caret goes to its first empty slot. */
+  /**
+   * Inserts a structure template in linear form; the caret goes to its first empty slot.
+   * {@code limits} ("undOvr", "subSup"; empty keeps the operator's default) forces the limit
+   * placement of the template's n-ary operators, as Wordcraft's {@code set_limits}; the linear
+   * writer keeps a non-default placement (see {@link Equation#SIDE_LIMITS}).
+   */
   void insertTemplate(String linear, String limits) {
-    // Wordcraft also forces stacked or side limits for some templates; linear text (how the
-    // document stores an equation) cannot carry the placement, so the parser's default is kept.
-    insertNodes(parse(linear));
+    List<N> nodes = parse(linear);
+    if (limits != null && !limits.isEmpty())
+      for (N n : nodes) if ("nary".equals(n.kind)) n.b = limits;
+    insertNodes(nodes);
   }
 
   void insertNodes(List<N> nodes) {
@@ -758,12 +764,13 @@ final class EquationEditor {
     return !"eqArr".equals(n.kind) && !"m".equals(n.kind);
   }
 
-  private static boolean unbalanced(List<N> nodes, int depth) {
+  private static boolean unbalanced(List<N> nodes, int depth, boolean oneSided) {
     if (depth > MAX_DEPTH) return false;
     for (N n : nodes) {
       if (n.run() && n.text.indexOf('\\') >= 0) return true;
-      if ("d".equals(n.kind) && !n.a.isEmpty() && n.b.isEmpty()) return true;
-      for (List<N> s : n.slots) if (unbalanced(s, depth + 1)) return true;
+      // A bracket left open by typing; a one-sided template group (written with U+2524) is not.
+      if ("d".equals(n.kind) && !n.a.isEmpty() && n.b.isEmpty() && !oneSided) return true;
+      for (List<N> s : n.slots) if (unbalanced(s, depth + 1, oneSided)) return true;
     }
     return false;
   }
@@ -773,8 +780,13 @@ final class EquationEditor {
     int depth = 0;
     for (int i = 0; i < text.length(); i++) {
       char c = text.charAt(i);
-      if ("([{\u3016\u27e8\u2308\u230a".indexOf(c) >= 0) depth++;
-      else if (")]}\u3017\u27e9\u2309\u230b".indexOf(c) >= 0) depth--;
+      if (c == '\u251c') {
+        // An explicit group's brackets are written by the user as characters, not nesting.
+        int close = text.indexOf('\u2524', i);
+        if (close < 0) return true;
+        i = close;
+      } else if ("([{\u3016\u27e8\u2308\u230a\u27e6".indexOf(c) >= 0) depth++;
+      else if (")]}\u3017\u27e9\u2309\u230b\u27e7\u2524".indexOf(c) >= 0) depth--;
     }
     return depth > 0;
   }
@@ -801,7 +813,7 @@ final class EquationEditor {
     tidy(built, 0);
     List<N> merged = copyAll(region);
     tidy(merged, 0);
-    if (describe(merged).equals(describe(built)) || unbalanced(built, 0)) {
+    if (describe(merged).equals(describe(built)) || unbalanced(built, 0, text.indexOf('\u2524') >= 0)) {
       tidy();
       return false;
     }
@@ -864,6 +876,274 @@ final class EquationEditor {
     boolean changed = autocorrect();
     changed |= buildUp();
     return changed;
+  }
+
+  // ------------------------------------------------------------------------ structure actions
+
+  /**
+   * Word's right-click actions for the structures around the caret, innermost first, as
+   * Wordcraft's {@code structure_actions}: {level, action id, label}; {@code level} indexes the
+   * caret path (the structure is the node at that step).
+   */
+  List<String[]> structureActions() {
+    Pos p = clamp(pos);
+    List<String[]> out = new ArrayList<>();
+    for (int level = p.depth() - 1; level >= 0; level--) {
+      List<N> parent = slotAt(root, p.path, 2 * level);
+      int j = p.path[2 * level];
+      if (parent == null || j >= parent.size()) continue;
+      N n = parent.get(j);
+      String lv = String.valueOf(level);
+      switch (n.kind) {
+        case "f": {
+          String[][] kinds = {{"bar", "frac.bar", "Change to Stacked Fraction"}, {"skw", "frac.skewed", "Change to Skewed Fraction"},
+            {"lin", "frac.linear", "Change to Linear Fraction"}, {"noBar", "frac.noBar", "Remove Fraction Bar"}};
+          for (String[] k : kinds) if (!k[0].equals(n.a)) out.add(new String[] {lv, k[1], k[2]});
+          break;
+        }
+        case "rad":
+          out.add(new String[] {lv, "rad.toggleDegree", n.hidden[1] ? "Show Degree" : "Hide Degree"});
+          break;
+        case "nary": {
+          boolean under = !"subSup".equals(n.b);
+          out.add(new String[] {lv, under ? "nary.limitsSide" : "nary.limitsUnder",
+            under ? "Change Limit Location to Subscript-Superscript" : "Change Limit Location to Under-Over"});
+          out.add(new String[] {lv, "nary.toggleLower", n.hidden[1] ? "Show Lower Limit" : "Hide Lower Limit"});
+          out.add(new String[] {lv, "nary.toggleUpper", n.hidden[2] ? "Show Upper Limit" : "Hide Upper Limit"});
+          break;
+        }
+        case "d":
+          out.add(new String[] {lv, "delim.addSeparator", "Insert Argument After"});
+          if (n.slots.size() > 1) out.add(new String[] {lv, "delim.deleteArgument", "Delete Argument"});
+          break;
+        case "sSubSup":
+          out.add(new String[] {lv, "script.removeSub", "Remove Subscript"});
+          out.add(new String[] {lv, "script.removeSup", "Remove Superscript"});
+          break;
+        case "sSub":
+          out.add(new String[] {lv, "script.addSup", "Add Superscript"});
+          break;
+        case "sSup":
+          out.add(new String[] {lv, "script.addSub", "Add Subscript"});
+          break;
+        case "m":
+          out.add(new String[] {lv, "matrix.rowAbove", "Insert Row Above"});
+          out.add(new String[] {lv, "matrix.rowBelow", "Insert Row Below"});
+          out.add(new String[] {lv, "matrix.colBefore", "Insert Column Before"});
+          out.add(new String[] {lv, "matrix.colAfter", "Insert Column After"});
+          out.add(new String[] {lv, "matrix.deleteRow", "Delete Row"});
+          out.add(new String[] {lv, "matrix.deleteCol", "Delete Column"});
+          break;
+        case "eqArr":
+          out.add(new String[] {lv, "eqarr.rowAbove", "Insert Equation Before"});
+          out.add(new String[] {lv, "eqarr.rowBelow", "Insert Equation After"});
+          out.add(new String[] {lv, "eqarr.deleteRow", "Delete Equation"});
+          break;
+        case "groupChr":
+          out.add(new String[] {lv, "group.flip", "top".equals(n.b) ? "Move Character Below" : "Move Character Above"});
+          break;
+        case "bar":
+          out.add(new String[] {lv, "bar.flip", "top".equals(n.a) ? "Change to Underbar" : "Change to Overbar"});
+          break;
+        default:
+          break;
+      }
+      String remove;
+      switch (n.kind) {
+        case "d": remove = "Remove Brackets"; break;
+        case "rad": remove = "Remove Radical"; break;
+        case "f": remove = "Remove Fraction"; break;
+        case "sSub": case "sSup": case "sSubSup": case "sPre": remove = "Remove Scripts"; break;
+        case "nary": remove = "Remove Operator"; break;
+        case "acc": remove = "Remove Accent"; break;
+        case "m": remove = "Remove Matrix"; break;
+        default: remove = "Remove Structure";
+      }
+      out.add(new String[] {lv, "remove", remove});
+    }
+    return out;
+  }
+
+  /** Applies a {@link #structureActions} action at {@code level}; false when it does not apply. */
+  boolean applyStructure(int level, String action) {
+    Pos p = clamp(pos);
+    if (level < 0 || level >= p.depth() || action == null) return false;
+    List<N> parent = slotAt(root, p.path, 2 * level);
+    int j = p.path[2 * level], c = p.path[2 * level + 1];
+    if (parent == null || j >= parent.size()) return false;
+    Pos at = new Pos(java.util.Arrays.copyOf(p.path, 2 * level), 0);
+    N n = parent.get(j);
+    Pos out = p;
+    int child = -1;
+    if ("remove".equals(action)) {
+      int start = nodeStart(parent, j);
+      parent.remove(j);
+      parent.addAll(j, dissolve(n));
+      out = at.with(start);
+    } else if (action.startsWith("frac.") && "f".equals(n.kind)) {
+      n.a = "frac.skewed".equals(action) ? "skw" : "frac.linear".equals(action) ? "lin" : "frac.noBar".equals(action) ? "noBar" : "bar";
+    } else if ("rad.toggleDegree".equals(action) && "rad".equals(n.kind)) {
+      n.hidden[1] = !n.hidden[1];
+      n.a = n.hidden[1] ? "1" : "";
+      if (n.hidden[1]) n.slots.get(1).clear();
+      child = n.hidden[1] ? 0 : 1;
+    } else if ("nary".equals(n.kind) && ("nary.limitsSide".equals(action) || "nary.limitsUnder".equals(action))) {
+      n.b = "nary.limitsSide".equals(action) ? "subSup" : "undOvr";
+    } else if ("nary".equals(n.kind) && ("nary.toggleLower".equals(action) || "nary.toggleUpper".equals(action))) {
+      int k = "nary.toggleLower".equals(action) ? 1 : 2;
+      n.hidden[k] = !n.hidden[k];
+      if (n.hidden[k]) n.slots.get(k).clear();
+      child = n.hidden[k] ? 0 : k;
+    } else if ("delim.addSeparator".equals(action) && "d".equals(n.kind)) {
+      int k = Math.min(c + 1, n.slots.size());
+      n.slots.add(k, new ArrayList<>());
+      n.hidden = new boolean[n.slots.size()];
+      child = k;
+    } else if ("delim.deleteArgument".equals(action) && "d".equals(n.kind) && n.slots.size() > 1) {
+      int k = Math.min(c, n.slots.size() - 1);
+      n.slots.remove(k);
+      n.hidden = new boolean[n.slots.size()];
+      child = Math.min(k, n.slots.size() - 1);
+    } else if ("script.removeSub".equals(action) && "sSubSup".equals(n.kind)) {
+      n.kind = "sSup";
+      n.slots.remove(1);
+      n.hidden = new boolean[2];
+      child = 1;
+    } else if ("script.removeSup".equals(action) && "sSubSup".equals(n.kind)) {
+      n.kind = "sSub";
+      n.slots.remove(2);
+      n.hidden = new boolean[2];
+      child = 1;
+    } else if ("script.addSup".equals(action) && "sSub".equals(n.kind)) {
+      n.kind = "sSubSup";
+      n.slots.add(new ArrayList<>());
+      n.hidden = new boolean[3];
+      child = 2;
+    } else if ("script.addSub".equals(action) && "sSup".equals(n.kind)) {
+      n.kind = "sSubSup";
+      n.slots.add(1, new ArrayList<>());
+      n.hidden = new boolean[3];
+      child = 1;
+    } else if (action.startsWith("matrix.") && "m".equals(n.kind)) {
+      child = matrix(n, c, action);
+      if (child < 0) return false;
+    } else if (action.startsWith("eqarr.") && "eqArr".equals(n.kind)) {
+      int rows = n.slots.size();
+      if (("eqarr.rowAbove".equals(action) || "eqarr.rowBelow".equals(action)) && rows < 1000) {
+        int k = Math.min("eqarr.rowAbove".equals(action) ? c : c + 1, rows);
+        n.slots.add(k, new ArrayList<>());
+        child = k;
+      } else if ("eqarr.deleteRow".equals(action) && rows > 1) {
+        n.slots.remove(Math.min(c, rows - 1));
+        child = Math.min(c, rows - 2);
+      } else return false;
+      n.hidden = new boolean[n.slots.size()];
+    } else if ("group.flip".equals(action) && "groupChr".equals(n.kind)) {
+      n.b = "top".equals(n.b) ? "bot" : "top";
+      String from = "\u23de\u23df\u23dc\u23dd\u23b4\u23b5", to = "\u23df\u23de\u23dd\u23dc\u23b5\u23b4";
+      int k = n.a == null ? -1 : from.indexOf(n.a);
+      if (k >= 0) n.a = to.substring(k, k + 1);
+    } else if ("bar.flip".equals(action) && "bar".equals(n.kind)) {
+      n.a = "top".equals(n.a) ? "bot" : "top";
+    } else return false;
+    if (child >= 0) out = at.child(j, child, 0);
+    tidy();
+    pos = clamp(out);
+    return true;
+  }
+
+  /** A matrix row/column action from cell {@code c}; the caret's new cell, or -1. */
+  private static int matrix(N n, int c, String action) {
+    List<List<List<N>>> rows = new ArrayList<>();
+    int k = 0, r = 0, col = 0, ncols = 1;
+    for (int ri = 0; ri < n.rowLens.length; ri++) {
+      List<List<N>> row = new ArrayList<>();
+      for (int ci = 0; ci < n.rowLens[ri]; ci++, k++) {
+        if (k == c) {
+          r = ri;
+          col = ci;
+        }
+        row.add(n.slots.get(k));
+      }
+      ncols = Math.max(ncols, row.size());
+      rows.add(row);
+    }
+    int tr = r, tc = col;
+    switch (action) {
+      case "matrix.rowAbove": case "matrix.rowBelow": {
+        if (rows.size() >= 1000) return -1;
+        int at = Math.min("matrix.rowAbove".equals(action) ? r : r + 1, rows.size());
+        List<List<N>> row = new ArrayList<>();
+        for (int i = 0; i < ncols; i++) row.add(new ArrayList<>());
+        rows.add(at, row);
+        tr = at;
+        break;
+      }
+      case "matrix.colBefore": case "matrix.colAfter": {
+        if (ncols >= 64) return -1;
+        int at = "matrix.colBefore".equals(action) ? col : col + 1;
+        for (List<List<N>> row : rows) row.add(Math.min(at, row.size()), new ArrayList<>());
+        tc = at;
+        break;
+      }
+      case "matrix.deleteRow":
+        if (rows.size() <= 1) return -1;
+        rows.remove(Math.min(r, rows.size() - 1));
+        tr = Math.min(r, rows.size() - 1);
+        break;
+      case "matrix.deleteCol":
+        if (ncols <= 1) return -1;
+        for (List<List<N>> row : rows) if (col < row.size()) row.remove(col);
+        tc = Math.min(col, ncols - 2);
+        break;
+      default:
+        return -1;
+    }
+    n.slots.clear();
+    n.rowLens = new int[rows.size()];
+    int flat = 0;
+    for (int ri = 0; ri < rows.size(); ri++) {
+      n.rowLens[ri] = rows.get(ri).size();
+      if (ri < tr) flat += rows.get(ri).size();
+      n.slots.addAll(rows.get(ri));
+    }
+    return Math.min(flat + Math.min(tc, Math.max(0, rows.get(tr).size() - 1)), n.slots.size() - 1);
+  }
+
+  /** Every caret position in reading order (at most {@code max}), for hit testing. */
+  List<Pos> positions(int max) {
+    List<Pos> out = new ArrayList<>();
+    Pos save = pos;
+    pos = new Pos(null, 0);
+    out.add(pos);
+    while (out.size() < max && moveRight()) out.add(pos);
+    pos = save;
+    return out;
+  }
+
+  // ------------------------------------------------------------------------ equation numbering
+
+  /**
+   * Word's {@code #} equation numbering, as Wordcraft's {@code number_equation}: a top-level
+   * {@code #} (outside any structure) ends the equation and what follows it is its number.
+   * Returns {number text} and removes it from the equation, or null when there is none.
+   */
+  String takeNumber() {
+    for (int i = 0; i < root.size(); i++) {
+      N n = root.get(i);
+      if (!n.run() || n.normal) continue;
+      int k = n.text.indexOf('#');
+      if (k < 0) continue;
+      List<N> tail = new ArrayList<>(root.subList(i + 1, root.size()));
+      String number = n.text.substring(k + 1) + linear(tail);
+      if (i == 0 && k == 0) return null;
+      n.text = n.text.substring(0, k);
+      while (root.size() > i + 1) root.remove(root.size() - 1);
+      tidy();
+      pos = new Pos(null, units(root));
+      return number.trim();
+    }
+    return null;
   }
 
   // ------------------------------------------------------------------------ caret geometry

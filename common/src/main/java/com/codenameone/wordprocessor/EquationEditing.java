@@ -70,11 +70,22 @@ final class EquationEditing {
 
   /** Writes the editor's text back when it changed (one undo step). */
   void commit() {
+    commit(false);
+  }
+
+  /**
+   * Writes the editor's text back when it changed. {@code typing} joins the change to the
+   * previous typing in this equation as one undo step, as Wordcraft groups {@code equation.type}
+   * under one "Typing" step until another edit happens.
+   */
+  void commit(boolean typing) {
     String text = editor.linear();
     String now = stored();
     if (field >= 0 && text.isEmpty()) text = EquationEditor.HOLE;
     if (text.equals(now)) return;
-    write(session, block, field, text);
+    final String value = text;
+    if (typing) session.transactGrouped(this, x -> write(x, block, field, value));
+    else write(session, block, field, value);
   }
 
   /** Sets an equation's linear text: a display block's drawing, or an inline field. */
@@ -97,7 +108,7 @@ final class EquationEditing {
 
   void type(String text) {
     editor.type(text, normalText);
-    commit();
+    commit(true);
   }
 
   void backspace() {
@@ -111,8 +122,20 @@ final class EquationEditing {
   }
 
   void insertTemplate(String linear) {
-    editor.insertTemplate(linear, "");
+    insertTemplate(linear, "");
+  }
+
+  /** A Structures template; {@code limits} forces its n-ary limit placement ("" keeps the default). */
+  void insertTemplate(String linear, String limits) {
+    editor.insertTemplate(linear, limits);
     commit();
+  }
+
+  /** A structure action from {@link EquationEditor#structureActions}; false when it does not apply. */
+  boolean structure(int level, String action) {
+    if (!editor.applyStructure(level, action)) return false;
+    commit();
+    return true;
   }
 
   /** Arrow, Home/End, Tab: leaving a slot finishes it first; false when the caret leaves. */
@@ -148,9 +171,47 @@ final class EquationEditing {
 
   /** Enter: build up what was typed; false when there was nothing to build (editing ends). */
   boolean enter() {
-    if (normalText || !editor.finish()) return false;
+    if (normalText) return false;
+    boolean changed = editor.finish();
+    // A top-level '#' numbers a display equation, as in Word and Wordcraft's number_equation.
+    String number = field < 0 ? editor.takeNumber() : null;
+    if (number != null) {
+      if (number.length() > 1 && number.charAt(0) == '(' && number.charAt(number.length() - 1) == ')')
+        number = number.substring(1, number.length() - 1);
+      final String n = number.isEmpty() ? "1" : number;
+      final String text = editor.linear();
+      session.transact(x -> {
+        write(x, block, field, text);
+        Picture p = (Picture) x.document().blocks.get(block);
+        x.replacePicture(block, p.drawing(p.drawing.with("number", n)));
+      });
+      return true;
+    }
+    if (!changed) return false;
     commit();
     return true;
+  }
+
+  /**
+   * Places the caret at the slot position nearest to ({@code x}, {@code y}) in the drawing's own
+   * coordinates, as Wordcraft's {@code equation_hit} does for a click in an equation.
+   */
+  void hit(Drawing d, float w, float h, LayoutEngine.Metrics metrics, float x, float y) {
+    EquationEditor.Pos best = editor.pos;
+    float bestScore = Float.MAX_VALUE;
+    for (EquationEditor.Pos p : editor.positions(400)) {
+      editor.pos = p;
+      float[] c = caret(d, w, h, metrics);
+      float dy = y < c[1] ? c[1] - y : y > c[1] + c[2] ? y - c[1] - c[2] : 0;
+      // Inside a slot's line, horizontal distance decides; deeper slots win ties (the click is
+      // on the smaller glyphs of a script or limit).
+      float score = Math.abs(x - c[0]) + dy * 4 - p.depth() * 0.01f;
+      if (score < bestScore) {
+        bestScore = score;
+        best = p;
+      }
+    }
+    editor.pos = best;
   }
 
   /** Puts the document caret beside the equation after editing ends ({@code before}: left of it). */

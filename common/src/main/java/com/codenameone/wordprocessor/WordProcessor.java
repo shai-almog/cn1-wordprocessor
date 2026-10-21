@@ -6728,11 +6728,37 @@ public class WordProcessor {
                   if (!editor.editEquation()) Dialog.show("Equation", "Select an equation first", "OK", null);
                   editor.requestFocus();
                 }),
+                button("Structure\u2026", this::equationStructureActions),
                 button("Done", () -> editor.endEquation(false)))),
         OfficeTheme.group("Structures", BoxLayout.encloseY(OfficeTheme.row(structures.subList(0, 6).toArray(new Component[0])),
             OfficeTheme.row(structures.subList(6, structures.size()).toArray(new Component[0])))),
         OfficeTheme.group("Symbols", BoxLayout.encloseY(OfficeTheme.row(symbols.subList(0, 4).toArray(new Component[0])),
             OfficeTheme.row(symbols.subList(4, symbols.size()).toArray(new Component[0])))));
+  }
+
+  /**
+   * Word's right-click structure actions for the structures around the equation caret
+   * (Wordcraft's structure_actions): matrix rows/columns, fraction kind, limits, scripts, ...
+   */
+  private void equationStructureActions() {
+    var e = editor.equationEditing();
+    if (e == null) {
+      Dialog.show("Equation", "Click inside an equation first", "OK", null);
+      return;
+    }
+    var dialog = new Dialog("Structure", new BorderLayout());
+    var body = BoxLayout.encloseY();
+    body.setScrollableY(true);
+    for (final String[] act : e.editor.structureActions())
+      body.add(button(act[2], () -> {
+        dialog.dispose();
+        editor.equationStructure(Integer.parseInt(act[0]), act[1]);
+        editor.requestFocus();
+      }));
+    if (body.getComponentCount() == 0) body.add(new Label("The caret is not inside a structure"));
+    dialog.add(BorderLayout.CENTER, body);
+    dialog.add(BorderLayout.SOUTH, button("Close", dialog::dispose));
+    dialog.show();
   }
 
   /** One Structures gallery (from STRUCTURES row {@code start}) as a picker dialog. */
@@ -6745,7 +6771,7 @@ public class WordProcessor {
       if ("S".equals(row[0])) body.add(new Label(row[1]));
       else body.add(button(row[2] + "   " + row[3].replace("\u2b1a", "\u25a1"), () -> {
         dialog.dispose();
-        editor.equationTemplate(row[3]);
+        editor.equationTemplate(row[3], row[4]);
       }));
     }
     dialog.add(BorderLayout.CENTER, body);

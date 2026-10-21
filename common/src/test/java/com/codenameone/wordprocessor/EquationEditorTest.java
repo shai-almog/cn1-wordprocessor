@@ -1,5 +1,6 @@
 package com.codenameone.wordprocessor;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -195,10 +196,9 @@ public class EquationEditorTest {
       assertTrue(row[1], e.linear().contains("z"));
     }
     assertTrue(count > 200);
-    // Symbol-only templates are plain text in Wordcraft too; the one-sided and bar brackets do
-    // not parse as delimiters here yet and insert as linear text.
-    assertEquals("int.dx int.dy int.dtheta brk.abs brk.norm brk.rightSquare brk.rightParen brk.rightSquareOnly"
-        + " brk.rightBrace brk.leftBar op.colonEq op.eqeq op.plusEq op.minusEq op.defEq op.measured op.delta"
+    // Symbol-only templates are plain text in Wordcraft too; every bracket template (one-sided,
+    // bars, outward and doubled brackets) is a real delimiter structure.
+    assertEquals("int.dx int.dy int.dtheta op.colonEq op.eqeq op.plusEq op.minusEq op.defEq op.measured op.delta"
         + " mat.cdots mat.ldots mat.vdots mat.ddots mat.adots ", flat.toString());
     assertTrue(EquationGallery.SYMBOLS.length >= 8);
     assertNotNull(limits);
@@ -318,5 +318,177 @@ public class EquationEditorTest {
     float[] start = e.caret(d, 400, 40, new PdfMetrics());
     assertTrue(end[0] > start[0]);
     assertTrue(start[0] > 100);
+  }
+
+  private static int displayBlock(Session s) {
+    for (int i = 0; i < s.document().blocks.size(); i++) if (s.document().blocks.get(i) instanceof Picture) return i;
+    return -1;
+  }
+
+  @Test
+  public void structureActionsAsWordcraft() {
+    // Wordcraft's structure_actions_work, on the same inputs.
+    var e = new EquationEditor("\u25a0(a&b@c&d)");
+    e.pos = new EquationEditor.Pos(new int[] {0, 3}, 0);
+    boolean offered = false;
+    for (String[] a : e.structureActions()) offered |= "matrix.rowBelow".equals(a[1]);
+    assertTrue(offered);
+    assertTrue(e.applyStructure(0, "matrix.rowBelow"));
+    assertTrue(e.applyStructure(0, "matrix.colAfter"));
+    assertEquals(3, e.root.get(0).rowLens.length);
+    assertEquals(9, e.root.get(0).slots.size());
+    var back = EquationEditor.parse(e.linear());
+    assertEquals(EquationEditor.describe(e.root), EquationEditor.describe(back));
+    assertTrue(e.applyStructure(0, "matrix.deleteRow"));
+    assertTrue(e.applyStructure(0, "matrix.deleteCol"));
+    assertEquals(4, e.root.get(0).slots.size());
+    e = new EquationEditor("\u221ax");
+    e.pos = new EquationEditor.Pos(new int[] {0, 0}, 1);
+    assertTrue(e.applyStructure(0, "rad.toggleDegree"));
+    assertArrayEquals(new int[] {0, 1}, e.pos.path);
+    e.type("3", false);
+    assertEquals("\u221a(3&x)", e.linear());
+    e = new EquationEditor("a+(b)");
+    e.tidy();
+    e.pos = new EquationEditor.Pos(new int[] {1, 0}, 0);
+    assertTrue(e.applyStructure(0, "remove"));
+    assertEquals("a+b", e.linear());
+    e = new EquationEditor("x_1");
+    e.pos = new EquationEditor.Pos(new int[] {0, 0}, 0);
+    assertTrue(e.applyStructure(0, "script.addSup"));
+    e.type("2", false);
+    assertEquals("x_1^2", e.linear());
+    e = new EquationEditor("a/b");
+    e.pos = new EquationEditor.Pos(new int[] {0, 0}, 0);
+    assertTrue(e.applyStructure(0, "frac.skewed"));
+    assertEquals("skw", EquationEditor.parse(e.linear()).get(0).a);
+    // Every action on every structure, at every caret position, never throws.
+    String all = "x=(-b\u00b1\u221a(3&b^2-4ac))/2a+\u2211_(i=1)^n\u2592i+\u25a0(a&b@c&d)+\u2588(x@y)+\u23de(a)+\u00af(b)+x_1^2+(a\u2502b)";
+    var probe = new EquationEditor(all);
+    for (EquationEditor.Pos p : probe.positions(1000)) {
+      probe.pos = p;
+      for (String[] a : probe.structureActions()) {
+        var c = new EquationEditor(all);
+        c.pos = p;
+        c.applyStructure(Integer.parseInt(a[0]), a[1]);
+        c.applyStructure(Integer.parseInt(a[0]) + 5, a[1]);
+        EquationEditor.parse(c.linear());
+      }
+    }
+  }
+
+  @Test
+  public void forcedLimitsRoundTripThroughLinearAndOmml() throws Exception {
+    var e = new EquationEditor("");
+    e.insertTemplate("\u2211_\u2b1a^\u2b1a\u2592\u2b1a", "subSup");
+    assertEquals("subSup", e.root.get(0).b);
+    var back = EquationEditor.parse(e.linear());
+    assertEquals("subSup", back.get(0).b);
+    assertTrue(Equation.omml(Equation.fromLinear(e.linear())).contains("m:limLoc m:val=\"subSup\""));
+    e = new EquationEditor("");
+    e.insertTemplate("\u222b_\u2b1a^\u2b1a\u2592\u2b1a", "undOvr");
+    e.type("0", false);
+    assertTrue(e.linear(), e.linear().startsWith("\u222b\u252c0"));
+    assertEquals("undOvr", EquationEditor.parse(e.linear()).get(0).b);
+    // The default placement writes plain Word linear text.
+    e = new EquationEditor("");
+    e.insertTemplate("\u2211_\u2b1a^\u2b1a\u2592\u2b1a", "undOvr");
+    assertEquals(-1, e.linear().indexOf(Equation.SIDE_LIMITS));
+    // Toggled from the structure actions, then saved to DOCX and read back.
+    var s = new Session(Document.empty());
+    run(s, "insert.equation", "text", "\u2211_(i=1)^n\u2592i", "display", true);
+    int block = displayBlock(s);
+    run(s, "equation.edit", "block", block, "steps", "home\nright\nstructure:nary.limitsSide");
+    String text = ((Picture) s.document().blocks.get(block)).drawing.get("text", "");
+    assertTrue(text, text.indexOf(Equation.SIDE_LIMITS) > 0);
+    String xml = docxXml(s.document());
+    assertTrue(xml, xml.contains("m:limLoc m:val=\"subSup\""));
+    var again = reopen(s.document());
+    for (Block b : again.blocks)
+      if (b instanceof Picture p && p.drawing != null && "equation".equals(p.drawing.kind))
+        assertTrue(Equation.omml(Equation.of(p.drawing)).contains("m:limLoc m:val=\"subSup\""));
+  }
+
+  @Test
+  public void oneSidedAndBarBracketsAreStructures() {
+    String[][] cases = {
+      {"(\u2b1a\u2524", "(", ""}, {"\u251c\u2b1a)", "", ")"}, {"[\u2b1a\u2524", "[", ""}, {"\u251c\u2b1a]", "", "]"},
+      {"{\u2b1a\u2524", "{", ""}, {"\u251c\u2b1a}", "", "}"}, {"\u251c|\u2b1a\u2524", "|", ""},
+      {"\u27e8\u2b1a\u2524", "\u27e8", ""}, {"|\u2b1a|", "|", "|"}, {"\u2016\u2b1a\u2016", "\u2016", "\u2016"},
+      {"\u251c[\u2b1a[\u2524", "[", "["}, {"\u251c]\u2b1a[\u2524", "]", "["}, {"(\u2b1a\u2502\u2b1a)", "(", ")"},
+    };
+    for (String[] c : cases) {
+      var e = new EquationEditor("");
+      e.insertTemplate(c[0], "");
+      var d = e.root.get(0);
+      assertEquals(c[0], "d", d.kind);
+      assertEquals(c[0], c[1], d.a);
+      assertEquals(c[0], c[2], d.b);
+      e.type("x", false);
+      var back = EquationEditor.parse(e.linear());
+      assertEquals(c[0], EquationEditor.describe(e.root), EquationEditor.describe(back));
+      String omml = Equation.omml(Equation.fromLinear(e.linear()));
+      assertTrue(omml, omml.contains("m:begChr m:val=\"" + Xml.attribute(c[1]) + "\"") && omml.contains("m:endChr m:val=\"" + Xml.attribute(c[2]) + "\""));
+    }
+    // Bars inside other brackets stay text: P(A|B) is not a bar group.
+    assertTrue(Equation.omml(Equation.fromLinear("P(A|B)")).indexOf("m:begChr m:val=\"|\"") < 0);
+  }
+
+  @Test
+  public void hashNumbersTheDisplayEquationOnEnter() {
+    var s = new Session(Document.empty());
+    run(s, "insert.equation", "text", "E=mc^2", "display", true);
+    int block = displayBlock(s);
+    var e = EquationEditing.at(s, block);
+    e.type("#(1)");
+    assertTrue(e.enter());
+    var d = ((Picture) s.document().blocks.get(block)).drawing;
+    assertEquals("E=mc^2", d.get("text", ""));
+    assertEquals("1", d.get("number", ""));
+    // Without '#', Enter with nothing to build ends editing.
+    assertFalse(e.enter());
+  }
+
+  @Test
+  public void typingInAnEquationIsOneUndoStep() {
+    var s = new Session(Document.empty());
+    run(s, "insert.equation", "text", "x", "display", true);
+    int block = displayBlock(s);
+    var e = EquationEditing.at(s, block);
+    for (String c : new String[] {"+", "a", "/", "b", " ", "c"}) e.type(c);
+    // Moving the caret keeps the group, as Wordcraft's pure equation.move.
+    e.move("left");
+    e.move("right");
+    e.type("d");
+    assertEquals("x+a/b cd", ((Picture) s.document().blocks.get(block)).drawing.get("text", ""));
+    s.undo();
+    assertEquals("x", ((Picture) s.document().blocks.get(block)).drawing.get("text", ""));
+    s.redo();
+    // A structure edit is its own step and ends the group.
+    e.backspace();
+    e.type("q");
+    s.undo();
+    s.undo();
+    assertEquals("x+a/b cd", ((Picture) s.document().blocks.get(block)).drawing.get("text", ""));
+  }
+
+  @Test
+  public void clickPlacesTheCaretInTheClickedSlot() {
+    var s = new Session(Document.empty());
+    run(s, "insert.equation", "text", "a/b+c", "display", true);
+    int block = displayBlock(s);
+    var e = EquationEditing.at(s, block);
+    var d = ((Picture) s.document().blocks.get(block)).drawing;
+    var m = new PdfMetrics();
+    // Aim at the caret geometry of the denominator's end.
+    e.editor.pos = new EquationEditor.Pos(new int[] {0, 1}, 1);
+    float[] den = e.caret(d, 400, 40, m);
+    e.editor.pos = new EquationEditor.Pos(null, 0);
+    e.hit(d, 400, 40, m, den[0] + 0.5f, den[1] + den[2] / 2);
+    assertArrayEquals(new int[] {0, 1}, e.editor.pos.path);
+    e.editor.pos = new EquationEditor.Pos(new int[] {0, 0}, 0);
+    float[] num = e.caret(d, 400, 40, m);
+    e.hit(d, 400, 40, m, num[0] - 0.5f, num[1] + num[2] / 2);
+    assertArrayEquals(new int[] {0, 0}, e.editor.pos.path);
   }
 }

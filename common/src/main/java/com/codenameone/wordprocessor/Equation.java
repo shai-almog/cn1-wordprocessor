@@ -22,6 +22,16 @@ public final class Equation {
   public static final int MAX_DEPTH = 40;
   static final String M = "http://schemas.openxmlformats.org/officeDocument/2006/math";
   private static final int MAX_NODES = 20000;
+  /** Bracket pairs the linear parser reads as a group. */
+  private static final String OPENERS = "([{\u27e8\u230a\u2308\u27e6", CLOSERS = ")]}\u27e9\u230b\u2309\u27e7";
+  /** Characters that may stand for a bracket in an explicit U+251C...U+2524 group. */
+  static final String BRACKETS = "()[]{}\u27e8\u27e9\u2308\u2309\u230a\u230b|\u2016\u27e6\u27e7";
+  /**
+   * Stored after an n-ary operator whose limits are forced beside it (Word's "Change Limit
+   * Location to Subscript-Superscript", Wordcraft's side-limit templates). Linear text, which is
+   * how an equation is stored, has no notation for it; a private-use character keeps it.
+   */
+  static final char SIDE_LIMITS = '\ue001';
 
   /** One node. Arguments are rows (kind "row") except where noted in {@link Equation}. */
   public static final class Node {
@@ -290,9 +300,16 @@ public final class Equation {
       while (i < s.length() && s.charAt(i) >= '\u0300' && s.charAt(i) <= '\u036f' || i < s.length() && s.charAt(i) >= '\u20d0' && s.charAt(i) <= '\u20ef')
         base = node("acc", String.valueOf(s.charAt(i++)), null, null, strip(base));
       Node sub = null, sup = null;
+      boolean stacked = false;
       while (true) {
         char c = peek();
-        if (c == '_' && sub == null) {
+        if ((c == '\u252c' || c == '\u2534') && "nary".equals(base.c) && (c == '\u252c' ? sub : sup) == null) {
+          // UnicodeMath's below/above operators on an n-ary operator force stacked limits.
+          i++;
+          stacked = true;
+          if (c == '\u252c') sub = operand(stop);
+          else sup = operand(stop);
+        } else if (c == '_' && sub == null) {
           i++;
           sub = operand(stop);
         } else if (c == '^' && sup == null) {
@@ -307,7 +324,8 @@ public final class Equation {
       if ("nary".equals(base.c)) {
         if (peek() == '\u2592') i++;
         Node body = scripted(stop);
-        out = node("nary", base.a, integral(base.a) ? "subSup" : "undOvr", null, body == null ? row() : strip(body),
+        String loc = stacked ? "undOvr" : !base.b.isEmpty() ? base.b : integral(base.a) ? "subSup" : "undOvr";
+        out = node("nary", base.a, loc, null, body == null ? row() : strip(body),
             sub == null ? row() : sub, sup == null ? row() : sup);
       } else if ("func".equals(base.c)) {
         Node name = run(base.a, true);
@@ -327,14 +345,29 @@ public final class Equation {
     }
 
     Node group(char open, char close) {
-      i++;
+      return group(open, String.valueOf(close));
+    }
+
+    /**
+     * A bracket group after {@code open} (0: none, after {@code U+251C}) up to one of
+     * {@code closers}; {@code U+2524} closes it with no bracket and {@code U+2502} separates
+     * elements, as in UnicodeMath and Wordcraft's linear parser.
+     */
+    Node group(char open, String closers) {
+      if (open != 0) i++;
       var rows = new ArrayList<Node>();
       var cells = new ArrayList<Node>();
       boolean grid = false;
+      String end = "";
       while (true) {
-        cells.add(parseRow("" + close + "&@"));
+        cells.add(parseRow(closers + "&@\u2524\u2502"));
         char c = peek();
-        if (c == '&') {
+        if (c == '\u2502' && !grid) {
+          i++;
+        } else if (c == '\u2524' && !grid) {
+          i++;
+          break;
+        } else if (c == '&') {
           grid = true;
           i++;
         } else if (c == '@') {
@@ -343,7 +376,10 @@ public final class Equation {
           rows.add(new Node("mr", null, null, null, cells));
           cells = new ArrayList<>();
         } else {
-          if (c == close) i++;
+          if (c != 0 && closers.indexOf(c) >= 0) {
+            i++;
+            end = String.valueOf(c);
+          } else if (closers.length() == 1) end = closers;
           break;
         }
       }
@@ -351,7 +387,73 @@ public final class Equation {
         rows.add(new Node("mr", null, null, null, cells));
         return new Node("m", null, null, null, rows);
       }
-      return new Node("d", String.valueOf(open), String.valueOf(close), "|", cells);
+      return new Node("d", open == 0 ? "" : String.valueOf(open), end, "|", cells);
+    }
+
+    /**
+     * {@code U+251C X ... Y U+2524}: brackets given explicitly, either side optional (any bracket
+     * character, so outward or doubled brackets); the cursor is just after {@code U+251C}. Null
+     * (cursor unchanged) when there is no matching {@code U+2524}.
+     */
+    Node explicitGroup() {
+      int level = 1, k = i;
+      for (; k < s.length(); k++) {
+        char c = s.charAt(k);
+        if (c == '\u251c') level++;
+        else if (c == '\u2524' && --level == 0) break;
+      }
+      if (level != 0) return null;
+      String inner = s.substring(i, k);
+      i = k + 1;
+      String beg = "", end = "";
+      if (!inner.isEmpty() && BRACKETS.indexOf(inner.charAt(0)) >= 0) {
+        beg = inner.substring(0, 1);
+        inner = inner.substring(1);
+      }
+      if (!inner.isEmpty() && BRACKETS.indexOf(inner.charAt(inner.length() - 1)) >= 0 && !paired(inner)) {
+        end = inner.substring(inner.length() - 1);
+        inner = inner.substring(0, inner.length() - 1);
+      }
+      var sub = new Linear(inner);
+      sub.depth = depth;
+      sub.nodes = nodes;
+      var cells = new ArrayList<Node>();
+      while (true) {
+        cells.add(sub.parseRow("\u2502"));
+        sub.depth = depth;
+        if (sub.peek() == '\u2502') sub.i++;
+        else if (sub.peek() != 0) sub.i++;
+        else break;
+      }
+      nodes = sub.nodes;
+      return new Node("d", beg, end, "|", cells);
+    }
+
+    /** Whether a bar at the cursor has a matching bar later at the same bracket level. */
+    boolean barCloses(char bar) {
+      int level = 0;
+      for (int k = i + 1; k < s.length(); k++) {
+        char c = s.charAt(k);
+        if (OPENERS.indexOf(c) >= 0 || c == '\u251c') level++;
+        else if (CLOSERS.indexOf(c) >= 0 || c == '\u2524') {
+          if (--level < 0) return false;
+        } else if (c == bar && level == 0) return true;
+      }
+      return false;
+    }
+
+    /** A closing bracket ending {@code t} that pairs with an opening one inside is content. */
+    private static boolean paired(String t) {
+      char last = t.charAt(t.length() - 1);
+      int at = ")]}\u27e9\u2309\u230b\u27e7".indexOf(last);
+      if (at < 0) return false;
+      char opener = "([{\u27e8\u2308\u230a\u27e6".charAt(at);
+      int open = 0, close = 0;
+      for (int j = 0; j < t.length() - 1; j++) {
+        if (t.charAt(j) == opener) open++;
+        else if (t.charAt(j) == last) close++;
+      }
+      return open > close;
     }
 
     Node primary(String stop) {
@@ -400,7 +502,16 @@ public final class Equation {
         }
         if (NARY.indexOf(c) >= 0) {
           i++;
-          return new Node("run", String.valueOf(c), "", "nary", null);
+          // SIDE_LIMITS after the operator: limits forced beside it (see SIDE_LIMITS).
+          boolean side = i < s.length() && s.charAt(i) == SIDE_LIMITS;
+          if (side) i++;
+          return new Node("run", String.valueOf(c), side ? "subSup" : "", "nary", null);
+        }
+        if ((c == '|' || c == '\u2016') && barCloses(c)) return group(c, String.valueOf(c));
+        if (c == '\u251c') {
+          i++;
+          Node explicit = explicitGroup();
+          return explicit != null ? explicit : group((char) 0, ")]}\u27e9\u2309\u230b\u27e7");
         }
         if (c == '\\') {
           int j = i + 1;
@@ -569,27 +680,41 @@ public final class Equation {
           b.append(')');
         }
         break;
-      case "nary":
+      case "nary": {
+        // Limit placement other than the operator's default is kept: stacked limits as
+        // UnicodeMath's below/above operators, side limits as SIDE_LIMITS after the operator.
+        String def = integral(n.a) ? "subSup" : "undOvr";
+        boolean stacked = "undOvr".equals(n.b) && !def.equals(n.b);
         b.append(n.a);
+        if ("subSup".equals(n.b) && !def.equals(n.b)) b.append(SIDE_LIMITS);
         if (!n.arg(1).empty()) {
-          b.append('_');
+          b.append(stacked ? '\u252c' : '_');
           op(n.arg(1), b, d);
         }
         if (!n.arg(2).empty()) {
-          b.append('^');
+          b.append(stacked ? '\u2534' : '^');
           op(n.arg(2), b, d);
         }
         b.append('\u2592');
         body(n.arg(0), b, d, false);
         break;
-      case "d":
+      }
+      case "d": {
+        // Matching pairs are written plainly; a missing closing bracket as U+2524 and any
+        // other pairing (one-sided, bars, outward or doubled brackets) as U+251C...U+2524.
+        int pair = OPENERS.indexOf(n.a);
+        boolean plain = !n.a.isEmpty() && pair >= 0 && n.b.equals(CLOSERS.substring(pair, pair + 1));
+        boolean openOnly = !plain && !n.a.isEmpty() && pair >= 0 && n.b.isEmpty();
+        if (!plain && !openOnly) b.append('\u251c');
         b.append(n.a);
         for (int i = 0; i < n.args.size(); i++) {
-          if (i > 0) b.append(n.c);
+          if (i > 0) b.append("|".equals(n.c) ? "\u2502" : n.c);
           linear(n.args.get(i), b, d);
         }
         b.append(n.b);
+        if (!plain) b.append('\u2524');
         break;
+      }
       case "m": case "eqArr":
         b.append("m".equals(n.kind) ? '\u25a0' : '\u2588').append('(');
         for (int r = 0; r < n.args.size(); r++) {
