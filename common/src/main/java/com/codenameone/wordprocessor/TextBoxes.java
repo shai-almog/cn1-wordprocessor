@@ -288,41 +288,60 @@ public final class TextBoxes {
   }
 
   /**
-   * {@code story} showing {@code text} (paragraphs on lines) without flattening it: each line
-   * edits its paragraph in place (the changed middle only, so the runs around it keep their
-   * formatting), extra lines become paragraphs formatted as the last (ids from {@code next}) and
-   * missing lines drop trailing paragraphs. A story holding a table or picture is edited in the
-   * box itself instead.
+   * {@code story} showing {@code text} (paragraphs on lines, table cell paragraphs in their
+   * place, as {@link Drawing#plainText} lists them) without flattening it: each line edits its
+   * paragraph in place (the changed middle only, so the runs around it keep their formatting),
+   * extra lines become paragraphs at the end formatted as the last, and missing lines drop
+   * trailing paragraphs (a cell keeps its first, emptied). Tables and pictures stay where they
+   * are, as Wordcraft only edits a box's text in its story and never flattens it.
    */
   public static Sequence<Block> retext(Sequence<Block> story, String text, long[] next) {
     if (Drawing.plainText(story).equals(text)) return story;
-    for (Block b : story)
-      if (!(b instanceof Paragraph))
-        throw new IllegalArgumentException("Edit the text of a box holding a table or picture in the box itself");
     var lines = DrawingOps.split(text, '\n');
-    var out = new Sequence<Block>();
-    Paragraph last = null;
-    for (int i = 0; i < lines.size(); i++) {
-      String line = lines.get(i);
-      if (i < story.size()) {
-        last = (Paragraph) story.get(i);
-        String was = last.text.toString();
-        if (!was.equals(line)) {
-          int a = 0, n = Math.min(was.length(), line.length());
-          while (a < n && was.charAt(a) == line.charAt(a)) a++;
-          int z = 0;
-          while (z < n - a && was.charAt(was.length() - 1 - z) == line.charAt(line.length() - 1 - z)) z++;
-          var style = last.text.styleAt(a > 0 ? a - 1 : 0);
-          last = last.text(last.text.replace(a, was.length() - z, RichText.of(line.substring(a, line.length() - z), style)));
-        }
-        out = out.append(last);
-      } else {
-        var style = last.text.styleAt(Math.max(0, last.text.length() - 1));
-        last = last.copy("p" + next[0]++, RichText.of(line, style));
-        out = out.append(last);
-      }
+    int[] at = {0};
+    Paragraph[] last = {null};
+    var out = retext(story, lines, at, last, true);
+    for (Block b : out) if (b instanceof Paragraph p) last[0] = p;
+    while (at[0] < lines.size()) {
+      String line = lines.get(at[0]++);
+      Paragraph p = last[0] == null ? new Paragraph("p" + next[0]++, RichText.of(line))
+          : last[0].copy("p" + next[0]++, RichText.of(line, last[0].text.styleAt(Math.max(0, last[0].text.length() - 1))));
+      out = out.append(p);
+      last[0] = p;
     }
     return out;
+  }
+
+  private static Sequence<Block> retext(Sequence<Block> in, List<String> lines, int[] at, Paragraph[] last, boolean top) {
+    var out = new Sequence<Block>();
+    boolean any = false;
+    for (Block b : in) {
+      if (b instanceof Paragraph p) {
+        last[0] = p;
+        if (at[0] < lines.size()) out = out.append(edit(p, lines.get(at[0]++)));
+        else if (!top && !any) out = out.append(edit(p, ""));
+        else continue;
+        any = true;
+      } else if (b instanceof Table t) {
+        for (int r = 0; r < t.rows(); r++)
+          for (int c = 0; c < t.columns(); c++)
+            if (!t.covered(r, c)) t = t.setBlocks(r, c, retext(t.blocks(r, c), lines, at, last, false));
+        out = out.append(t);
+      } else out = out.append(b);
+    }
+    return out;
+  }
+
+  /** {@code p} showing {@code line}: only the changed middle is replaced. */
+  private static Paragraph edit(Paragraph p, String line) {
+    String was = p.text.toString();
+    if (was.equals(line)) return p;
+    int a = 0, n = Math.min(was.length(), line.length());
+    while (a < n && was.charAt(a) == line.charAt(a)) a++;
+    int z = 0;
+    while (z < n - a && was.charAt(was.length() - 1 - z) == line.charAt(line.length() - 1 - z)) z++;
+    var style = p.text.styleAt(a > 0 ? a - 1 : 0);
+    return p.text(p.text.replace(a, was.length() - z, RichText.of(line.substring(a, line.length() - z), style)));
   }
 
   /**

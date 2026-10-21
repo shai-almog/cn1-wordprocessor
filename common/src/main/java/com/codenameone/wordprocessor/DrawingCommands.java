@@ -116,7 +116,11 @@ final class DrawingCommands implements Commands.Extension {
             var story = TextBoxes.retext(d.story, Commands.str(a, "text"), next);
             var out = new Sequence<Block>();
             for (Block b : story) {
-              var p = (Paragraph) b;
+              if (!(b instanceof Paragraph p)) {
+                // Tables and pictures stay as they are; the formatting applies to the paragraphs.
+                out = out.append(b);
+                continue;
+              }
               int n = p.text.length();
               if (a.containsKey("size")) p = p.text(p.text.format(0, n, "size", String.valueOf(clamp(f(a, "size", 11), 1, 400))));
               if (a.containsKey("color")) p = p.text(p.text.format(0, n, "color", color(Commands.str(a, "color"))));

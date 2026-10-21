@@ -316,6 +316,27 @@ public class DrawingCommandsTest {
   }
 
   @Test
+  public void textDialogKeepsTablesAndPicturesOfAStory() {
+    var d = TextBoxStoryTest.boxedTable();
+    var box = (Picture) d.blocks.get(1);
+    var shape = Picture.drawing("i9", Drawing.of("shape"), 20, 20, "", "left");
+    d = d.blocks(d.blocks.set(1, box.drawing(box.drawing.story(box.drawing.story.append(shape)))), d.nextId);
+    var s = new Session(d);
+    run(s, "shape.text", "block", 1, "text", "Head!\nA1\nB2\nTail\nMore", "bold", true);
+    var story = ((Picture) s.document().blocks.get(1)).drawing.story;
+    assertEquals(5, story.size());
+    assertEquals("Head!", ((Paragraph) story.get(0)).text.toString());
+    var t = (Table) story.get(1);
+    assertEquals("B2", ((Paragraph) t.blocks(0, 1).get(0)).text.toString());
+    assertEquals("p21", t.blocks(0, 1).get(0).id());
+    assertEquals("Tail", ((Paragraph) story.get(2)).text.toString());
+    assertEquals("i9", story.get(3).id());
+    assertEquals("More", ((Paragraph) story.get(4)).text.toString());
+    assertTrue(((Paragraph) story.get(4)).text.styleAt(0).bold);
+    assertEquals("Head!\nA1\nB2\nTail\nMore", Drawing.plainText(story));
+  }
+
+  @Test
   public void textDialogEditsAStoryWithoutFlatteningIt() {
     var s = new Session(TextBoxStoryTest.boxed());
     run(s, "shape.text", "block", 1, "text", "Bold start\nSecond lines\nThird", "align", "right");
