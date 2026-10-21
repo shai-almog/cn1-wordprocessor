@@ -113,4 +113,55 @@ public class TurnedCellLayoutTest {
     var l = line(r, "turned line");
     assertTrue(cx > l.pageBounds()[0] + l.pageBounds()[2]);
   }
+
+  /** A 1x1 table whose cell (direction {@code outer}) holds a 1x1 table (direction {@code inner}). */
+  private static Document nested(String outer, String inner) {
+    var s = new Session(Document.empty());
+    s.insertTable(1, 1);
+    var d = s.document();
+    int at = 0;
+    for (int i = 0; i < d.blocks.size(); i++) if (d.blocks.get(i) instanceof Table) at = i;
+    var t = (Table) d.blocks.get(at);
+    s.enterCell(at, 0, 0);
+    s.insertTable(1, 1);
+    s.leaveCell();
+    d = s.document();
+    t = (Table) d.blocks.get(at);
+    int k = 0;
+    for (int i = 0; i < t.blocks(0, 0).size(); i++) if (t.blocks(0, 0).get(i) instanceof Table) k = i;
+    var n = (Table) t.blocks(0, 0).get(k);
+    n = n.setBlocks(0, 0, new Sequence<Block>().append(new Paragraph("np", RichText.of("inner words"))));
+    n = n.format(n.format.direction(0, 0, inner));
+    t = t.setBlocks(0, 0, t.blocks(0, 0).set(k, n));
+    t = t.format(t.format.direction(0, 0, outer));
+    return d.blocks(d.blocks.set(at, t), d.nextId);
+  }
+
+  private static LayoutEngine.Line innerLine(LayoutEngine.Result r) {
+    for (LayoutEngine.Line l : r.pages.get(0).lines)
+      if (l.path != null && l.path.length >= 3 && l.end > l.start) return l;
+    fail("no nested line");
+    return null;
+  }
+
+  @Test
+  public void nestedCellsKeepTheirOwnDirection() {
+    // Inside a horizontal cell: the nested cell turns on its own.
+    var flat = engine().layout(nested("lrTb", "btLr"), 0);
+    var l = innerLine(flat);
+    assertEquals(2, l.turn);
+    LayoutEngine.Box outer = null;
+    for (LayoutEngine.Box b : flat.pages.get(0).boxes) if (b.path.length == 0) outer = b;
+    float[] b = l.pageBounds();
+    assertEquals(l.width, b[3], .01f);
+    if (outer != null) {
+      assertTrue(b[0] >= outer.x - .01f && b[0] + b[2] <= outer.x + outer.width + .01f);
+      assertTrue(b[1] >= outer.y - .01f && b[1] + b[3] <= outer.y + outer.height + .01f);
+    }
+    // Inside a turned cell: the nested cell's own (bottom-to-top) direction, not the outer one.
+    var turned = engine().layout(nested("tbRl", "btLr"), 0);
+    assertEquals(2, innerLine(turned).turn);
+    // A horizontal nested cell in a turned cell turns with it.
+    assertEquals(1, innerLine(engine().layout(nested("tbRl", "lrTb"), 0)).turn);
+  }
 }

@@ -2960,6 +2960,12 @@ public final class LayoutEngine {
       final List<String> ids = new ArrayList<String>(), markers = new ArrayList<String>();
       final List<Float> xs = new ArrayList<Float>(), ys = new ArrayList<Float>();
       final List<int[]> paths = new ArrayList<int[]>();
+      /**
+       * Per line: null, or for a line of a nested cell turned on its own (Wordcraft's turned
+       * text inside a cell keeps its own direction) {turn, originX, originY, frameX, frameY}:
+       * the nested cell's frame origin in this cell's space and the line's place in that frame.
+       */
+      final List<float[]> frames = new ArrayList<float[]>();
       final List<InnerBox> inner = new ArrayList<InnerBox>();
       /** Pictures and drawings in this cell (nested cells too) with their cell-relative frames. */
       final List<Picture> pics = new ArrayList<Picture>();
@@ -3003,7 +3009,8 @@ public final class LayoutEngine {
         this.width = edges[col + span.columns] - edges[col];
         height = format.verticalPadding;
         float width = Math.max(1, this.width - 2 * format.horizontalPadding);
-        String dir = prefix.length == 0 ? t.format.direction(row, col) : "lrTb";
+        // Nested cells turn too (their own direction, as Wordcraft lays every cell out alike).
+        String dir = t.format.direction(row, col);
         turn = "tbRl".equals(dir) ? 1 : "btLr".equals(dir) ? 2 : 0;
         if (turn != 0) {
           // As Wordcraft: turned lines run along the cell's height. An exact row height sets
@@ -3062,6 +3069,7 @@ public final class LayoutEngine {
             ids.add(p.id);
             markers.add(marker);
             paths.add(prefix);
+            frames.add(null);
             marker = "";
             xs.add(x);
             ys.add(height);
@@ -3261,14 +3269,37 @@ public final class LayoutEngine {
             picBoxes.add(
                 new float[] {sub.left + r[0], top + shift + r[1], r[2], r[3], sub.left + r[4], top + shift + r[5], r[6]});
           }
+          // A turned nested cell's frame origin in this cell (as turnOrigin for a table's cell).
+          float[] origin = null;
+          if (sub.turn != 0) {
+            float pad = sub.format.horizontalPadding, vpad = sub.format.verticalPadding;
+            float cw = Math.max(0, sub.width - 2 * pad);
+            float off =
+                "center".equals(sub.format.vertical)
+                    ? Math.max(0, (cw - sub.across) / 2)
+                    : "bottom".equals(sub.format.vertical) ? Math.max(0, cw - sub.across) : 0;
+            origin = new float[] {
+              sub.turn == 2 ? sub.left + pad + off : sub.left + pad + cw - off,
+              sub.turn == 2 ? top + vpad + sub.len : top + vpad
+            };
+          }
           for (int i = 0; i < sub.lines.size(); i++) {
             lines.add(sub.lines.get(i));
             paragraphs.add(sub.paragraphs.get(i));
             ids.add(sub.ids.get(i));
             markers.add(sub.markers.get(i));
             paths.add(sub.paths.get(i));
-            xs.add(sub.left + sub.xs.get(i));
-            ys.add(top + shift + sub.ys.get(i));
+            float[] f = sub.frames.get(i);
+            if (origin != null)
+              frames.add(new float[] {
+                sub.turn, origin[0], origin[1],
+                sub.xs.get(i) - sub.format.horizontalPadding, sub.ys.get(i) - sub.format.verticalPadding
+              });
+            else if (f != null) frames.add(new float[] {f[0], sub.left + f[1], top + shift + f[2], f[3], f[4]});
+            else frames.add(null);
+            // A turned line's place for row splitting: its cell's top.
+            xs.add(sub.left + (origin != null ? 0 : sub.xs.get(i)));
+            ys.add(origin != null ? top : top + shift + sub.ys.get(i));
           }
         }
         height += tops[n.rows()];
@@ -3569,7 +3600,12 @@ public final class LayoutEngine {
           if (turnAt == null) continue;
           float pad = cell.format.horizontalPadding, vpad = cell.format.verticalPadding;
           float ox = turnAt[0], oy = turnAt[1];
-          for (int i = 0; i < cell.lines.size(); i++)
+          var frame = new Line(index, -1, -1, "", pages.size(), 0, 0, new RawLine(), "")
+              .turned(cell.turn, ox, oy);
+          for (int i = 0; i < cell.lines.size(); i++) {
+            float[] f = cell.frames.get(i);
+            // A nested cell turned on its own keeps its direction; its frame moves with this one.
+            float[] o = f == null ? null : frame.toPage(f[1] - pad, f[2] - vpad);
             current.add(
                 new Line(
                         index,
@@ -3577,16 +3613,37 @@ public final class LayoutEngine {
                         cell.span.column,
                         cell.ids.get(i),
                         pages.size(),
-                        cell.xs.get(i) - pad,
-                        cell.ys.get(i) - vpad,
+                        f == null ? cell.xs.get(i) - pad : f[3],
+                        f == null ? cell.ys.get(i) - vpad : f[4],
                         cell.lines.get(i),
                         cell.markers.get(i))
                     .at(cell.paths.get(i))
-                    .turned(cell.turn, ox, oy));
+                    .turned(f == null ? cell.turn : (int) f[0], f == null ? ox : o[0], f == null ? oy : o[1]));
+          }
           continue;
         }
         for (int i = 0; i < cell.lines.size(); i++) {
           float lineY = top + cell.shift + cell.ys.get(i);
+          float[] f = cell.frames.get(i);
+          if (f != null) {
+            // A turned nested cell's line: drawn in its frame on the page where its cell starts.
+            if (lineY >= first - .01f && lineY < end - .01f)
+              current.add(
+                  new Line(
+                          index,
+                          cell.span.row,
+                          cell.span.column,
+                          cell.ids.get(i),
+                          pages.size(),
+                          f[3],
+                          f[4],
+                          cell.lines.get(i),
+                          cell.markers.get(i))
+                      .at(cell.paths.get(i))
+                      .inNote(index == -2 ? endnote : null, endnoteBlock)
+                      .turned((int) f[0], spec.left + cell.left + f[1], y + top + cell.shift + f[2] - first));
+            continue;
+          }
           if (lineY >= first - .01f && lineY < end - .01f && lineY < bottom - .01f)
             current.add(
                 new Line(
