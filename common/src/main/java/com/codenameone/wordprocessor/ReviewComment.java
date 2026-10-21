@@ -422,6 +422,17 @@ public final class ReviewComment {
       found = scanFurniture(TEXT_BOX + box.id(), box.drawing.story, id, result);
       if (found != null) return found;
     }
+    // Group member stories (Wordcraft's member text box parts), keyed by member id.
+    var groups = new java.util.ArrayList<Picture>();
+    TextBoxes.map(document, p -> {
+      if (p.drawing != null && !p.drawing.storyMembers().isEmpty()) groups.add(p);
+      return p;
+    });
+    for (Picture g : groups)
+      for (int k : g.drawing.storyMembers()) {
+        found = scanFurniture(TEXT_BOX + TextBoxes.memberId(g.id(), k), g.drawing.memberStory(k), id, result);
+        if (found != null) return found;
+      }
     return null;
   }
 

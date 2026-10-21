@@ -350,6 +350,29 @@ public class TextBoxStoryTest {
   }
 
   @Test
+  public void commentsAnchorInGroupMemberStories() throws Exception {
+    var s = new Session(groupWithMemberText());
+    String id = TextBoxes.memberId(group(s.document()).id(), 1);
+    s.enterTextBox(id);
+    s.select(0, 0, 6);
+    s.addComment("Me", "On member");
+    s.leaveCell();
+    var c = s.document().comments.get(s.document().comments.size() - 1);
+    var anchor = ReviewComment.index(s.document()).get(c.startId);
+    assertEquals(id, ReviewComment.textBox(anchor));
+    s.selectComment(c.id);
+    assertEquals(id, s.textBoxStory());
+    assertEquals(6, s.selection().end());
+    s.leaveCell();
+    var out = new java.io.ByteArrayOutputStream();
+    Docx.write(s.document(), out);
+    var back = Docx.read(new java.io.ByteArrayInputStream(out.toByteArray())).document;
+    assertEquals(1, back.comments.size());
+    assertEquals("On member", back.comments.get(0).text);
+    assertTrue(ReviewComment.textBox(ReviewComment.index(back).get(back.comments.get(0).startId)).endsWith("/1"));
+  }
+
+  @Test
   public void overflowingStoryIsCutAtALineAsWordcraftFitsABox() throws Exception {
     var story = new Sequence<Block>();
     for (int i = 0; i < 8; i++) story = story.append(new Paragraph("p" + (40 + i), RichText.of("Line " + i)));
