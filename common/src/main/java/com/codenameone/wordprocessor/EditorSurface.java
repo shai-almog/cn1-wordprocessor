@@ -1863,6 +1863,19 @@ public final class EditorSurface extends Container
       }
     }
     paintInk(g);
+    if (moving && movePic != null) {
+      // Wordcraft's drag outline (frame::paint_outline): the object's frame where it would land.
+      int to = pageAt(moveX, moveY);
+      float px = (moveX - viewportX() - pageX(to)) / scale() - moveDx;
+      float py = (moveY - viewportY() + getScrollY() - pageY(to)) / scale() - moveDy;
+      int gx = getX() + pageX(to) + getScrollX() + Math.round(px * scale()), gy = baseY + pageY(to) + Math.round(py * scale());
+      int gw = Math.round(movePic.width() * scale()), gh = Math.round(movePic.height() * scale());
+      g.setColor(0x2b579a);
+      g.setAlpha(20);
+      g.fillRect(gx, gy, gw, gh);
+      g.setAlpha(255);
+      g.drawRect(gx, gy, gw, gh);
+    }
     if (inputAfterPaint) {
       inputAfterPaint = false;
       Display.getInstance().callSerially(() -> {
@@ -2327,8 +2340,25 @@ public final class EditorSurface extends Container
 
   /** The object being dragged to a new position, its page and the grab offset in points. */
   private LayoutEngine.PlacedPicture movePic;
-  private int movePage, movePressX, movePressY;
+  private int movePage, movePressX, movePressY, moveX, moveY;
   private float moveDx, moveDy;
+  private boolean moving;
+
+  /** The page under screen point x, y (the nearest one by its vertical extent). */
+  private int pageAt(int x, int y) {
+    int best = movePage;
+    float dist = Float.MAX_VALUE;
+    for (int page = 0; page < layout().pages.size(); page++) {
+      float py = (y - viewportY() + getScrollY() - pageY(page)) / scale();
+      float h = session.document().page.height;
+      float d = py < 0 ? -py : py > h ? py - h : 0;
+      if (d < dist) {
+        dist = d;
+        best = page;
+      }
+    }
+    return best;
+  }
 
   /**
    * Drops a dragged object: as Wordcraft, it floats with its top left where it was dropped,
@@ -2338,15 +2368,20 @@ public final class EditorSurface extends Container
   private boolean dropMoved(int x, int y) {
     var pic = movePic;
     movePic = null;
+    moving = false;
     if (pic == null || Math.abs(x - movePressX) + Math.abs(y - movePressY) < OfficeTheme.px(4)) return false;
     var block = session.document().blocks.get(pic.block());
     if (!(block instanceof Picture)) return false;
-    float px = (x - viewportX() - pageX(movePage)) / scale() - moveDx;
-    float py = (y - viewportY() + getScrollY() - pageY(movePage)) / scale() - moveDy;
+    int to = pageAt(x, y);
+    float px = (x - viewportX() - pageX(to)) / scale() - moveDx;
+    float py = (y - viewportY() + getScrollY() - pageY(to)) / scale() - moveDy;
     var spec = session.document().page;
     px = Math.max(-pic.width() / 2, Math.min(spec.width - pic.width() / 2, px));
     py = Math.max(-pic.height() / 2, Math.min(spec.height - pic.height() / 2, py));
-    session.replacePicture(pic.block(), ((Picture) block).movedTo(px, py));
+    // Dropped on another page: re-anchored to the paragraph there, as Wordcraft's move_object.
+    Document moved = to == movePage ? null : Picture.reanchored(session.document(), layout(), pic.block(), to, px, py);
+    if (moved != null) session.replaceDocument(moved);
+    else session.replacePicture(pic.block(), ((Picture) block).movedTo(px, py));
     refresh();
     changed.run();
     return true;
@@ -2358,7 +2393,14 @@ public final class EditorSurface extends Container
       inkDrag(x, y);
       return;
     }
-    if (movePic != null) return;
+    if (movePic != null) {
+      // Wordcraft's drag outline: where the object will land.
+      moveX = x;
+      moveY = y;
+      moving = Math.abs(x - movePressX) + Math.abs(y - movePressY) >= OfficeTheme.px(4);
+      repaint();
+      return;
+    }
     if (OfficeTheme.mobile() && !touchSelecting) {
       if (Math.abs(x - touchX) + Math.abs(y - touchY) > OfficeTheme.px(6)) touchMoved = true;
       super.pointerDragged(x, y);

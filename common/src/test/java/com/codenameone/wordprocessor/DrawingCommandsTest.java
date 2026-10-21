@@ -207,6 +207,33 @@ public class DrawingCommandsTest {
     assertEquals("page,,250;page,,300", ((Picture) s.document().blocks.get(shape)).position());
   }
 
+  /** As Wordcraft's move_object: dropping a float on another page re-anchors it there. */
+  @Test
+  public void draggingAFloatOntoAnotherPageReanchorsIt() throws Exception {
+    var blocks = new Sequence<Block>().append(Picture.drawing("i0", Drawing.of("shape").with("wrap", "square"), 80, 40, "", "left"));
+    for (int i = 1; i <= 120; i++) blocks = blocks.append(new Paragraph("p" + i, RichText.of("Paragraph " + i + " with some words.")));
+    var s = new Session(new Document(blocks, PageSpec.A4, "T", 200));
+    assertEquals("reanchored", run(s, "arrange.bounds", "block", 0, "x", 100, "y", 300, "page", 1));
+    LayoutEngine engine = PdfExporter.layoutEngine(null);
+    var layout = engine.layout(s.document(), 2);
+    int moved = -1;
+    for (int i = 0; i < s.document().blocks.size(); i++) if (s.document().blocks.get(i) instanceof Picture) moved = i;
+    assertTrue(moved > 1);
+    var pic = layout.pages.get(1).pictures.get(0);
+    assertEquals(100, pic.x(), .01f);
+    assertEquals(300, pic.y(), .01f);
+    // Anchored before the paragraph at that height on page 2.
+    var next = (Paragraph) s.document().blocks.get(moved + 1);
+    boolean onPage2 = false;
+    for (var l : layout.pages.get(1).lines) if (next.id.equals(l.paragraphId) && l.y <= 300.5f) onPage2 = true;
+    assertTrue(onPage2);
+    // Same page: just a move.
+    assertEquals("page,,90;page,,310", run(s, "arrange.bounds", "block", moved, "x", 90, "y", 310, "page", 1));
+    s.undo();
+    s.undo();
+    assertTrue(s.document().blocks.get(0) instanceof Picture);
+  }
+
   @Test
   public void smartArtOutlineMatchesWordcraftSemantics() {
     Session s = new Session(Document.empty());

@@ -505,9 +505,23 @@ final class DrawingCommands implements Commands.Extension {
           s.replacePicture(block, p.wrapSide(side));
           return side;
         });
-    c.edit("arrange.bounds", "block?:integer,x:number,y:number",
-        "Move an object to page point x, y (points) on its anchor's page: it floats there, Square wrapped if it was inline", (s, a) -> {
+    c.edit("arrange.bounds", "block?:integer,x:number,y:number,page?:integer",
+        "Move an object to page point x, y (points) on its anchor's page, or on page (0-based) re-anchored to the paragraph there: it floats there, Square wrapped if it was inline", (s, a) -> {
           int block = block(s, a);
+          if (a.get("page") != null) {
+            int page = (int) Commands.number(a, "page", 0);
+            var layout = c.layoutEngine().layout(s.document(), s.revision());
+            int now = -1;
+            for (int i = 0; i < layout.pages.size() && now < 0; i++)
+              for (LayoutEngine.PlacedPicture x : layout.pages.get(i).pictures) if (x.block() == block) now = i;
+            if (page != now) {
+              Document moved = Picture.reanchored(s.document(), layout, block, page,
+                  Commands.number(a, "x", 0), Commands.number(a, "y", 0));
+              if (moved == null) throw new IllegalArgumentException("No text on that page to anchor to");
+              s.replaceDocument(moved);
+              return "reanchored";
+            }
+          }
           Picture next = picture(s, block).movedTo(Commands.number(a, "x", 0), Commands.number(a, "y", 0));
           s.replacePicture(block, next);
           return next.position();

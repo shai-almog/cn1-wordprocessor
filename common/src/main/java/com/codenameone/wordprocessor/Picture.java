@@ -299,6 +299,27 @@ public final class Picture implements Block {
     return look(look.position(pos));
   }
 
+  /**
+   * As Wordcraft's move_object across pages: the float at body block {@code block} dropped at page
+   * point x, y of {@code page} moves before the paragraph there (the last one starting at or above
+   * y, else the page's first) and floats at that page point. Null when the page has no body
+   * paragraph to anchor to.
+   */
+  static Document reanchored(Document doc, LayoutEngine.Result layout, int block, int page, float x, float y) {
+    if (page < 0 || page >= layout.pages.size() || !(doc.blocks.get(block) instanceof Picture p)) return null;
+    int anchor = -1, first = -1;
+    for (LayoutEngine.Line l : layout.pages.get(page).lines) {
+      if (l.block < 0 || l.row >= 0 || l.start != 0 || !(doc.blocks.get(l.block) instanceof Paragraph)) continue;
+      if (first < 0) first = l.block;
+      if (l.y <= y + .5f) anchor = l.block;
+    }
+    if (anchor < 0) anchor = first;
+    if (anchor < 0) return null;
+    var blocks = doc.blocks.remove(block);
+    int at = anchor > block ? anchor - 1 : anchor;
+    return doc.blocks(blocks.insert(at, p.movedTo(x, y)), doc.nextId);
+  }
+
   /** As Wordcraft's arrange.nudge: a positioned float's offsets moved by dx, dy points. */
   public Picture nudged(float dx, float dy) {
     FloatPosition f = FloatPosition.parse(position());
