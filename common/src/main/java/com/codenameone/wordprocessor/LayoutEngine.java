@@ -987,13 +987,41 @@ public final class LayoutEngine {
       else if ("distribute".equals(p.align) && end > start) justify(line, available, true, p.text);
       // UAX #9 L1: a tab is a segment separator at paragraph level, so each tab-delimited segment is
       // reordered within its own extent and the tabs (and their stops) stay put.
-      if (levels != null) {
+      // A right-to-left paragraph is laid out from its start edge as if mirrored (Wordcraft
+      // para.rs break_lines): tabs, indents and alignment are measured from the right, so each
+      // tab-delimited segment and each tab moves to its mirrored extent before reordering.
+      boolean mirror = p.format.rtl && line.gapAt == null && !(dropped && out.size() < dropLines);
+      float lineW = line.width;
+      if (mirror) for (Span sp : line.spans) lineW = Math.max(lineW, sp.x + sp.width);
+      if (levels != null || mirror) {
         int from = 0;
         for (int i = 0; i <= line.spans.size(); i++)
           if (i == line.spans.size() || "\t".equals(line.spans.get(i).text)) {
-            if (i > from) Bidi.reorder(line.spans.subList(from, i), levels, p.format.rtl);
+            if (i > from) {
+              var segment = line.spans.subList(from, i);
+              if (mirror) {
+                var last = segment.get(segment.size() - 1);
+                segment.set(0, segment.get(0).placed(lineW - (last.x + last.width), true));
+                if (levels == null) {
+                  float sx = segment.get(0).x;
+                  for (int k = 0; k < segment.size(); k++) {
+                    segment.set(k, segment.get(k).placed(sx, true));
+                    sx += segment.get(k).width;
+                  }
+                }
+              }
+              if (levels != null) Bidi.reorder(segment, levels, p.format.rtl);
+            }
+            if (mirror && i < line.spans.size()) {
+              var tab = line.spans.get(i);
+              line.spans.set(i, tab.placed(lineW - tab.x - tab.width, true));
+            }
             from = i + 1;
           }
+        if (mirror) {
+          java.util.Collections.sort(line.spans, (u, v) -> Float.compare(u.x, v.x));
+          line.width = lineW;
+        }
       }
       float textOffset = start == 0 ? p.format.firstIndent : 0;
       if (line.gapAt != null) {
@@ -1002,7 +1030,7 @@ public final class LayoutEngine {
       for (TabStop stop : p.format.tabs)
         if ("bar".equals(stop.alignment)) {
           if (line.barTabs.isEmpty()) line.barTabs = new ArrayList<>();
-          line.barTabs.add(stop.position - textOffset);
+          line.barTabs.add(mirror ? lineW - (stop.position - textOffset) : stop.position - textOffset);
         }
       float baseline = metrics.ascent(TextStyle.DEFAULT);
       for (Span span : line.spans)
@@ -1675,10 +1703,12 @@ public final class LayoutEngine {
         float indent = p.indent + (p.list.isEmpty() ? 0 : 18 * (p.listLevel + 1));
         float first = line.start == 0 ? p.format.firstIndent : 0;
         float extra = spec.contentWidth() - indent - first - p.format.rightIndent - line.width;
-        x =
+        float lx =
             indent
                 + first
                 + ("center".equals(p.align) ? extra / 2 : "right".equals(p.align) ? extra : 0);
+        // Right to left: mirrored from the note area's right edge.
+        x = p.format.rtl && line.gapAt == null ? spec.contentWidth() - lx - line.width : lx;
       }
 
       float height() {
@@ -2039,6 +2069,8 @@ public final class LayoutEngine {
           x += (spec.contentWidth() - indent - p.format.rightIndent - firstIndent - l.lead - l.cutRight - l.width) / 2;
         if ("right".equals(p.align) && l.gapAt == null)
           x += spec.contentWidth() - indent - p.format.rightIndent - firstIndent - l.lead - l.cutRight - l.width;
+        // Right to left: indents and alignment are measured from the right edge (mirrored).
+        if (p.format.rtl && l.gapAt == null) x = 2 * spec.left + spec.contentWidth() - x - l.width;
         current.add(new Line(index, -1, -1, p.id, pages.size(), x, y, l, marker));
         // After the first line, so caret lookups for offset 0 find the text line first.
         if (l.drop != null)

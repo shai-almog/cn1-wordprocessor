@@ -142,4 +142,46 @@ public class BidiTest {
       x += s.width;
     }
   }
+
+  private LayoutEngine.Page rtlPage(String text, String... props) {
+    var s = new Session(Document.empty());
+    s.replace(text);
+    s.paragraph("rtl", "true");
+    for (int i = 0; i < props.length; i += 2) s.paragraph(props[i], props[i + 1]);
+    return engine().layout(s.document(), 0).pages.get(0);
+  }
+
+  private static float right(LayoutEngine.Line l) {
+    float r = l.x;
+    for (LayoutEngine.Span s : l.spans) r = Math.max(r, l.x + s.x + s.width);
+    return r;
+  }
+
+  @Test
+  public void rightToLeftIndentIsMeasuredFromTheRight() {
+    var page = rtlPage(SHALOM, "indent", "36");
+    var spec = page.spec;
+    var l = page.lines.get(0);
+    assertEquals(spec.left + spec.contentWidth() - 36, right(l), .01);
+    var end = rtlPage(SHALOM, "rightIndent", "20", "align", "right").lines.get(0);
+    assertEquals(spec.left + 20, end.x, .01);
+    var center = rtlPage(SHALOM, "align", "center").lines.get(0);
+    assertEquals(spec.left + (spec.contentWidth() - 40) / 2, center.x, .01);
+  }
+
+  @Test
+  public void rightToLeftTabStopsAreMeasuredFromTheRight() {
+    var page = rtlPage("\u05D0\t\u05D1", "tabs", "100,left,none");
+    var spec = page.spec;
+    var l = page.lines.get(0);
+    LayoutEngine.Span first = null, second = null;
+    for (LayoutEngine.Span s : l.spans) {
+      if ("\u05D0".equals(s.text)) first = s;
+      if ("\u05D1".equals(s.text)) second = s;
+    }
+    float edge = spec.left + spec.contentWidth();
+    assertEquals(edge, l.x + first.x + first.width, .01);
+    assertEquals(edge - 100, l.x + second.x + second.width, .01);
+    assertTrue(l.spans.get(0).x <= l.spans.get(l.spans.size() - 1).x);
+  }
 }
