@@ -205,7 +205,7 @@ public final class Session {
   private int transactionDepth;
   private State composition;
   private TextStyle insertionStyle;
-  private static final int HISTORY_LIMIT = 200;
+  private static final int HISTORY_LIMIT = 500;
   private Document typedDocument;
   private Selection typedSelection;
   private CellContext typedCell;
