@@ -396,80 +396,8 @@ public final class PdfExporter {
             .append(n(spec.left - lineGap - label.length() * 5f)).append(' ')
             .append(n(spec.height - n[0] - 9)).append(" Tm (").append(label).append(") Tj ET\n");
       }
-      for (LayoutEngine.Frame frame : page.frames) frame(content, frame, spec.height);
-      for (LayoutEngine.PlacedPicture pic : LayoutEngine.byDepth(page.paintedPictures(), false)) {
-        int figure = structure.mcid(pageNumber, structure.figure(pic.picture().alt));
-        content.append("/Figure << /MCID ").append(figure).append(" >> BDC\n");
-        if (pic.picture().drawing != null) {
-          PdfDrawings.paint(content, pic, spec.height, fonts, null);
-          imageIndex = groupImages(content, imageResources, pic, groupIds.get(pic.picture()), spec.height, imageIndex);
-          content.append("EMC\n");
-          continue;
-        }
-        var name = "Im" + (imageIndex++);
-        imageResources
-            .append('/')
-            .append(name)
-            .append(' ')
-            .append(imageIds.get(pic.picture()))
-            .append(" 0 R ");
-        picture(content, pic, spec.height, name);
-        content.append("EMC\n");
-      }
-      for (LayoutEngine.Box b : page.paintedBoxes()) {
-        content
-            .append(color(b.format.background))
-            .append(" rg ")
-            .append(color(b.format.borderColor))
-            .append(" RG ")
-            .append(n(b.format.borderWidth))
-            .append(" w ")
-            .append(n(b.x))
-            .append(' ')
-            .append(n(spec.height - b.y - b.height))
-            .append(' ')
-            .append(n(b.width))
-            .append(' ')
-            .append(n(b.height))
-            .append(
-                b.format.borderWidth > 0 && b.format.sides == TableFormat.Cell.ALL
-                    ? " re B\n"
-                    : " re f\n");
-        if (b.format.borderWidth > 0 && b.format.sides != TableFormat.Cell.ALL) {
-          float x0 = b.x, x1 = b.x + b.width, y0 = spec.height - b.y, y1 = y0 - b.height;
-          float[][] edges = {
-            {TableFormat.Cell.TOP, x0, y0, x1, y0},
-            {TableFormat.Cell.BOTTOM, x0, y1, x1, y1},
-            {TableFormat.Cell.LEFT, x0, y0, x0, y1},
-            {TableFormat.Cell.RIGHT, x1, y0, x1, y1}
-          };
-          for (float[] e : edges)
-            if (b.format.side((int) e[0]))
-              content
-                  .append(n(e[1]))
-                  .append(' ')
-                  .append(n(e[2]))
-                  .append(" m ")
-                  .append(n(e[3]))
-                  .append(' ')
-                  .append(n(e[4]))
-                  .append(" l S\n");
-        }
-      }
-      for (LayoutEngine.Line area : page.noteAreas()) {
-        float y = spec.height - area.y + 6;
-        content
-            .append("0 G 0.5 w ")
-            .append(n(spec.left))
-            .append(' ')
-            .append(n(y))
-            .append(" m ")
-            .append(n(spec.left + Math.min(144, spec.contentWidth() / 3)))
-            .append(' ')
-            .append(n(y))
-            .append(" l S\n");
-      }
-      for (LayoutEngine.Line line : page.allLines()) {
+      // One line's text; text box story lines are written after their box (PDF paints in order).
+      LinePainter paintLine = line -> {
         if (furniture.contains(line)) content.append("/Artifact BMC\n");
         else {
           var element = structure.element(line, notes.contains(line));
@@ -628,7 +556,82 @@ public final class PdfExporter {
         if (line.clipped) content.append("Q\n");
         if (line.turn != 0) content.append("Q\n");
         content.append("EMC\n");
+            };
+      for (LayoutEngine.Frame frame : page.frames) frame(content, frame, spec.height);
+      for (LayoutEngine.PlacedPicture pic : LayoutEngine.byDepth(page.paintedPictures(), false)) {
+        int figure = structure.mcid(pageNumber, structure.figure(pic.picture().alt));
+        content.append("/Figure << /MCID ").append(figure).append(" >> BDC\n");
+        if (pic.picture().drawing != null) {
+          PdfDrawings.paint(content, pic, spec.height, fonts, null);
+          imageIndex = groupImages(content, imageResources, pic, groupIds.get(pic.picture()), spec.height, imageIndex);
+          content.append("EMC\n");
+          boxLines(content, page, pic, spec, paintLine);
+          continue;
+        }
+        var name = "Im" + (imageIndex++);
+        imageResources
+            .append('/')
+            .append(name)
+            .append(' ')
+            .append(imageIds.get(pic.picture()))
+            .append(" 0 R ");
+        picture(content, pic, spec.height, name);
+        content.append("EMC\n");
       }
+      for (LayoutEngine.Box b : page.paintedBoxes()) {
+        content
+            .append(color(b.format.background))
+            .append(" rg ")
+            .append(color(b.format.borderColor))
+            .append(" RG ")
+            .append(n(b.format.borderWidth))
+            .append(" w ")
+            .append(n(b.x))
+            .append(' ')
+            .append(n(spec.height - b.y - b.height))
+            .append(' ')
+            .append(n(b.width))
+            .append(' ')
+            .append(n(b.height))
+            .append(
+                b.format.borderWidth > 0 && b.format.sides == TableFormat.Cell.ALL
+                    ? " re B\n"
+                    : " re f\n");
+        if (b.format.borderWidth > 0 && b.format.sides != TableFormat.Cell.ALL) {
+          float x0 = b.x, x1 = b.x + b.width, y0 = spec.height - b.y, y1 = y0 - b.height;
+          float[][] edges = {
+            {TableFormat.Cell.TOP, x0, y0, x1, y0},
+            {TableFormat.Cell.BOTTOM, x0, y1, x1, y1},
+            {TableFormat.Cell.LEFT, x0, y0, x0, y1},
+            {TableFormat.Cell.RIGHT, x1, y0, x1, y1}
+          };
+          for (float[] e : edges)
+            if (b.format.side((int) e[0]))
+              content
+                  .append(n(e[1]))
+                  .append(' ')
+                  .append(n(e[2]))
+                  .append(" m ")
+                  .append(n(e[3]))
+                  .append(' ')
+                  .append(n(e[4]))
+                  .append(" l S\n");
+        }
+      }
+      for (LayoutEngine.Line area : page.noteAreas()) {
+        float y = spec.height - area.y + 6;
+        content
+            .append("0 G 0.5 w ")
+            .append(n(spec.left))
+            .append(' ')
+            .append(n(y))
+            .append(" m ")
+            .append(n(spec.left + Math.min(144, spec.contentWidth() / 3)))
+            .append(' ')
+            .append(n(y))
+            .append(" l S\n");
+      }
+      for (LayoutEngine.Line line : page.allLines()) paintLine.paint(line);
       // Draw bars after text backgrounds, using the same geometry as the editor canvas.
       for (LayoutEngine.Line line : page.allLines())
         for (float bar : line.barTabs)
@@ -648,6 +651,7 @@ public final class PdfExporter {
         PdfDrawings.paint(content, pic, spec.height, fonts, null);
         imageIndex = groupImages(content, imageResources, pic, groupIds.get(pic.picture()), spec.height, imageIndex);
         content.append("EMC\n");
+        boxLines(content, page, pic, spec, paintLine);
       }
       if (balloons != null) {
         balloonCards(content, balloons.get(pageIndex), spec);
@@ -723,6 +727,23 @@ public final class PdfExporter {
                 + xref
                 + "\n%%EOF\n"));
     return pdf.toByteArray();
+  }
+
+  private interface LinePainter {
+    void paint(LayoutEngine.Line line) throws IOException;
+  }
+
+  /** A text box's story lines, clipped to its text area, written over the box. */
+  private static void boxLines(StringBuilder content, LayoutEngine.Page page,
+      LayoutEngine.PlacedPicture pic, PageSpec spec, LinePainter paint) throws IOException {
+    if (page.textBoxLines.isEmpty()) return;
+    var lines = page.textBoxLines(pic.picture().id());
+    if (lines.isEmpty()) return;
+    float[] c = lines.get(0).boxClip;
+    content.append("q ").append(n(c[0])).append(' ').append(n(spec.height - c[1] - c[3])).append(' ')
+        .append(n(c[2])).append(' ').append(n(c[3])).append(" re W n\n");
+    for (LayoutEngine.Line line : lines) paint.paint(line);
+    content.append("Q\n");
   }
 
   private static void curve(

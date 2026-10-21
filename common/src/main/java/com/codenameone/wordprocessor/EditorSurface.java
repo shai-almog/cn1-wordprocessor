@@ -221,6 +221,228 @@ public final class EditorSurface extends Container
     } else paintDrawingOnly(g, pic, px, py, scale);
   }
 
+  /** Paints the story lines of text box {@code pic} over it, clipped to its text area. */
+  private void paintBoxLines(Graphics g, LayoutEngine.Page page, LayoutEngine.PlacedPicture pic,
+      int x, int y, float scale, Selection selection, LayoutEngine.Line caretLine) {
+    if (page.textBoxLines.isEmpty() || pic.picture().drawing == null) return;
+    int clipX = g.getClipX(), clipY = g.getClipY(), clipW = g.getClipWidth(), clipH = g.getClipHeight();
+    for (LayoutEngine.Line line : page.textBoxLines(pic.picture().id())) {
+      float[] c = line.boxClip;
+      g.setClip(clipX, clipY, clipW, clipH);
+      g.clipRect(x + Math.round(c[0] * scale), y + Math.round(c[1] * scale),
+          Math.max(1, Math.round(c[2] * scale)), Math.max(1, Math.round(c[3] * scale)));
+      paintLine(g, page, line, x, y, scale, selection, caretLine);
+    }
+    g.setClip(clipX, clipY, clipW, clipH);
+  }
+
+  private void paintLine(Graphics g, LayoutEngine.Page page, LayoutEngine.Line line, int x, int y,
+      float scale, Selection selection, LayoutEngine.Line caretLine) {
+      if (draft && line.block != -2 && (page.header.contains(line) || page.footer.contains(line)))
+        return;
+      int clipX = g.getClipX(),
+          clipY = g.getClipY(),
+          clipW = g.getClipWidth(),
+          clipH = g.getClipHeight();
+      // Lines outside the repaint area are skipped, with a line's height of slack for ink
+      // that overhangs it. Some ports (Windows DirectWrite) lay out every string they are
+      // asked to draw even when it is clipped away.
+      float[] bounds = line.pageBounds();
+      int top = y + Math.round(bounds[1] * scale), extent = Math.round(bounds[3] * scale);
+      if (top + 2 * extent < clipY || top - extent > clipY + clipH) return;
+      // Turned cell text (btLr/tbRl) is drawn in its frame, turned onto the page about the
+      // frame origin as Wordcraft's display list does.
+      com.codename1.ui.Transform unturned = null;
+      if (line.turn != 0 && g.isTransformSupported()) {
+        unturned = g.getTransform();
+        var turned = unturned.copy();
+        turned.translate(x + line.turnX * scale, y + line.turnY * scale);
+        turned.rotate((float) (line.turn == 1 ? Math.PI / 2 : -Math.PI / 2), 0, 0);
+        turned.translate(-x, -y);
+        g.setTransform(turned);
+      }
+      if (line.clipped)
+        g.clipRect(
+            clipX,
+            y + Math.round(line.y * scale),
+            clipW,
+            Math.max(1, Math.round(line.clipHeight * scale)));
+      int lx = x + Math.round(line.x * scale), ly = y + Math.round(line.y * scale);
+      if (!line.marker.isEmpty()) {
+        g.setFont(font(TextStyle.DEFAULT, zoom));
+        g.setColor(ink(0x242424));
+        int mx = lx - Math.round(18 * scale);
+        if (line.rtl) mx = x + Math.round(line.markerX(g.getFont().stringWidth(line.marker) / scale) * scale);
+        g.drawString(line.marker, mx, ly + Math.round(line.markerOffset * scale));
+      }
+      for (ReviewComment comment : session.document().comments) {
+        if (comment.resolved) continue;
+        ReviewComment.Anchor first = commentAnchors.get(comment.startId),
+            last = commentAnchors.get(comment.endId),
+            current = commentAnchors.get(line.paragraphId);
+        // A range runs through the body stream (body text and table cells in reading order)
+        // or within one note story.
+        if (first == null
+            || current == null
+            || !first.sameFlow(last)
+            || !first.sameFlow(current)
+            || order(current, first) < 0
+            || order(current, last) > 0) continue;
+        // A note's first displayed line starts with its label and a space.
+        int shift =
+            current.note != null && current.paragraph == 0 ? current.note.label.length() + 1 : 0;
+        int a =
+            current == first
+                ? Math.max(line.start, comment.start + shift)
+                : line.start;
+        int b = current == last ? Math.min(line.end, comment.end + shift) : line.end;
+        if (b > a) {
+          g.setColor(0xffedaa);
+          fillRange(g, line, a, b, lx, ly, scale);
+        }
+      }
+      int selectedBlock = editingBlock(line), shown = selectedBlock < 0 ? 0 : noteShift(line);
+      if (!exporting && session.cellSelection() == null
+          && selectedBlock >= 0
+          && selectedBlock >= selection.startBlock()
+          && selectedBlock <= selection.endBlock()
+          && (selectedBlock > selection.startBlock() || selection.start() + shown < line.end)
+          && (selectedBlock < selection.endBlock() || selection.end() + shown > line.start)) {
+        int
+            a =
+                selectedBlock == selection.startBlock()
+                    ? Math.max(selection.start() + shown, line.start)
+                    : line.start,
+            b =
+                selectedBlock == selection.endBlock()
+                    ? Math.min(selection.end() + shown, line.end)
+                    : line.end;
+        g.setColor(0xc5e9e6);
+        fillRange(g, line, a, b, lx, ly, scale);
+      }
+      int[] across = exporting || session.mixedSelection() == null ? null : acrossRange(line);
+      if (across != null && across[1] > line.start && across[0] < line.end
+          || across != null && across[0] == across[1] && line.start == line.end) {
+        g.setColor(0xc5e9e6);
+        fillRange(g, line, Math.max(across[0], line.start), Math.min(across[1], line.end), lx, ly, scale);
+      }
+      // Object lines (pictures, charts, equations) have no paragraph to proof.
+      if (!exporting && textLine(line) && AppOptions.flag("checkSpelling")) {
+        // Proofing marks: red wavy for spelling, blue for grammar.
+        int base = ly + Math.round(line.height * scale) - 2;
+        for (Proofing.Issue issue : proofIssues(lineParagraph(line))) {
+          if ("grammar".equals(issue.kind()) && !AppOptions.flag("checkGrammar")) continue;
+          int a = Math.max(issue.start(), line.start), b = Math.min(issue.end(), line.end);
+          if (a >= b) continue;
+          int x0 = lx + Math.round(offsetX(line, a) * scale), x1 = lx + Math.round(offsetX(line, b) * scale);
+          squiggle(g, Math.min(x0, x1), Math.max(x0, x1), base, "spelling".equals(issue.kind()) ? 0xd13438 : 0x2b579a);
+        }
+      }
+      boolean revised = false;
+      for (LayoutEngine.Span span : line.spans)
+        revised |= span.style.revision != null || span.style.formatRevision != null;
+      if (textLine(line)) {
+        var paragraph = lineParagraph(line);
+        revised |= paragraph.formatRevision != null;
+        // A table with a tracked property change (Wordcraft's table fmt_change) is marked
+        // beside each of its lines, as Word marks a table whose properties changed.
+        if (line.row >= 0) revised |= tableRevised(line);
+        if (paragraph.breakRevision != null && line.end == paragraph.text.length()) {
+          revised = true;
+          g.setFont(font(TextStyle.DEFAULT, zoom));
+          g.setColor(paragraph.breakRevision.inserted() ? 0x1261a0 : 0xb32222);
+          g.drawString("\u00b6", lx + Math.round(line.width * scale), ly);
+        }
+      }
+      if (revised) {
+        g.setColor(0xb32222);
+        g.fillRect(
+            x + Math.round((page.spec.left - 12) * scale),
+            ly,
+            Math.max(1, Math.round(scale)),
+            Math.round(line.height * scale));
+      }
+      for (LayoutEngine.Span span : line.spans) {
+        if (span.style.characters.hidden && !isShowHidden()) continue;
+        var f = font(span.glyphStyle, zoom);
+        g.setFont(f);
+        int sx = lx + Math.round(span.x * scale), sy = ly + Math.round(span.top * scale);
+        if (session.mergeData().highlight
+            && textLine(line)
+            && InlineField.OBJECT.equals(span.text)) {
+          var field = lineParagraph(line).text.fieldAt(span.start);
+          if (field != null && MailMerge.placeholder(field.instruction) != null) {
+            g.setColor(0xe2e8f0);
+            g.fillRect(sx, sy, Math.max(2, Math.round(span.width * scale)), f.getHeight());
+          }
+        }
+        if (span.style.background != 0xffffff) {
+          g.setColor(span.style.background);
+          g.fillRect(sx, sy, Math.round(span.width * scale), f.getHeight());
+        }
+        g.setColor(ink(span.style.color));
+        drawCharacters(g, span, f, scale, sx, sy);
+        if (InlineField.OBJECT.equals(span.text) && span.displayText.isEmpty() && textLine(line)) {
+          var field = lineParagraph(line).text.fieldAt(span.start);
+          if (Equation.inline(field)) {
+            paintingInline = span.start;
+            paintDrawing(g, Equation.placed(field, span.glyphStyle, line.block, 0, 0, 0, span.width),
+                sx, sy + f.getAscent(), scale);
+            paintingInline = -1;
+          }
+        }
+        if (span.style.hasUnderline()) {
+          var path = new GeneralPath();
+          TextDecorations.underline(
+              span,
+              fontMetrics,
+              (x1, y1, x2, y2) -> {
+                path.moveTo(sx + x1 * scale, sy + f.getAscent() + y1 * scale);
+                path.lineTo(sx + x2 * scale, sy + f.getAscent() + y2 * scale);
+              });
+          g.setColor(
+              ink(
+                  span.style.characters.underlineColor < 0
+                      ? span.style.color
+                      : span.style.characters.underlineColor));
+          g.drawShape(
+              path,
+              new Stroke(
+                  Math.max(1, TextDecorations.weight(span.style) * scale),
+                  Stroke.CAP_BUTT,
+                  Stroke.JOIN_MITER,
+                  1));
+        }
+        if (span.style.strike || span.style.characters.doubleStrike) {
+          g.setColor(ink(span.style.color));
+          int decorationY = sy + f.getAscent() - Math.round(span.glyphStyle.size * .35f * scale);
+          g.drawLine(sx, decorationY, sx + Math.round(span.width * scale), decorationY);
+          if (span.style.characters.doubleStrike)
+            g.drawLine(
+                sx,
+                decorationY - Math.max(2, Math.round(1.5f * scale)),
+                sx + Math.round(span.width * scale),
+                decorationY - Math.max(2, Math.round(1.5f * scale)));
+        }
+      }
+      if (showMarks) paintMarks(g, line, lx, ly, scale);
+      else if (isShowHidden()) paintHiddenUnderline(g, line, lx, ly, scale);
+      g.setColor(ink(0x242424));
+      for (float bar : line.barTabs)
+        g.fillRect(
+            lx + Math.round(bar * scale),
+            ly,
+            Math.max(1, Math.round(.5f * scale)),
+            Math.round(line.height * scale));
+      if (!exporting && session.cellSelection() == null && line == caretLine && selection.collapsed()) {
+        g.setColor(0x087f80);
+        int cx = lx + Math.round(offsetX(line, selection.caret + noteShift(line)) * scale);
+        g.fillRect(cx, ly, 2, Math.round(line.height * scale));
+      }
+      if (line.clipped) g.setClip(clipX, clipY, clipW, clipH);
+      if (unturned != null) g.setTransform(unturned);
+  }
+
   private void paintDrawingOnly(Graphics g, LayoutEngine.PlacedPicture pic, int px, int py, float scale) {
     DrawingOps.Ops ops = DrawingOps.build(pic.picture().drawing, pic.width(), pic.height(), fontMetrics);
     boolean shapes = g.isShapeSupported();
@@ -264,7 +486,9 @@ public final class EditorSurface extends Container
       drawPicture(g, image, look, Math.round(px + im.x() * scale), Math.round(py + im.y() * scale),
           Math.max(1, Math.round(im.width() * scale)), Math.max(1, Math.round(im.height() * scale)), scale);
     }
-    for (DrawingOps.Text t : ops.texts) {
+    // A text box's story is laid out by the layout engine and painted with its lines.
+    boolean story = LayoutEngine.storyLaidOut(pic.picture().drawing) && pic.page() >= 0;
+    for (DrawingOps.Text t : story ? java.util.Collections.<DrawingOps.Text>emptyList() : ops.texts) {
       var style = TextStyle.DEFAULT.with("size", String.valueOf(t.size()));
       if (t.bold()) style = style.with("bold", "true");
       if (t.italic()) style = style.with("italic", "true");
@@ -1704,6 +1928,7 @@ public final class EditorSurface extends Container
       for (LayoutEngine.PlacedPicture pic : LayoutEngine.byDepth(page.paintedPictures(), false)) {
         if (pic.picture().drawing != null) {
           paintDrawing(g, pic, x + Math.round(pic.x() * scale), y + Math.round(pic.y() * scale), scale);
+          paintBoxLines(g, page, pic, x, y, scale, selection, caretLine);
           continue;
         }
         var image = picture(pic.picture());
@@ -1780,213 +2005,11 @@ public final class EditorSurface extends Container
         g.drawLine(
             nx, ny, nx + Math.round(Math.min(144, page.spec.contentWidth() / 3) * scale), ny);
       }
-      for (LayoutEngine.Line line : page.allLines()) {
-        if (draft && line.block != -2 && (page.header.contains(line) || page.footer.contains(line)))
-          continue;
-        int clipX = g.getClipX(),
-            clipY = g.getClipY(),
-            clipW = g.getClipWidth(),
-            clipH = g.getClipHeight();
-        // Lines outside the repaint area are skipped, with a line's height of slack for ink
-        // that overhangs it. Some ports (Windows DirectWrite) lay out every string they are
-        // asked to draw even when it is clipped away.
-        float[] bounds = line.pageBounds();
-        int top = y + Math.round(bounds[1] * scale), extent = Math.round(bounds[3] * scale);
-        if (top + 2 * extent < clipY || top - extent > clipY + clipH) continue;
-        // Turned cell text (btLr/tbRl) is drawn in its frame, turned onto the page about the
-        // frame origin as Wordcraft's display list does.
-        com.codename1.ui.Transform unturned = null;
-        if (line.turn != 0 && g.isTransformSupported()) {
-          unturned = g.getTransform();
-          var turned = unturned.copy();
-          turned.translate(x + line.turnX * scale, y + line.turnY * scale);
-          turned.rotate((float) (line.turn == 1 ? Math.PI / 2 : -Math.PI / 2), 0, 0);
-          turned.translate(-x, -y);
-          g.setTransform(turned);
-        }
-        if (line.clipped)
-          g.clipRect(
-              clipX,
-              y + Math.round(line.y * scale),
-              clipW,
-              Math.max(1, Math.round(line.clipHeight * scale)));
-        int lx = x + Math.round(line.x * scale), ly = y + Math.round(line.y * scale);
-        if (!line.marker.isEmpty()) {
-          g.setFont(font(TextStyle.DEFAULT, zoom));
-          g.setColor(ink(0x242424));
-          int mx = lx - Math.round(18 * scale);
-          if (line.rtl) mx = x + Math.round(line.markerX(g.getFont().stringWidth(line.marker) / scale) * scale);
-          g.drawString(line.marker, mx, ly + Math.round(line.markerOffset * scale));
-        }
-        for (ReviewComment comment : session.document().comments) {
-          if (comment.resolved) continue;
-          ReviewComment.Anchor first = commentAnchors.get(comment.startId),
-              last = commentAnchors.get(comment.endId),
-              current = commentAnchors.get(line.paragraphId);
-          // A range runs through the body stream (body text and table cells in reading order)
-          // or within one note story.
-          if (first == null
-              || current == null
-              || !first.sameFlow(last)
-              || !first.sameFlow(current)
-              || order(current, first) < 0
-              || order(current, last) > 0) continue;
-          // A note's first displayed line starts with its label and a space.
-          int shift =
-              current.note != null && current.paragraph == 0 ? current.note.label.length() + 1 : 0;
-          int a =
-              current == first
-                  ? Math.max(line.start, comment.start + shift)
-                  : line.start;
-          int b = current == last ? Math.min(line.end, comment.end + shift) : line.end;
-          if (b > a) {
-            g.setColor(0xffedaa);
-            fillRange(g, line, a, b, lx, ly, scale);
-          }
-        }
-        int selectedBlock = editingBlock(line), shown = selectedBlock < 0 ? 0 : noteShift(line);
-        if (!exporting && session.cellSelection() == null
-            && selectedBlock >= 0
-            && selectedBlock >= selection.startBlock()
-            && selectedBlock <= selection.endBlock()
-            && (selectedBlock > selection.startBlock() || selection.start() + shown < line.end)
-            && (selectedBlock < selection.endBlock() || selection.end() + shown > line.start)) {
-          int
-              a =
-                  selectedBlock == selection.startBlock()
-                      ? Math.max(selection.start() + shown, line.start)
-                      : line.start,
-              b =
-                  selectedBlock == selection.endBlock()
-                      ? Math.min(selection.end() + shown, line.end)
-                      : line.end;
-          g.setColor(0xc5e9e6);
-          fillRange(g, line, a, b, lx, ly, scale);
-        }
-        int[] across = exporting || session.mixedSelection() == null ? null : acrossRange(line);
-        if (across != null && across[1] > line.start && across[0] < line.end
-            || across != null && across[0] == across[1] && line.start == line.end) {
-          g.setColor(0xc5e9e6);
-          fillRange(g, line, Math.max(across[0], line.start), Math.min(across[1], line.end), lx, ly, scale);
-        }
-        // Object lines (pictures, charts, equations) have no paragraph to proof.
-        if (!exporting && textLine(line) && AppOptions.flag("checkSpelling")) {
-          // Proofing marks: red wavy for spelling, blue for grammar.
-          int base = ly + Math.round(line.height * scale) - 2;
-          for (Proofing.Issue issue : proofIssues(lineParagraph(line))) {
-            if ("grammar".equals(issue.kind()) && !AppOptions.flag("checkGrammar")) continue;
-            int a = Math.max(issue.start(), line.start), b = Math.min(issue.end(), line.end);
-            if (a >= b) continue;
-            int x0 = lx + Math.round(offsetX(line, a) * scale), x1 = lx + Math.round(offsetX(line, b) * scale);
-            squiggle(g, Math.min(x0, x1), Math.max(x0, x1), base, "spelling".equals(issue.kind()) ? 0xd13438 : 0x2b579a);
-          }
-        }
-        boolean revised = false;
-        for (LayoutEngine.Span span : line.spans)
-          revised |= span.style.revision != null || span.style.formatRevision != null;
-        if (textLine(line)) {
-          var paragraph = lineParagraph(line);
-          revised |= paragraph.formatRevision != null;
-          // A table with a tracked property change (Wordcraft's table fmt_change) is marked
-          // beside each of its lines, as Word marks a table whose properties changed.
-          if (line.row >= 0) revised |= tableRevised(line);
-          if (paragraph.breakRevision != null && line.end == paragraph.text.length()) {
-            revised = true;
-            g.setFont(font(TextStyle.DEFAULT, zoom));
-            g.setColor(paragraph.breakRevision.inserted() ? 0x1261a0 : 0xb32222);
-            g.drawString("\u00b6", lx + Math.round(line.width * scale), ly);
-          }
-        }
-        if (revised) {
-          g.setColor(0xb32222);
-          g.fillRect(
-              x + Math.round((page.spec.left - 12) * scale),
-              ly,
-              Math.max(1, Math.round(scale)),
-              Math.round(line.height * scale));
-        }
-        for (LayoutEngine.Span span : line.spans) {
-          if (span.style.characters.hidden && !isShowHidden()) continue;
-          var f = font(span.glyphStyle, zoom);
-          g.setFont(f);
-          int sx = lx + Math.round(span.x * scale), sy = ly + Math.round(span.top * scale);
-          if (session.mergeData().highlight
-              && textLine(line)
-              && InlineField.OBJECT.equals(span.text)) {
-            var field = lineParagraph(line).text.fieldAt(span.start);
-            if (field != null && MailMerge.placeholder(field.instruction) != null) {
-              g.setColor(0xe2e8f0);
-              g.fillRect(sx, sy, Math.max(2, Math.round(span.width * scale)), f.getHeight());
-            }
-          }
-          if (span.style.background != 0xffffff) {
-            g.setColor(span.style.background);
-            g.fillRect(sx, sy, Math.round(span.width * scale), f.getHeight());
-          }
-          g.setColor(ink(span.style.color));
-          drawCharacters(g, span, f, scale, sx, sy);
-          if (InlineField.OBJECT.equals(span.text) && span.displayText.isEmpty() && textLine(line)) {
-            var field = lineParagraph(line).text.fieldAt(span.start);
-            if (Equation.inline(field)) {
-              paintingInline = span.start;
-              paintDrawing(g, Equation.placed(field, span.glyphStyle, line.block, 0, 0, 0, span.width),
-                  sx, sy + f.getAscent(), scale);
-              paintingInline = -1;
-            }
-          }
-          if (span.style.hasUnderline()) {
-            var path = new GeneralPath();
-            TextDecorations.underline(
-                span,
-                fontMetrics,
-                (x1, y1, x2, y2) -> {
-                  path.moveTo(sx + x1 * scale, sy + f.getAscent() + y1 * scale);
-                  path.lineTo(sx + x2 * scale, sy + f.getAscent() + y2 * scale);
-                });
-            g.setColor(
-                ink(
-                    span.style.characters.underlineColor < 0
-                        ? span.style.color
-                        : span.style.characters.underlineColor));
-            g.drawShape(
-                path,
-                new Stroke(
-                    Math.max(1, TextDecorations.weight(span.style) * scale),
-                    Stroke.CAP_BUTT,
-                    Stroke.JOIN_MITER,
-                    1));
-          }
-          if (span.style.strike || span.style.characters.doubleStrike) {
-            g.setColor(ink(span.style.color));
-            int decorationY = sy + f.getAscent() - Math.round(span.glyphStyle.size * .35f * scale);
-            g.drawLine(sx, decorationY, sx + Math.round(span.width * scale), decorationY);
-            if (span.style.characters.doubleStrike)
-              g.drawLine(
-                  sx,
-                  decorationY - Math.max(2, Math.round(1.5f * scale)),
-                  sx + Math.round(span.width * scale),
-                  decorationY - Math.max(2, Math.round(1.5f * scale)));
-          }
-        }
-        if (showMarks) paintMarks(g, line, lx, ly, scale);
-        else if (isShowHidden()) paintHiddenUnderline(g, line, lx, ly, scale);
-        g.setColor(ink(0x242424));
-        for (float bar : line.barTabs)
-          g.fillRect(
-              lx + Math.round(bar * scale),
-              ly,
-              Math.max(1, Math.round(.5f * scale)),
-              Math.round(line.height * scale));
-        if (!exporting && session.cellSelection() == null && line == caretLine && selection.collapsed()) {
-          g.setColor(0x087f80);
-          int cx = lx + Math.round(offsetX(line, selection.caret + noteShift(line)) * scale);
-          g.fillRect(cx, ly, 2, Math.round(line.height * scale));
-        }
-        if (line.clipped) g.setClip(clipX, clipY, clipW, clipH);
-        if (unturned != null) g.setTransform(unturned);
-      }
-      for (LayoutEngine.PlacedPicture pic : LayoutEngine.byDepth(page.paintedPictures(), true))
+      for (LayoutEngine.Line line : page.allLines()) paintLine(g, page, line, x, y, scale, selection, caretLine);
+      for (LayoutEngine.PlacedPicture pic : LayoutEngine.byDepth(page.paintedPictures(), true)) {
         paintDrawing(g, pic, x + Math.round(pic.x() * scale), y + Math.round(pic.y() * scale), scale);
+        paintBoxLines(g, page, pic, x, y, scale, selection, caretLine);
+      }
     }
     if (OfficeTheme.mobile() && !exporting && session.cellSelection() == null && !selection.collapsed()) {
       g.setColor(OfficeTheme.BLUE);

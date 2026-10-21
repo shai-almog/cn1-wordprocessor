@@ -93,6 +93,15 @@ public final class LayoutEngine {
 
     public int[] noteCell;
 
+    /**
+     * For a line of a text box's story (Page.textBoxLines): the text box picture's id. Its
+     * {@link #paragraphId} names the story paragraph; the line is clipped to {@link #boxClip}.
+     */
+    public String textBox;
+
+    /** A text box line's clip rectangle on the page {x, y, width, height}, in points. */
+    public float[] boxClip;
+
     /** A story line's cell (row, column, then the nested path), or null: see storyCell. */
     int[] storyCell;
 
@@ -425,6 +434,20 @@ public final class LayoutEngine {
 
     /** Paragraph border/shading boxes, painted under the text. */
     public final List<Frame> frames = new ArrayList<>();
+
+    /**
+     * Lines of text box stories on this page (Wordcraft's layout_box of a text box part), in
+     * page coordinates, each marked with its box's picture id; painted with their box.
+     */
+    public final List<Line> textBoxLines = new ArrayList<>();
+
+    /** The story lines of text box {@code id} on this page. */
+    public List<Line> textBoxLines(String id) {
+      if (textBoxLines.isEmpty()) return Collections.emptyList();
+      var out = new ArrayList<Line>();
+      for (Line l : textBoxLines) if (id.equals(l.textBox)) out.add(l);
+      return out;
+    }
 
     /** Page color, watermark and page borders of this page's section. */
     public PageDecor decor = PageDecor.NONE;
@@ -1605,7 +1628,66 @@ public final class LayoutEngine {
     }
     cache = nextCache;
     byContent = nextByContent;
+    for (Page page : b.pages) textBoxes(doc, page);
     return new Result(doc, b.pages, measured, revision, warnings);
+  }
+
+  /**
+   * Whether a drawing's text is laid out as a block story by this engine: text boxes and shapes
+   * with horizontal, unrotated text. Turned text (vert, vert270, stacked) and rotated shapes keep
+   * the drawing's own text painting.
+   */
+  public static boolean storyLaidOut(Drawing d) {
+    return d != null && d.storyKind() && "horizontal".equals(d.get("textDirection", "horizontal"))
+        && d.num("rotation", 0) % 360 == 0 && d.storyOrText("x") != null;
+  }
+
+  /** Lays out the stories of the page's text boxes inside their text rectangles. */
+  private void textBoxes(Document doc, Page page) {
+    page.textBoxLines.clear();
+    for (PlacedPicture pic : page.paintedPictures()) {
+      var d = pic.picture().drawing;
+      if (!storyLaidOut(d)) continue;
+      var blocks = d.storyOrText(pic.picture().id() + "-t");
+      float[] rect = DrawingOps.textRect(d, pic.width(), pic.height());
+      if (rect[2] < 1 || rect[3] < 1) continue;
+      var laid = boxStory(doc, blocks, page.number, rect[2]);
+      var valign = d.get("valign", "middle");
+      float slack = rect[3] - laid.height;
+      float dy = "top".equals(valign) || slack < 0 ? 0 : "bottom".equals(valign) ? slack : slack / 2;
+      float ox = pic.x() + rect[0], oy = pic.y() + rect[1] + dy;
+      float[] clip = {pic.x() + rect[0], pic.y() + rect[1], rect[2], rect[3]};
+      for (Line l : laid.lines) {
+        var line = new Line(-1, -1, -1, l.paragraphId, pic.page() < 0 ? page.number : pic.page(),
+            ox + l.x, oy + l.y, raw(l), l.marker).storyCell(l);
+        line.textBox = pic.picture().id();
+        line.boxClip = clip;
+        page.textBoxLines.add(line);
+      }
+    }
+  }
+
+  /** A text box story laid out {@code width} points wide, as a header story is. */
+  private StoryLayout boxStory(Document doc, Sequence<Block> blocks, int page, float width) {
+    var out = new StoryLayout();
+    float w = Math.max(72, width);
+    var region = new PageSpec(w, 100000, 0, w - width, 0, 0);
+    var scratch = new Builder();
+    scratch.beginSection(
+        0, doc.lastSection.page(region).furniture(PageFurniture.EMPTY).columns(Columns.ONE), region);
+    for (int i = 0; i < blocks.size(); i++) {
+      Block block = blocks.get(i);
+      if (block instanceof Paragraph p)
+        scratch.paragraph(p, -1, i + 1 < blocks.size() && blocks.get(i + 1) instanceof Paragraph n ? n : null);
+      else if (block instanceof Table t) scratch.table(t, -1);
+    }
+    float height = scratch.y;
+    scratch.finish();
+    if (scratch.pages.isEmpty()) return out;
+    for (Line l : scratch.pages.get(0).lines)
+      out.lines.add(new Line(-1, -1, -1, l.paragraphId, page, l.x, l.y, raw(l), l.marker).storyCell(l));
+    out.height = height;
+    return out;
   }
 
   private PageSpec bodySpec(Document doc, float header, float footer) {

@@ -105,4 +105,31 @@ public class TextBoxStoryTest {
     assertTrue(((Paragraph) s.get(0)).text.styleAt(0).italic);
     assertEquals("Two", ((Paragraph) s.get(1)).text.toString());
   }
+
+  @Test
+  public void storyIsLaidOutInsideTheBox() throws Exception {
+    var d = boxed();
+    var r = new LayoutEngine(new PdfMetrics()).layout(d, 0);
+    var page = r.pages.get(0);
+    LayoutEngine.PlacedPicture box = null;
+    for (LayoutEngine.PlacedPicture p : page.pictures) if (p.picture().id().equals("i5")) box = p;
+    assertNotNull(box);
+    var lines = page.textBoxLines("i5");
+    assertEquals(2, lines.size());
+    assertEquals("p10", lines.get(0).paragraphId);
+    assertEquals("p11", lines.get(1).paragraphId);
+    // Top-aligned inside the 7.2pt internal margin; the centered line sits mid-box.
+    assertEquals(box.y() + 7.2f, lines.get(0).y, .5f);
+    assertTrue(lines.get(0).x >= box.x() + 7.1f);
+    float mid = lines.get(1).x + lines.get(1).width / 2;
+    assertEquals(box.x() + box.width() / 2, mid, 2f);
+    assertTrue(lines.get(1).y > lines.get(0).y);
+    // The bold run is its own span, styled from the story.
+    assertTrue(lines.get(0).spans.get(0).style.bold);
+    // Body lines are unaffected.
+    for (LayoutEngine.Line l : page.lines) assertNull(l.textBox);
+    // PDF writes the story text over the box, not the drawing's flat text.
+    String pdf = new String(PdfExporter.write(d), "ISO-8859-1");
+    assertTrue(pdf.contains("re W n"));
+  }
 }

@@ -64,7 +64,9 @@ final class PdfDrawings {
       if (stroke) c.append(rgb(blend(p.stroke(), p.alpha()))).append(" RG ").append(n(p.width())).append(" w ");
       c.append(fill && stroke ? "B" : fill ? "f" : stroke ? "S" : "n").append('\n');
     }
-    for (DrawingOps.Text t : ops.texts) {
+    // A text box's story is laid out by the layout engine and written with its lines.
+    boolean story = LayoutEngine.storyLaidOut(pic.picture().drawing) && pic.page() >= 0;
+    for (DrawingOps.Text t : story ? java.util.Collections.<DrawingOps.Text>emptyList() : ops.texts) {
       String s = literal(t.text());
       // Bold and italic text uses the bold/italic face of the base font set.
       TextStyle style = fonts == null ? null : (base == null ? TextStyle.DEFAULT : base)

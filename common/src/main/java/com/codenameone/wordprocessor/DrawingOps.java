@@ -258,6 +258,17 @@ public final class DrawingOps {
         d.color("textColor", text0), d.get("align", align0));
   }
 
+  /**
+   * The rectangle (x, y, w, h) a drawing's text story is laid out in: the geometry's text area
+   * inside the internal margin, as the drawing's own text is placed.
+   */
+  static float[] textRect(Drawing d, float w, float h) {
+    String geometry = "textBox".equals(d.kind) ? "rect" : d.get("shape", "rect");
+    float inset = d.num("inset", 7.2f);
+    float[] box = textBox(geometry, w, h);
+    return new float[] {box[0] + inset, box[1] + inset, box[2] - 2 * inset, box[3] - 2 * inset};
+  }
+
   /** The text rectangle (x, y, w, h) inside a geometry. */
   private static float[] textBox(String g, float w, float h) {
     if ("ellipse".equals(g) || "octagon".equals(g) || "hexagon".equals(g))
