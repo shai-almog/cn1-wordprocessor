@@ -287,7 +287,7 @@ platform from the same source and uploads each as a workflow artifact: macOS `.d
 simulator `.zip` and unsigned `.ipa`, Android `.apk`, web `.zip`, Linux x64/arm64 `.tar.gz` and
 Windows x64/arm64 `.zip`. `scripts/dist.sh` packages them into `dist/`. Pushing a `v*` tag runs
 [`release.yml`](.github/workflows/release.yml), which reuses that build and attaches every
-package to a GitHub release. The Apple packages are unsigned; signing needs your certificates.
+package to a GitHub release. The macOS app is signed with Developer ID and notarized when the signing secrets are configured (otherwise ad-hoc signed); the iOS `.ipa` is unsigned.
 
 The standard CN1 lifecycle is `common/src/main/java/com/codenameone/wordprocessor/app/Main.java`.
 It starts the `WordProcessor` UI and uses the CN1 platform file APIs.
