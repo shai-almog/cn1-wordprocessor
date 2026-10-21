@@ -99,7 +99,9 @@ final class PdfFonts {
   /** Characters that stay in the face of the character before them (marks, viramas, joiners). */
   private static boolean combining(int cp) {
     int indic = PdfShaping.indic(cp);
-    return PdfShaping.mark(cp) || cp == 0x200c || indic >= 2 && indic != 5;
+    int cluster = Math.max(PdfShaping.khmer(cp), PdfShaping.myanmar(cp));
+    return PdfShaping.mark(cp) || cp == 0x200c || indic >= 2 && indic != 5
+        || cluster >= 2 && cluster != 5;
   }
 
   /** Face runs of {@code text}: {face, from, to} split at face and script changes. */
@@ -241,11 +243,13 @@ final class PdfFonts {
     /** CID showing glyph {@code glyph} and extracting as {@code text}. */
     int cid(int glyph, String text) throws IOException {
       if (glyph < 0 || glyph >= font.glyphs) glyph = 0;
-      var key = glyph + ":" + text;
+      // CFF2 faces embed whole as /OpenType, where CIDs are glyph ids: a glyph keeps the text of
+      // its first use (a later use with other text extracts as the first).
+      var key = font.cff2 ? String.valueOf(glyph) : glyph + ":" + text;
       var cid = codes.get(key);
       if (cid == null) {
         if (codes.size() == 65535) throw new IOException("Too many PDF font characters");
-        codes.put(key, cid = codes.size() + 1);
+        codes.put(key, cid = font.cff2 ? glyph : codes.size() + 1);
         glyphCodes.add(glyph);
         texts.add(text);
       }
@@ -274,9 +278,18 @@ final class PdfFonts {
     }
 
     int install(List<byte[]> objects) throws IOException {
-      byte[] subset = FontSubset.subset(font, glyphCodes);
       String base = tag();
-      int file = add(objects, stream("/Length1 " + subset.length, subset, true));
+      int file;
+      if (font.cff) {
+        var t = font.tables.get("CFF ");
+        byte[] cff = Cff.subset(Arrays.copyOfRange(font.data, t[0], t[0] + t[1]), glyphCodes);
+        file = add(objects, stream("/Subtype /CIDFontType0C", cff, true));
+      } else if (font.cff2) {
+        file = add(objects, stream("/Subtype /OpenType", font.data, true));
+      } else {
+        byte[] subset = FontSubset.subset(font, glyphCodes);
+        file = add(objects, stream("/Length1 " + subset.length, subset, true));
+      }
       int descriptor =
           add(
               objects,
@@ -293,14 +306,14 @@ final class PdfFonts {
                       + font.scaled(font.descent)
                       + " /CapHeight "
                       + font.scaled(font.ascent)
-                      + " /StemV 80 /FontFile2 "
+                      + (font.cff || font.cff2 ? " /StemV 80 /FontFile3 " : " /StemV 80 /FontFile2 ")
                       + file
                       + " 0 R >>"));
       byte[] mapping = new byte[(codes.size() + 1) * 2];
       // Glyphs that extract as nothing (later glyphs of a cluster) get no ToUnicode entry.
       int mapped = 0;
       for (String t : texts) if (!t.isEmpty()) mapped++;
-      StringBuilder widths = new StringBuilder("[1 ["),
+      StringBuilder widths = new StringBuilder(font.cff2 ? "[" : "[1 ["),
           unicode =
               new StringBuilder(
                   """
@@ -316,10 +329,13 @@ final class PdfFonts {
                   """);
       int count = 0;
       for (int i = 0; i < glyphCodes.size(); i++) {
-        int cid = i + 1, glyph = glyphCodes.get(i);
-        mapping[2 * cid] = (byte) (glyph >> 8);
-        mapping[2 * cid + 1] = (byte) glyph;
-        widths.append(font.scaled(font.advance(glyph))).append(' ');
+        int glyph = glyphCodes.get(i), cid = font.cff2 ? glyph : i + 1;
+        if (!font.cff2) {
+          mapping[2 * cid] = (byte) (glyph >> 8);
+          mapping[2 * cid + 1] = (byte) glyph;
+        }
+        if (font.cff2) widths.append(cid).append(" [");
+        widths.append(font.scaled(font.advance(glyph))).append(font.cff2 ? "] " : " ");
         var text = texts.get(i);
         if (text.isEmpty()) continue;
         if (count % 100 == 0)
@@ -331,23 +347,24 @@ final class PdfFonts {
         if (count % 100 == 0 || count == mapped) unicode.append("endbfchar\n");
       }
       unicode.append("endcmap\nCMapName currentdict /CMap defineresource pop\nend\nend\n");
-      int map = add(objects, stream("", mapping, true));
+      int map = font.cff || font.cff2 ? 0 : add(objects, stream("", mapping, true));
       int toUnicode = add(objects, stream("", ascii(unicode.toString()), false));
       int descendant =
           add(
               objects,
               ascii(
-                  "<< /Type /Font /Subtype /CIDFontType2 /BaseFont /"
+                  "<< /Type /Font /Subtype /"
+                      + (font.cff || font.cff2 ? "CIDFontType0" : "CIDFontType2")
+                      + " /BaseFont /"
                       + base
                       + " /CIDSystemInfo << /Registry (Adobe) /Ordering (Identity) /Supplement 0 >>"
                       + " /FontDescriptor "
                       + descriptor
                       + " 0 R /DW 1000 /W "
                       + widths
-                      + "]]"
-                      + " /CIDToGIDMap "
-                      + map
-                      + " 0 R >>"));
+                      + (font.cff2 ? "]" : "]]")
+                      + (map == 0 ? "" : " /CIDToGIDMap " + map + " 0 R")
+                      + " >>"));
       return add(
           objects,
           ascii(
@@ -361,18 +378,22 @@ final class PdfFonts {
     }
   }
 
-  /** Bounds-checked SFNT reader; supports Unicode cmap 4 and 12 and TrueType outlines. */
+  /** Bounds-checked SFNT reader; supports Unicode cmap 4 and 12 and TrueType, CFF or CFF2 outlines. */
   static final class TrueType {
     final byte[] data;
     final Map<String, int[]> tables = new HashMap<>();
     final int units, ascent, descent, metrics, glyphs, hmtx, cmap, cmapLength, format, head;
     final float italic;
+    /** CFF (version 1) or CFF2 outlines instead of TrueType 'glyf' ones. */
+    final boolean cff, cff2;
 
     TrueType(byte[] bytes) throws IOException {
       if (bytes == null || bytes.length > 20 * 1024 * 1024)
         throw new IOException("Invalid TrueType font");
       data = bytes;
-      if (u32(0) != 0x10000) throw new IOException("PDF embedding requires TrueType outlines");
+      int version = u32(0);
+      if (version != 0x10000 && version != 0x4f54544f)
+        throw new IOException("Unsupported font outline format");
       int count = u16(4);
       check(12, count * 16);
       for (int i = 0; i < count; i++) {
@@ -380,7 +401,9 @@ final class PdfFonts {
         check(offset, length);
         tables.put(new String(data, at, 4, "ISO-8859-1"), new int[] {offset, length});
       }
-      table("glyf", 0);
+      cff2 = version == 0x4f54544f && !tables.containsKey("CFF ") && tables.containsKey("CFF2");
+      cff = version == 0x4f54544f && !cff2;
+      table(cff ? "CFF " : cff2 ? "CFF2" : "glyf", 0);
       head = table("head", 54);
       units = u16(head + 18);
       if (units < 16 || units > 16384) throw new IOException("Invalid font units");

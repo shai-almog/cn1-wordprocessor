@@ -8,8 +8,8 @@ import java.util.*;
  * folders are indexed once by family name (reading only each file's table directory and 'name'
  * table), and for a character no bundled face covers, candidates are tried in a per-script
  * preference order (Wordcraft's script lists, then families named after the script, then the
- * general system fallback list, then the rest) until one maps it. Only TrueType-outline faces
- * (.ttf, .ttc, glyf-based .otf) qualify, since the PDF writer embeds CIDFontType2 fonts.
+ * general system fallback list, then the rest) until one maps it. SFNT faces
+ * (.ttf, .ttc, .otf, with TrueType, CFF or CFF2 outlines) qualify.
  * Files are read through Codename One's FileSystemStorage; where that is unavailable (web, tests
  * without a platform) the index is simply empty.
  */
@@ -171,14 +171,15 @@ final class SystemFonts {
     }
     for (int i = 0; i < count; i++) {
       byte[] h = range(path, offsets[i], 12);
-      if (FontSubset.be32(h, 0) != 0x10000) continue;
+      int version = FontSubset.be32(h, 0);
+      if (version != 0x10000 && version != 0x4f54544f) continue;
       int tables = FontSubset.be16(h, 4);
       byte[] records = range(path, offsets[i] + 12, 16 * tables);
       int nameAt = -1, nameLength = 0;
       boolean glyf = false;
       for (int t = 0; t < tables; t++) {
         var tag = new String(records, 16 * t, 4, "ISO-8859-1");
-        if (tag.equals("glyf")) glyf = true;
+        if (tag.equals("glyf") || tag.equals("CFF ") || tag.equals("CFF2")) glyf = true;
         if (tag.equals("name")) {
           nameAt = FontSubset.be32(records, 16 * t + 8);
           nameLength = FontSubset.be32(records, 16 * t + 12);

@@ -8,8 +8,7 @@ import java.util.*;
  * and GPOS lookup types 1, 2, 4, 5, 6, 7, 8 and 9, with lookup flags (ignore base / ligature /
  * marks, mark attachment type, mark filtering sets) from GDEF. Features are applied by mask, so a
  * shaper can enable a feature for some glyphs only (Arabic joining forms, Indic half forms).
- * Not covered: GSUB alternate (3) and reverse chaining (8) lookups, GPOS cursive attachment (3),
- * variable fonts and the 'morx' / AAT tables.
+ * Not covered: GSUB alternate (3) and reverse chaining (8) lookups, variable fonts and the 'morx' / AAT tables.
  */
 final class OpenType {
   /** One glyph of the shaping buffer; positions are in font units. */
@@ -36,6 +35,8 @@ final class OpenType {
   static final int SUBSTITUTED = 1, LIGATED = 2, BASE = 4;
 
   private final PdfFonts.TrueType font;
+  /** Whether the buffer being positioned is a right-to-left run in visual order. */
+  boolean rtl;
   private final int gsub, gpos, gdef;
   private final Map<String, int[]> featureCache = new HashMap<>();
 
@@ -494,6 +495,7 @@ final class OpenType {
       value(h, f2, at + s1);
       return s2 == 0 ? j : j + 1;
     }
+    if (type == 3) return cursive(sub, lookup, flag, buffer, i);
     if (type == 4 || type == 5 || type == 6) {
       int markIndex = font.coverage(sub + font.u16(sub + 2), g.id);
       if (markIndex < 0) return -1;
@@ -538,6 +540,38 @@ final class OpenType {
       return i + 1;
     }
     return -1;
+  }
+
+  /**
+   * Cursive attachment between glyph {@code i} and the next glyph to its right (the buffer is in
+   * visual order). Left to right, the left glyph's exit meets the right glyph's entry; right to
+   * left, the right glyph (logically first) exits into the left one's entry. The left glyph's
+   * advance ends at the joint and the right glyph starts there; the right glyph is moved
+   * vertically so the anchors coincide.
+   */
+  private int cursive(int sub, int lookup, int flag, List<Glyph> buffer, int i)
+      throws IOException {
+    if (font.u16(sub) != 1) return -1;
+    var left = buffer.get(i);
+    int li = font.coverage(sub + font.u16(sub + 2), left.id), count = font.u16(sub + 4);
+    if (li < 0 || li >= count) return -1;
+    int j = nextIndex(lookup, flag, buffer, i, 1);
+    if (j < 0) return -1;
+    var right = buffer.get(j);
+    int ri = font.coverage(sub + font.u16(sub + 2), right.id);
+    if (ri < 0 || ri >= count) return -1;
+    // EntryExitRecord: entry anchor offset, then exit anchor offset.
+    int la = font.u16(sub + 6 + 4 * li + (rtl ? 0 : 2)),
+        ra = font.u16(sub + 6 + 4 * ri + (rtl ? 2 : 0));
+    if (la == 0 || ra == 0) return -1;
+    int lx = font.s16(sub + la + 2), ly = font.s16(sub + la + 4),
+        rx = font.s16(sub + ra + 2), ry = font.s16(sub + ra + 4);
+    left.adv = lx + left.dx;
+    int d = rx + right.dx;
+    right.adv -= d;
+    right.dx -= d;
+    right.dy = left.dy + ly - ry;
+    return j;
   }
 
   private static int size(int format) {
