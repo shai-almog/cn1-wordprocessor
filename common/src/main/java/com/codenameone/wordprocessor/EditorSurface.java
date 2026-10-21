@@ -1713,8 +1713,20 @@ public final class EditorSurface extends Container
         // Lines outside the repaint area are skipped, with a line's height of slack for ink
         // that overhangs it. Some ports (Windows DirectWrite) lay out every string they are
         // asked to draw even when it is clipped away.
-        int top = y + Math.round(line.y * scale), extent = Math.round(line.height * scale);
+        float[] bounds = line.pageBounds();
+        int top = y + Math.round(bounds[1] * scale), extent = Math.round(bounds[3] * scale);
         if (top + 2 * extent < clipY || top - extent > clipY + clipH) continue;
+        // Turned cell text (btLr/tbRl) is drawn in its frame, turned onto the page about the
+        // frame origin as Wordcraft's display list does.
+        com.codename1.ui.Transform unturned = null;
+        if (line.turn != 0 && g.isTransformSupported()) {
+          unturned = g.getTransform();
+          var turned = unturned.copy();
+          turned.translate(x + line.turnX * scale, y + line.turnY * scale);
+          turned.rotate((float) (line.turn == 1 ? Math.PI / 2 : -Math.PI / 2), 0, 0);
+          turned.translate(-x, -y);
+          g.setTransform(turned);
+        }
         if (line.clipped)
           g.clipRect(
               clipX,
@@ -1890,6 +1902,7 @@ public final class EditorSurface extends Container
           g.fillRect(cx, ly, 2, Math.round(line.height * scale));
         }
         if (line.clipped) g.setClip(clipX, clipY, clipW, clipH);
+        if (unturned != null) g.setTransform(unturned);
       }
       for (LayoutEngine.PlacedPicture pic : LayoutEngine.byDepth(page.paintedPictures(), true))
         paintDrawing(g, pic, x + Math.round(pic.x() * scale), y + Math.round(pic.y() * scale), scale);
@@ -2041,7 +2054,11 @@ public final class EditorSurface extends Container
     return w.floatValue();
   }
 
+  /** The last pointer y given to {@link #lineAt}: a turned line's offset depends on it. */
+  private int hitY;
+
   private LayoutEngine.Line lineAt(int absX, int absY) {
+    hitY = absY;
     int page = pageAt(absY - viewportY() + getScrollY());
     float y = (absY - viewportY() + getScrollY() - pageY(page)) / scale();
     float x = (absX - viewportX() - pageX(page)) / scale();
@@ -2051,8 +2068,11 @@ public final class EditorSurface extends Container
     // An entered note story is hit-tested in the note area too.
     for (LayoutEngine.Line l : session.noteStory() != null ? p.allLines() : p.lines) {
       if (session.noteStory() != null && l.row < 0 && l.block < 0 && editingBlock(l) < 0) continue;
-      float dy = y < l.y ? l.y - y : y > l.y + l.height ? y - l.y - l.height : 0;
-      float dx = x < l.x ? l.x - x : x > l.x + l.width ? x - l.x - l.width : 0;
+      // A turned cell line is hit in its unturned frame.
+      float[] f = l.toFrame(x, y);
+      float fx = f[0], fy = f[1];
+      float dy = fy < l.y ? l.y - fy : fy > l.y + l.height ? fy - l.y - l.height : 0;
+      float dx = fx < l.x ? l.x - fx : fx > l.x + l.width ? fx - l.x - l.width : 0;
       float d = dy * 1000 + dx;
       if (d < distance) {
         distance = d;
@@ -2179,6 +2199,10 @@ public final class EditorSurface extends Container
 
   private int offsetAt(LayoutEngine.Line line, int absX) {
     float x = (absX - viewportX() - pageX(line.page)) / scale() - line.x;
+    if (line.turn != 0) {
+      float py = (hitY - viewportY() + getScrollY() - pageY(line.page)) / scale();
+      x = line.toFrame(x + line.x, py)[0] - line.x;
+    }
     int best = line.start;
     float distance = Float.MAX_VALUE;
     int shift = noteShift(line);
@@ -3413,6 +3437,17 @@ public final class EditorSurface extends Container
         if (editingBlock(line) == block
             && offset + noteShift(line) >= line.start
             && offset + noteShift(line) <= line.end) chosen = line;
+    if (chosen != null && chosen.turn != 0) {
+      float[] r =
+          chosen.pageRect(
+              chosen.x + offsetX(chosen, offset + noteShift(chosen)), chosen.y, 0, chosen.height);
+      return new int[] {
+        viewportX() + pageX(chosen.page) + Math.round(r[0] * scale()),
+        viewportY() - getScrollY() + pageY(chosen.page) + Math.round(r[1] * scale()),
+        Math.max(2, Math.round(r[2] * scale())),
+        Math.max(2, Math.round(r[3] * scale()))
+      };
+    }
     if (chosen != null)
       return new int[] {
         viewportX()
@@ -3443,6 +3478,15 @@ public final class EditorSurface extends Container
             && b > textIndex().absolute(editingBlock(l), l.start)) {
           int base = textIndex().absolute(editingBlock(l), 0);
           int start = Math.max(a - base, l.start), end = Math.min(b - base, l.end);
+          if (l.turn != 0) {
+            float[] r =
+                l.pageRect(l.x + offsetX(l, start), l.y, offsetX(l, end) - offsetX(l, start), l.height);
+            values.add(viewportX() + pageX(l.page) + Math.round(r[0] * scale()));
+            values.add(viewportY() - getScrollY() + pageY(l.page) + Math.round(r[1] * scale()));
+            values.add(Math.round(r[2] * scale()));
+            values.add(Math.round(r[3] * scale()));
+            continue;
+          }
           values.add(viewportX() + pageX(l.page) + Math.round((l.x + offsetX(l, start)) * scale()));
           values.add(viewportY() - getScrollY() + pageY(l.page) + Math.round(l.y * scale()));
           values.add(Math.round((offsetX(l, end) - offsetX(l, start)) * scale()));

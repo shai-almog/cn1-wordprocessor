@@ -473,6 +473,14 @@ public final class PdfExporter {
               + n(spec.height - line.y) + "] /Border [0 0 0] " + action + " >>"));
           annotations.append(objects.size()).append(" 0 R ");
         }
+        if (line.turn != 0) {
+          // Turned cell text: drawn in its frame and turned about the frame origin (see
+          // LayoutEngine.Line#toPage), as Wordcraft's PDF writer turns a cell's lines.
+          float h = spec.height;
+          content.append(line.turn == 1 ? "q 0 -1 1 0 " : "q 0 1 -1 0 ")
+              .append(n(line.turn == 1 ? line.turnX - h : line.turnX + h)).append(' ')
+              .append(n(h - line.turnY)).append(" cm\n");
+        }
         if (line.clipped)
           content
               .append("q 0 ")
@@ -603,6 +611,7 @@ public final class PdfExporter {
           }
         }
         if (line.clipped) content.append("Q\n");
+        if (line.turn != 0) content.append("Q\n");
         content.append("EMC\n");
       }
       // Draw bars after text backgrounds, using the same geometry as the editor canvas.

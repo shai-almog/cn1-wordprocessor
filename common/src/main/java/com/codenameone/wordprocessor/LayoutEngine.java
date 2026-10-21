@@ -83,6 +83,51 @@ public final class LayoutEngine {
       path = value;
       return this;
     }
+
+    /**
+     * Turned cell text (Wordcraft's turned cells, w:textDirection): 0 for horizontal, 1 for
+     * top-to-bottom (tbRl, "down") and 2 for bottom-to-top (btLr, "up"). A turned line's x and y
+     * are in its cell's unturned frame, whose origin is page point (turnX, turnY): frame point
+     * (u, v) lands at (turnX - v, turnY + u) going down and (turnX + v, turnY - u) going up.
+     */
+    public int turn;
+
+    public float turnX, turnY;
+
+    Line turned(int value, float ox, float oy) {
+      turn = value;
+      turnX = ox;
+      turnY = oy;
+      return this;
+    }
+
+    /** The page point of frame point (u, v) of this line's frame (identity when not turned). */
+    public float[] toPage(float u, float v) {
+      if (turn == 1) return new float[] {turnX - v, turnY + u};
+      if (turn == 2) return new float[] {turnX + v, turnY - u};
+      return new float[] {u, v};
+    }
+
+    /** The inverse of {@link #toPage}: the frame point at page point (px, py). */
+    public float[] toFrame(float px, float py) {
+      if (turn == 1) return new float[] {py - turnY, turnX - px};
+      if (turn == 2) return new float[] {turnY - py, px - turnX};
+      return new float[] {px, py};
+    }
+
+    /** This line's page bounds as {x, y, w, h}. */
+    public float[] pageBounds() {
+      return pageRect(x, y, width, height);
+    }
+
+    /** The page rectangle {x, y, w, h} that frame rectangle (u, v, w, h) covers. */
+    public float[] pageRect(float u, float v, float w, float h) {
+      if (turn == 0) return new float[] {u, v, w, h};
+      float[] a = toPage(u, v), b = toPage(u + w, v + h);
+      return new float[] {
+        Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.abs(a[0] - b[0]), Math.abs(a[1] - b[1])
+      };
+    }
     public final String paragraphId, marker;
     public final float x, y, width, height;
 
@@ -442,6 +487,16 @@ public final class LayoutEngine {
 
   static {
     for (int i = 0; i < ASCII.length; i++) ASCII[i] = String.valueOf((char) i);
+  }
+
+  /** The longest line turned cell text gets when its row height isn't exact (as Wordcraft). */
+  static final float TURNED_MAX = 648;
+
+  /** The longest line turned cell text ever gets (Word's largest page, as Wordcraft). */
+  static final float TURNED_LIMIT = 1584;
+
+  private static float clamp(float v, float lo, float hi) {
+    return Math.max(lo, Math.min(hi, v));
   }
 
   private static final class RawLine {
@@ -2339,12 +2394,23 @@ public final class LayoutEngine {
       final TableFormat.Cell format;
       final float left, width;
       float height, shift;
+      /**
+       * Turned text (see {@link Line#turn}): its lines are laid out {@link #len} long in the
+       * cell's unturned frame and reach {@link #across} across the cell.
+       */
+      int turn;
+
+      float len, across;
 
       CellLayout(Table t, int row, int col, float[] edges) {
-        this(t, row, col, edges, NO_PATH);
+        this(t, row, col, edges, NO_PATH, -1);
       }
 
       CellLayout(Table t, int row, int col, float[] edges, int[] prefix) {
+        this(t, row, col, edges, prefix, -1);
+      }
+
+      CellLayout(Table t, int row, int col, float[] edges, int[] prefix, float forcedLength) {
         span = t.span(row, col);
         format = t.format.cell(row, col);
         // A right-to-left table (bidiVisual) mirrors column positions within the table.
@@ -2355,6 +2421,18 @@ public final class LayoutEngine {
         this.width = edges[col + span.columns] - edges[col];
         height = format.verticalPadding;
         float width = Math.max(1, this.width - 2 * format.horizontalPadding);
+        String dir = prefix.length == 0 ? t.format.direction(row, col) : "lrTb";
+        turn = "tbRl".equals(dir) ? 1 : "btLr".equals(dir) ? 2 : 0;
+        if (turn != 0) {
+          // As Wordcraft: turned lines run along the cell's height. An exact row height sets
+          // their length; otherwise they get the length the text needs unwrapped (at most a
+          // Letter page's body height) and the row grows to fit.
+          if (forcedLength > 0) width = Math.min(TURNED_LIMIT, forcedLength);
+          else if ("exact".equals(t.format.row(row).rule) && t.format.minHeight(row) > 0)
+            width = clamp(t.format.minHeight(row) - 2 * format.verticalPadding, 4, TURNED_LIMIT);
+          else width = clamp(naturalLength(t.blocks(row, col)), 4, TURNED_MAX);
+          len = width;
+        }
         var numbers = new ListNumbers();
         var content = t.blocks(row, col);
         for (int k = 0; k < content.size(); k++) {
@@ -2409,7 +2487,25 @@ public final class LayoutEngine {
         }
         for (float[] f : floats) height = Math.max(height, f[3]);
         for (float[] r : picBoxes) height = Math.max(height, r[1] + r[3]);
+        if (turn != 0) {
+          across = height - format.verticalPadding;
+          height = len + format.verticalPadding;
+        }
         height += format.verticalPadding;
+      }
+
+      /** The line length turned text needs so that nothing wraps (Wordcraft's natural_length). */
+      private float naturalLength(Sequence<Block> content) {
+        float most = 0;
+        for (Block b : content) {
+          if (!(b instanceof Paragraph p)) continue;
+          float indent = p.indent + (p.list.isEmpty() ? 0 : 18 * (p.listLevel + 1));
+          for (RawLine line : LayoutEngine.this.lines(p, TURNED_MAX)) {
+            float first = line.start == 0 ? Math.max(0, p.format.firstIndent) : 0;
+            most = Math.max(most, indent + first + line.lead + line.width + Math.max(0, p.format.rightIndent));
+          }
+        }
+        return most;
       }
 
       /**
@@ -2629,7 +2725,18 @@ public final class LayoutEngine {
             }
         }
       for (int i = 0; i < heights.length; i++) tops[i + 1] = tops[i] + heights[i];
+      // Turned lines run the cell's whole height: laid out again when the row grew (Wordcraft).
+      for (int k = 0; k < cells.size(); k++) {
+        var cell = cells.get(k);
+        if (cell.turn == 0) continue;
+        float full =
+            tops[cell.span.row + cell.span.rows] - tops[cell.span.row]
+                - 2 * cell.format.verticalPadding;
+        if (Math.abs(full - cell.len) > .01f && full >= 4)
+          cells.set(k, new CellLayout(t, cell.span.row, cell.span.column, edges, NO_PATH, full));
+      }
       for (CellLayout cell : cells) {
+        if (cell.turn != 0) continue;
         float extra =
             Math.max(0, tops[cell.span.row + cell.span.rows] - tops[cell.span.row] - cell.height);
         cell.shift =
@@ -2660,6 +2767,7 @@ public final class LayoutEngine {
         float first = tops[row], last = tops[endRow];
         boolean keepTogether = row < t.format.headerRows;
         for (int i = row; i < endRow; i++) keepTogether |= !t.format.row(i).allowBreak;
+        for (CellLayout cell : group) keepTogether |= cell.turn != 0;
         float freshCapacity =
             spec.height - spec.top - spec.bottom - (row >= t.format.headerRows ? headerHeight : 0);
         // Oversized unsplittable rows must make progress even on a fresh page.
@@ -2682,7 +2790,7 @@ public final class LayoutEngine {
           for (CellLayout cell : group)
             for (int i = 0; i < cell.lines.size(); i++) {
               var line = cell.lines.get(i);
-              float top = tops[cell.span.row] + cell.shift + cell.ys.get(i);
+              float top = tops[cell.span.row] + cell.shift + (cell.turn != 0 ? 0 : cell.ys.get(i));
               if (top < first - .01f || top >= end || top >= tops[cell.span.row + cell.span.rows])
                 continue;
               final boolean[] hasNote = {false};
@@ -2701,7 +2809,7 @@ public final class LayoutEngine {
           do {
             changed = false;
             for (CellLayout cell : group)
-              for (int i = 0; i < cell.lines.size(); i++) {
+              for (int i = 0; i < cell.lines.size() && cell.turn == 0; i++) {
                 float top = tops[cell.span.row] + cell.shift + cell.ys.get(i),
                     bottom = top + cell.lines.get(i).height;
                 if (top > first + .01f
@@ -2717,7 +2825,7 @@ public final class LayoutEngine {
           var anchors = new ArrayList<Note>();
           for (CellLayout cell : group)
             for (int i = 0; i < cell.lines.size(); i++) {
-              float top = tops[cell.span.row] + cell.shift + cell.ys.get(i);
+              float top = tops[cell.span.row] + cell.shift + (cell.turn != 0 ? 0 : cell.ys.get(i));
               if (top < first - .01f
                   || top >= end - .01f
                   || top >= tops[cell.span.row + cell.span.rows]) continue;
@@ -2802,6 +2910,35 @@ public final class LayoutEngine {
                     cell.pics.get(i), cell.picIndex.get(i), pages.size(), ox + r[0], y + picTop - first, r[2], r[3],
                     path, new float[] {ox + r[4], y + anchor - first, r[6]}));
           }
+        }
+        if (cell.turn != 0) {
+          // Turned text is drawn whole on the page where its cell starts (Wordcraft keeps a
+          // turned cell's row in one piece).
+          if (top < first - .01f || top >= end - .01f) continue;
+          float pad = cell.format.horizontalPadding, vpad = cell.format.verticalPadding;
+          float cw = Math.max(0, cell.width - 2 * pad);
+          float off =
+              "center".equals(cell.format.vertical)
+                  ? Math.max(0, (cw - cell.across) / 2)
+                  : "bottom".equals(cell.format.vertical) ? Math.max(0, cw - cell.across) : 0;
+          float cellX = spec.left + cell.left, cellY = y + top - first;
+          float ox = cell.turn == 2 ? cellX + pad + off : cellX + pad + cw - off;
+          float oy = cell.turn == 2 ? cellY + vpad + cell.len : cellY + vpad;
+          for (int i = 0; i < cell.lines.size(); i++)
+            current.add(
+                new Line(
+                        index,
+                        cell.span.row,
+                        cell.span.column,
+                        cell.ids.get(i),
+                        pages.size(),
+                        cell.xs.get(i) - pad,
+                        cell.ys.get(i) - vpad,
+                        cell.lines.get(i),
+                        cell.markers.get(i))
+                    .at(cell.paths.get(i))
+                    .turned(cell.turn, ox, oy));
+          continue;
         }
         for (int i = 0; i < cell.lines.size(); i++) {
           float lineY = top + cell.shift + cell.ys.get(i);
