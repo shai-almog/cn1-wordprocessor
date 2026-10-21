@@ -5170,6 +5170,7 @@ public class WordProcessor {
     java.util.function.Consumer<Runnable> step = r -> {
       // Pending Text Pane typing is applied first, as its own step, so buttons act on what is shown.
       applySmartArtText(pane.getText());
+      smartArtItem = smartArtLine(pane);
       r.run();
       refresh.run();
       form.revalidate();
@@ -5188,19 +5189,38 @@ public class WordProcessor {
     var body = BoxLayout.encloseY(
         new Label("Layout"), layout, new Label("Colors"), colors,
         new Label("Text Pane (Tab-indent for levels)"), BorderLayout.center(pane).add(BorderLayout.EAST, buttons));
-    if (showDialog("SmartArt Design", body, "Apply", "Close")) applySmartArtText(pane.getText());
+    boolean apply = showDialog("SmartArt Design", body, "Apply", "Close");
+    smartArtItem = smartArtLine(pane);
+    if (apply) applySmartArtText(pane.getText());
   }
 
   private final Button[] smartArtThumbs = new Button[SMART_ART_LAYOUTS.length];
   private ComboBox<String> smartArtRibbonColors;
   private boolean syncingSmartArt;
   private String smartArtThumbColors = "colorful";
+  /** The Text Pane's current item (Wordcraft's smart_art_item), or -1 for none. */
+  int smartArtItem = -1;
+
+  /**
+   * The ribbon's item arguments, as Wordcraft's smart_art_design: the Text Pane's current item
+   * when it is still an item of the selected graphic, else none (the command takes the last).
+   */
+  Map<String, Object> smartArtCurrent(String key) {
+    int n;
+    try {
+      Object got = ((Map<?, ?>) commands.execute(session, "smartArt.get", Json.object())).get("items");
+      n = got instanceof java.util.List ? ((java.util.List<?>) got).size() : -1;
+    } catch (RuntimeException e) {
+      n = -1;
+    }
+    return smartArtItem >= 0 && smartArtItem < n ? Json.object(key, smartArtItem) : Json.object();
+  }
 
   /**
    * The SmartArt Design contextual tab, shown while a SmartArt graphic is selected, as Wordcraft's
    * smart_art_design: Create Graphic (Add Shape, Promote, Demote, Text Pane), a Layouts gallery of
    * drawn previews (the current layout marked), Change Colors and Reset Graphic. Item commands act
-   * on the last item, as Wordcraft's do without a Text Pane item.
+   * on the Text Pane's current item, else the last, as Wordcraft's.
    */
   private Container smartArtRibbon() {
     var gallery = new Container(new GridLayout(2, 4));
@@ -5228,9 +5248,9 @@ public class WordProcessor {
         OfficeTheme.group(
             "Create Graphic",
             BoxLayout.encloseY(
-                button("Add Shape", () -> run("smartArt.addShape", Json.object())),
-                OfficeTheme.row(button("Promote", () -> run("smartArt.promote", Json.object())),
-                    button("Demote", () -> run("smartArt.demote", Json.object()))),
+                button("Add Shape", () -> run("smartArt.addShape", smartArtCurrent("after"))),
+                OfficeTheme.row(button("Promote", () -> run("smartArt.promote", smartArtCurrent("index"))),
+                    button("Demote", () -> run("smartArt.demote", smartArtCurrent("index")))),
                 button("Text Pane", this::smartArtDialog))),
         OfficeTheme.group("Layouts", gallery),
         OfficeTheme.group("SmartArt Styles", BoxLayout.encloseY(new Label("Change Colors"), colors)),

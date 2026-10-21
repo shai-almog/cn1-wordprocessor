@@ -758,15 +758,30 @@ public class SimulatorUiTest {
           assertEquals(Boolean.TRUE, thumbs[4].getClientProperty("selected"));
           assertNull(thumbs[2].getClientProperty("selected"));
           // A preview draws the layout's shapes.
-          var img = WordProcessor.smartArtPreview("matrix", "accent2", 46, 31);
-          int[] rgb = img.getRGB();
-          boolean drawn = false;
-          for (int v : rgb) drawn |= (v & 0xffffff) == 0xed7d31 && (v >>> 24) != 0;
-          assertTrue(drawn);
+          assertTrue(hasColor(WordProcessor.smartArtPreview("matrix", "accent2", 46, 31), 0xed7d31));
+          // Ribbon item commands act on the Text Pane's current item, else the last (Wordcraft).
+          new Commands().execute(session, "smartArt.textPane", Json.object("nodes", "A\nB\nC"));
+          Method rb = WordProcessor.class.getDeclaredMethod("smartArtRibbon");
+          rb.setAccessible(true);
+          Container tab = (Container) rb.invoke(app);
+          app.smartArtItem = 0;
+          ((com.codename1.ui.Button) named(tab, "Add Shape")).released();
+          assertEquals("A\nText\nB\nC", String.valueOf(new Commands().execute(session, "smartArt.textPane", Json.object())).trim());
+          app.smartArtItem = 2;
+          ((com.codename1.ui.Button) named(tab, "Demote")).released();
+          assertEquals("A\nText\n\tB\nC", String.valueOf(new Commands().execute(session, "smartArt.textPane", Json.object())).trim());
+          app.smartArtItem = 9;
+          ((com.codename1.ui.Button) named(tab, "Add Shape")).released();
+          assertTrue(String.valueOf(new Commands().execute(session, "smartArt.textPane", Json.object())).trim().endsWith("C\nText"));
           session.replaceDocument(Document.empty());
           call(app, "updateStatus");
           assertFalse(ribbon.tabVisible("SmartArt Design"));
         });
+  }
+
+  private static boolean hasColor(com.codename1.ui.Image img, int color) {
+    for (int v : img.getRGB()) if ((v & 0xffffff) == color && (v >>> 24) != 0) return true;
+    return false;
   }
 
   @Test
