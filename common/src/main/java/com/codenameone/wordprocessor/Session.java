@@ -26,6 +26,13 @@ public final class Session {
     /** Set when the story is this footnote/endnote's (block then holds its reference). */
     String note;
 
+    /** Set when the story is this text box picture's (Wordcraft's text box part). */
+    String textBox;
+
+    boolean story() {
+      return note != null || textBox != null;
+    }
+
     /**
      * The enclosing cell when this cell belongs to a table nested in another cell. Its root is
      * then that outer cell's story, so block/row/column are relative to that story (Wordcraft's
@@ -56,13 +63,13 @@ public final class Session {
   }
 
   public boolean inCell() {
-    return cell != null && cell.note == null;
+    return cell != null && !cell.story();
   }
 
   /** Table nesting depth of the cell being edited: 0 in the body, 1 in a body table's cell. */
   public int cellDepth() {
     int depth = 0;
-    for (var c = cell; c != null && c.note == null; c = c.parent) depth++;
+    for (var c = cell; c != null && !c.story(); c = c.parent) depth++;
     return depth;
   }
 
@@ -129,6 +136,52 @@ public final class Session {
     return cell == null ? null : cell.note;
   }
 
+  /** The text box (picture id) whose story text commands edit, or null. */
+  public String textBoxStory() {
+    return cell == null ? null : cell.textBox;
+  }
+
+  /** The text box whose story is being edited, at its story level or in one of its cells. */
+  public String enclosingTextBox() {
+    return cell == null ? null : cell.top().textBox;
+  }
+
+  /**
+   * Edits text box {@code id}'s story in place, as Wordcraft's selection can be in a text box
+   * part: typing, formatting, comments and undo work on its paragraphs; {@link #leaveCell}
+   * returns to the body. A box whose text is still one string is edited as its paragraphs (ids
+   * as the layout shows them) and stored as a story once edited.
+   */
+  public void enterTextBox(String id) {
+    if (transactionDepth == 0) breakTypingGroup();
+    finishComposition();
+    cells = null;
+    span = null;
+    if (cell != null && id.equals(cell.textBox)) return;
+    leaveCell();
+    var box = TextBoxes.find(document, id);
+    if (box == null || box.drawing == null || !box.drawing.storyKind())
+      throw new IllegalArgumentException("Unknown text box");
+    var blocks = box.drawing.storyOrText(id + "-t");
+    if (blocks == null) blocks = Sequence.<Block>of(java.util.Collections.<Block>singletonList(
+        new Paragraph(id + "-t0", new RichText())));
+    var view =
+        new Document(blocks, document.page, document.title, document.nextId)
+            .styles(document.styles)
+            .trackChanges(document.trackChanges);
+    var comments = new ArrayList<ReviewComment>();
+    for (ReviewComment c : document.comments)
+      if (ReviewComment.block(view, c.startId) >= 0 && ReviewComment.block(view, c.endId) >= 0)
+        comments.add(c);
+    view = view.comments(comments).bookmarks(storyBookmarks(document, view));
+    cell = new CellContext(document, view, selection, -1, -1, -1);
+    cell.textBox = id;
+    document = view;
+    selection = new Selection(0, 0, 0);
+    insertionStyle = null;
+    integratedSource = null;
+  }
+
   /**
    * Edits a footnote or endnote story in place, as Wordcraft's selection can be in a note part:
    * text commands, comments and fields then work on the note's paragraphs. {@link #leaveCell}
@@ -175,8 +228,8 @@ public final class Session {
 
   /** Enters a cell of table {@code block} in the story being edited (body or cell). */
   public void enterNestedCell(int block, int row, int column) {
-    // A note story is a story of its own: its tables' cells nest inside it.
-    if (!inCell() && noteStory() == null) {
+    // A note or text box story is a story of its own: its tables' cells nest inside it.
+    if (!inCell() && noteStory() == null && textBoxStory() == null) {
       enterCell(block, row, column);
       return;
     }
@@ -535,7 +588,10 @@ public final class Session {
   private static Document integrate(CellContext c, Document story) {
     if (story == c.initial) return c.root;
     Document out;
-    if (c.note != null) {
+    if (c.textBox != null) {
+      out = TextBoxes.setStory(c.root, c.textBox, story.blocks);
+      out = out.blocks(out.blocks, story.nextId);
+    } else if (c.note != null) {
       // The note story holds any body block (Wordcraft note parts): tables and pictures too.
       final var notes = story.blocks;
       final String id = c.note;
@@ -584,7 +640,7 @@ public final class Session {
    */
   public void selectAcross(
       int[] anchorPath, int anchorBlock, int anchor, int[] focusPath, int block, int caret) {
-    if (noteStory() != null) leaveCell();
+    if (noteStory() != null || textBoxStory() != null) leaveCell();
     var body = document();
     var from = MixedRange.story(body, anchorPath);
     var to = MixedRange.story(body, focusPath);
@@ -1056,6 +1112,13 @@ public final class Session {
         ReviewComment.Anchor last = ReviewComment.locate(document, c.endId);
         if (first == null || !first.sameFlow(last))
           throw new IllegalStateException("Comment anchor is no longer available");
+        String box = ReviewComment.textBox(first);
+        if (box != null && box.equals(ReviewComment.textBox(last))) {
+          enterTextBox(box);
+          selectRange(ReviewComment.block(document, c.startId), c.start,
+              ReviewComment.block(document, c.endId), c.end);
+          return;
+        }
         // A header/footer range has no body caret: the comment is shown, its story unchanged.
         if (first.furniture != null) return;
         if (!first.sameStory(last)) {

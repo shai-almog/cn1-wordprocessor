@@ -132,4 +132,66 @@ public class TextBoxStoryTest {
     String pdf = new String(PdfExporter.write(d), "ISO-8859-1");
     assertTrue(pdf.contains("re W n"));
   }
+
+  @Test
+  public void editingInsideTextBoxWithUndoAndComments() {
+    var s = new Session(boxed());
+    s.enterTextBox("i5");
+    assertEquals("i5", s.textBoxStory());
+    assertFalse(s.inCell());
+    assertEquals(2, s.editingDocument().blocks.size());
+    s.select(1, 6, 6);
+    s.typeText("X", 0);
+    s.enterParagraph();
+    s.typeText("New", 0);
+    var story = story(s.document());
+    assertEquals(3, story.size());
+    assertEquals("SecondX", ((Paragraph) story.get(1)).text.toString());
+    assertEquals("New line", ((Paragraph) story.get(2)).text.toString());
+    // The body is untouched; the box text property mirrors the story.
+    assertEquals("Body", s.document().paragraph(0).text.toString());
+    assertEquals("Bold start\nSecondX\nNew line", TextBoxes.all(s.document()).get(0).drawing.get("text", ""));
+    // The comment in the box still anchors its paragraph.
+    assertTrue(ReviewComment.validRange(s.document(), "p11", 0, "p11", 6));
+    s.select(0, 0, 4);
+    s.addComment("Bo", "On bold");
+    assertEquals(2, s.document().comments.size());
+    s.leaveCell();
+    assertNull(s.textBoxStory());
+    var added = s.document().comments.get(1);
+    assertEquals("p10", added.startId);
+    // Selecting the comment enters the box with its range selected.
+    s.selectComment(added.id);
+    assertEquals("i5", s.textBoxStory());
+    assertEquals(0, s.selection().start());
+    assertEquals(4, s.selection().end());
+    s.leaveCell();
+    s.undo();
+    assertEquals(1, s.document().comments.size());
+    s.undo();
+    s.undo();
+    s.undo();
+    assertEquals("Second line", ((Paragraph) story(s.document()).get(1)).text.toString());
+  }
+
+  @Test
+  public void singleStringBoxBecomesStoryWhenEdited() {
+    var doc = new Document(new Sequence<Block>().append(new Paragraph("p1", new RichText()))
+        .append(Picture.drawing("i2", Drawing.of("textBox").with("text", "One\nTwo"), 100, 50, "", "left")),
+        PageSpec.A4, "T", 5);
+    var s = new Session(doc);
+    s.enterTextBox("i2");
+    s.leaveCell();
+    assertNull(((Picture) s.document().blocks.get(1)).drawing.story);
+    s.enterTextBox("i2");
+    s.select(1, 3, 3);
+    s.typeText("!", 0);
+    s.leaveCell();
+    var d = ((Picture) s.document().blocks.get(1)).drawing;
+    assertNotNull(d.story);
+    assertEquals("One\nTwo!", d.get("text", ""));
+    // The layout shows the edited story inside the box.
+    var r = new LayoutEngine(new PdfMetrics()).layout(s.document(), 0);
+    assertEquals(2, r.pages.get(0).textBoxLines("i2").size());
+  }
 }
