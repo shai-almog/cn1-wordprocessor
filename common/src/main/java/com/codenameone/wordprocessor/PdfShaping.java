@@ -518,12 +518,10 @@ final class PdfShaping {
     }
     clusters(buffer);
     if (rtl) reverse(buffer, ot);
-    if (kerning) {
-      if (aat.hasKerx()) aat.kerx(buffer);
-      else
-        for (int i = 0; i + 1 < buffer.size(); i++)
-          buffer.get(i).adv += font.kern(buffer.get(i).id, buffer.get(i + 1).id);
-    }
+    if (aat.hasKerx()) aat.kerx(buffer, kerning);
+    else if (kerning)
+      for (int i = 0; i + 1 < buffer.size(); i++)
+        buffer.get(i).adv += font.kern(buffer.get(i).id, buffer.get(i + 1).id);
     aat.track(buffer, ptem);
     return buffer;
   }

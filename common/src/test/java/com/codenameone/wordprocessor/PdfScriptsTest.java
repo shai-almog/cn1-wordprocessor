@@ -546,4 +546,169 @@ public class PdfScriptsTest {
         hbRtl(new PdfFonts.TrueType(installed("NotoSansPsalterPahlavi-Regular.ttf")),
             "\ud802\udf80\ud802\udf82\ud802\udf81"));
   }
+
+  // ------------------------------------------------------------------ AAT synthetic tables
+
+  private static void u32(ByteArrayOutputStream out, int v) {
+    u16(out, v >>> 16);
+    u16(out, v & 0xffff);
+  }
+
+  /**
+   * Source Serif without its OpenType layout tables, with an empty 'morx' (so the AAT path
+   * applies) and the given extra tables.
+   */
+  private static PdfFonts.TrueType aatFont(PdfFonts.TrueType base, Map<String, byte[]> extra)
+      throws IOException {
+    var tables = new TreeMap<String, byte[]>();
+    for (var e : base.tables.entrySet())
+      if (!e.getKey().equals("GPOS") && !e.getKey().equals("GDEF") && !e.getKey().equals("GSUB"))
+        tables.put(e.getKey(), Arrays.copyOfRange(base.data, e.getValue()[0],
+            e.getValue()[0] + e.getValue()[1]));
+    var morx = new ByteArrayOutputStream();
+    u16(morx, 2);
+    u16(morx, 0);
+    u32(morx, 0);
+    tables.put("morx", morx.toByteArray());
+    tables.putAll(extra);
+    return new PdfFonts.TrueType(FontSubset.write(tables));
+  }
+
+  private static List<OpenType.Glyph> aatShape(PdfFonts.TrueType font, String text,
+      boolean kerning, float ptem) throws IOException {
+    return PdfShaping.shapeRun(font, new OpenType(font), text, 0, text.length(), false, kerning,
+        ptem, 0);
+  }
+
+  @Test
+  public void trakInterpolatesTrackZeroByPointSize() throws Exception {
+    var base = new PdfFonts.TrueType(resource("SourceSerif4-Regular"));
+    var t = new ByteArrayOutputStream();
+    u32(t, 0x00010000);
+    u16(t, 0); // format
+    u16(t, 12); // horizontal data
+    u16(t, 0); // no vertical data
+    u16(t, 0);
+    u16(t, 1); // one track
+    u16(t, 2); // two sizes
+    u32(t, 28); // size table
+    u32(t, 0); // track 0 (normal)
+    u16(t, 256);
+    u16(t, 36); // its values
+    u32(t, 12 << 16);
+    u32(t, 24 << 16);
+    u16(t, 100);
+    u16(t, 50);
+    var font = aatFont(base, Map.of("trak", t.toByteArray()));
+    int a = font.advance(font.glyph('a'));
+    assertEquals(a + 100, aatShape(font, "a", false, 6).get(0).adv);
+    assertEquals(a + 100, aatShape(font, "a", false, 12).get(0).adv);
+    var mid = aatShape(font, "a", false, 18).get(0);
+    assertEquals(a + 75, mid.adv);
+    assertEquals(37, mid.dx);
+    assertEquals(a + 50, aatShape(font, "a", false, 30).get(0).adv);
+    assertEquals(a, aatShape(font, "a", false, 0).get(0).adv);
+  }
+
+  /** A kerx subtable: header (length, coverage, tuple count) then {@code body}. */
+  private static void kerxSubtable(ByteArrayOutputStream kerx, int format, byte[] body) {
+    u32(kerx, 12 + body.length);
+    u32(kerx, format);
+    u32(kerx, 0);
+    kerx.write(body, 0, body.length);
+  }
+
+  private static byte[] kerx(int format, byte[] body) {
+    var k = new ByteArrayOutputStream();
+    u16(k, 2);
+    u16(k, 0);
+    u32(k, 1);
+    kerxSubtable(k, format, body);
+    return k.toByteArray();
+  }
+
+  /**
+   * An extended state table at the start of {@code out} with classes 4 (A) and 5 (V), states 0
+   * and 1, and three 6-byte entries; {@code tail} (at offset 20 + the table) follows, and the
+   * u32 at offset 16 (format 1 values / format 4 flags) is {@code field}.
+   */
+  private static byte[] stateTable(int a, int v, int[][] entries, int fieldBase, byte[] tail) {
+    var out = new ByteArrayOutputStream();
+    int classTable = 20, classLen = 12 + 8, states = classTable + classLen, entryAt = states + 24;
+    int tailAt = entryAt + 6 * entries.length;
+    u32(out, 6);
+    u32(out, classTable);
+    u32(out, states);
+    u32(out, entryAt);
+    u32(out, fieldBase | tailAt);
+    // Class lookup, format 6 (single glyphs).
+    u16(out, 6);
+    u16(out, 4);
+    u16(out, 2);
+    u16(out, 8);
+    u16(out, 1);
+    u16(out, 0);
+    u16(out, Math.min(a, v));
+    u16(out, a < v ? 4 : 5);
+    u16(out, Math.max(a, v));
+    u16(out, a < v ? 5 : 4);
+    // State 0: A goes to entry 1; state 1: A to entry 1, V to entry 2.
+    for (int c : new int[] {0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 2}) u16(out, c);
+    for (int[] e : entries)
+      for (int x : e) u16(out, x);
+    out.write(tail, 0, tail.length);
+    return out.toByteArray();
+  }
+
+  @Test
+  public void kerxFormats1And4And6PositionAsHarfrust() throws Exception {
+    var base = new PdfFonts.TrueType(resource("SourceSerif4-Regular"));
+    int a = base.glyph('A'), v = base.glyph('V');
+    int advA = base.advance(a), advV = base.advance(v);
+    // Format 6: row lookup gives A index 0, column lookup V index 1; array {0, -80}.
+    var f6 = new ByteArrayOutputStream();
+    u32(f6, 0);
+    u16(f6, 1);
+    u16(f6, 2);
+    u32(f6, 32);
+    u32(f6, 40);
+    u32(f6, 48);
+    u16(f6, 8);
+    u16(f6, a);
+    u16(f6, 1);
+    u16(f6, 0);
+    u16(f6, 8);
+    u16(f6, v);
+    u16(f6, 1);
+    u16(f6, 1);
+    u16(f6, 0);
+    u16(f6, -80);
+    var font = aatFont(base, Map.of("kerx", kerx(6, f6.toByteArray())));
+    var g = aatShape(font, "AV", true, 0);
+    assertEquals(advA - 40, g.get(0).adv);
+    assertEquals(advV - 40, g.get(1).adv);
+    assertEquals(-40, g.get(1).dx);
+    assertEquals(advA, aatShape(font, "AV", false, 0).get(0).adv);
+    // Format 1: A and V are pushed, the action pops V with -59 (odd: the list ends), so V takes
+    // -60 on its advance and offset.
+    var values = new ByteArrayOutputStream();
+    u16(values, -59);
+    byte[] f1 = stateTable(a, v, new int[][] {{0, 0, 0xffff}, {1, 0x8000, 0xffff},
+        {0, 0x8000, 0}}, 0, values.toByteArray());
+    font = aatFont(base, Map.of("kerx", kerx(1, f1)));
+    g = aatShape(font, "AV", true, 0);
+    assertEquals(advA, g.get(0).adv);
+    assertEquals(advV - 60, g.get(1).adv);
+    assertEquals(-60, g.get(1).dx);
+    assertEquals(advV, aatShape(font, "AV", false, 0).get(1).adv);
+    // Format 4 with coordinates: A is the mark; V's point (50, 0) meets A's (300, 400).
+    var coords = new ByteArrayOutputStream();
+    for (int c : new int[] {300, 400, 50, 0}) u16(coords, c);
+    byte[] f4 = stateTable(a, v, new int[][] {{0, 0, 0xffff}, {1, 0x8000, 0xffff},
+        {0, 0, 0}}, 2 << 30, coords.toByteArray());
+    font = aatFont(base, Map.of("kerx", kerx(4, f4)));
+    g = aatShape(font, "AV", false, 0);
+    assertEquals(300 - 50 - advA, g.get(1).dx);
+    assertEquals(400, g.get(1).dy);
+  }
 }

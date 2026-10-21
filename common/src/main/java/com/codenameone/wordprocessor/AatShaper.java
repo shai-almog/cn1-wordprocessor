@@ -6,15 +6,16 @@ import java.util.*;
 /**
  * Apple Advanced Typography shaping as HarfBuzz / harfrust's aat module: the 'morx' extended
  * glyph metamorphosis table (rearrangement, contextual, ligature, noncontextual and insertion
- * subtables, run by the AAT state machine driver), 'kerx' kerning (formats 0 and 2) and 'trak'
- * tracking. HarfBuzz takes this path when a face has 'morx' but its GSUB does not list the run's
+ * subtables, run by the AAT state machine driver), 'kerx' kerning (formats 0, 1, 2, 4 and 6) and
+ * 'trak' tracking. HarfBuzz takes this path when a face has 'morx' but its GSUB does not list the run's
  * script; positioning then uses 'kerx' (or the legacy 'kern' table), never GPOS, and marks keep
  * their advances (the "dumber" shaper).
  *
- * <p>Not covered: chain feature selection beyond each chain's default flags (the default OpenType
- * features map onto settings the fonts enable by default), kerx state-machine formats 1 and 4
- * (contextual kerning, anchor attachment) and format 6, and the "kashida-like" insertion flags,
- * which HarfBuzz ignores too.
+ * <p>Chains run with their default flags. harfrust maps only user-requested OpenType features
+ * onto morx settings, and Wordcraft requests only "-kern" (which has no morx mapping and turns
+ * off kerx pair and format 1 kerning here too) and "ssty" for math, so the result is the same
+ * (as in Wordcraft). Vertical subtables are skipped: Wordcraft never shapes vertically (as in
+ * Wordcraft). The "kashida-like" insertion flags are ignored, as HarfBuzz does.
  */
 final class AatShaper {
   static final int DELETED = 0xffff;
@@ -50,11 +51,17 @@ final class AatShaper {
 
   /** Value of an AAT lookup table (formats 0, 2, 4, 6, 8, 10) for {@code g}, or -1. */
   int lookup(int t, int g) throws IOException {
+    return lookup(t, g, false);
+  }
+
+  /** As {@link #lookup(int, int)}; {@code wide} tables (kerx format 6 long) hold 32-bit values. */
+  private int lookup(int t, int g, boolean wide) throws IOException {
     if (g == DELETED) return -1;
+    int vs = wide ? 4 : 2;
     int format = font.u16(t);
     switch (format) {
       case 0:
-        return g < numGlyphs ? font.u16(t + 2 + 2 * g) : -1;
+        return g < numGlyphs ? value(t + 2 + vs * g, wide) : -1;
       case 2:
       case 4: {
         int unit = font.u16(t + 2), lo = 0, hi = font.u16(t + 4) - 1;
@@ -63,8 +70,8 @@ final class AatShaper {
           int last = font.u16(seg), first = font.u16(seg + 2);
           if (g < first) hi = mid - 1;
           else if (g > last) lo = mid + 1;
-          else return format == 2 ? font.u16(seg + 4)
-              : font.u16(t + font.u16(seg + 4) + 2 * (g - first));
+          else return format == 2 ? value(seg + 4, wide)
+              : value(t + font.u16(seg + 4) + vs * (g - first), wide);
         }
         return -1;
       }
@@ -74,13 +81,13 @@ final class AatShaper {
           int mid = (lo + hi) >>> 1, e = t + 12 + mid * unit, key = font.u16(e);
           if (g < key) hi = mid - 1;
           else if (g > key) lo = mid + 1;
-          else return font.u16(e + 2);
+          else return value(e + 2, wide);
         }
         return -1;
       }
       case 8: {
         int i = g - font.u16(t + 2);
-        return i >= 0 && i < font.u16(t + 4) ? font.u16(t + 6 + 2 * i) : -1;
+        return i >= 0 && i < font.u16(t + 4) ? value(t + 6 + vs * i, wide) : -1;
       }
       case 10: {
         int unit = font.u16(t + 2), i = g - font.u16(t + 4);
@@ -92,6 +99,10 @@ final class AatShaper {
       default:
         return -1;
     }
+  }
+
+  private int value(int at, boolean wide) throws IOException {
+    return wide ? i32(at) : font.u16(at);
   }
 
   // --------------------------------------------------------------------------------- buffer
@@ -424,37 +435,156 @@ final class AatShaper {
     return t != null && t[1] >= 8;
   }
 
-  /** Applies horizontal 'kerx' pair kerning (formats 0 and 2), skipping marks, as HarfBuzz. */
-  void kerx(List<OpenType.Glyph> buffer) throws IOException {
+  /**
+   * Applies the horizontal 'kerx' subtables as harfrust: pair kerning (formats 0, 2 and 6) and
+   * state-machine kerning (format 1) when {@code kerning} is on, cross-stream values as vertical
+   * offsets, and format 4 anchor attachment (anchor points from 'ankr' or coordinates). The
+   * buffer is in visual order.
+   */
+  void kerx(List<OpenType.Glyph> buffer, boolean kerning) throws IOException {
     int t = font.tables.get("kerx")[0];
     int count = i32(t + 4), s = t + 8;
     for (int k = 0; k < count; k++) {
       int len = i32(s), coverage = i32(s + 4), tuples = i32(s + 8);
       int format = coverage & 0xff;
       boolean cross = (coverage & 0x40000000) != 0;
-      if ((coverage & 0x80000000) == 0 && tuples == 0 && (format == 0 || format == 2)) {
-        for (int i = 0; i < buffer.size(); i++) {
-          if (nonspacing(buffer.get(i).cp)) continue;
-          int j = i + 1;
-          while (j < buffer.size() && nonspacing(buffer.get(j).cp)) j++;
-          if (j >= buffer.size()) break;
-          var a = buffer.get(i);
-          var b = buffer.get(j);
-          int kern = format == 0 ? pair0(s, a.id, b.id) : pair2(s, len, a.id, b.id);
-          if (kern != 0) {
-            if (cross) b.dy = kern;
-            else {
-              int k1 = kern >> 1, k2 = kern - k1;
-              a.adv += k1;
-              b.adv += k2;
-              b.dx += k2;
+      if ((coverage & 0x80000000) == 0) {
+        if (format == 1) stateKerning(buffer, s, tuples, cross, kerning);
+        else if (format == 4) attach(buffer, s);
+        else if (kerning && (format == 0 && tuples == 0 || format == 2 && tuples == 0
+            || format == 6)) {
+          for (int i = 0; i < buffer.size(); i++) {
+            if (nonspacing(buffer.get(i).cp)) continue;
+            int j = i + 1;
+            while (j < buffer.size() && nonspacing(buffer.get(j).cp)) j++;
+            if (j >= buffer.size()) break;
+            var a = buffer.get(i);
+            var b = buffer.get(j);
+            int kern = format == 0 ? pair0(s, a.id, b.id) : format == 2 ? pair2(s, len, a.id, b.id)
+                : pair6(s, len, tuples, a.id, b.id);
+            if (kern != 0) {
+              if (cross) b.dy = kern;
+              else {
+                int k1 = kern >> 1, k2 = kern - k1;
+                a.adv += k1;
+                b.adv += k2;
+                b.dx += k2;
+              }
             }
+            i = j - 1;
           }
-          i = j - 1;
         }
       }
       s += len;
     }
+  }
+
+  /** Format 6: row and column lookups (16- or 32-bit) index the kerning array, maybe a tuple. */
+  private int pair6(int s, int len, int tuples, int left, int right) throws IOException {
+    boolean wide = (i32(s + 12) & 1) != 0;
+    int rows = s + i32(s + 20), columns = s + i32(s + 24), array = s + i32(s + 28);
+    int r = lookup(rows, left, wide), c = lookup(columns, right, wide);
+    long idx = (long) Math.max(r, 0) + Math.max(c, 0);
+    int at = (int) (array + idx * (wide ? 4 : 2));
+    if (at < s || at + (wide ? 4 : 2) > s + len) return 0;
+    int v = wide ? i32(at) : font.s16(at);
+    if (tuples != 0) {
+      int vector = s + i32(s + 32) + 2 * (v >> 1);
+      if (vector + 2 > s + len) return 0;
+      v = font.s16(vector);
+    }
+    return v;
+  }
+
+  /**
+   * Format 1 contextual kerning: entries push glyphs on an eight-deep stack and an action pops
+   * them, applying one value each until an odd value ends the list (harfrust's Driver1).
+   */
+  private void stateKerning(List<OpenType.Glyph> buffer, int s, int tuples, boolean cross,
+      boolean kerning) throws IOException {
+    int st = s + 12, values = st + i32(st + 16);
+    int[] stack = new int[8];
+    int[] depth = {0};
+    var b = new Buf(buffer, false);
+    int step = Math.max(tuples, 1);
+    drive(st, 6, b, (buf, e, flags) -> {
+      if ((flags & 0x2000) != 0) depth[0] = 0;
+      if ((flags & 0x8000) != 0) {
+        if (depth[0] < stack.length) stack[depth[0]++] = buf.idx;
+        else depth[0] = 0;
+      }
+      int action = font.u16(e + 4);
+      if (action == 0xffff || depth[0] == 0) return;
+      boolean last = false;
+      while (!last && depth[0] != 0) {
+        int idx = stack[--depth[0]];
+        int v = font.s16(values + 2 * action);
+        action += step;
+        if (idx >= buffer.size()) continue;
+        last = (v & 1) != 0;
+        v &= ~1;
+        var g = buffer.get(idx);
+        if (cross) g.dy = v == -0x8000 ? 0 : g.dy + v;
+        else if (kerning) {
+          g.adv += v;
+          g.dx += v;
+        }
+      }
+    });
+  }
+
+  /**
+   * Format 4 attachment: an entry with the mark flag records the mark glyph; an action places the
+   * current glyph so its anchor meets the mark's (anchor points from 'ankr', or coordinates).
+   */
+  private void attach(List<OpenType.Glyph> buffer, int s) throws IOException {
+    int st = s + 12, flags4 = i32(st + 16), type = flags4 >>> 30 & 3;
+    int actions = st + (flags4 & 0xffffff);
+    var ankr = font.tables.get("ankr");
+    int[] mark = {-1};
+    var b = new Buf(buffer, false);
+    drive(st, 6, b, (buf, e, flags) -> {
+      int action = font.u16(e + 4);
+      if (mark[0] >= 0 && action != 0xffff && buf.idx < buffer.size()) {
+        var cur = buffer.get(buf.idx);
+        var base = buffer.get(mark[0]);
+        int mx = 0, my = 0, cx = 0, cy = 0;
+        boolean placed = true;
+        if (type == 1 && ankr != null) {
+          int[] m = anchor(ankr[0], base.id, font.u16(actions + 4 * action));
+          int[] c = anchor(ankr[0], cur.id, font.u16(actions + 4 * action + 2));
+          mx = m[0];
+          my = m[1];
+          cx = c[0];
+          cy = c[1];
+        } else if (type == 2) {
+          int at = actions + 8 * action;
+          mx = font.s16(at);
+          my = font.s16(at + 2);
+          cx = font.s16(at + 4);
+          cy = font.s16(at + 6);
+        } else placed = false;
+        if (placed) {
+          // HarfBuzz's mark attachment chain: offset from the mark glyph's own position.
+          int between = 0;
+          for (int i = Math.min(mark[0], buf.idx); i < Math.max(mark[0], buf.idx); i++)
+            between += buffer.get(i).adv;
+          int shift = mark[0] < buf.idx ? -between : between;
+          cur.dx = mx - cx + base.dx + shift;
+          cur.dy = my - cy + base.dy;
+        }
+      }
+      if ((flags & 0x8000) != 0) mark[0] = buf.idx;
+    });
+  }
+
+  /** Anchor point {@code index} of {@code glyph} in the 'ankr' table at {@code t}, or 0,0. */
+  private int[] anchor(int t, int glyph, int index) throws IOException {
+    int v = lookup(t + i32(t + 4), glyph);
+    if (v < 0) return new int[2];
+    int data = t + i32(t + 8) + v, n = i32(data);
+    if (index >= n) return new int[2];
+    return new int[] {font.s16(data + 4 + 4 * index), font.s16(data + 6 + 4 * index)};
   }
 
   private int pair0(int s, int left, int right) throws IOException {
