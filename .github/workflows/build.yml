@@ -34,7 +34,9 @@ jobs:
         with:
           path: .local/maven-repository
           key: m2-${{ runner.os }}-${{ hashFiles('**/pom.xml') }}
-      - run: scripts/build.sh
+      # SimulatorUiTest boots the Codename One simulator, which needs an X display.
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends xvfb
+      - run: xvfb-run -a scripts/build.sh
 
   native:
     needs: test

@@ -37,6 +37,9 @@ public class SimulatorUiTest {
 
   @BeforeClass
   public static void boot() throws Exception {
+    // The simulator needs a display; without one (a bare CI runner) Display.init never starts the
+    // EDT and every call below would wait forever.
+    org.junit.Assume.assumeFalse(java.awt.GraphicsEnvironment.isHeadless());
     if (!Display.isInitialized()) Display.init(null);
     // An uncaught EDT error would open a modal error dialog and hang the run; log it instead.
     Display.getInstance()
@@ -59,6 +62,7 @@ public class SimulatorUiTest {
 
   @AfterClass
   public static void restore() throws Exception {
+    if (app == null) return;
     edt(
         () -> {
           AppOptions.set("officeTheme", savedTheme == null ? "" : savedTheme);
@@ -74,6 +78,8 @@ public class SimulatorUiTest {
   private static void edt(Body body) throws Exception {
     Exception[] error = {null};
     Error[] fail = {null};
+    boolean[] done = {false};
+    // Bounded so a stuck EDT fails the test instead of hanging the build.
     Display.getInstance()
         .callSeriallyAndWait(
             () -> {
@@ -84,7 +90,10 @@ public class SimulatorUiTest {
               } catch (Error e) {
                 fail[0] = e;
               }
-            });
+              done[0] = true;
+            },
+            120000);
+    if (!done[0]) throw new AssertionError("EDT call did not finish within 120s");
     if (fail[0] != null) throw fail[0];
     if (error[0] != null) throw error[0];
   }
