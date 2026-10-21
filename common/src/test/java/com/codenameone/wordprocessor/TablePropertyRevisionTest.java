@@ -129,6 +129,28 @@ public class TablePropertyRevisionTest {
     assertEquals(f.rowRevision(0).id, n.rowRevision(0).id);
   }
 
+  /** A tracked cell text direction change keeps the prior direction in w:tcPrChange, as Wordcraft's tcpr. */
+  @Test public void cellDirectionChangeKeepsPriorDirection() throws Exception {
+    var s = new Session(Document.empty());
+    s.replace("body");
+    s.select(0, 4, 4);
+    s.insertTable(2, 2);
+    var t = (Table) s.document().blocks.get(1);
+    s.formatTable(1, t.format.direction(0, 1, "tbRl"));
+    s.trackChanges(true);
+    t = (Table) s.document().blocks.get(1);
+    s.formatTable(1, t.format.direction(0, 1, "btLr"));
+    var bytes = new ByteArrayOutputStream();
+    Docx.write(s.document(), bytes);
+    var f = table(Docx.read(new ByteArrayInputStream(bytes.toByteArray())).document).format;
+    assertEquals("btLr", f.direction(0, 1));
+    assertNotNull(f.cellRevision(0, 1));
+    assertEquals("tbRl", f.previous().direction(0, 1));
+    var d = Docx.read(new ByteArrayInputStream(bytes.toByteArray())).document;
+    var rejected = table(Revisions.resolve(d, f.cellRevision(0, 1).id, false)).format;
+    assertEquals("tbRl", rejected.direction(0, 1));
+  }
+
   private static Table firstTable(Sequence<Block> blocks) {
     for (Block b : blocks) if (b instanceof Table t) return t;
     return null;
