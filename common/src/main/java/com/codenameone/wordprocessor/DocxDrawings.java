@@ -42,14 +42,15 @@ final class DocxDrawings {
         .append("<a:ext uri=\"").append(EXT).append("\"><cn:drawing xmlns:cn=\"").append(CN)
         .append("\" value=\"").append(Xml.attribute(d.encode())).append("\"/></a:ext></a:extLst></wp:docPr>")
         .append("<a:graphic xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\">");
-    String[] dgm = parts != null && "smartArt".equals(d.kind) ? parts.diagramRels(d) : null;
+    String[] dgm = parts != null && "smartArt".equals(d.kind) ? parts.diagramRels(d, p.width, p.height) : null;
     if (parts != null && "chart".equals(d.kind)) {
       // A real chart part: the original one while unedited, otherwise one generated from the data.
       b.append("<a:graphicData uri=\"").append(DocxCharts.CHART).append("\"><c:chart xmlns:c=\"")
           .append(DocxCharts.CHART).append("\" xmlns:r=\"").append(DocxCharts.R).append("\" r:id=\"")
           .append(Xml.attribute(parts.chartRel(d))).append("\"/>");
     } else if (dgm != null) {
-      // Unedited SmartArt keeps its diagram data, layout, style and color parts.
+      // Unedited SmartArt keeps its diagram data, layout, style and color parts; created or edited
+      // SmartArt gets newly generated ones (with a cached drawing), as Wordcraft writes it.
       b.append("<a:graphicData uri=\"").append(DocxCharts.DIAGRAM).append("\"><dgm:relIds xmlns:dgm=\"")
           .append(DocxCharts.DIAGRAM).append("\" xmlns:r=\"").append(DocxCharts.R).append("\" r:dm=\"")
           .append(Xml.attribute(dgm[0])).append("\" r:lo=\"").append(Xml.attribute(dgm[1])).append("\" r:qs=\"")

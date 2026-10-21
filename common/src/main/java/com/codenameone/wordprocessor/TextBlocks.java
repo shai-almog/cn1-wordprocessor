@@ -439,8 +439,9 @@ final class TextBlocks {
         code = !code;
         cur.append(c);
       } else if (c == '|' && !code) {
-        // A bare "||" (no space) is a MultiMarkdown colspan; null marks the spanned column.
-        cells.add(cur.length() == 0 && !cells.isEmpty() ? null : cur.toString().trim());
+        // A bare "||" is an empty cell, as in GFM and Wordcraft's markdown reader (no
+        // MultiMarkdown colspans).
+        cells.add(cur.toString().trim());
         cur.setLength(0);
       } else cur.append(c);
     }
@@ -470,14 +471,9 @@ final class TextBlocks {
           if (l.trim().length() == 0 || l.indexOf('|') < 0) break;
           List<String> raw = pipeCells(l);
           var row = new ArrayList<Spec>();
-          int k = 0;
-          for (int c = 0; c < head.size() && c < MAX_COLUMNS; c++, k++) {
-            if (k < raw.size() && raw.get(k) == null && !row.isEmpty()) {
-              row.get(row.size() - 1).columns++;
-              continue;
-            }
+          for (int c = 0; c < head.size() && c < MAX_COLUMNS; c++) {
             Spec s = new Spec();
-            String v = k < raw.size() && raw.get(k) != null ? raw.get(k) : "";
+            String v = c < raw.size() ? raw.get(c) : "";
             s.source = v.replace("<br>", "\n\n").replace("<br/>", "\n\n");
             String d = c < delim.size() && delim.get(c) != null ? delim.get(c) : "";
             s.align = d.startsWith(":") && d.endsWith(":") && d.length() > 1 ? "center" : d.endsWith(":") ? "right" : "";
@@ -712,11 +708,8 @@ final class TextBlocks {
     for (int r = 0; r < t.rows(); r++) {
       b.append('|');
       for (int c = 0; c < t.columns(); c++) {
-        if (t.covered(r, c) && t.span(r, c).column < c && t.span(r, c).row == r) {
-          // MultiMarkdown colspan: a cell's extra columns are bare pipes after it ("| a ||").
-          b.append('|');
-          continue;
-        }
+        // Spanned columns are written as empty cells ("| a |  |"), as Wordcraft's markdown
+        // writer does (table_md); the span itself is not representable in GFM output.
         b.append(' ');
         if (!t.covered(r, c)) {
           boolean first = true;
@@ -732,7 +725,7 @@ final class TextBlocks {
       if (r == 0) {
         b.append('|');
         for (int c = 0; c < t.columns(); c++) {
-          String align = t.cell(0, c).get(0).align;
+          String align = t.covered(0, c) ? null : t.cell(0, c).get(0).align;
           b.append("center".equals(align) ? " :---: |" : "right".equals(align) ? " ---: |" : " --- |");
         }
         b.append('\n');

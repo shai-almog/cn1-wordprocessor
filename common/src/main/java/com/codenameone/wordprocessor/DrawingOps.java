@@ -60,6 +60,15 @@ public final class DrawingOps {
   public static final class Ops {
     public final List<Path> paths = new ArrayList<>();
     public final List<Text> texts = new ArrayList<>();
+    /**
+     * SmartArt shapes as {prst, x, y, w, h, fill, line, textColor, text} in points, recorded beside
+     * the paths so the DOCX writer can save them as the diagram's cached dsp drawing.
+     */
+    public final List<Object[]> shapes = new ArrayList<>();
+
+    void shape(String prst, float x, float y, float w, float h, int fill, int line, int textColor, String text) {
+      shapes.add(new Object[] {prst, x, y, w, h, fill, line, textColor, text});
+    }
 
     void fill(float[] pts, int fill, int stroke, float width) {
       paths.add(new Path(pts, true, fill, stroke, width, 255));
@@ -623,6 +632,7 @@ public final class DrawingOps {
           ops.fill(
               new float[] {bx + bw + 4, h / 2 - 5, bx + bw + gap - 4, h / 2, bx + bw + 4, h / 2 + 5},
               0xa5a5a5, -1, 0);
+        if (i + 1 < n) ops.shape("rightArrow", bx + bw + 4, h / 2 - 5, gap - 8, 10, 0xa5a5a5, -1, 0, "");
       }
     } else if ("cycle".equals(layout)) {
       float cx = w / 2, cy = h / 2, rad = Math.min(w, h) * .35f;
@@ -657,6 +667,8 @@ public final class DrawingOps {
         ops.fill(
             new float[] {w / 2 - w * t0 / 2, lh * i, w / 2 + w * t0 / 2, lh * i, w / 2 + w * t1 / 2, lh * (i + 1), w / 2 - w * t1 / 2, lh * (i + 1)},
             smartColor(d, i), 0xffffff, 1);
+        ops.shape(i == 0 ? "triangle" : "trapezoid", w / 2 - w * t1 / 2, lh * i, w * t1, lh, smartColor(d, i), 0xffffff,
+            0xffffff, top.get(i));
         layoutText(ops, label, top.get(i), w / 4, lh * i, w / 2, lh, 0xffffff, "center");
       }
     } else if ("radial".equals(layout)) {
@@ -668,11 +680,13 @@ public final class DrawingOps {
         ops.line(new float[] {cx, cy, cx + (float) Math.cos(a) * rad, cy + (float) Math.sin(a) * rad}, 0xa5a5a5, 1, 255);
       }
       ops.fill(ellipse(cx, cy, r0, r0), smartColor(d, 0), 0xffffff, 1);
+      ops.shape("ellipse", cx - r0, cy - r0, r0 * 2, r0 * 2, smartColor(d, 0), 0xffffff, 0xffffff, top.get(0));
       layoutText(ops, label, top.get(0), cx - r0, cy - r0, r0 * 2, r0 * 2, 0xffffff, "center");
       for (int i = 0; i < m; i++) {
         double a = -Math.PI / 2 + 2 * Math.PI * i / m;
         float x = cx + (float) Math.cos(a) * rad, y = cy + (float) Math.sin(a) * rad;
         ops.fill(ellipse(x, y, r1, r1), smartColor(d, i + 1), 0xffffff, 1);
+        ops.shape("ellipse", x - r1, y - r1, r1 * 2, r1 * 2, smartColor(d, i + 1), 0xffffff, 0xffffff, top.get(i + 1));
         layoutText(ops, label, top.get(i + 1), x - r1, y - r1, r1 * 2, r1 * 2, 0xffffff, "center");
       }
     } else if ("venn".equals(layout)) {
@@ -682,6 +696,7 @@ public final class DrawingOps {
         double a = -Math.PI / 2 + 2 * Math.PI * i / n;
         float x = cx + (float) Math.cos(a) * off, y = cy + (float) Math.sin(a) * off;
         ops.paths.add(new Path(ellipse(x, y, r, r), true, smartColor(d, i), smartColor(d, i), 1, 128));
+        ops.shape("ellipse", x - r, y - r, r * 2, r * 2, smartColor(d, i), smartColor(d, i), 0x262626, top.get(i));
       }
       for (int i = 0; i < n; i++) {
         double a = -Math.PI / 2 + 2 * Math.PI * i / n;
@@ -737,6 +752,9 @@ public final class DrawingOps {
   private static void node(
       Ops ops, Drawing label, String text, List<String> children, float x, float y, float w, float h, int color) {
     ops.fill(geometry("roundRect", w, h), color, 0xffffff, 1);
+    var label0 = new StringBuilder(text);
+    for (String c : children) label0.append('\n').append(c);
+    ops.shape("roundRect", x, y, w, h, color, 0xffffff, 0xffffff, label0.toString());
     for (int i = 0; i < ops.paths.get(ops.paths.size() - 1).points.length; i += 2) {
       ops.paths.get(ops.paths.size() - 1).points[i] += x;
       ops.paths.get(ops.paths.size() - 1).points[i + 1] += y;

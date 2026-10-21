@@ -256,8 +256,45 @@ public class ChartSmartArtTest {
     for (DrawingOps.Text t : ops2.texts) one |= t.text().contains("One");
     assertTrue(one);
     String doc = save(copy(o.document, edited, "smartArt"), o).get("word/document.xml");
-    assertFalse(doc.contains("r:dm="));
-    assertTrue(doc.contains("wpg:wgp"));
+    // Edited SmartArt is written as newly generated diagram parts, as Wordcraft does.
+    assertTrue(doc.contains("r:dm=\"cn1Dgm"));
+    assertFalse(doc.contains("wpg:wgp"));
+  }
+
+  @Test
+  public void createdSmartArtRoundTripsAsDiagramParts() throws Exception {
+    String[] layouts = {"list", "process", "cycle", "hierarchy", "pyramid", "radial", "matrix", "venn"};
+    String[] colors = {"accent1", "colorful", "accent4"};
+    for (int i = 0; i < layouts.length; i++) {
+      Drawing d = Drawing.of("smartArt").with("layout", layouts[i]).with("nodes", "Plan\n\tDetail & more\nBuild\nShip")
+          .with("colors", colors[i % colors.length]);
+      var blocks = new Sequence<Block>().append(Picture.drawing("i1", d, 432, 252, "", "center"));
+      var out = new ByteArrayOutputStream();
+      Docx.write(new Document(blocks, PageSpec.A4, "t", 1), out);
+      var parts = new LinkedHashMap<String, String>();
+      var in = new ZipInputStream(new ByteArrayInputStream(out.toByteArray()));
+      for (ZipEntry e; (e = in.getNextEntry()) != null; ) parts.put(e.getName(), new String(in.readAllBytes(), "UTF-8"));
+      int found = 0;
+      for (Map.Entry<String, String> e : parts.entrySet())
+        if (e.getKey().startsWith("word/diagrams/")) {
+          found++;
+          Xml.parse(e.getValue().getBytes("UTF-8")); // well-formed
+          assertTrue(parts.get("[Content_Types].xml").contains("/" + e.getKey()));
+        }
+      assertEquals(5, found);
+      String rels = parts.get("word/_rels/document.xml.rels");
+      assertTrue(rels.contains("relationships/diagramData") && rels.contains("relationships/diagramDrawing"));
+      // Read the diagram parts as Word would: without the app's own encoded drawing in docPr.
+      parts.put("word/document.xml", parts.get("word/document.xml").replaceAll("<a:extLst[^>]*><a:ext[^>]*><cn:drawing[^>]*/></a:ext></a:extLst>", ""));
+      assertFalse(parts.get("word/document.xml").contains("cn:drawing"));
+      Docx.Opened back = Docx.read(new ByteArrayInputStream(zip(parts)));
+      Drawing r = drawing(back.document, "smartArt");
+      assertEquals(layouts[i], r.get("layout", ""));
+      assertEquals("Plan\n\tDetail & more\nBuild\nShip", r.get("nodes", ""));
+      assertEquals(colors[i % colors.length], r.get("colors", ""));
+      assertFalse(layouts[i], r.get("shapes", "").isEmpty()); // the cached drawing was read
+      assertTrue(r.get("shapes", "").contains("Plan"));
+    }
   }
 
   @Test
