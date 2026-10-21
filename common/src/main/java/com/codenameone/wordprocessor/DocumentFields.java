@@ -29,7 +29,18 @@ public final class DocumentFields {
           if (displayOffset >= line.start && displayOffset < line.end) {
             number = layout.pages.get(line.page).number;
             format = layout.pages.get(line.page).decor.numberFormat;
-            break;
+            // SECTION and SECTIONPAGES as Wordcraft's FieldCtx: the page's section (1-based)
+            // and how many pages that section has; AUTHOR from the document's properties.
+            int section = layout.pages.get(line.page).section, pages = 0;
+            for (LayoutEngine.Page pg : layout.pages) if (pg.section == section) pages++;
+            var more = new java.util.HashMap<String, String>(values);
+            more.put("SECTION", "" + (section + 1));
+            more.put("SECTIONPAGES", "" + pages);
+            String author = doc.properties.get("author");
+            if (author != null && !author.isEmpty()) more.putIfAbsent("AUTHOR", author);
+            return resolve(CrossReferences.resolve(doc, layout, lines, paragraph, offset,
+                sequences.resolve(paragraph, offset, formulas.resolve(paragraph, offset, field))),
+                doc.title, number, layout.pages.size(), more, format);
           }
       var sequence = sequences.resolve(paragraph, offset, formulas.resolve(paragraph, offset, field));
       InlineField reference = CrossReferences.resolve(doc, layout, lines, paragraph, offset, sequence);
@@ -49,11 +60,9 @@ public final class DocumentFields {
     var tokens = tokens(field.instruction);
     if (tokens.isEmpty()) return field;
     String kind = tokens.get(0).toUpperCase(), result = null;
+    String numberFormat = formatSwitch(tokens);
     if ("PAGE".equals(kind) && page > 0)
-      result =
-          "decimal".equals(pageFormat) || field.instruction.indexOf("\\*") >= 0
-              ? "" + page
-              : ListNumbers.format(page, pageFormat);
+      result = ListNumbers.format(page, numberFormat != null ? numberFormat : pageFormat);
     else if ("NUMPAGES".equals(kind)) result = "" + count;
     else if ("TITLE".equals(kind)) result = title;
     else if ("MERGEFIELD".equals(kind) && tokens.size() > 1) result = values.get(tokens.get(1));
@@ -61,21 +70,46 @@ public final class DocumentFields {
       result = "Title".equalsIgnoreCase(tokens.get(1)) ? title : values.get(tokens.get(1));
     else result = values.get(kind);
     if (result == null) return field;
-    final var numeric = result;
+    boolean numeric = "NUMPAGES".equals(kind) || "SECTION".equals(kind) || "SECTIONPAGES".equals(kind);
+    if (numeric && numberFormat != null)
+      try {
+        result = ListNumbers.format(Integer.parseInt(result.trim()), numberFormat);
+      } catch (NumberFormatException ex) {
+        // not a number: shown as it is
+      }
     for (int i = 1; i + 1 < tokens.size(); i++)
       if ("\\*".equals(tokens.get(i))) {
         var format = tokens.get(++i);
         if ("Upper".equalsIgnoreCase(format)) result = result.toUpperCase();
         else if ("Lower".equalsIgnoreCase(format)) result = result.toLowerCase();
-        else if ("PAGE".equals(kind) || "NUMPAGES".equals(kind)) {
-          int number = Integer.parseInt(numeric);
-          if ("ROMAN".equals(format)) result = ListNumbers.format(number, "upperRoman");
-          else if ("roman".equals(format)) result = ListNumbers.format(number, "lowerRoman");
-          else if ("ALPHABETIC".equals(format)) result = ListNumbers.format(number, "upperLetter");
-          else if ("alphabetic".equals(format)) result = ListNumbers.format(number, "lowerLetter");
-        }
       }
     return field.result(result);
+  }
+
+  /**
+   * The number format of a \\* switch as Wordcraft's format_switch (roman, ROMAN, alphabetic,
+   * ALPHABETIC, CardText, OrdText, Ordinal, Arabic, ChineseNum1-3), or null.
+   */
+  static String formatSwitch(List<String> tokens) {
+    for (int i = 1; i + 1 < tokens.size(); i++) {
+      if (!"\\*".equals(tokens.get(i))) continue;
+      String v = tokens.get(i + 1);
+      switch (v) {
+        case "roman": return "lowerRoman";
+        case "ROMAN": case "Roman": return "upperRoman";
+        case "alphabetic": return "lowerLetter";
+        case "ALPHABETIC": case "Alphabetic": return "upperLetter";
+        case "CardText": case "cardtext": return "cardinalText";
+        case "OrdText": case "ordtext": return "ordinalText";
+        case "Ordinal": case "ordinal": return "ordinal";
+        case "Arabic": case "arabic": return "decimal";
+        default:
+          if ("ChineseNum1".equalsIgnoreCase(v)) return "chineseCountingThousand";
+          if ("ChineseNum2".equalsIgnoreCase(v)) return "chineseLegalSimplified";
+          if ("ChineseNum3".equalsIgnoreCase(v)) return "ideographDigital";
+      }
+    }
+    return null;
   }
 
   public static List<String> tokens(String instruction) {

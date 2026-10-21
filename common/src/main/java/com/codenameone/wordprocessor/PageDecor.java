@@ -5,8 +5,15 @@ package com.codenameone.wordprocessor;
  * watermark, page borders, the page-number format and margin line numbering.
  */
 public final class PageDecor {
-  public static final java.util.List<String> NUMBER_FORMATS =
-      java.util.Arrays.asList("decimal", "upperRoman", "lowerRoman", "upperLetter", "lowerLetter");
+  /** Page-number formats: Wordcraft's NumFormat set (every list number format but bullets). */
+  public static final java.util.List<String> NUMBER_FORMATS = pageFormats();
+
+  private static java.util.List<String> pageFormats() {
+    var out = new java.util.ArrayList<String>();
+    for (String f : ListNumbers.BASES)
+      if (!"outline".equals(f) && !"legal".equals(f) && !"bullet".equals(f)) out.add(f);
+    return java.util.Collections.unmodifiableList(out);
+  }
   public static final java.util.List<String> LINE_RESTARTS =
       java.util.Arrays.asList("page", "section", "continuous");
   public static final PageDecor NONE = new PageDecor(-1, "", 0xc0c0c0, ParagraphBorders.NONE);

@@ -1039,7 +1039,17 @@ static final char COLUMN_BREAK = '\u000B';
                 "headerReference",
                 "footerReference",
                 "footnotePr",
-                "endnotePr")
+                "endnotePr",
+                // Read further down, or (formProt, rtlGutter, noEndnote, paperSrc) ignored by
+                // Wordcraft as well: no warning.
+                "vAlign",
+                "docGrid",
+                "bidi",
+                "textDirection",
+                "formProt",
+                "rtlGutter",
+                "noEndnote",
+                "paperSrc")
             .contains(Xml.local(child))) warnings.add("Section feature: " + Xml.local(child));
     }
     PageFurniture furniture =
