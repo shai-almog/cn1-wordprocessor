@@ -85,4 +85,21 @@ public class DocxGroupTest {
     String pdf = new String(PdfExporter.write(doc), "ISO-8859-1");
     assertTrue(pdf.contains("/Im0 Do"));
   }
+
+  /** Shape and text-box rotation and flips go out in the standard a:xfrm so Word turns them. */
+  @Test
+  public void shapeRotationAndFlipsExportInStandardXfrm() throws Exception {
+    for (String kind : new String[] {"shape", "textBox"}) {
+      Drawing d = Drawing.of(kind).with("rotation", "-90").with("flipH", "true").with("flipV", "true");
+      var b = new StringBuilder();
+      DocxDrawings.write(b, Picture.drawing("x", d, 72, 36, "", "left"), 1);
+      String xml = b.toString();
+      assertTrue(xml, xml.contains("<a:xfrm rot=\"16200000\" flipH=\"1\" flipV=\"1\">"));
+      int at = xml.indexOf("<wps:wsp");
+      String wsp = xml.substring(at, xml.indexOf("</wps:wsp>", at) + 10);
+      Drawing back = DocxDrawings.wsp(Xml.parse(wsp.replace("<wps:wsp ", "<wps:wsp xmlns:a=\"a\" xmlns:w=\"w\" ")));
+      assertEquals(270, back.num("rotation", 0), .01f);
+      assertTrue(back.flag("flipH") && back.flag("flipV"));
+    }
+  }
 }

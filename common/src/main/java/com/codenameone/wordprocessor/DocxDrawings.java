@@ -205,7 +205,7 @@ final class DocxDrawings {
     boolean box = "textBox".equals(d.kind);
     String geometry = box ? "rect" : d.get("shape", "rect");
     b.append("<wps:wsp xmlns:wps=\"").append(WPS).append("\"><wps:cNvSpPr")
-        .append(box ? " txBox=\"1\"" : "").append("/><wps:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"")
+        .append(box ? " txBox=\"1\"" : "").append("/><wps:spPr><a:xfrm").append(xfrmTurn(d)).append("><a:off x=\"0\" y=\"0\"/><a:ext cx=\"")
         .append(cx).append("\" cy=\"").append(cy).append("\"/></a:xfrm>");
     if ("custom".equals(geometry)) custom(b, d.get("path", ""), cx, cy);
     else b.append("<a:prstGeom prst=\"").append(prst(geometry)).append("\"><a:avLst/></a:prstGeom>");
@@ -235,6 +235,19 @@ final class DocxDrawings {
     else if ("rotate270".equals(direction)) b.append(" vert=\"vert270\"");
     else if ("stacked".equals(direction)) b.append(" vert=\"wordArtVert\"");
     b.append("/></wps:wsp>");
+  }
+
+  /**
+   * Standard a:xfrm rot/flipH/flipV for the drawing's rotation and flips, so Word (not only this
+   * editor's private extension) turns the shape as Wordcraft's xfrm_spin writes it.
+   */
+  static String xfrmTurn(Drawing d) {
+    var b = new StringBuilder();
+    long rot = Math.round(((d.num("rotation", 0) % 360) + 360) % 360 * 60000.0);
+    if (rot != 0) b.append(" rot=\"").append(rot).append('"');
+    if (d.flag("flipH")) b.append(" flipH=\"1\"");
+    if (d.flag("flipV")) b.append(" flipV=\"1\"");
+    return b.toString();
   }
 
   private static void path(StringBuilder b, DrawingOps.Path p) {
