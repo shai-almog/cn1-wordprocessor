@@ -101,6 +101,26 @@ public final class Odt {
     return Xml.attribute(v);
   }
 
+  /** An ODF border ("0.75pt solid #a0a0a0") as WordprocessingML edge attributes, or null. */
+  static String odfBorder(String v) {
+    if (v == null || v.isEmpty() || "none".equals(v) || v.indexOf("hidden") >= 0) return null;
+    String width = "0.5pt", style = "single", color = "auto";
+    var parts = new java.util.ArrayList<String>();
+    for (String raw : v.trim().replace('\t', ' ').split(" ")) if (!raw.isEmpty()) parts.add(raw);
+    for (String part : parts) {
+      if (part.startsWith("#")) {
+        String h = hex(part);
+        if (h != null) color = h;
+      } else if (part.endsWith("pt") || part.endsWith("in") || part.endsWith("cm") || part.endsWith("mm"))
+        width = part;
+      else if ("double".equals(part)) style = "double";
+      else if ("dotted".equals(part)) style = "dotted";
+      else if ("dashed".equals(part)) style = "dashed";
+    }
+    int eighths = Math.max(2, Math.min(96, Math.round(points(width, 0.5f) * 8)));
+    return " w:val=\"" + style + "\" w:sz=\"" + eighths + "\" w:space=\"1\" w:color=\"" + color + "\"";
+  }
+
   private static String hex(String color) {
     if (color == null || color.length() != 7 || color.charAt(0) != '#') return null;
     for (int i = 1; i < 7; i++)
@@ -406,6 +426,15 @@ public final class Odt {
       if ("0".equals(attr(p, "fo:widows")) && "0".equals(attr(p, "fo:orphans")))
         b.append("<w:widowControl w:val=\"0\"/>");
       if ("page".equals(attr(p, "fo:break-before"))) b.append("<w:pageBreakBefore/>");
+      // Paragraph borders: Wordcraft reads fo:border-bottom as a rule under the paragraph.
+      var borders = new StringBuilder();
+      for (String side : new String[] {"top", "left", "bottom", "right"}) {
+        String v = attr(p, "fo:border-" + side);
+        if (v.isEmpty()) v = attr(p, "fo:border");
+        String edge = odfBorder(v);
+        if (edge != null) borders.append("<w:").append(side).append(edge).append("/>");
+      }
+      if (borders.length() > 0) b.append("<w:pBdr>").append(borders).append("</w:pBdr>");
       String fill = hex(attr(p, "fo:background-color"));
       if (fill != null) b.append("<w:shd w:val=\"clear\" w:color=\"auto\" w:fill=\"").append(fill).append("\"/>");
       if (attr(p, "style:writing-mode").startsWith("rl")) b.append("<w:bidi/>");
@@ -1056,6 +1085,18 @@ public final class Odt {
             if ("auto".equals(rule)) b.append(" fo:line-height=\"").append(num(v / 2.4f)).append("%\"");
             else if ("exact".equals(rule)) b.append(" fo:line-height=\"").append(pt(v / 20f)).append('"');
             else b.append(" style:line-height-at-least=\"").append(pt(v / 20f)).append('"');
+          }
+        } else if ("pBdr".equals(k)) {
+          // Paragraph borders, as Wordcraft writes its rule as fo:border-bottom.
+          for (Element edge : Xml.children(e, null)) {
+            String side = Xml.local(edge), val = attr(edge, "w:val");
+            if (!("top".equals(side) || "left".equals(side) || "bottom".equals(side) || "right".equals(side))
+                || val.isEmpty() || "none".equals(val) || "nil".equals(val)) continue;
+            String color = attr(edge, "w:color");
+            float width = Xml.number(Xml.attr(edge, "w:sz", "4")) / 8f;
+            b.append(" fo:border-").append(side).append("=\"").append(pt(width)).append(' ')
+                .append("double".equals(val) ? "double" : "dotted".equals(val) ? "dotted" : "dashed".equals(val) ? "dashed" : "solid")
+                .append(" #").append(color.length() == 6 ? color : "000000").append('"');
           }
         } else if ("keepNext".equals(k)) b.append(" fo:keep-with-next=\"").append(on(e) ? "always" : "auto").append('"');
         else if ("keepLines".equals(k)) b.append(" fo:keep-together=\"").append(on(e) ? "always" : "auto").append('"');
