@@ -4,13 +4,21 @@ package com.codenameone.wordprocessor;
  * A floating object's position as Wordcraft's Float: h_rel/h_align/x and v_rel/v_align/y, kept
  * as "hRel,hAlign,x;vRel,vAlign,y" (offsets in points; an empty align places by the offset).
  * Anchors: page, margin, column, character, leftMargin, rightMargin, insideMargin, outsideMargin
- * horizontally; page, margin, paragraph, line, topMargin, bottomMargin vertically.
+ * horizontally; page, margin, paragraph, line, topMargin, bottomMargin vertically. A third
+ * ";side" part keeps Wordcraft's WrapText (left, right, largest) when it is not bothSides.
  */
 final class FloatPosition {
   final String hRel, hAlign, vRel, vAlign;
   final float x, y;
+  /** The sides of a Square/Tight/Through float text flows on: bothSides, left, right, largest. */
+  final String side;
 
   FloatPosition(String hRel, String hAlign, float x, String vRel, String vAlign, float y) {
+    this(hRel, hAlign, x, vRel, vAlign, y, "bothSides");
+  }
+
+  FloatPosition(String hRel, String hAlign, float x, String vRel, String vAlign, float y, String side) {
+    this.side = side == null || side.isEmpty() ? "bothSides" : side;
     this.hRel = hRel;
     this.hAlign = hAlign;
     this.x = x;
@@ -24,10 +32,12 @@ final class FloatPosition {
     if (s == null || s.isEmpty()) return null;
     int semi = s.indexOf(';');
     if (semi < 0) return null;
-    String[] h = TextUtil.split(s.substring(0, semi), ','), v = TextUtil.split(s.substring(semi + 1), ',');
+    int semi2 = s.indexOf(';', semi + 1);
+    String side = semi2 < 0 ? "bothSides" : s.substring(semi2 + 1);
+    String[] h = TextUtil.split(s.substring(0, semi), ','), v = TextUtil.split(s.substring(semi + 1, semi2 < 0 ? s.length() : semi2), ',');
     if (h.length != 3 || v.length != 3) return null;
     try {
-      return new FloatPosition(h[0], h[1], Float.parseFloat(h[2]), v[0], v[1], Float.parseFloat(v[2]));
+      return new FloatPosition(h[0], h[1], Float.parseFloat(h[2]), v[0], v[1], Float.parseFloat(v[2]), side);
     } catch (NumberFormatException e) {
       return null;
     }
@@ -35,7 +45,19 @@ final class FloatPosition {
 
   @Override
   public String toString() {
-    return hRel + "," + hAlign + "," + num(x) + ";" + vRel + "," + vAlign + "," + num(y);
+    return hRel + "," + hAlign + "," + num(x) + ";" + vRel + "," + vAlign + "," + num(y)
+        + ("bothSides".equals(side) ? "" : ";" + side);
+  }
+
+  /** This position with text flowing on {@code s} (bothSides, left, right or largest). */
+  FloatPosition side(String s) {
+    return new FloatPosition(hRel, hAlign, x, vRel, vAlign, y, s);
+  }
+
+  /** The wrapText of a position string ("" or malformed: bothSides). */
+  static String sideOf(String s) {
+    FloatPosition f = parse(s);
+    return f == null ? "bothSides" : f.side;
   }
 
   static String num(float f) {

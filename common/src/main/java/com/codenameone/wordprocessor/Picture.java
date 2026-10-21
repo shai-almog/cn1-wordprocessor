@@ -276,10 +276,27 @@ public final class Picture implements Block {
    * top left at page point x, y of its anchor's page.
    */
   public Picture movedTo(float x, float y) {
-    String pos = "page,," + FloatPosition.num(x) + ";page,," + FloatPosition.num(y);
+    String side = FloatPosition.sideOf(position());
+    String pos = new FloatPosition("page", "", x, "page", "", y, side).toString();
     String w = "inline".equals(wrap()) ? "square" : wrap();
     if (drawing != null) return drawing(drawing.with("wrap", w).with("position", pos));
     return look(look.wrap(w, look.wrapPolygon).position(pos));
+  }
+
+  /**
+   * As Wordcraft's arrange.wrapText: text flows on {@code side} of the float. A one-sided wrap is
+   * carried by the position, so a paragraph-placed float gets its own column/paragraph place.
+   */
+  public Picture wrapSide(String side) {
+    FloatPosition f = FloatPosition.parse(position());
+    if (f == null) {
+      if ("bothSides".equals(side)) return this;
+      String a = "right".equals(align) ? "end" : "center".equals(align) ? "center" : "start";
+      f = new FloatPosition("column", a, 0, "paragraph", "", 0);
+    }
+    String pos = f.side(side).toString();
+    if (drawing != null) return drawing(drawing.with("position", pos));
+    return look(look.position(pos));
   }
 
   /** As Wordcraft's arrange.nudge: a positioned float's offsets moved by dx, dy points. */
@@ -287,7 +304,7 @@ public final class Picture implements Block {
     FloatPosition f = FloatPosition.parse(position());
     if (f == null || !f.hAlign.isEmpty() || !f.vAlign.isEmpty())
       throw new IllegalArgumentException("Drag the object to float it before nudging");
-    String pos = new FloatPosition(f.hRel, "", f.x + dx, f.vRel, "", f.y + dy).toString();
+    String pos = new FloatPosition(f.hRel, "", f.x + dx, f.vRel, "", f.y + dy, f.side).toString();
     if (drawing != null) return drawing(drawing.with("position", pos));
     return look(look.position(pos));
   }

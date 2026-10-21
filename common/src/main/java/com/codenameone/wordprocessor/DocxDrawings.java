@@ -109,12 +109,13 @@ final class DocxDrawings {
     else b.append("<wp:positionH relativeFrom=\"column\"><wp:align>").append(p.align)
         .append("</wp:align></wp:positionH><wp:positionV relativeFrom=\"paragraph\"><wp:posOffset>0</wp:posOffset></wp:positionV>");
     b.append("<wp:extent cx=\"").append(cx).append("\" cy=\"").append(cy).append("\"/><wp:effectExtent l=\"0\" t=\"0\" r=\"0\" b=\"0\"/>");
-    if ("square".equals(wrap)) b.append("<wp:wrapSquare wrapText=\"bothSides\"/>");
+    String side = pos == null ? "bothSides" : pos.side;
+    if ("square".equals(wrap)) b.append("<wp:wrapSquare wrapText=\"").append(side).append("\"/>");
     else if ("topBottom".equals(wrap)) b.append("<wp:wrapTopAndBottom/>");
     else if ("behind".equals(wrap) || "front".equals(wrap)) b.append("<wp:wrapNone/>");
     else {
       String tag = "tight".equals(wrap) ? "wp:wrapTight" : "wp:wrapThrough";
-      b.append('<').append(tag).append(" wrapText=\"bothSides\">");
+      b.append('<').append(tag).append(" wrapText=\"").append(side).append("\">");
       String poly = p.wrapPolygon();
       // Without a polygon the frame itself, unedited, as Wordcraft writes it.
       String pts = poly.isEmpty() ? "0,0 0,21600 21600,21600 21600,0" : poly.substring(poly.indexOf(';') + 1);

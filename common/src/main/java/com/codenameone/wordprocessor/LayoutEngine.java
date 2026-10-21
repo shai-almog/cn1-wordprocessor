@@ -420,6 +420,13 @@ public final class LayoutEngine {
      */
     float cutRight, skip;
 
+    /**
+     * Text on both sides of a float (Wordcraft's row spans): the character offsets where the line
+     * jumps over a float and the x (from the line's text start) it resumes at. Null: one segment.
+     */
+    int[] gapAt;
+    float[] gapX;
+
     /** The first line of a drop-capped paragraph carries the large letter and its x offset. */
     RawLine drop;
 
@@ -706,6 +713,7 @@ public final class LayoutEngine {
     float bandY = 0;
     do {
       var line = new RawLine();
+      float[] gapS = null, gapE = null;
       if (out.size() < dropLines) line.lead = dropWidth;
       if (band != null) {
         float left = p.indent + (p.list.isEmpty() ? 0 : 18 * (p.listLevel + 1)) + (start == 0 ? p.format.firstIndent : 0);
@@ -715,6 +723,17 @@ public final class LayoutEngine {
           if (cut[2] <= bandY) {
             line.lead += Math.max(0, cut[0] - left);
             line.cutRight = Math.max(0, cut[1] - p.format.rightIndent);
+            if (cut.length > 3) {
+              // Gaps in column coordinates, made relative to this line's text start.
+              float origin = left + line.lead;
+              int g = (cut.length - 3) / 2;
+              gapS = new float[g];
+              gapE = new float[g];
+              for (int k = 0; k < g; k++) {
+                gapS[k] = cut[3 + k * 2] - origin;
+                gapE[k] = cut[4 + k * 2] - origin;
+              }
+            }
             break;
           }
           line.skip += cut[2] - bandY;
@@ -726,7 +745,9 @@ public final class LayoutEngine {
       line.height = metrics.height(TextStyle.DEFAULT);
       int end = start == 0 ? skip : start, lastBreak = -1;
       boolean hyphenated = false;
-      float x = 0;
+      float x = 0, xBreak = 0, xSeg = 0;
+      int seg = 0, segStart = end;
+      int[] jumps = gapS == null ? null : new int[gapS.length];
       while (end < text.length()) {
         char first = text.charAt(end);
         // ASCII followed by ASCII is always its own cluster (CR LF aside): skip the rules.
@@ -747,6 +768,17 @@ public final class LayoutEngine {
                 : "\t".equals(ch)
                     ? tabWidth(p, text, end, x, start == 0 ? p.format.firstIndent : 0)
                     : clusterWidth(p, text, end, end + count, st, obj);
+        if (jumps != null && seg < gapS.length && x + w > gapS[seg] && x + w <= available) {
+          // Past this segment: the words since its last break move beyond the float.
+          int from = lastBreak > segStart ? lastBreak : segStart;
+          float fromX = lastBreak > segStart ? xBreak : xSeg;
+          jumps[seg] = from;
+          x = gapE[seg] + (x - fromX);
+          xSeg = gapE[seg];
+          segStart = from;
+          seg++;
+          continue;
+        }
         if (x + w > available && end > start) {
           int soft = hyphenate ? hyphenPoint(p, text, start, Math.max(lastBreak, start), end, available) : -1;
           if (soft > 0) {
@@ -757,17 +789,33 @@ public final class LayoutEngine {
         }
         x += w;
         end += count;
-        if (Character.isWhitespace(ch.charAt(0))) lastBreak = end;
+        if (Character.isWhitespace(ch.charAt(0))) {
+          lastBreak = end;
+          xBreak = x;
+        }
+      }
+      if (jumps != null && seg > 0) {
+        line.gapAt = new int[seg];
+        line.gapX = new float[seg];
+        for (int k = 0; k < seg; k++) {
+          line.gapAt[k] = jumps[k];
+          line.gapX[k] = gapE[k];
+        }
       }
       if (end == start && end < text.length() && text.charAt(end) != '\n')
         end = Graphemes.next(p.text, end);
       line.end = end;
       float pos = 0;
       int a = start == 0 ? skip : start;
+      int nextGap = 0;
       while (a < end) {
         var s = st[a];
+        while (line.gapAt != null && nextGap < line.gapAt.length && line.gapAt[nextGap] <= a)
+          pos = Math.max(pos, line.gapX[nextGap++]);
+        int segStop = line.gapAt != null && nextGap < line.gapAt.length ? line.gapAt[nextGap] : end;
         int b = a + 1;
         while (b < end
+            && b != segStop
             && !obj[a]
             && !obj[b]
             && text.charAt(a) != '\t'
@@ -822,7 +870,9 @@ public final class LayoutEngine {
       }
       line.width = pos;
       boolean softWrapped = end < text.length() && text.charAt(end) != '\n';
-      if (("both".equals(p.align) || "justify".equals(p.align)) && softWrapped)
+      if (line.gapAt != null) {
+        // Segments around a float stay left-aligned in place (no justification across the gap).
+      } else if (("both".equals(p.align) || "justify".equals(p.align)) && softWrapped)
         justify(line, available, false, p.text);
       else if ("distribute".equals(p.align) && end > start) justify(line, available, true, p.text);
       // UAX #9 L1: a tab is a segment separator at paragraph level, so each tab-delimited segment is
@@ -836,7 +886,8 @@ public final class LayoutEngine {
           }
       }
       float textOffset = start == 0 ? p.format.firstIndent : 0;
-      if ("center".equals(p.align)) textOffset += (available - line.width) / 2;
+      if (line.gapAt != null) {
+      } else if ("center".equals(p.align)) textOffset += (available - line.width) / 2;
       else if ("right".equals(p.align)) textOffset += available - line.width;
       for (TabStop stop : p.format.tabs)
         if ("bar".equals(stop.alignment)) {
@@ -1817,6 +1868,8 @@ public final class LayoutEngine {
           c.dropX = l.dropX;
           c.cutRight = l.cutRight;
           c.skip = l.skip;
+          c.gapAt = l.gapAt;
+          c.gapX = l.gapX;
           c.height = (float) Math.ceil(l.height / gridPitch - .01f) * gridPitch;
           snapped.add(c);
         }
@@ -1877,9 +1930,9 @@ public final class LayoutEngine {
         }
         float firstIndent = l.start == 0 ? p.format.firstIndent : 0;
         float x = spec.left + indent + firstIndent + l.lead;
-        if ("center".equals(p.align))
+        if ("center".equals(p.align) && l.gapAt == null)
           x += (spec.contentWidth() - indent - p.format.rightIndent - firstIndent - l.lead - l.cutRight - l.width) / 2;
-        if ("right".equals(p.align))
+        if ("right".equals(p.align) && l.gapAt == null)
           x += spec.contentWidth() - indent - p.format.rightIndent - firstIndent - l.lead - l.cutRight - l.width;
         current.add(new Line(index, -1, -1, p.id, pages.size(), x, y, l, marker));
         // After the first line, so caret lookups for offset 0 find the text line first.
@@ -1960,6 +2013,8 @@ public final class LayoutEngine {
       final float x0, y0, x1, y1, fx, fy, fw, fh, dist;
       final boolean topBottom;
       final float[] outline;
+      /** Wordcraft's WrapText: bothSides, left, right or largest. */
+      String side = "bothSides";
 
       Excl(int page, float fx, float fy, float fw, float fh, float dist, boolean topBottom, float[] outline) {
         this.page = page;
@@ -1987,23 +2042,56 @@ public final class LayoutEngine {
      */
     float[] cut(float yA, float h) {
       float left = spec.left, right = spec.left + spec.contentWidth();
-      float cutL = 0, cutR = 0;
+      // Wordcraft's row_spans: what each float takes of the row (its side of the row too when
+      // text flows on one side only), then the free spans left to right.
+      float[] taken = new float[excl.size() * 2];
+      float firstBottom = Float.MAX_VALUE;
+      int n = 0;
       for (Excl e : excl) {
         if (e.page != pages.size() || e.y0 >= yA + h || e.y1 <= yA || e.x0 >= right || e.x1 <= left) continue;
-        float ox0 = e.x0, ox1 = e.x1;
         if (e.topBottom) return new float[] {0, 0, e.y1};
+        float ox0 = e.x0, ox1 = e.x1;
         if (e.outline != null && e.fh > 0) {
           float[] r = WrapOutline.extent(e.outline, (yA - e.fy) / e.fh, (yA + h - e.fy) / e.fh);
           if (r == null) continue;
           ox0 = e.fx + r[0] * e.fw - e.dist;
           ox1 = e.fx + r[1] * e.fw + e.dist;
         }
-        float spaceL = ox0 - (left + cutL), spaceR = (right - cutR) - ox1;
-        if (spaceR >= spaceL) cutL = Math.max(cutL, ox1 - left);
-        else cutR = Math.max(cutR, right - ox0);
-        if (right - left - cutL - cutR < 18) return new float[] {0, 0, e.y1};
+        if (!"bothSides".equals(e.side)) {
+          boolean textLeft = "left".equals(e.side) || (!"right".equals(e.side) && ox0 - left >= right - ox1);
+          if (textLeft) ox1 = Math.max(right, ox1);
+          else ox0 = Math.min(left, ox0);
+        }
+        taken[n++] = ox0;
+        taken[n++] = ox1;
+        firstBottom = Math.min(firstBottom, e.y1);
       }
-      return new float[] {cutL, cutR, yA};
+      if (n == 0) return new float[] {0, 0, yA};
+      List<float[]> spans = new ArrayList<>();
+      spans.add(new float[] {left, right});
+      for (int i = 0; i < n; i += 2) {
+        List<float[]> next = new ArrayList<>();
+        for (float[] sp : spans) {
+          if (taken[i + 1] <= sp[0] || taken[i] >= sp[1]) next.add(sp);
+          else {
+            next.add(new float[] {sp[0], Math.min(taken[i], sp[1])});
+            next.add(new float[] {Math.max(taken[i + 1], sp[0]), sp[1]});
+          }
+        }
+        spans = next;
+      }
+      for (int i = spans.size() - 1; i >= 0; i--) if (spans.get(i)[1] - spans.get(i)[0] < 20) spans.remove(i);
+      if (spans.isEmpty()) return new float[] {0, 0, firstBottom};
+      // {left cut, right cut, top, then each gap between spans as start, end within the column}.
+      float[] out = new float[3 + (spans.size() - 1) * 2];
+      out[0] = spans.get(0)[0] - left;
+      out[1] = right - spans.get(spans.size() - 1)[1];
+      out[2] = yA;
+      for (int i = 1; i < spans.size(); i++) {
+        out[1 + i * 2] = spans.get(i - 1)[1] - left;
+        out[2 + i * 2] = spans.get(i)[0] - left;
+      }
+      return out;
     }
 
     boolean floatsBelow(float from) {
@@ -2040,9 +2128,12 @@ public final class LayoutEngine {
       float top = ve == 0 && !pos.vAlign.isEmpty() ? vs : FloatPosition.alignIn(vs, ve, pos.y, h, pos.vAlign, odd);
       pictures.add(new PlacedPicture(p, index, pages.size(), x, top, w, h));
       boolean tight = "tight".equals(wrap) || "through".equals(wrap);
-      if ("square".equals(wrap) || tight || "topBottom".equals(wrap))
-        excl.add(new Excl(pages.size(), x, top, w, h, "topBottom".equals(wrap) ? 0 : 9, "topBottom".equals(wrap),
-            tight ? WrapOutline.parse(p.wrapPolygon()) : null));
+      if ("square".equals(wrap) || tight || "topBottom".equals(wrap)) {
+        Excl e = new Excl(pages.size(), x, top, w, h, "topBottom".equals(wrap) ? 0 : 9, "topBottom".equals(wrap),
+            tight ? WrapOutline.parse(p.wrapPolygon()) : null);
+        e.side = pos.side;
+        excl.add(e);
+      }
     }
 
     void picture(Picture p, int index) {

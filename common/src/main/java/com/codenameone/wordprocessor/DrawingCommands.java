@@ -497,6 +497,14 @@ final class DrawingCommands implements Commands.Extension {
           else s.replacePicture(block, p.drawing(p.drawing.with("wrap", wrap)));
           return wrap;
         });
+    c.edit("arrange.wrapText", "block?:integer,side?:string",
+        "The sides of a Square, Tight or Through object text flows on: bothSides, left, right or largest (the wider side, line by line)", (s, a) -> {
+          int block = block(s, a);
+          Picture p = picture(s, block);
+          String side = oneOf(Commands.str(a, "side", "bothSides"), "bothSides", "left", "right", "largest");
+          s.replacePicture(block, p.wrapSide(side));
+          return side;
+        });
     c.edit("arrange.bounds", "block?:integer,x:number,y:number",
         "Move an object to page point x, y (points) on its anchor's page: it floats there, Square wrapped if it was inline", (s, a) -> {
           int block = block(s, a);

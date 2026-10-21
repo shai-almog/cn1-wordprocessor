@@ -153,4 +153,48 @@ public class DocxWrapTest {
     assertTrue(lower.x < first.x - 50);
     assertTrue(lower.x > 20);
   }
+
+  /** Text flows on both sides of a mid-column float (Wordcraft's row_spans), or on one side. */
+  @Test
+  public void bothSidesLeftRightAndLargestWrapText() throws Exception {
+    Drawing d = Drawing.of("shape").with("wrap", "square").with("position", "page,,160;page,,100");
+    var page = engine().layout(doc(Picture.drawing("i1", d, 80, 100, "", "left"), "word ".repeat(300)), 0).pages.get(0);
+    int split = 0;
+    for (var l : page.lines) {
+      if (l.y + l.height <= 100 || l.y >= 200) continue;
+      boolean left = false, right = false;
+      for (var sp : l.spans) {
+        if (sp.text.trim().isEmpty()) continue;
+        float sx = l.x + sp.x;
+        assertFalse("text under the float", sx + sp.width > 152 && sx < 248);
+        if (sx < 152) left = true;
+        else right = true;
+      }
+      if (left && right) split++;
+    }
+    assertTrue(split >= 6);
+    // Left only: nothing right of the float; right only: nothing left of it.
+    for (String side : new String[] {"left", "right", "largest"}) {
+      Drawing one = d.with("position", "page,,160;page,,100;" + side);
+      var pg = engine().layout(doc(Picture.drawing("i1", one, 80, 100, "", "left"), "word ".repeat(300)), 0).pages.get(0);
+      for (var l : pg.lines) {
+        if (l.y + l.height <= 100 || l.y >= 200) continue;
+        for (var sp : l.spans) {
+          if (sp.text.trim().isEmpty()) continue;
+          float sx = l.x + sp.x;
+          // Largest: the sides tie (131pt each), and Wordcraft then takes the left.
+          if (!"right".equals(side)) assertTrue(sx + sp.width <= 152.5f);
+          else assertTrue(side + " " + sx + " y" + l.y + " h" + l.height + " " + sp.text, sx >= 247.5f);
+        }
+      }
+    }
+    // wrapText reads into the position and is written back.
+    assertEquals("column,start,0;paragraph,,0;left", wrap("<wp:wrapSquare wrapText=\"left\"/>", "")[3]);
+    Drawing w = d.with("position", "page,,160;page,,100;largest");
+    var out = new ByteArrayOutputStream();
+    Docx.write(doc(Picture.drawing("i1", w, 50, 50, "", "left"), "x"), out);
+    Picture back = (Picture) Docx.read(new ByteArrayInputStream(out.toByteArray())).document.blocks.get(0);
+    assertEquals("page,,160;page,,100;largest", back.position());
+    assertEquals("right", FloatPosition.sideOf(back.wrapSide("right").position()));
+  }
 }

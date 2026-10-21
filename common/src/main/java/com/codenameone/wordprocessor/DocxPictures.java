@@ -140,9 +140,13 @@ final class DocxPictures {
   static String[] anchorWrap(Element anchor) {
     String on = Xml.attr(anchor, "behindDoc", "0");
     boolean behind = "1".equals(on) || "true".equals(on) || "on".equals(on);
-    String wrap = "square", polygon = "", align = "left", h = "column,,0", vpos = "paragraph,,0";
+    String wrap = "square", polygon = "", align = "left", h = "column,,0", vpos = "paragraph,,0", side = "bothSides";
     for (Element k : Xml.children(anchor, null)) {
       String n = Xml.local(k);
+      if (n.startsWith("wrap") && !Xml.attr(k, "wrapText", "").isEmpty()) {
+        String t = Xml.attr(k, "wrapText", "");
+        if ("left".equals(t) || "right".equals(t) || "largest".equals(t)) side = t;
+      }
       if ("wrapSquare".equals(n)) wrap = "square";
       else if ("wrapTopAndBottom".equals(n)) wrap = "topBottom";
       else if ("wrapNone".equals(n)) wrap = behind ? "behind" : "front";
@@ -167,6 +171,8 @@ final class DocxPictures {
     // At the anchor paragraph, aligned in the column, is the picture's own align: no position.
     String a = "left".equals(align) ? "start" : "right".equals(align) ? "end" : align;
     if (pos.equals("column,,0;paragraph,,0") || pos.equals("column," + a + ",0;paragraph,,0")) pos = "";
+    // Text on one side only (Wordcraft's WrapText) needs the positioned float that carries it.
+    if (!"bothSides".equals(side)) pos = (pos.isEmpty() ? "column," + a + ",0;paragraph,,0" : pos) + ";" + side;
     return new String[] {wrap, polygon, align, pos};
   }
 
