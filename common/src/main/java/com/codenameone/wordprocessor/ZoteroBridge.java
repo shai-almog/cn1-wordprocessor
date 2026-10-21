@@ -383,7 +383,7 @@ public final class ZoteroBridge implements Zotero.Handler {
             public void run(int offset, String text, TextStyle style) {}
 
             public void field(int offset, InlineField f, TextStyle style) {
-              if (Zotero.is(f) && !f.rangeStart() && style.revision == null)
+              if ((Zotero.is(f) || InlineField.rangeInstruction(f.instruction)) && !f.rangeStart() && style.revision == null)
                 atomic.add(new Object[] {offset, f, style});
             }
           });

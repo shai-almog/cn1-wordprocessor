@@ -49,6 +49,15 @@ public final class InlineField {
     return RANGE.equals(formats);
   }
 
+  /**
+   * Field codes kept as range fields (start mark, ordinary content, end mark), as Wordcraft's
+   * docx reader keeps citation managers' ADDIN fields (Zotero, Mendeley, EndNote).
+   */
+  public static boolean rangeInstruction(String instruction) {
+    String t = instruction == null ? "" : instruction.trim();
+    return t.regionMatches(true, 0, "ADDIN", 0, 5) && (t.length() == 5 || t.charAt(5) == ' ');
+  }
+
   /** True for a range field's end mark. */
   public boolean rangeEnd() {
     return END.equals(instruction);

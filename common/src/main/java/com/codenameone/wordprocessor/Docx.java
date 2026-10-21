@@ -205,6 +205,8 @@ public final class Docx {
     // Notes are referenced only from the main story (DocxFields rejects them elsewhere).
     if (Xml.mayContain(root, "footnoteReference") || Xml.mayContain(root, "endnoteReference"))
       document = Notes.normalize(document);
+    // Range fields spanning paragraphs: drop end marks no start opened, close unclosed starts.
+    document = ZoteroBridge.balance(document, null);
 
     return new Opened(document, warnings, parts);
   }

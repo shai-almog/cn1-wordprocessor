@@ -37,6 +37,15 @@ final class DocxFields {
   static RichText read(Element paragraph, RunReader reader, DocxLinks links, Set<String> warnings) {
     var parser = new DocxFields(reader, links, warnings);
     for (Element child : Xml.children(paragraph, null)) parser.node(child, "");
+    // A citation manager's ADDIN field (a bibliography) may run on into later paragraphs: as
+    // Wordcraft's FieldStart (docx read/story.rs is_range_instr), it opens a range field whose
+    // result is the paragraphs' own content, closed by the end marker in a later paragraph.
+    if (parser.stack.size() == 1 && parser.stack.get(0).separated
+        && InlineField.rangeInstruction(parser.stack.get(0).instruction.toString())) {
+      var open = parser.stack.remove(0);
+      var mark = new InlineField(open.instruction.toString().trim(), "", open.locked, false).start();
+      parser.text = parser.text.concat(RichText.field(mark, open.style)).concat(open.result);
+    }
     while (!parser.stack.isEmpty()) {
       warnings.add("Unclosed complex field");
       parser.close();
@@ -180,6 +189,8 @@ final class DocxFields {
         } else if ("separate".equals(action) && !stack.isEmpty())
           stack.get(stack.size() - 1).separated = true;
         else if ("end".equals(action) && !stack.isEmpty()) close();
+        // The end of a range field opened in an earlier paragraph (orphans are dropped on read).
+        else if ("end".equals(action)) append(RichText.field(InlineField.end(), style));
         else warnings.add("Unmatched complex field marker");
       } else if ("ruby".equals(type)) {
         append(Docx.ruby(child, style));
