@@ -171,8 +171,7 @@ public final class LayoutEngine {
   public static List<PlacedPicture> byDepth(List<PlacedPicture> pictures, boolean front) {
     var out = new ArrayList<PlacedPicture>();
     for (PlacedPicture p : pictures) {
-      var d = p.picture.drawing;
-      if (front == (d != null && "front".equals(d.get("wrap", "inline")))) out.add(p);
+      if (front == "front".equals(p.picture.wrap())) out.add(p);
     }
     java.util.Collections.sort(
         out,
@@ -186,8 +185,7 @@ public final class LayoutEngine {
 
   private static float z(PlacedPicture p) {
     var d = p.picture.drawing;
-    if (d == null) return 0;
-    return d.num("z", 0) + ("behind".equals(d.get("wrap", "inline")) ? -10000 : 0);
+    return (d == null ? 0 : d.num("z", 0)) + ("behind".equals(p.picture.wrap()) ? -10000 : 0);
   }
 
   public record PlacedPicture(
@@ -1655,8 +1653,8 @@ public final class LayoutEngine {
         spec =
             wrapped =
                 new PageSpec(
-                    spec.width, spec.height, spec.top, spec.right + wrapRight, spec.bottom,
-                    spec.left + wrapLeft);
+                    spec.width, spec.height, spec.top, spec.right + polygonCut(wrapRight), spec.bottom,
+                    spec.left + polygonCut(wrapLeft));
       }
       var ls = lines(p, spec.contentWidth(), index >= 0);
       if (gridPitch > 0 && index >= 0) {
@@ -1769,10 +1767,28 @@ public final class LayoutEngine {
 
     /** A square/tight-wrapped object narrows paragraphs beside it until this y on its page. */
     float wrapBottom, wrapLeft, wrapRight;
+    /** Tight/Through: the wrapped object's frame and polygon (unit coordinates), or null. */
+    float wrapTop, wrapWidth, wrapHeight;
+    boolean wrapRightSide;
+    float[] wrapOutline;
     int wrapPage = -1, wrapColumn;
 
     boolean inWrap() {
       return wrapPage == pages.size() && wrapColumn == column && y < wrapBottom;
+    }
+
+    /**
+     * The side cut for a paragraph starting at y: with a wrap polygon, the polygon's extent over
+     * the paragraph's first line band (text follows the outline paragraph by paragraph), else
+     * the frame cut.
+     */
+    float polygonCut(float frameCut) {
+      if (frameCut == 0 || wrapOutline == null || wrapHeight <= 0) return frameCut;
+      float a = (y - wrapTop) / wrapHeight, b = (y + 16 - wrapTop) / wrapHeight;
+      float[] r = WrapOutline.extent(wrapOutline, a, b);
+      if (r == null) return 0;
+      float reach = wrapRightSide ? (1 - r[0]) * wrapWidth : r[1] * wrapWidth;
+      return Math.max(0, Math.min(frameCut, reach + 6));
     }
 
     /** Tables and inline objects start below a wrapped object rather than beside it. */
@@ -1783,10 +1799,10 @@ public final class LayoutEngine {
 
     void picture(Picture p, int index) {
       numbering.reset();
-      String wrap = p.drawing == null ? "inline" : p.drawing.get("wrap", "inline");
+      String wrap = p.wrap();
       boolean floating = "behind".equals(wrap) || "front".equals(wrap);
-      boolean around =
-          ("square".equals(wrap) || "tight".equals(wrap)) && !"center".equals(p.align);
+      boolean tight = "tight".equals(wrap) || "through".equals(wrap);
+      boolean around = ("square".equals(wrap) || tight) && !"center".equals(p.align);
       if (!floating) clearWrap();
       float scale =
           Math.min(
@@ -1804,9 +1820,14 @@ public final class LayoutEngine {
       pictures.add(new PlacedPicture(p, index, pages.size(), x, y, width, height));
       if (floating) return;
       if (around && width < spec.contentWidth() * .75f) {
-        float cut = width + ("tight".equals(wrap) ? 6 : 12);
+        float cut = width + (tight ? 6 : 12);
         wrapPage = pages.size();
         wrapColumn = column;
+        wrapTop = y;
+        wrapWidth = width;
+        wrapHeight = height;
+        wrapRightSide = "right".equals(p.align);
+        wrapOutline = tight ? WrapOutline.parse(p.wrapPolygon()) : null;
         wrapBottom = y + height + 6;
         wrapLeft = "right".equals(p.align) ? 0 : cut;
         wrapRight = "right".equals(p.align) ? cut : 0;

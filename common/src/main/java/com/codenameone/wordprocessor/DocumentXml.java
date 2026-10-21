@@ -111,6 +111,8 @@ public final class DocumentXml {
           b.append(" adjust=\"").append(look.brightness).append(',').append(look.contrast).append(',')
               .append(look.transparency).append(',').append(look.colorMode).append(',')
               .append(look.effect).append(',').append(look.backgroundTolerance).append('"');
+        if (look != null && !"inline".equals(look.wrap))
+          b.append(" wrap=\"").append(look.wrap).append("\" wrapPolygon=\"").append(Xml.attribute(look.wrapPolygon)).append('"');
         if (picture.drawing != null)
           b.append(" drawing=\"").append(Xml.attribute(controlsOut(picture.drawing.encode()))).append('"');
         b.append(">")
@@ -419,7 +421,7 @@ public final class DocumentXml {
                       f(c, "height"),
                       Xml.attr(c, "alt", ""),
                       Xml.attr(c, "align", "left"),
-                      pictureAdjust(c, pictureLook(c))));
+                      pictureAdjust(c, pictureLook(c)).wrap(Xml.attr(c, "wrap", "inline"), Xml.attr(c, "wrapPolygon", ""))));
           if (!Xml.attr(c, "drawing", "").isEmpty()) {
             var last = (Picture) blocks.get(blocks.size() - 1);
             blocks =

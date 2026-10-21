@@ -13,6 +13,8 @@ public final class Picture implements Block {
     public static final java.util.List<String> EFFECTS =
         java.util.Arrays.asList("none", "blur", "pencilSketch", "posterize", "negative", "glowEdges", "sharpen");
 
+    public static final java.util.List<String> WRAPS =
+        java.util.Arrays.asList("inline", "square", "tight", "through", "topBottom", "behind", "front");
     public static final Look NONE = new Look(0, 0, 0, 0, -1, 0, 0, false, false);
 
     /** Fractions of the source cut from each edge; their sum per axis stays below 0.95. */
@@ -38,6 +40,14 @@ public final class Picture implements Block {
     public final String effect;
 
     public final int backgroundTolerance;
+
+
+    /** Text wrapping and the wrap polygon (see the full constructor). */
+    public final String wrap, wrapPolygon;
+
+    public Look wrap(String wrap, String polygon) {
+      return new Look(cropLeft, cropTop, cropRight, cropBottom, borderColor, borderWidth, rotation, flipH, flipV, brightness, contrast, transparency, colorMode, effect, backgroundTolerance, wrap, polygon);
+    }
 
     public Look(
         float cropLeft,
@@ -86,6 +96,35 @@ public final class Picture implements Block {
         String colorMode,
         String effect,
         int backgroundTolerance) {
+      this(cropLeft, cropTop, cropRight, cropBottom, borderColor, borderWidth, rotation, flipH, flipV,
+          brightness, contrast, transparency, colorMode, effect, backgroundTolerance, "inline", "");
+    }
+
+    /**
+     * Wrapping as Wordcraft's Float: inline, square, tight, through, topBottom, behind (wrapNone
+     * with behindDoc) or front; the polygon is "edited;x,y x,y ..." in the 21600 wrap space.
+     */
+    public Look(
+        float cropLeft,
+        float cropTop,
+        float cropRight,
+        float cropBottom,
+        int borderColor,
+        float borderWidth,
+        int rotation,
+        boolean flipH,
+        boolean flipV,
+        int brightness,
+        int contrast,
+        int transparency,
+        String colorMode,
+        String effect,
+        int backgroundTolerance,
+        String wrap,
+        String wrapPolygon) {
+      if (!WRAPS.contains(wrap)) throw new IllegalArgumentException("Invalid wrap");
+      this.wrap = wrap;
+      this.wrapPolygon = wrapPolygon == null ? "" : wrapPolygon;
       if (!EFFECTS.contains(effect) || backgroundTolerance < -1 || backgroundTolerance > 100)
         throw new IllegalArgumentException("Invalid picture effect");
       this.effect = effect;
@@ -119,29 +158,29 @@ public final class Picture implements Block {
     }
 
     public Look crop(float l, float t, float r, float b) {
-      return new Look(l, t, r, b, borderColor, borderWidth, rotation, flipH, flipV, brightness, contrast, transparency, colorMode, effect, backgroundTolerance);
+      return new Look(l, t, r, b, borderColor, borderWidth, rotation, flipH, flipV, brightness, contrast, transparency, colorMode, effect, backgroundTolerance, wrap, wrapPolygon);
     }
 
     public Look border(int color, float width) {
-      return new Look(cropLeft, cropTop, cropRight, cropBottom, color, width, rotation, flipH, flipV, brightness, contrast, transparency, colorMode, effect, backgroundTolerance);
+      return new Look(cropLeft, cropTop, cropRight, cropBottom, color, width, rotation, flipH, flipV, brightness, contrast, transparency, colorMode, effect, backgroundTolerance, wrap, wrapPolygon);
     }
 
     public Look rotate(int degrees, boolean h, boolean v) {
-      return new Look(cropLeft, cropTop, cropRight, cropBottom, borderColor, borderWidth, degrees, h, v, brightness, contrast, transparency, colorMode, effect, backgroundTolerance);
+      return new Look(cropLeft, cropTop, cropRight, cropBottom, borderColor, borderWidth, degrees, h, v, brightness, contrast, transparency, colorMode, effect, backgroundTolerance, wrap, wrapPolygon);
     }
 
     /** Brightness and contrast -100..100, transparency 0..100 percent. */
     public Look adjust(int brightness, int contrast, int transparency, String colorMode) {
-      return new Look(cropLeft, cropTop, cropRight, cropBottom, borderColor, borderWidth, rotation, flipH, flipV, brightness, contrast, transparency, colorMode, effect, backgroundTolerance);
+      return new Look(cropLeft, cropTop, cropRight, cropBottom, borderColor, borderWidth, rotation, flipH, flipV, brightness, contrast, transparency, colorMode, effect, backgroundTolerance, wrap, wrapPolygon);
     }
 
     public Look effect(String name) {
-      return new Look(cropLeft, cropTop, cropRight, cropBottom, borderColor, borderWidth, rotation, flipH, flipV, brightness, contrast, transparency, colorMode, name, backgroundTolerance);
+      return new Look(cropLeft, cropTop, cropRight, cropBottom, borderColor, borderWidth, rotation, flipH, flipV, brightness, contrast, transparency, colorMode, name, backgroundTolerance, wrap, wrapPolygon);
     }
 
     /** Tolerance 0-100, or -1 to keep the background. */
     public Look removeBackground(int tolerance) {
-      return new Look(cropLeft, cropTop, cropRight, cropBottom, borderColor, borderWidth, rotation, flipH, flipV, brightness, contrast, transparency, colorMode, effect, tolerance);
+      return new Look(cropLeft, cropTop, cropRight, cropBottom, borderColor, borderWidth, rotation, flipH, flipV, brightness, contrast, transparency, colorMode, effect, tolerance, wrap, wrapPolygon);
     }
 
     public boolean adjusted() {
@@ -166,7 +205,9 @@ public final class Picture implements Block {
           && transparency == k.transparency
           && colorMode.equals(k.colorMode)
           && effect.equals(k.effect)
-          && backgroundTolerance == k.backgroundTolerance;
+          && backgroundTolerance == k.backgroundTolerance
+          && wrap.equals(k.wrap)
+          && wrapPolygon.equals(k.wrapPolygon);
     }
 
     @Override
@@ -188,6 +229,16 @@ public final class Picture implements Block {
   public final Look look;
   /** Vector content drawn instead of the (placeholder) image, or null for a raster picture. */
   public final Drawing drawing;
+
+  /** Text wrapping: a drawing's own "wrap", else the picture look's. */
+  public String wrap() {
+    return drawing != null ? drawing.get("wrap", "inline") : look == null ? "inline" : look.wrap;
+  }
+
+  /** The wrap polygon ("edited;x,y x,y ..." in 21600 wrap space), or "". */
+  public String wrapPolygon() {
+    return drawing != null ? drawing.get("wrapPolygon", "") : look == null ? "" : look.wrapPolygon;
+  }
 
   public Picture(String id, byte[] data, float width, float height, String alt, String align) {
     this(id, data, width, height, alt, align, Look.NONE, true);

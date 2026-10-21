@@ -485,13 +485,12 @@ final class DrawingCommands implements Commands.Extension {
           return null;
         });
     c.edit("arrange.wrap", "block?:integer,wrap:string",
-        "Text wrapping: inline, square, tight, topBottom, behind or front", (s, a) -> {
+        "Text wrapping: inline, square, tight, through, topBottom, behind or front", (s, a) -> {
           int block = block(s, a);
           Picture p = picture(s, block);
-          String wrap = oneOf(Commands.str(a, "wrap"), "inline", "square", "tight", "topBottom", "behind", "front");
-          Drawing d = p.drawing == null ? null : p.drawing.with("wrap", wrap);
-          if (d == null) throw new IllegalArgumentException("Wrapping applies to shapes and other drawn objects");
-          s.replacePicture(block, p.drawing(d));
+          String wrap = oneOf(Commands.str(a, "wrap"), "inline", "square", "tight", "through", "topBottom", "behind", "front");
+          if (p.drawing == null) s.replacePicture(block, p.look(p.look.wrap(wrap, p.look.wrapPolygon)));
+          else s.replacePicture(block, p.drawing(p.drawing.with("wrap", wrap)));
           return wrap;
         });
     c.edit("arrange.bringForward", "block?:integer,all?:boolean",
@@ -889,7 +888,7 @@ final class DrawingCommands implements Commands.Extension {
           Json.object(
               "block", i, "kind", kind, "name", name.isEmpty() ? (p.alt.isEmpty() ? kind : p.alt) : name,
               "visible", p.drawing == null || !p.drawing.flag("hidden"),
-              "wrap", p.drawing == null ? "inline" : p.drawing.get("wrap", "inline"),
+              "wrap", p.wrap(),
               "z", p.drawing == null ? 0 : Math.round(p.drawing.num("z", 0))));
     }
     return out;

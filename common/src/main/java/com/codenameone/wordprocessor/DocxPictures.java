@@ -74,12 +74,19 @@ final class DocxPictures {
         Element inline = descendant(e, "inline"), anchor = descendant(e, "anchor");
         Element container = inline != null ? inline : anchor;
         if (container == null) throw new IllegalArgumentException("Unknown drawing container");
-        if (anchor != null)
-          warnings.add("Floating picture placement converted to a separate paragraph");
+        // As Wordcraft's anchor_float: the wrap kind (wrapNone is behind or in front of the text
+        // by behindDoc), the Tight/Through wrap polygon and the horizontal alignment. The
+        // position itself becomes the picture's own paragraph at its anchor.
+        String[] wrap = inline != null ? new String[] {"inline", "", "left"} : anchorWrap(anchor);
+        if (anchor != null && Xml.child(anchor, "positionH") != null
+            && Xml.child(Xml.child(anchor, "positionH"), "align") == null)
+          warnings.add("Floating picture offset converted to a paragraph position");
         Element extent0 = Xml.child(container, "extent"), props0 = Xml.child(container, "docPr");
         Drawing drawing = DocxDrawings.extension(container);
         if (drawing == null) drawing = DocxDrawings.shape(container, warnings);
         if (drawing == null && extent0 != null) drawing = object(container, extent0, warnings);
+        if (drawing != null && !"inline".equals(wrap[0]) && !"equation".equals(drawing.kind))
+          drawing = drawing.with("wrap", wrap[0]).with("wrapPolygon", wrap[1]);
         if (drawing != null && extent0 != null) {
           result.add(
               Picture.drawing(
@@ -88,7 +95,7 @@ final class DocxPictures {
                   Math.max(1, Xml.number(Xml.attr(extent0, "cx", "0")) / 12700f),
                   Math.max(1, Xml.number(Xml.attr(extent0, "cy", "0")) / 12700f),
                   props0 == null ? "" : Xml.attr(props0, "descr", ""),
-                  "left"));
+                  wrap[2]));
           return;
         }
         Element blip = descendant(container, "blip"),
@@ -98,7 +105,7 @@ final class DocxPictures {
           throw new IllegalArgumentException("Drawing is not an embedded picture");
         var data = parts.get(targets.get(Xml.attr(blip, "embed", "")));
         if (data == null) throw new IllegalArgumentException("Picture data missing or external");
-        Picture.Look look = look(container, warnings);
+        Picture.Look look = look(container, warnings).wrap(wrap[0], wrap[1]);
         result.add(
             new Picture(
                 "i" + id[0]++,
@@ -106,7 +113,7 @@ final class DocxPictures {
                 Xml.number(Xml.attr(extent, "cx", "0")) / 12700f,
                 Xml.number(Xml.attr(extent, "cy", "0")) / 12700f,
                 props == null ? "" : Xml.attr(props, "descr", Xml.attr(props, "name", "")),
-                "left",
+                wrap[2],
                 look));
       } catch (RuntimeException ex) {
         warnings.add("Picture requires conversion: " + ex.getMessage());
@@ -119,6 +126,66 @@ final class DocxPictures {
       return;
     }
     for (Element child : Xml.children(e, null)) collect(child, result, id, warnings);
+  }
+
+  /**
+   * A wp:anchor's wrapping as Wordcraft reads it (docx read/story.rs anchor_float): {wrap,
+   * polygon, align}. wrapThrough is kept apart from wrapTight; wrapNone is "behind" with
+   * behindDoc, else "front". An unedited polygon round the whole frame is dropped, as there.
+   */
+  static String[] anchorWrap(Element anchor) {
+    String on = Xml.attr(anchor, "behindDoc", "0");
+    boolean behind = "1".equals(on) || "true".equals(on) || "on".equals(on);
+    String wrap = "square", polygon = "", align = "left";
+    for (Element k : Xml.children(anchor, null)) {
+      String n = Xml.local(k);
+      if ("wrapSquare".equals(n)) wrap = "square";
+      else if ("wrapTopAndBottom".equals(n)) wrap = "topBottom";
+      else if ("wrapNone".equals(n)) wrap = behind ? "behind" : "front";
+      else if ("wrapTight".equals(n) || "wrapThrough".equals(n)) {
+        wrap = "wrapTight".equals(n) ? "tight" : "through";
+        Element poly = Xml.child(k, "wrapPolygon");
+        if (poly != null) polygon = polygon(poly);
+      } else if ("positionH".equals(n)) {
+        Element a = Xml.child(k, "align");
+        String v = a == null ? "" : Xml.text(a).trim();
+        if ("right".equals(v) || "outside".equals(v)) align = "right";
+        else if ("center".equals(v)) align = "center";
+      }
+    }
+    return new String[] {wrap, polygon, align};
+  }
+
+  /** wp:start and wp:lineTo points, capped at 1024 and clamped to 4x the 21600 space. */
+  static String polygon(Element poly) {
+    var pts = new ArrayList<long[]>();
+    for (Element k : Xml.children(poly, null)) {
+      String n = Xml.local(k);
+      if ((!"start".equals(n) && !"lineTo".equals(n)) || pts.size() > 1024) continue;
+      try {
+        long x = Long.parseLong(Xml.attr(k, "x", "").trim()), y = Long.parseLong(Xml.attr(k, "y", "").trim());
+        pts.add(new long[] {Math.max(-86400, Math.min(86400, x)), Math.max(-86400, Math.min(86400, y))});
+      } catch (NumberFormatException ex) {
+        // Wordcraft skips points without integer coordinates.
+      }
+    }
+    if (pts.size() > 3 && pts.get(0)[0] == pts.get(pts.size() - 1)[0] && pts.get(0)[1] == pts.get(pts.size() - 1)[1])
+      pts.remove(pts.size() - 1);
+    while (pts.size() > 1024) pts.remove(pts.size() - 1);
+    String e = Xml.attr(poly, "edited", "0");
+    boolean edited = "1".equals(e) || "true".equals(e) || "on".equals(e);
+    if (pts.size() < 3) return "";
+    if (!edited && pts.size() == 4) {
+      int corners = 0;
+      for (long[] p : pts) if ((p[0] == 0 || p[0] == 21600) && (p[1] == 0 || p[1] == 21600)) corners++;
+      boolean distinct = true;
+      for (int i = 0; i < 4; i++) for (int j = i + 1; j < 4; j++)
+        if (pts.get(i)[0] == pts.get(j)[0] && pts.get(i)[1] == pts.get(j)[1]) distinct = false;
+      if (corners == 4 && distinct) return "";
+    }
+    var b = new StringBuilder(edited ? "1;" : "0;");
+    for (int i = 0; i < pts.size(); i++) b.append(i == 0 ? "" : " ").append(pts.get(i)[0]).append(',').append(pts.get(i)[1]);
+    return b.toString();
   }
 
   /** a:srcRect (1/1000 percent), a:xfrm rot (1/60000 degree) and flips, and a solid a:ln. */
@@ -212,16 +279,9 @@ final class DocxPictures {
     long cx = Math.round(p.width * 12700), cy = Math.round(p.height * 12700);
     b.append("<w:p><w:pPr><w:jc w:val=\"")
         .append(p.align)
-        .append(
-            """
-            "/></w:pPr><w:r><w:drawing><wp:inline\
-             xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"\
-             distT="0" distB="0" distL="0" distR="0"><wp:extent cx="\
-            """)
-        .append(cx)
-        .append("\" cy=\"")
-        .append(cy)
-        .append("\"/><wp:docPr id=\"")
+        .append("\"/></w:pPr><w:r><w:drawing>");
+    DocxDrawings.container(b, p, cx, cy);
+    b.append("<wp:docPr id=\"")
         .append(output.size())
         .append("\" name=\"Picture\" descr=\"")
         .append(Xml.escape(p.alt))
@@ -273,7 +333,7 @@ final class DocxPictures {
           .append(Integer.toHexString(0x1000000 | k.borderColor).substring(1))
           .append("\"/></a:solidFill></a:ln>");
     b.append(
-        "</pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>");
+        "</pic:spPr></pic:pic></a:graphicData></a:graphic>" + DocxDrawings.containerEnd(p) + "</w:drawing></w:r></w:p>");
   }
 
   /** A chart or SmartArt graphic read from its relationship parts, or null. */

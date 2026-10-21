@@ -34,9 +34,9 @@ final class DocxDrawings {
     }
     long cx = emu(p.width), cy = emu(p.height);
     b.append("<w:p><w:pPr><w:jc w:val=\"").append(p.align).append("\"/></w:pPr><w:r><w:drawing>")
-        .append("<wp:inline xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\"")
-        .append(" distT=\"0\" distB=\"0\" distL=\"0\" distR=\"0\"><wp:extent cx=\"").append(cx)
-        .append("\" cy=\"").append(cy).append("\"/><wp:docPr id=\"").append(docId)
+        ;
+    container(b, p, cx, cy);
+    b.append("<wp:docPr id=\"").append(docId)
         .append("\" name=\"").append(d.kind).append(' ').append(docId).append("\" descr=\"")
         .append(Xml.attribute(p.alt)).append("\"><a:extLst xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\">")
         .append("<a:ext uri=\"").append(EXT).append("\"><cn:drawing xmlns:cn=\"").append(CN)
@@ -68,7 +68,49 @@ final class DocxDrawings {
       for (DrawingOps.Text text : ops.texts) text(b, text);
       b.append("</wpg:wgp>");
     }
-    b.append("</a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>");
+    b.append("</a:graphicData></a:graphic>").append(containerEnd(p)).append("</w:drawing></w:r></w:p>");
+  }
+
+  /**
+   * The wp:inline, or for a wrapped picture a wp:anchor at its paragraph as Wordcraft writes
+   * floats (write/story.rs): behindDoc, the alignment, the extent and the wrap element with its
+   * polygon; everything up to wp:docPr.
+   */
+  static void container(StringBuilder b, Picture p, long cx, long cy) {
+    String wrap = p.wrap();
+    String ns = " xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\"";
+    if ("inline".equals(wrap)) {
+      b.append("<wp:inline").append(ns).append(" distT=\"0\" distB=\"0\" distL=\"0\" distR=\"0\"><wp:extent cx=\"")
+          .append(cx).append("\" cy=\"").append(cy).append("\"/>");
+      return;
+    }
+    b.append("<wp:anchor").append(ns).append(" distT=\"0\" distB=\"0\" distL=\"114300\" distR=\"114300\" simplePos=\"0\"")
+        .append(" relativeHeight=\"251658240\" behindDoc=\"").append("behind".equals(wrap) ? 1 : 0)
+        .append("\" locked=\"0\" layoutInCell=\"1\" allowOverlap=\"1\"><wp:simplePos x=\"0\" y=\"0\"/>")
+        .append("<wp:positionH relativeFrom=\"column\"><wp:align>").append(p.align)
+        .append("</wp:align></wp:positionH><wp:positionV relativeFrom=\"paragraph\"><wp:posOffset>0</wp:posOffset></wp:positionV>")
+        .append("<wp:extent cx=\"").append(cx).append("\" cy=\"").append(cy).append("\"/><wp:effectExtent l=\"0\" t=\"0\" r=\"0\" b=\"0\"/>");
+    if ("square".equals(wrap)) b.append("<wp:wrapSquare wrapText=\"bothSides\"/>");
+    else if ("topBottom".equals(wrap)) b.append("<wp:wrapTopAndBottom/>");
+    else if ("behind".equals(wrap) || "front".equals(wrap)) b.append("<wp:wrapNone/>");
+    else {
+      String tag = "tight".equals(wrap) ? "wp:wrapTight" : "wp:wrapThrough";
+      b.append('<').append(tag).append(" wrapText=\"bothSides\">");
+      String poly = p.wrapPolygon();
+      // Without a polygon the frame itself, unedited, as Wordcraft writes it.
+      String pts = poly.isEmpty() ? "0,0 0,21600 21600,21600 21600,0" : poly.substring(poly.indexOf(';') + 1);
+      b.append("<wp:wrapPolygon edited=\"").append(poly.startsWith("1;") ? 1 : 0).append("\">");
+      String[] list = TextUtil.split(pts, ' ');
+      for (int i = 0; i <= list.length; i++) {
+        String[] xy = TextUtil.split(list[i % list.length], ',');
+        b.append(i == 0 ? "<wp:start x=\"" : "<wp:lineTo x=\"").append(xy[0]).append("\" y=\"").append(xy[1]).append("\"/>");
+      }
+      b.append("</wp:wrapPolygon></").append(tag).append('>');
+    }
+  }
+
+  static String containerEnd(Picture p) {
+    return "inline".equals(p.wrap()) ? "</wp:inline>" : "</wp:anchor>";
   }
 
   private static long emu(float points) {
