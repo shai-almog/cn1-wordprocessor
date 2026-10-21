@@ -190,4 +190,31 @@ public class TurnedCellLayoutTest {
     float[] b = innerLine(r).pageBounds();
     assertTrue(cx < b[0]);
   }
+
+  /** As Wordcraft: a turned cell nested in a row's cell keeps that outer row on one page. */
+  @Test
+  public void nestedTurnedCellKeepsItsOuterRowWhole() {
+    var d = nested("lrTb", "btLr");
+    int at = 0;
+    for (int i = 0; i < d.blocks.size(); i++) if (d.blocks.get(i) instanceof Table) at = i;
+    var t = (Table) d.blocks.get(at);
+    var cell = t.blocks(0, 0);
+    for (int i = 0; i < 12; i++) cell = cell.append(new Paragraph("cp" + i, RichText.of("cell line " + i)));
+    t = t.setBlocks(0, 0, cell);
+    var blocks = d.blocks.set(at, t);
+    float pageText = d.lastSection.page.height - d.lastSection.page.top - d.lastSection.page.bottom;
+    // Fill the first page so only a few of the row's lines would still fit on it.
+    int filler = (int) ((pageText - 60) / 12);
+    for (int i = 0; i < filler; i++) blocks = blocks.insert(at, new Paragraph("f" + i, RichText.of("filler")));
+    d = d.blocks(blocks, d.nextId);
+    var r = engine().layout(d, 0);
+    int tableBlock = at + filler, page = -1;
+    for (int p = 0; p < r.pages.size(); p++)
+      for (LayoutEngine.Line l : r.pages.get(p).lines)
+        if (l.block == tableBlock && l.end > l.start) {
+          if (page < 0) page = p;
+          assertEquals("row split across pages", page, p);
+        }
+    assertTrue(page > 0);
+  }
 }

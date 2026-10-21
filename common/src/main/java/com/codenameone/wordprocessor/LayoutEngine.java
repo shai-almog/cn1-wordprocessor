@@ -3046,6 +3046,9 @@ public final class LayoutEngine {
        */
       int turn;
 
+      /** A nested cell (at any depth) is turned: Wordcraft keeps the outer row on one page. */
+      boolean nestedTurn;
+
       float len, across;
 
       /**
@@ -3329,6 +3332,7 @@ public final class LayoutEngine {
           own[prefix.length + 1] = sub.span.row;
           own[prefix.length + 2] = sub.span.column;
           inner.add(new InnerBox(own, sub.left, top, sub.width, cellHeight, sub.format));
+          nestedTurn |= sub.turn != 0 || sub.nestedTurn;
           // A turned nested cell's frame origin in this cell (as turnOrigin for a table's cell).
           float[] origin = null;
           if (sub.turn != 0) {
@@ -3511,7 +3515,7 @@ public final class LayoutEngine {
         float first = tops[row], last = tops[endRow];
         boolean keepTogether = row < t.format.headerRows;
         for (int i = row; i < endRow; i++) keepTogether |= !t.format.row(i).allowBreak;
-        for (CellLayout cell : group) keepTogether |= cell.turn != 0;
+        for (CellLayout cell : group) keepTogether |= cell.turn != 0 || cell.nestedTurn;
         float freshCapacity =
             spec.height - spec.top - spec.bottom - (row >= t.format.headerRows ? headerHeight : 0);
         // Oversized unsplittable rows must make progress even on a fresh page.
