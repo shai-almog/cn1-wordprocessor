@@ -128,4 +128,81 @@ public class TablePropertyRevisionTest {
     assertEquals(2, n.revisions().size());
     assertEquals(f.rowRevision(0).id, n.rowRevision(0).id);
   }
+
+  private static Table firstTable(Sequence<Block> blocks) {
+    for (Block b : blocks) if (b instanceof Table t) return t;
+    return null;
+  }
+
+  private static int index(Sequence<Block> blocks) {
+    for (int i = 0; i < blocks.size(); i++) if (blocks.get(i) instanceof Table) return i;
+    return -1;
+  }
+
+  @Test public void noteTableEditsAreTracked() throws Exception {
+    var s = new Session(Document.empty());
+    s.replace("Body ");
+    s.insertNote("footnote", "Note text", "");
+    String id = Notes.all(s.document()).get(0).id;
+    s.enterNote(id);
+    s.insertTable(2, 2);
+    s.leaveCell();
+    s.trackChanges(true);
+    var blocks = Notes.all(s.document()).get(0).blocks;
+    int at = index(blocks);
+    var t = firstTable(blocks);
+    s.enterNoteCell(id, new int[] {at, 0, 0});
+    s.formatTable(s.cellBlock(), t.format.withProp("rtl", "true"));
+    assertEquals(id, s.enclosingNote());
+    s.leaveCell();
+    var d = s.document();
+    var f = firstTable(Notes.all(d).get(0).blocks).format;
+    assertNotNull(f.revision());
+    assertEquals("", f.previous().prop("rtl", ""));
+    boolean listed = false;
+    for (Revisions.Change c : Revisions.list(d)) listed |= "Table properties".equals(c.text) && c.story.startsWith("note:");
+    assertTrue(listed);
+    var rejected = Revisions.resolve(d, f.revision().id, false);
+    var g = firstTable(Notes.all(rejected).get(0).blocks).format;
+    assertNull(g.revision());
+    assertEquals("", g.prop("rtl", ""));
+    var bytes = new ByteArrayOutputStream();
+    Docx.write(d, bytes);
+    var opened = Docx.read(new ByteArrayInputStream(bytes.toByteArray())).document;
+    var h = firstTable(Notes.all(opened).get(0).blocks).format;
+    assertNotNull(h.revision());
+    assertEquals("true", h.prop("rtl", ""));
+    assertEquals("", h.previous().prop("rtl", ""));
+  }
+
+  @Test public void nestedTableEditsAreTracked() throws Exception {
+    var s = new Session(Document.empty());
+    s.replace("body");
+    s.select(0, 4, 4);
+    s.insertTable(2, 2);
+    s.enterCell(1, 0, 0);
+    s.insertTable(2, 2);
+    s.leaveCell();
+    s.trackChanges(true);
+    s.enterCell(1, 0, 0);
+    int at = index(s.document().blocks);
+    var inner = firstTable(s.document().blocks);
+    s.enterNestedCell(at, 0, 0);
+    s.formatTable(s.cellBlock(), inner.format.cell(0, 0, inner.format.cell(0, 0).background(0x00ff00)));
+    s.leaveCell();
+    var outer = table(s.document());
+    assertNull(outer.format.revision());
+    var nested = firstTable(outer.blocks(0, 0));
+    assertNotNull(nested.format.revision());
+    assertEquals(0x00ff00, nested.format.cell(0, 0).background);
+    assertEquals(0xffffff, nested.format.previous().cell(0, 0).background);
+    var accepted = Revisions.resolve(s.document(), nested.format.revision().id, true);
+    var done = firstTable(table(accepted).blocks(0, 0));
+    assertNull(done.format.revision());
+    assertEquals(0x00ff00, done.format.cell(0, 0).background);
+    var bytes = new ByteArrayOutputStream();
+    Docx.write(s.document(), bytes);
+    var opened = Docx.read(new ByteArrayInputStream(bytes.toByteArray())).document;
+    assertNotNull(firstTable(table(opened).blocks(0, 0)).format.revision());
+  }
 }

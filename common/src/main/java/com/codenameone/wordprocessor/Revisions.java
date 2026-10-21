@@ -311,7 +311,12 @@ public final class Revisions {
         if (t.format.review(id, accept) != t.format) t = t.format(t.format.review(id, accept));
         for (int r = 0; r < t.rows(); r++)
           for (int c = 0; c < t.columns(); c++)
-            if (!t.covered(r, c)) t = t.setCell(r, c, resolveParagraphs(t.cell(r, c), id, accept));
+            if (!t.covered(r, c)) {
+              // Cells hold blocks: nested tables (and their property changes) resolve too.
+              var cell = t.blocks(r, c);
+              var resolved = resolveBlocks(cell, id, accept, new LinkedHashMap<>());
+              if (!sameBlocks(resolved, cell)) t = t.setBlocks(r, c, resolved);
+            }
         block = t;
       }
       blocks = blocks.append(block);

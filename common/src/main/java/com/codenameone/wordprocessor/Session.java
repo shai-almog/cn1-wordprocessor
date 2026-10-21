@@ -841,6 +841,16 @@ public final class Session {
       if (notePath.length > 0) leaveCell();
       document = Notes.normalize(document);
       if (bodyBefore != null && cell == null) trackTableProperties(bodyBefore);
+      else if (bodyBefore != null && cell.top().note != null && noteTables(bodyBefore)) {
+        // An edit in a footnote or endnote story: tracked on the whole document, then the story
+        // (and the note cell, if any) is entered again.
+        String note = cell.top().note;
+        int[] path = cellPath();
+        leaveCell();
+        trackTableProperties(bodyBefore);
+        if (path.length > 0) enterNoteCell(note, path);
+        else enterNote(note);
+      }
       if (notePath.length > 0) enterCellPath(notePath);
       selection = noteSelection;
       cells = noteCells;
@@ -1369,6 +1379,24 @@ public final class Session {
             new PageFurniture(stories, f.differentFirst, f.differentEven, f.headerDistance, f.footerDistance));
       }
     }
+    // Footnote and endnote stories' tables (nested too), as Wordcraft's fmt_change in note parts.
+    if (document.blocks != before.blocks) {
+      var old = new HashMap<String, Table>();
+      for (Note note : Notes.all(before)) collectTables(note.blocks, old);
+      if (!old.isEmpty()) {
+        var mapped = Notes.map(document, note -> {
+          var next = trackTables(note.blocks, old);
+          return next == note.blocks ? note : note.blocks(next);
+        });
+        // newRevision advanced nextId on the field while mapping; keep it.
+        if (mapped != document) document = mapped.blocks(mapped.blocks, Math.max(mapped.nextId, document.nextId));
+      }
+    }
+  }
+
+  private static boolean noteTables(Document d) {
+    for (Note note : Notes.all(d)) for (Block b : note.blocks) if (b instanceof Table) return true;
+    return false;
   }
 
   private static void collectTables(Sequence<Block> blocks, Map<String, Table> out) {
@@ -2901,7 +2929,8 @@ public final class Session {
           document =
               document.blocks(document.blocks.set(block, table.format(format)), document.nextId);
           if (cellBlock == block) {
-            enterCell(block, row, column);
+            // Back into the cell in the story left (a nested cell's or a note's, not the body's).
+            enterNestedCell(block, row, column);
             selection = selected;
             cells = selectedCells;
           }
