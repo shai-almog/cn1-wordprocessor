@@ -102,6 +102,13 @@ public final class LayoutEngine {
     /** A text box line's clip rectangle on the page {x, y, width, height}, in points. */
     public float[] boxClip;
 
+    /**
+     * For text of a table cell inside a text box's story: the cell's path within that story
+     * (block, row, column triples, as Session.cellPath while the box is entered), so a click
+     * enters that cell as Wordcraft's hit test finds cells in text box parts.
+     */
+    public int[] boxCell;
+
     /** A story line's cell (row, column, then the nested path), or null: see storyCell. */
     int[] storyCell;
 
@@ -1659,8 +1666,9 @@ public final class LayoutEngine {
       float[] clip = {pic.x() + rect[0], pic.y() + rect[1], rect[2], rect[3]};
       for (Line l : laid.lines) {
         var line = new Line(-1, -1, -1, l.paragraphId, pic.page() < 0 ? page.number : pic.page(),
-            ox + l.x, oy + l.y, raw(l), l.marker).storyCell(l);
+            ox + l.x, oy + l.y, raw(l), l.marker);
         line.textBox = pic.picture().id();
+        line.boxCell = l.boxCell;
         line.boxClip = clip;
         page.textBoxLines.add(line);
       }
@@ -1684,10 +1692,34 @@ public final class LayoutEngine {
     float height = scratch.y;
     scratch.finish();
     if (scratch.pages.isEmpty()) return out;
-    for (Line l : scratch.pages.get(0).lines)
-      out.lines.add(new Line(-1, -1, -1, l.paragraphId, page, l.x, l.y, raw(l), l.marker).storyCell(l));
+    // Cell paragraphs name the story table they are in, so cell lines carry their story path.
+    var tableOf = new HashMap<String, Integer>();
+    for (int i = 0; i < blocks.size(); i++)
+      if (blocks.get(i) instanceof Table t) cellParagraphs(t, i, tableOf);
+    for (Line l : scratch.pages.get(0).lines) {
+      var line = new Line(-1, -1, -1, l.paragraphId, page, l.x, l.y, raw(l), l.marker);
+      Integer table = tableOf.get(l.paragraphId);
+      if (l.row >= 0 && table != null) {
+        line.boxCell = new int[3 + l.path.length];
+        line.boxCell[0] = table;
+        line.boxCell[1] = l.row;
+        line.boxCell[2] = l.column;
+        System.arraycopy(l.path, 0, line.boxCell, 3, l.path.length);
+      }
+      out.lines.add(line);
+    }
     out.height = height;
     return out;
+  }
+
+  private static void cellParagraphs(Table t, int block, Map<String, Integer> out) {
+    for (int r = 0; r < t.rows(); r++)
+      for (int c = 0; c < t.columns(); c++)
+        if (!t.covered(r, c))
+          for (Block b : t.blocks(r, c)) {
+            if (b instanceof Paragraph p) out.put(p.id, block);
+            else if (b instanceof Table n) cellParagraphs(n, block, out);
+          }
   }
 
   private PageSpec bodySpec(Document doc, float header, float footer) {

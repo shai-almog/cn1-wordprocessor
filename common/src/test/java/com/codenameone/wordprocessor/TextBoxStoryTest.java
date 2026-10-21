@@ -194,4 +194,41 @@ public class TextBoxStoryTest {
     var r = new LayoutEngine(new PdfMetrics()).layout(s.document(), 0);
     assertEquals(2, r.pages.get(0).textBoxLines("i2").size());
   }
+
+  static Document boxedTable() {
+    var row = java.util.Arrays.asList(
+        Sequence.<Paragraph>of(Collections.singletonList(new Paragraph("p20", RichText.of("A1")))),
+        Sequence.<Paragraph>of(Collections.singletonList(new Paragraph("p21", RichText.of("B1")))));
+    var table = new Table("t1", Collections.singletonList(row));
+    var story = new Sequence<Block>().append(new Paragraph("p10", RichText.of("Head"))).append(table)
+        .append(new Paragraph("p12", RichText.of("Tail")));
+    var box = Picture.drawing("i5", Drawing.of("textBox").with("valign", "top").story(story), 300, 150, "", "left");
+    return new Document(new Sequence<Block>().append(new Paragraph("p1", RichText.of("Body"))).append(box),
+        PageSpec.A4, "T", 30);
+  }
+
+  @Test
+  public void cellsInsideTextBoxAreEntered() throws Exception {
+    var d = boxedTable();
+    var lines = new LayoutEngine(new PdfMetrics()).layout(d, 0).pages.get(0).textBoxLines("i5");
+    int[] cell = null;
+    for (LayoutEngine.Line l : lines) {
+      if (l.paragraphId.equals("p21")) cell = l.boxCell;
+      if (l.paragraphId.equals("p10") || l.paragraphId.equals("p12")) assertNull(l.boxCell);
+    }
+    assertArrayEquals(new int[] {1, 0, 1}, cell);
+    var s = new Session(d);
+    s.enterTextBoxCell("i5", cell);
+    assertEquals("i5", s.enclosingTextBox());
+    assertNull(s.textBoxStory());
+    assertArrayEquals(cell, s.cellPath());
+    s.select(0, 2, 2);
+    s.typeText("x", 0);
+    s.leaveCell();
+    var t = (Table) story(s.document()).get(1);
+    assertEquals("B1x", t.paragraph(0, 1, LayoutEngine.NO_PATH, "p21").text.toString());
+    s.undo();
+    t = (Table) story(s.document()).get(1);
+    assertEquals("B1", t.paragraph(0, 1, LayoutEngine.NO_PATH, "p21").text.toString());
+  }
 }

@@ -665,9 +665,9 @@ public final class EditorSurface extends Container
    */
   private java.util.List<LayoutEngine.Line> linesOf(int block) {
     var result = layout();
-    if (session.textBoxStory() != null) {
+    if (session.enclosingTextBox() != null) {
       var all = new ArrayList<LayoutEngine.Line>();
-      for (LayoutEngine.Page page : result.pages) all.addAll(page.textBoxLines(session.textBoxStory()));
+      for (LayoutEngine.Page page : result.pages) all.addAll(page.textBoxLines(session.enclosingTextBox()));
       return all;
     }
     if (session.noteStory() != null) {
@@ -699,7 +699,7 @@ public final class EditorSurface extends Container
   private LayoutEngine.Line verticalLine(LayoutEngine.Line current, boolean down, boolean page) {
     var lines = new ArrayList<LayoutEngine.Line>();
     for (LayoutEngine.Page p : layout().pages)
-      for (LayoutEngine.Line line : session.textBoxStory() != null ? p.textBoxLines : p.lines)
+      for (LayoutEngine.Line line : session.enclosingTextBox() != null ? p.textBoxLines : p.lines)
         if (editingBlock(line) >= 0) lines.add(line);
     int index = lines.indexOf(current);
     if (index < 0) return current;
@@ -2167,9 +2167,9 @@ public final class EditorSurface extends Container
   /** The last pointer y given to {@link #lineAt}: a turned line's offset depends on it. */
   private int hitY;
 
-  /** Whether a note's or text box's own story (not the body's) is being edited. */
+  /** Whether a note's or text box's own story (not the body's), or a box's cell, is being edited. */
   private boolean ownStory() {
-    return session.noteStory() != null || session.textBoxStory() != null;
+    return session.noteStory() != null || session.enclosingTextBox() != null;
   }
 
   /** The nearest story line of the text box whose text area holds the point, or null. */
@@ -2184,7 +2184,6 @@ public final class EditorSurface extends Container
     LayoutEngine.Line best = null;
     float distance = Float.MAX_VALUE;
     for (LayoutEngine.Line l : p.textBoxLines(id)) {
-      if (l.row >= 0) continue;
       float dy = y < l.y ? l.y - y : y > l.y + l.height ? y - l.y - l.height : 0;
       float dx = x < l.x ? l.x - x : x > l.x + l.width ? x - l.x - l.width : 0;
       float d = dy * 1000 + dx;
@@ -2270,9 +2269,12 @@ public final class EditorSurface extends Container
 
   private int editingBlock(LayoutEngine.Line line) {
     // A text box story: its own lines only, matched by paragraph id (Wordcraft's text box part).
-    String box = session.textBoxStory();
+    // In one of its cells, the cell's own lines (by their story path) only.
+    String box = session.enclosingTextBox();
     if (box != null || line.textBox != null) {
-      if (box == null || !box.equals(line.textBox) || line.row >= 0) return -1;
+      if (box == null || !box.equals(line.textBox)) return -1;
+      if (session.textBoxStory() != null ? line.boxCell != null
+          : !java.util.Arrays.equals(line.boxCell, session.cellPath())) return -1;
       var story = session.editingDocument();
       for (int i = 0; i < story.blocks.size(); i++)
         if (story.blocks.get(i) instanceof Paragraph p && p.id.equals(line.paragraphId)) return i;
@@ -2364,7 +2366,8 @@ public final class EditorSurface extends Container
 
   /** Enters the story a pressed line belongs to: a body cell, a note table's cell or the body. */
   private void enterLine(LayoutEngine.Line line) {
-    if (line.textBox != null) session.enterTextBox(line.textBox);
+    if (line.textBox != null && line.boxCell != null) session.enterTextBoxCell(line.textBox, line.boxCell);
+    else if (line.textBox != null) session.enterTextBox(line.textBox);
     else if (line.noteCell != null) session.enterNoteCell(line.note, line.noteCell);
     else if (line.row >= 0) session.enterCellPath(linePath(line));
     else if (session.noteStory() == null || editingBlock(line) < 0) session.leaveCell();

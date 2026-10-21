@@ -141,6 +141,19 @@ public final class Session {
     return cell == null ? null : cell.textBox;
   }
 
+  /**
+   * Enters cell {@code path} (block, row, column triples relative to the box's story) of a table
+   * in text box {@code id}, as clicking a cell inside a text box does in Wordcraft.
+   */
+  public void enterTextBoxCell(String id, int[] path) {
+    if (id.equals(enclosingTextBox()) && java.util.Arrays.equals(path, cellPath())) return;
+    if (!id.equals(textBoxStory())) {
+      leaveCell();
+      enterTextBox(id);
+    }
+    for (int i = 0; i + 2 < path.length; i += 3) enterNestedCell(path[i], path[i + 1], path[i + 2]);
+  }
+
   /** The text box whose story is being edited, at its story level or in one of its cells. */
   public String enclosingTextBox() {
     return cell == null ? null : cell.top().textBox;
@@ -817,8 +830,9 @@ public final class Session {
     try {
       var bodyBefore = document.trackChanges ? document() : null;
       edit.apply(this);
-      // A cell of a table inside a note story stays where it is (its path is note-relative).
-      int[] notePath = cell != null && cell.top().note != null ? new int[0] : cellPath();
+      // A cell of a table inside a note or text box story stays where it is (its path is
+      // relative to that story).
+      int[] notePath = cell != null && cell.top().story() ? new int[0] : cellPath();
       var noteCells = cells;
       var noteSpan = span;
       var noteSelection = selection;
