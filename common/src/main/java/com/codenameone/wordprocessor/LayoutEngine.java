@@ -711,7 +711,16 @@ public final class LayoutEngine {
       if (("both".equals(p.align) || "justify".equals(p.align)) && softWrapped)
         justify(line, available, false, p.text);
       else if ("distribute".equals(p.align) && end > start) justify(line, available, true, p.text);
-      if (levels != null && !hasTab(line)) Bidi.reorder(line.spans, levels, p.format.rtl);
+      // UAX #9 L1: a tab is a segment separator at paragraph level, so each tab-delimited segment is
+      // reordered within its own extent and the tabs (and their stops) stay put.
+      if (levels != null) {
+        int from = 0;
+        for (int i = 0; i <= line.spans.size(); i++)
+          if (i == line.spans.size() || "\t".equals(line.spans.get(i).text)) {
+            if (i > from) Bidi.reorder(line.spans.subList(from, i), levels, p.format.rtl);
+            from = i + 1;
+          }
+      }
       float textOffset = start == 0 ? p.format.firstIndent : 0;
       if ("center".equals(p.align)) textOffset += (available - line.width) / 2;
       else if ("right".equals(p.align)) textOffset += available - line.width;
@@ -893,11 +902,6 @@ public final class LayoutEngine {
     var out = new StringBuilder(count);
     for (int i = 0; i < count; i++) out.append(glyph);
     return out.toString();
-  }
-
-  private static boolean hasTab(RawLine line) {
-    for (Span span : line.spans) if ("\t".equals(span.text)) return true;
-    return false;
   }
 
   private void justify(RawLine line, float available, boolean distributed, RichText source) {

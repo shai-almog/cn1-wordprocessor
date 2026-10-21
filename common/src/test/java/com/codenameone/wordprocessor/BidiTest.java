@@ -80,4 +80,66 @@ public class BidiTest {
       }
     assertTrue(latin);
   }
+
+  private static String levelString(String text, boolean rtl) {
+    byte[] lv = Bidi.levels(text, rtl);
+    var b = new StringBuilder();
+    for (int i = 0; i < lv.length; i++) {
+      char c = text.charAt(i);
+      boolean removed = c >= 0x202A && c <= 0x202E;
+      b.append(removed ? 'x' : (char) ('0' + lv[i]));
+    }
+    return b.toString();
+  }
+
+  /** UAX #9 BidiCharacterTest-style known answers; x marks characters removed by rule X9. */
+  @Test
+  public void uax9KnownAnswers() {
+    String[][] cases = {
+      {"a (b) c", "rtl", "2222222"},
+      {"\u05D0 (b) \u05D1", "rtl", "1112111"},
+      {"a (\u05D0) b", "ltr", "0001000"},
+      {"\u05D0 (\u05D1) c", "ltr", "1111100"},
+      {"a (b", "rtl", "2222"},
+      {"\u05D0 [1]", "rtl", "11121"},
+      {"a\u202Bb c\u202Cd", "ltr", "0x222x0"},
+      {"a\u202Ebc\u202Cd", "ltr", "0x11x0"},
+      {"\u202D\u05D0\u05D1\u202C", "rtl", "x22x"},
+      {"a \u2067b c\u2069 d", "ltr", "000222000"},
+      {"a\u2068\u05D0 b\u2069c", "ltr", "0011200"},
+      {"\u05D0\u2068b\u2069", "rtl", "1121"},
+      {"\u05D0 \u2066b\u2069 \u05D1", "ltr", "1112111"},
+      {"a\u2069b", "ltr", "000"},
+      {"\u05D0 1.5", "ltr", "11222"},
+      {"\u05D0 1,000.50", "ltr", "1122222222"},
+      {"\u05D0 1+2", "ltr", "11222"},
+      {"\u05D0 $12", "ltr", "11222"},
+      {"\u0627 12", "ltr", "1122"},
+      {"1-2 \u05D0", "rtl", "22211"},
+      {"a\u0301 b", "rtl", "2222"},
+      {"\u05D0\t\u05D1", "ltr", "101"},
+      {"\u05D0\u200Ea", "ltr", "100"},
+    };
+    for (String[] c : cases)
+      assertEquals(c[0], c[2], levelString(c[0], "rtl".equals(c[1])));
+  }
+
+  @Test
+  public void explicitControlsAreNotTrivial() {
+    assertTrue(Bidi.needed("a\u2067b\u2069", false));
+    assertFalse(Bidi.needed("a (b) c", false));
+  }
+
+  @Test
+  public void tabbedLineReordersEachSegment() {
+    var line = line("\u05D0\u05D1 c\t\u05D2\u05D3", false);
+    var v = visual(line);
+    assertTrue(v, v.startsWith("<\u05D0\u05D1"));
+    assertTrue(v, v.endsWith("\t|<\u05D2\u05D3"));
+    float x = 0;
+    for (LayoutEngine.Span s : line.spans) {
+      assertEquals(x, s.x, .001);
+      x += s.width;
+    }
+  }
 }

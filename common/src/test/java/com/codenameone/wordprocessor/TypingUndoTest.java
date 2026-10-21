@@ -80,9 +80,9 @@ public class TypingUndoTest {
 
   @Test public void groupedTypingDoesNotEvictExtraEntriesAtTheHistoryLimit() {
     var s = new Session(Document.empty());
-    for(int i=0;i<200;i++)s.replace("x");
-    type(s,"abc");s.undo();assertEquals(200,s.document().plainText().length());
-    for(int i=0;i<199;i++)s.undo();assertEquals("x",s.document().plainText());
+    for(int i=0;i<500;i++)s.replace("x");
+    type(s,"abc");s.undo();assertEquals(500,s.document().plainText().length());
+    for(int i=0;i<499;i++)s.undo();assertEquals("x",s.document().plainText());
     s.undo();assertEquals("x",s.document().plainText());
   }
 
