@@ -899,6 +899,12 @@ public class WordProcessor {
     return b;
   }
 
+  /** Frees a long-lived control from the ribbon it was in, so a rebuilt ribbon can take it. */
+  private static <T extends Component> T detached(T c) {
+    if (c.getParent() != null) c.remove();
+    return c;
+  }
+
   private Button iconButton(String name, char icon, Runnable action, boolean large) {
     var b = button(name, action);
     b.setAccessibilityText(name.isEmpty() ? iconName(icon) : name);
@@ -3465,7 +3471,7 @@ public class WordProcessor {
                         iconButton("Pause or resume reading", FontImage.MATERIAL_PAUSE, () -> readAloud("playPause"), false),
                         iconButton("Next sentence", FontImage.MATERIAL_SKIP_NEXT, () -> readAloud("next"), false),
                         iconButton("Stop Reading", FontImage.MATERIAL_STOP, () -> readAloud("stop"), false)),
-                    readAloudStatus),
+                    detached(readAloudStatus)),
                 BoxLayout.encloseY(readingSpeed(), skipCitationsBox()),
                 iconButton("Dictate", FontImage.MATERIAL_MIC, this::dictate, true))),
         OfficeTheme.group(

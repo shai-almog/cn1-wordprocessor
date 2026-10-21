@@ -418,7 +418,7 @@ public class SimulatorUiTest {
   }
 
   private static Component named(Component c, String name) {
-    if (name.equals(c.getName())) return c;
+    if (name.equals(c.getName()) || c instanceof Button b && name.equals(b.getText())) return c;
     if (c instanceof Container k)
       for (int i = 0; i < k.getComponentCount(); i++) {
         Component f = named(k.getComponentAt(i), name);
