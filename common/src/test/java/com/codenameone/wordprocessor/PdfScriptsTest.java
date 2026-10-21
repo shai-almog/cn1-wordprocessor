@@ -279,4 +279,69 @@ public class PdfScriptsTest {
       }
     };
   }
+
+  @Test
+  public void cffSubroutinesReachedByKeptGlyphsAreTheOnlyOnesKept() throws Exception {
+    // Charstring: callgsubr 0 (operand -107 with bias 107), endchar; gsubr 0 calls gsubr 1.
+    byte[] cs = {32, 29, 14};
+    byte[] g = Cff.writeIndex(Arrays.asList(new byte[] {33, 29, 11}, new byte[] {11}, new byte[] {(byte) 139, (byte) 139, 21, 11}));
+    byte[] d = new byte[cs.length + g.length];
+    System.arraycopy(cs, 0, d, 0, cs.length);
+    System.arraycopy(g, 0, d, cs.length, g.length);
+    int[] global = Cff.index(d, cs.length);
+    boolean[] used = new boolean[3];
+    new Cff.Walker(d, global, used, null, new boolean[0]).run(0, cs.length, 0);
+    assertTrue(used[0] && used[1] && !used[2]);
+    // A real CFF face with subroutines: a two-glyph subset drops nearly all subroutine bodies.
+    var f = new File("/System/Library/Fonts/Supplemental/NotoSansCanadianAboriginal-Regular.otf");
+    Assume.assumeTrue(f.exists());
+    byte[] face;
+    try (var in = new FileInputStream(f)) {
+      face = FontSubset.face(in.readAllBytes(), 0);
+    }
+    var font = new PdfFonts.TrueType(face);
+    var cff = font.tables.get("CFF ");
+    byte[] subset = Cff.subset(Arrays.copyOfRange(font.data, cff[0], cff[0] + cff[1]), Arrays.asList(font.glyph(0x1401), font.glyph(0x1402)));
+    assertTrue(subset.length + " of " + cff[1], subset.length < cff[1] / 8);
+  }
+
+  @Test
+  public void teluguFormsRephOnlyWithExplicitZwj() throws Exception {
+    // As hb-shape with Kohinoor Telugu: Ra virama ZWJ Ka gives [tlKA|tlReph], Ra virama Ka
+    // gives [tlRA|tlKAc2] (below-base Ka, no reph).
+    var f = new File("/System/Library/Fonts/KohinoorTelugu.ttc");
+    Assume.assumeTrue(f.exists());
+    PdfFonts.TrueType font;
+    try (var in = new FileInputStream(f)) {
+      font = new PdfFonts.TrueType(FontSubset.face(in.readAllBytes(), 0));
+    }
+    var reph = shape(font, "\u0c30\u0c4d\u200d\u0c15");
+    assertEquals(cps(reph), 2, reph.size());
+    assertEquals(cps(reph), 0x0c15, reph.get(0).cp);
+    assertEquals(cps(reph), 0x0c30, reph.get(1).cp);
+    var plain = shape(font, "\u0c30\u0c4d\u0c15");
+    assertEquals(cps(plain), 0x0c30, plain.get(0).cp);
+  }
+
+  @Test
+  public void hangulJamoComposeOrTakeJamoFeatures() throws Exception {
+    // Expected glyph ids are hb-shape's with Apple SD Gothic Neo (face 0).
+    var f = new File("/System/Library/Fonts/AppleSDGothicNeo.ttc");
+    Assume.assumeTrue(f.exists());
+    PdfFonts.TrueType font;
+    try (var in = new FileInputStream(f)) {
+      font = new PdfFonts.TrueType(FontSubset.face(in.readAllBytes(), 0));
+    }
+    var lvt = shape(font, "\u1100\u1161\u11a8");
+    assertEquals(1, lvt.size());
+    assertEquals(1087, lvt.get(0).id);
+    var lvPlusT = shape(font, "\uac00\u11a8");
+    assertEquals(1, lvPlusT.size());
+    assertEquals(1087, lvPlusT.get(0).id);
+    // An old trailing jamo: no precomposed syllable, the L and V take their ljmo/vjmo forms.
+    var old = shape(font, "\u1100\u1161\u11ff");
+    assertEquals(3, old.size());
+    assertEquals(18282, old.get(0).id);
+    assertEquals(18303, old.get(1).id);
+  }
 }

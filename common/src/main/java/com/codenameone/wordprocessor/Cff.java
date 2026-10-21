@@ -6,9 +6,10 @@ import java.util.*;
 /**
  * CFF (version 1) subsetting for PDF embedding as FontFile3 /CIDFontType0C. The output is a
  * CID-keyed font whose CID n is glyph n of the output, which holds .notdef followed by the used
- * glyphs in the order the PDF writer numbered them, so the PDF CIDs need no CIDToGIDMap. Only
- * charstrings are subset: the global and local subroutine INDEXes are copied whole, since
- * charstrings call them by biased index (renumbering would mean rewriting every charstring).
+ * glyphs in the order the PDF writer numbered them, so the PDF CIDs need no CIDToGIDMap. The kept
+ * charstrings are interpreted to find the global and local subroutines they reach (directly or
+ * through other subroutines); every other subroutine is replaced by a bare {@code return}, so the
+ * INDEXes keep their counts and biased numbering and no charstring needs rewriting.
  * Name-keyed sources become a single-FD CID font; CID-keyed sources keep their whole FDArray.
  */
 final class Cff {
@@ -59,6 +60,20 @@ final class Cff {
           ? new int[] {(int) num(top, PRIVATE, 1), (int) num(top, PRIVATE, 0)}
           : new int[] {0, 0});
     }
+    // Subroutines the kept glyphs reach.
+    int[] globalIdx = gsubrs;
+    var localIdx = new ArrayList<int[]>();
+    for (int[] p : privates) {
+      int[] local = null;
+      if (p[1] > 0) {
+        var pd = dict(d, p[0], p[0] + p[1]);
+        if (pd.containsKey(SUBRS)) local = index(d, p[0] + (int) num(pd, SUBRS, 0));
+      }
+      localIdx.add(local);
+    }
+    boolean[] usedGlobal = new boolean[Math.max(0, globalIdx.length - 1)];
+    var usedLocal = new ArrayList<boolean[]>();
+    for (int[] l : localIdx) usedLocal.add(new boolean[l == null ? 0 : l.length - 1]);
     // Output glyphs: .notdef then the used glyphs in CID order.
     int n = glyphs.size() + 1;
     var outStrings = new ArrayList<byte[]>();
@@ -69,6 +84,8 @@ final class Cff {
       if (g < 0 || g >= count) g = 0;
       outCharstrings.add(Arrays.copyOfRange(d, charstrings[g], charstrings[g + 1]));
       outFd[k] = Math.min(fdOf[g], privates.size() - 1);
+      int f = Math.max(0, outFd[k]);
+      new Walker(d, globalIdx, usedGlobal, localIdx.get(f), usedLocal.get(f)).run(charstrings[g], charstrings[g + 1], 0);
     }
     outStrings.add(ascii("Adobe"));
     outStrings.add(ascii("Identity"));
@@ -86,8 +103,8 @@ final class Cff {
           op(dict, e.getKey());
         }
         if (pd.containsKey(SUBRS)) {
-          int[] local = index(d, p[0] + (int) num(pd, SUBRS, 0));
-          subrs = Arrays.copyOfRange(d, p[0] + (int) num(pd, SUBRS, 0), end(local));
+          int f = privateBlobs.size();
+          subrs = pruned(d, localIdx.get(f), usedLocal.get(f));
           int size = dict.size() + 6;
           int5(dict, size);
           op(dict, SUBRS);
@@ -113,7 +130,7 @@ final class Cff {
     put16(fdSelect, 3 + 3 * fdRanges.size(), n);
     byte[] nameIndex = Arrays.copyOfRange(d, d[2] & 255, end(names));
     byte[] stringIndex = writeIndex(outStrings);
-    byte[] gsubrIndex = Arrays.copyOfRange(d, end(strings), end(gsubrs));
+    byte[] gsubrIndex = pruned(d, gsubrs, usedGlobal);
     byte[] charstringIndex = writeIndex(outCharstrings);
     // Two passes: every offset is a fixed-size operand, so sizes do not depend on the values.
     byte[] topDict = topDict(top, n, 0, 0, 0, 0);
@@ -143,6 +160,95 @@ final class Cff {
     out.write(writeIndex(fdDicts));
     for (byte[] p : privateBlobs) out.write(p);
     return out.toByteArray();
+  }
+
+  /** {@code index} with every subroutine not in {@code used} replaced by a bare return. */
+  private static byte[] pruned(byte[] d, int[] index, boolean[] used) {
+    var items = new ArrayList<byte[]>();
+    for (int i = 0; i + 1 < index.length; i++)
+      items.add(used[i] ? Arrays.copyOfRange(d, index[i], index[i + 1]) : new byte[] {11});
+    return writeIndex(items);
+  }
+
+  /** The subroutine bias of an INDEX with {@code count} entries (Type 2 charstring spec). */
+  static int bias(int count) {
+    return count < 1240 ? 107 : count < 33900 ? 1131 : 32768;
+  }
+
+  /**
+   * A Type 2 charstring scan: tracks the operand stack and stem count (for hintmask bytes) and
+   * marks every subroutine reached through callsubr/callgsubr.
+   */
+  static final class Walker {
+    private final byte[] d;
+    private final int[] global, local;
+    private final boolean[] usedGlobal, usedLocal;
+    private final double[] stack = new double[96];
+    private int top, stems;
+    private boolean done;
+
+    Walker(byte[] d, int[] global, boolean[] usedGlobal, int[] local, boolean[] usedLocal) {
+      this.d = d;
+      this.global = global;
+      this.usedGlobal = usedGlobal;
+      this.local = local;
+      this.usedLocal = usedLocal;
+    }
+
+    void run(int p, int end, int depth) {
+      if (depth > 10) return;
+      while (p < end && !done) {
+        int b = d[p] & 255;
+        if (b == 28 && p + 2 < end) {
+          push((short) ((d[p + 1] & 255) << 8 | d[p + 2] & 255));
+          p += 3;
+        } else if (b >= 32 && b <= 246) {
+          push(b - 139);
+          p++;
+        } else if (b >= 247 && b <= 250 && p + 1 < end) {
+          push((b - 247) * 256 + (d[p + 1] & 255) + 108);
+          p += 2;
+        } else if (b >= 251 && b <= 254 && p + 1 < end) {
+          push(-(b - 251) * 256 - (d[p + 1] & 255) - 108);
+          p += 2;
+        } else if (b == 255 && p + 4 < end) {
+          push(((d[p + 1] & 255) << 24 | (d[p + 2] & 255) << 16 | (d[p + 3] & 255) << 8 | d[p + 4] & 255) / 65536.0);
+          p += 5;
+        } else if (b == 10 || b == 29) {
+          p++;
+          if (top == 0) continue;
+          int[] idx = b == 10 ? local : global;
+          boolean[] used = b == 10 ? usedLocal : usedGlobal;
+          int k = (int) stack[--top] + bias(idx == null ? 0 : idx.length - 1);
+          if (idx == null || k < 0 || k + 1 >= idx.length) continue;
+          used[k] = true;
+          run(idx[k], idx[k + 1], depth + 1);
+        } else if (b == 11) {
+          return;
+        } else if (b == 14) {
+          done = true;
+          return;
+        } else if (b == 1 || b == 3 || b == 18 || b == 23) {
+          stems += top / 2;
+          top = 0;
+          p++;
+        } else if (b == 19 || b == 20) {
+          stems += top / 2;
+          top = 0;
+          p += 1 + (stems + 7) / 8;
+        } else if (b == 12) {
+          top = 0;
+          p += 2;
+        } else {
+          top = 0;
+          p++;
+        }
+      }
+    }
+
+    private void push(double v) {
+      if (top < stack.length) stack[top++] = v;
+    }
   }
 
   private static byte[] topDict(Map<Integer, byte[]> source, int n, int charset, int fdSelect,

@@ -116,7 +116,7 @@ final class PdfShaping {
   // ---------------------------------------------------------------- OpenType shaping
 
   private static final int GLOBAL = 1, ISOL = 2, FINA = 4, MEDI = 8, INIT = 16, RPHF = 32,
-      HALF = 64, POST = 128;
+      HALF = 64, POST = 128, LJMO = 256, VJMO = 512, TJMO = 1024;
   private static final int MERGED = 8;
 
   /** Indic scripts by Unicode block (U+0900 + 0x80 k): OpenType tag, then the version 2 tag. */
@@ -151,6 +151,8 @@ final class PdfShaping {
     if (cp >= 0x0900 && cp <= 0x0d7f) return INDIC[2 * ((cp - 0x0900) >> 7)];
     if (cp >= 0xa8e0 && cp <= 0xa8ff) return "deva";
     if (cp >= 0x0e00 && cp <= 0x0e7f) return "thai";
+    if (cp >= 0x1100 && cp <= 0x11ff || cp >= 0x3130 && cp <= 0x318f || cp >= 0xa960 && cp <= 0xa97f
+        || cp >= 0xac00 && cp <= 0xd7ff) return "hang";
     if (cp >= 0x0e80 && cp <= 0x0eff) return "lao ";
     if (cp >= 0x1780 && cp <= 0x17ff || cp >= 0x19e0 && cp <= 0x19ff) return "khmr";
     if (cp >= 0x1000 && cp <= 0x109f || cp >= 0xaa60 && cp <= 0xaa7f
@@ -290,6 +292,9 @@ final class PdfShaping {
         split(font, buffer, base + SPLITS[block][s], base + SPLITS[block][s + 1],
             base + SPLITS[block][s + 2]);
       indicSyllables(buffer, block);
+    } else if ("hang".equals(script)) {
+      scripts = new String[] {"hang"};
+      hangul(font, buffer);
     } else if ("thai".equals(script) || "lao ".equals(script)) {
       scripts = new String[] {script};
       saraAm(font, buffer, "lao ".equals(script));
@@ -329,6 +334,11 @@ final class PdfShaping {
           new String[] {"pres", "abvs", "blws", "psts", "clig", "liga", "calt"}, all);
     } else {
       gsub(ot, scripts, buffer, new String[] {"ccmp", "locl"}, all);
+      if ("hang".equals(script)) {
+        gsub(ot, scripts, buffer, new String[] {"ljmo"}, LJMO);
+        gsub(ot, scripts, buffer, new String[] {"vjmo"}, VJMO);
+        gsub(ot, scripts, buffer, new String[] {"tjmo"}, TJMO);
+      }
       if ("arab".equals(script)) {
         gsub(ot, scripts, buffer, new String[] {"isol"}, ISOL);
         gsub(ot, scripts, buffer, new String[] {"fina"}, FINA);
@@ -473,6 +483,83 @@ final class PdfShaping {
   }
 
   /** Sets every glyph of [s, e) to one syllable spanning all their text. */
+  private static boolean leading(int cp) {
+    return cp >= 0x1100 && cp <= 0x115f || cp >= 0xa960 && cp <= 0xa97c;
+  }
+
+  private static boolean vowel(int cp) {
+    return cp >= 0x1160 && cp <= 0x11a7 || cp >= 0xd7b0 && cp <= 0xd7c6;
+  }
+
+  private static boolean trailing(int cp) {
+    return cp >= 0x11a8 && cp <= 0x11ff || cp >= 0xd7cb && cp <= 0xd7fb;
+  }
+
+  /**
+   * HarfBuzz's Hangul shaper: a leading/vowel(/trailing) jamo sequence of modern jamo becomes the
+   * precomposed syllable when the font has it, as does an LV syllable followed by a trailing
+   * jamo; otherwise the jamo (an LV syllable decomposed when the font has its jamo) are masked
+   * for the font's 'ljmo', 'vjmo' and 'tjmo' features, so old Hangul is drawn by the font's
+   * jamo positioning rather than as a row of separate jamo.
+   */
+  private static void hangul(PdfFonts.TrueType font, List<OpenType.Glyph> buffer)
+      throws java.io.IOException {
+    for (int i = 0; i < buffer.size(); i++) {
+      var g = buffer.get(i);
+      int cp = g.cp;
+      boolean lv = cp >= 0xac00 && cp <= 0xd7a3 && (cp - 0xac00) % 28 == 0;
+      if (lv && i + 1 < buffer.size() && trailing(buffer.get(i + 1).cp)) {
+        var t = buffer.get(i + 1);
+        if (t.cp <= 0x11c2) {
+          int lvt = cp + t.cp - 0x11a7;
+          int id = font.glyph(lvt);
+          if (id != 0) {
+            replace(buffer, i, 2, id, lvt);
+            continue;
+          }
+        }
+        int l = 0x1100 + (cp - 0xac00) / 588, v = 0x1161 + (cp - 0xac00) % 588 / 28;
+        if (font.glyph(l) != 0 && font.glyph(v) != 0 && font.glyph(t.cp) != 0) {
+          var lg = new OpenType.Glyph(font.glyph(l), l, g.start, g.end, g.mask | LJMO);
+          var vg = new OpenType.Glyph(font.glyph(v), v, g.start, g.end, g.mask | VJMO);
+          buffer.set(i, lg);
+          buffer.add(i + 1, vg);
+          t.mask |= TJMO;
+          syllable(buffer, i, i + 3, i + 1);
+          i += 2;
+        }
+        continue;
+      }
+      if (!leading(cp) || i + 1 >= buffer.size() || !vowel(buffer.get(i + 1).cp)) continue;
+      int e = i + 2;
+      int v = buffer.get(i + 1).cp;
+      boolean hasT = e < buffer.size() && trailing(buffer.get(e).cp);
+      if (hasT) e++;
+      int t = hasT ? buffer.get(i + 2).cp : 0;
+      if (cp <= 0x1112 && v >= 0x1161 && v <= 0x1175 && (!hasT || t <= 0x11c2)) {
+        int syl = 0xac00 + ((cp - 0x1100) * 21 + v - 0x1161) * 28 + (hasT ? t - 0x11a7 : 0);
+        int id = font.glyph(syl);
+        if (id != 0) {
+          replace(buffer, i, e - i, id, syl);
+          continue;
+        }
+      }
+      buffer.get(i).mask |= LJMO;
+      buffer.get(i + 1).mask |= VJMO;
+      if (hasT) buffer.get(i + 2).mask |= TJMO;
+      syllable(buffer, i, e, i + 1);
+      i = e - 1;
+    }
+  }
+
+  /** Replaces {@code count} glyphs at {@code i} with one glyph for {@code cp} spanning their text. */
+  private static void replace(List<OpenType.Glyph> buffer, int i, int count, int id, int cp) {
+    var first = buffer.get(i);
+    int end = first.end;
+    for (int k = 1; k < count; k++) end = Math.max(end, buffer.remove(i + 1).end);
+    buffer.set(i, new OpenType.Glyph(id, cp, first.start, end, first.mask));
+  }
+
   private static void syllable(List<OpenType.Glyph> buffer, int s, int e, int syllable) {
     int start = Integer.MAX_VALUE, end = 0;
     for (int k = s; k < e; k++) {
@@ -523,10 +610,14 @@ final class PdfShaping {
   private static void consonantSyllable(List<OpenType.Glyph> buffer, int s, int e, int block) {
     int ra = 0x0930 + 0x80 * block, consonants = 0;
     for (int k = s; k < e; k++) if (buffer.get(k).cat == 1) consonants++;
-    // Tamil has no reph; Telugu forms one only with an explicit ZWJ, which is not modeled.
-    boolean reph = block != 5 && block != 6 && consonants > 1 && e - s > 2
-        && buffer.get(s).cp == ra && buffer.get(s + 1).cat == 3 && buffer.get(s + 2).cat == 1;
-    int first = reph ? s + 2 : s, base = -1;
+    // Tamil has no reph; Telugu forms one only with an explicit ZWJ (Ra, virama, ZWJ), as
+    // HarfBuzz's explicit reph mode, and the ZWJ is part of the reph.
+    boolean explicit = block == 6;
+    int rephLen = explicit ? 3 : 2;
+    boolean reph = block != 5 && consonants > 1 && e - s > rephLen
+        && buffer.get(s).cp == ra && buffer.get(s + 1).cat == 3
+        && (!explicit || buffer.get(s + 2).cat == 7) && buffer.get(s + rephLen).cat == 1;
+    int first = reph ? s + rephLen : s, base = -1;
     for (int k = e - 1; k >= first; k--) {
       var g = buffer.get(k);
       if (g.cat != 1) continue;
@@ -539,8 +630,7 @@ final class PdfShaping {
     if (base < 0) base = first;
     buffer.get(base).flags |= OpenType.BASE;
     if (reph) {
-      buffer.get(s).mask |= RPHF;
-      buffer.get(s + 1).mask |= RPHF;
+      for (int k = s; k < s + rephLen; k++) buffer.get(k).mask |= RPHF;
     }
     for (int k = first; k < base; k++) buffer.get(k).mask |= HALF;
     for (int k = base + 1; k < e; k++) buffer.get(k).mask |= POST;
