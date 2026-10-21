@@ -895,6 +895,7 @@ static final char COLUMN_BREAK = '\u000B';
     furniture.references(b);
     NoteFormats.write(b, section.notes, "w:");
     var p = section.page;
+    float gutter = Float.parseFloat(section.decor.layout("gutter", "0"));
     b.append("<w:type w:val=\"").append(section.start).append("\"/>");
     b.append("<w:pgSz w:w=\"")
         .append(Math.round(p.width * 20))
@@ -909,18 +910,22 @@ static final char COLUMN_BREAK = '\u000B';
         .append("\" w:bottom=\"")
         .append(Math.round(p.bottom * 20))
         .append("\" w:left=\"")
-        .append(Math.round(p.left * 20))
+        .append(Math.round(Math.max(0, p.left - gutter) * 20))
         .append("\" w:header=\"")
         .append(Math.round(section.furniture.headerDistance * 20))
         .append("\" w:footer=\"")
         .append(Math.round(section.furniture.footerDistance * 20))
+        .append(gutter > 0 ? "\" w:gutter=\"" + Math.round(gutter * 20) : "")
         .append("\"/>");
     DocxBorders.page(b, section.decor.borders);
     var decor = section.decor;
     if (decor.lineCountBy > 0)
       b.append("<w:lnNumType w:countBy=\"").append(decor.lineCountBy).append("\" w:restart=\"")
           .append("page".equals(decor.lineRestart) ? "newPage" : "section".equals(decor.lineRestart) ? "newSection" : "continuous")
-          .append("\"/>");
+          .append('"')
+          .append(decor.layout("lineStart", "").isEmpty() ? "" : " w:start=\"" + (Integer.parseInt(decor.layout("lineStart", "1")) - 1) + '"')
+          .append(decor.layout("lineDistance", "").isEmpty() ? "" : " w:distance=\"" + Math.round(Float.parseFloat(decor.layout("lineDistance", "0")) * 20) + '"')
+          .append("/>");
     if (section.pageStart > 0 || !"decimal".equals(decor.numberFormat)) {
       b.append("<w:pgNumType");
       if (!"decimal".equals(decor.numberFormat)) b.append(" w:fmt=\"").append(decor.numberFormat).append('"');
@@ -1001,7 +1006,9 @@ static final char COLUMN_BREAK = '\u000B';
                   twips(margin, "top", 1080),
                   twips(margin, "right", 1080),
                   twips(margin, "bottom", 1080),
-                  twips(margin, "left", 1080));
+                  // Wordcraft adds w:gutter to the left (inside) margin: text_width and every
+                  // body x use margin_left + gutter; the gutter is kept to be written back apart.
+                  twips(margin, "left", 1080) + twips(margin, "gutter", 0));
       } catch (RuntimeException ex) {
         warnings.add("Invalid section geometry; using A4");
       }
@@ -1072,6 +1079,9 @@ static final char COLUMN_BREAK = '\u000B';
     decor = decor.numberFormat(numberFormat);
     if (e != null) {
       try {
+        Element mar = Xml.child(e, "pgMar");
+        float gutter = mar == null ? 0 : twips(mar, "gutter", 0);
+        if (gutter > 0) decor = decor.withLayout("gutter", "" + Math.min(1000, gutter));
         Element v = Xml.child(e, "vAlign");
         if (v != null) decor = decor.withLayout("verticalAlign", Xml.attr(v, "val", "top"));
         Element flow = Xml.child(e, "textDirection");
@@ -1101,8 +1111,12 @@ static final char COLUMN_BREAK = '\u000B';
             decor.lineNumbers(
                 by,
                 "newSection".equals(restart) ? "section" : "continuous".equals(restart) ? "continuous" : "page");
-        if (!Xml.attr(lines, "start", "").isEmpty() && !"1".equals(Xml.attr(lines, "start", "1")))
-          warnings.add("Line numbers start at 1");
+        // Wordcraft's lnNumType: w:start is 0-based (the first number is start + 1), w:distance
+        // the gap from the text in twips (0 means its 18pt default).
+        int first = Integer.parseInt(Xml.attr(lines, "start", "0"));
+        if (first > 0) decor = decor.withLayout("lineStart", "" + (Math.min(32767, first) + 1));
+        float distance = twips(lines, "distance", 0);
+        if (distance > 0) decor = decor.withLayout("lineDistance", "" + Math.min(1000, distance));
       } catch (RuntimeException ex) {
         warnings.add("Invalid line numbering");
       }

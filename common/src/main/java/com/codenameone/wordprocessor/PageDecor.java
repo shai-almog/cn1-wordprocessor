@@ -39,7 +39,10 @@ public final class PageDecor {
 
   /** Section layout keys: vertical alignment, direction, text flow and the document grid. */
   public static final java.util.List<String> LAYOUT_KEYS =
-      java.util.Arrays.asList("verticalAlign", "rtl", "textDirection", "grid", "gridPitch", "charPitch");
+      java.util.Arrays.asList("verticalAlign", "rtl", "textDirection", "grid", "gridPitch", "charPitch",
+          // Wordcraft SectionProps: gutter (points, already part of the page's left margin),
+          // line-number start (first number) and distance from the text (points).
+          "gutter", "lineStart", "lineDistance");
 
   public static final java.util.List<String> VERTICAL_ALIGN =
       java.util.Arrays.asList("top", "center", "both", "bottom");
@@ -138,6 +141,14 @@ public final class PageDecor {
       if (key.endsWith("Pitch")) {
         float f = Float.parseFloat(value);
         if (!(f >= 1 && f <= 200)) throw new IllegalArgumentException("Invalid " + key);
+      }
+      if ("gutter".equals(key) || "lineDistance".equals(key)) {
+        float f = Float.parseFloat(value);
+        if (!(f >= 0 && f <= 1000)) throw new IllegalArgumentException("Invalid " + key);
+      }
+      if ("lineStart".equals(key)) {
+        int n = Integer.parseInt(value);
+        if (n < 1 || n > 32768) throw new IllegalArgumentException("Invalid " + key);
       }
     }
     var next = new java.util.TreeMap<String, String>(layout);

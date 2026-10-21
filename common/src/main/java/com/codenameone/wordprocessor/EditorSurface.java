@@ -1613,7 +1613,9 @@ public final class EditorSurface extends Container
         var lf = font(TextStyle.DEFAULT.with("size", "9"), zoom);
         g.setFont(lf);
         g.setColor(ink(0x6b6b6b));
-        int right = x + Math.round((page.spec.left - 14) * scale);
+        // Wordcraft: numbers end lnNumType distance (18pt by default) left of the text.
+        float gap = Float.parseFloat(page.decor.layout("lineDistance", "0"));
+        int right = x + Math.round((page.spec.left - (gap > 0 ? gap : 18)) * scale);
         for (float[] n : page.lineNumbers) {
           String label = String.valueOf((int) n[1]);
           g.drawString(label, right - lf.stringWidth(label), y + Math.round(n[0] * scale));

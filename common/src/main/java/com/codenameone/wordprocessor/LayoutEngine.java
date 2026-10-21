@@ -1235,8 +1235,11 @@ public final class LayoutEngine {
             || "section".equals(numbering.lineRestart) && page.sectionPage == 0) lineCount = 0;
         for (Line line : page.lines) {
           if (line.block < 0 || line.row >= 0) continue;
-          if (++lineCount % numbering.lineCountBy == 0)
-            rebuilt.lineNumbers.add(new float[] {line.y, lineCount});
+          // Wordcraft: the shown number is the count plus lnNumType start - 1; countBy applies
+          // to that number.
+          int shown = ++lineCount + Integer.parseInt(numbering.layout("lineStart", "1")) - 1;
+          if (shown % numbering.lineCountBy == 0)
+            rebuilt.lineNumbers.add(new float[] {line.y, shown});
         }
       }
       b.pages.set(i, rebuilt);

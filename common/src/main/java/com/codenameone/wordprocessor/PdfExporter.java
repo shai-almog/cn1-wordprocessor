@@ -359,10 +359,12 @@ public final class PdfExporter {
             .append(n(spec.height - rule[2]))
             .append(" l S Q\n");
       decor(content, page.decor, spec);
+      float lineGap = Float.parseFloat(page.decor.layout("lineDistance", "0"));
+      if (lineGap <= 0) lineGap = 18;
       for (float[] n : page.lineNumbers) {
         String label = String.valueOf((int) n[1]);
         content.append("0.42 g BT /F0 9 Tf 1 0 0 1 ")
-            .append(n(spec.left - 14 - label.length() * 5f)).append(' ')
+            .append(n(spec.left - lineGap - label.length() * 5f)).append(' ')
             .append(n(spec.height - n[0] - 9)).append(" Tm (").append(label).append(") Tj ET\n");
       }
       for (LayoutEngine.Frame frame : page.frames) frame(content, frame, spec.height);
