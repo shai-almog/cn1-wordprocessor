@@ -34,9 +34,84 @@ public final class TextBoxes {
     return found[0];
   }
 
-  /** Replaces the story of picture {@code id}. */
+  /** The most boxes one story flows through (Wordcraft's MAX_LINKED_BOXES guard). */
+  static final int MAX_LINKED = 64;
+
+  /**
+   * Linked text box chains, as Wordcraft's text_box_chains: each starts at a box no box links
+   * to and follows the "linkNext" ids (the first box in document order to link to a box wins;
+   * cycles and missing targets end a chain). Only chains of two or more boxes are listed.
+   */
+  public static List<List<String>> chains(Document d) {
+    var boxes = new LinkedHashMap<String, Picture>();
+    map(d, p -> {
+      if (p.drawing != null && "textBox".equals(p.drawing.kind)) boxes.putIfAbsent(p.id(), p);
+      return p;
+    });
+    var prev = new LinkedHashMap<String, String>();
+    for (Picture p : boxes.values()) {
+      String n = p.drawing.get("linkNext", "");
+      if (!n.isEmpty() && !n.equals(p.id()) && boxes.containsKey(n)) prev.putIfAbsent(n, p.id());
+    }
+    var out = new ArrayList<List<String>>();
+    for (Picture p : boxes.values()) {
+      if (prev.containsKey(p.id())) continue;
+      var chain = new ArrayList<String>();
+      chain.add(p.id());
+      String at = p.id();
+      while (chain.size() < MAX_LINKED) {
+        String n = boxes.get(at).drawing.get("linkNext", "");
+        if (n.isEmpty() || !at.equals(prev.get(n)) || chain.contains(n)) break;
+        chain.add(n);
+        at = n;
+      }
+      if (chain.size() > 1) out.add(chain);
+    }
+    return out;
+  }
+
+  /** The box whose story box {@code id} shows: its chain's first box, or itself. */
+  public static String head(Document d, String id) {
+    for (List<String> c : chains(d)) if (c.contains(id)) return c.get(0);
+    return id;
+  }
+
+  /**
+   * The story box {@code id} holds for editing and layout: its own, followed for a chain's first
+   * box by any text its linked boxes still hold themselves (files from before stories flowed
+   * through chains kept a single string per box). Null without text.
+   */
+  public static Sequence<Block> story(Document d, String id) {
+    var box = find(d, id);
+    if (box == null || box.drawing == null) return null;
+    var out = box.drawing.storyOrText(id + "-t");
+    for (List<String> c : chains(d)) {
+      if (!c.get(0).equals(id)) continue;
+      for (int i = 1; i < c.size(); i++) {
+        var tail = find(d, c.get(i));
+        var more = tail.drawing.storyOrText(c.get(i) + "-t");
+        if (more == null) continue;
+        if (out == null) out = more;
+        else for (Block b : more) out = out.append(b);
+      }
+    }
+    return out;
+  }
+
+  /**
+   * Replaces the story of picture {@code id}; the boxes it links to hold no text of their own
+   * (the story flows through them).
+   */
   public static Document setStory(Document d, String id, Sequence<Block> story) {
-    return map(d, p -> p.id().equals(id) && p.drawing != null ? p.drawing(p.drawing.story(story)) : p);
+    var tails = new java.util.HashSet<String>();
+    for (List<String> c : chains(d)) if (c.get(0).equals(id)) tails.addAll(c.subList(1, c.size()));
+    return map(d, p -> {
+      if (p.drawing == null) return p;
+      if (p.id().equals(id)) return p.drawing(p.drawing.story(story));
+      if (tails.contains(p.id()) && (p.drawing.story != null || !p.drawing.get("text", "").isEmpty()))
+        return p.drawing(p.drawing.story(null).with("text", ""));
+      return p;
+    });
   }
 
   /** Maps every picture of the body, notes and headers/footers; returns d when none change. */

@@ -135,26 +135,24 @@ final class DrawingCommands implements Commands.Extension {
           if (from == to || source.drawing == null || target.drawing == null
               || !"textBox".equals(source.drawing.kind) || !"textBox".equals(target.drawing.kind))
             throw new IllegalArgumentException("Link two different text boxes");
+          // As Wordcraft's link_text_box: the source keeps its story, which flows on into the
+          // target (laid out by the layout engine); the target must be empty, not linked to by
+          // another box and not one the text already runs through.
           var d = source.drawing;
-          var text = d.get("text", "") + (target.drawing.get("text", "").isEmpty() ? "" : "\n" + target.drawing.get("text", ""));
-          float size = d.num("fontSize", 11), inset = d.num("inset", 7.2f);
-          var lines = DrawingOps.wrap(text, source.width - 2 * inset, size, d.flag("bold"));
-          int fits = Math.max(1, (int) ((source.height - 2 * inset) / (size * 1.2f)));
-          StringBuilder first = new StringBuilder(), rest = new StringBuilder();
-          for (int i = 0; i < lines.size(); i++) {
-            StringBuilder into = i < fits ? first : rest;
-            if (into.length() > 0) into.append(i < fits || into.length() > 0 ? " " : "");
-            into.append(lines.get(i));
+          if (!d.get("linkNext", "").isEmpty())
+            throw new IllegalArgumentException("This text box is already linked: break the link first");
+          if (!target.drawing.get("text", "").trim().isEmpty())
+            throw new IllegalArgumentException("The text box to link to must be empty");
+          var root = s.document();
+          for (java.util.List<String> chain : TextBoxes.chains(root)) {
+            if (chain.indexOf(target.id()) > 0)
+              throw new IllegalArgumentException("Another text box already links to that one");
+            if (chain.contains(source.id()) && chain.contains(target.id()))
+              throw new IllegalArgumentException("A text box can't link to a box its text already runs through");
           }
-          // Both boxes are in the story being edited: the body, or a table cell's blocks (as
-          // Wordcraft links boxes in any story), changed as one undo step.
-          var linked = source.drawing(d.with("text", first.toString()).with("linkNext", target.id()));
-          var continued = target.drawing(target.drawing.with("text", rest.toString()));
-          s.transact(x -> {
-            x.replacePicture(from, linked);
-            x.replacePicture(to, continued);
-          });
-          return Json.object("moved", rest.length());
+          var linked = source.drawing(d.with("linkNext", target.id()));
+          s.transact(x -> x.replacePicture(from, linked));
+          return Json.object("textBox", source.id(), "next", target.id());
         });
 
     // ---------------------------------------------------------------- WordArt

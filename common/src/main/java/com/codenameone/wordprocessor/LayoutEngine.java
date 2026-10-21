@@ -99,6 +99,12 @@ public final class LayoutEngine {
      */
     public String textBox;
 
+    /**
+     * For a text box line: the box whose story it shows (Wordcraft's shown_story), the first box
+     * of a linked chain or {@link #textBox} itself. Editing enters that story.
+     */
+    public String boxStory;
+
     /** A text box line's clip rectangle on the page {x, y, width, height}, in points. */
     public float[] boxClip;
 
@@ -492,6 +498,14 @@ public final class LayoutEngine {
       if (textBoxLines.isEmpty()) return Collections.emptyList();
       var out = new ArrayList<Line>();
       for (Line l : textBoxLines) if (id.equals(l.textBox)) out.add(l);
+      return out;
+    }
+
+    /** The text box lines showing box {@code id}'s story, in every box of its chain. */
+    public List<Line> storyLines(String id) {
+      if (textBoxLines.isEmpty()) return Collections.emptyList();
+      var out = new ArrayList<Line>();
+      for (Line l : textBoxLines) if (id.equals(l.boxStory)) out.add(l);
       return out;
     }
 
@@ -1674,7 +1688,7 @@ public final class LayoutEngine {
     }
     cache = nextCache;
     byContent = nextByContent;
-    for (Page page : b.pages) textBoxes(doc, page);
+    textBoxes(doc, b.pages);
     return new Result(doc, b.pages, measured, revision, warnings);
   }
 
@@ -1690,64 +1704,154 @@ public final class LayoutEngine {
   /** The line length stacked text is laid out in, one letter to a line (Wordcraft's STACK_WIDTH). */
   static final float STACK_WIDTH = 12;
 
-  /** Lays out the stories of the page's text boxes inside their text rectangles. */
-  private void textBoxes(Document doc, Page page) {
-    page.textBoxLines.clear();
-    for (PlacedPicture pic : page.paintedPictures()) {
-      var d = pic.picture().drawing;
-      if (!storyLaidOut(d)) continue;
-      var blocks = d.storyOrText(pic.picture().id() + "-t");
-      float[] rect = DrawingOps.textRect(d, pic.width(), pic.height());
-      if (rect[2] < 1 || rect[3] < 1) continue;
-      // As Wordcraft's textbox.rs: turned text runs along the box's height and its lines stack
-      // across its width (top-to-bottom ones from the right edge, bottom-to-top ones from the
-      // left); stacked text is one letter to a line.
-      var direction = d.get("textDirection", "horizontal");
-      int turn = "rotate90".equals(direction) ? 1 : "rotate270".equals(direction) ? 2 : 0;
-      boolean stacked = "stacked".equals(direction);
-      float along = turn == 0 ? rect[2] : rect[3], across = turn == 0 ? rect[3] : rect[2];
-      var laid = boxStory(doc, blocks, page.number, stacked ? STACK_WIDTH : along);
-      var valign = d.get("valign", "middle");
-      float slack = across - laid.height;
-      float off = "top".equals(valign) || slack < 0 ? 0 : "bottom".equals(valign) ? slack : slack / 2;
-      float bx = pic.x() + rect[0], by = pic.y() + rect[1];
-      float ox = turn == 1 ? bx + rect[2] - off : turn == 2 ? bx + off : bx;
-      float oy = turn == 1 ? by : turn == 2 ? by + rect[3] : by + off;
-      float angle = turn == 1 ? 90 : turn == 2 ? -90 : 0;
-      float[] clip = {bx, by, rect[2], rect[3]};
-      // A rotated box turns its story about the box centre with it (Wordcraft's Draw::Rotated).
-      float rotation = d.num("rotation", 0) % 360;
-      if (rotation != 0) {
-        double r = Math.toRadians(rotation);
-        float cx = pic.x() + pic.width() / 2, cy = pic.y() + pic.height() / 2;
-        float c = (float) Math.cos(r), sn = (float) Math.sin(r), dx = ox - cx, dy = oy - cy;
-        ox = cx + dx * c - dy * sn;
-        oy = cy + dx * sn + dy * c;
-        angle += rotation;
-        // The clip is the turned text area's page bounds.
-        float x0 = Float.MAX_VALUE, y0 = Float.MAX_VALUE, x1 = -Float.MAX_VALUE, y1 = -Float.MAX_VALUE;
-        for (int k = 0; k < 4; k++) {
-          float px = bx + (k % 2) * rect[2] - cx, py = by + (k / 2) * rect[3] - cy;
-          float qx = cx + px * c - py * sn, qy = cy + px * sn + py * c;
-          x0 = Math.min(x0, qx);
-          y0 = Math.min(y0, qy);
-          x1 = Math.max(x1, qx);
-          y1 = Math.max(y1, qy);
+  /**
+   * Lays out the stories of the pages' text boxes inside their text rectangles. A linked chain
+   * flows its first box's story through its boxes, as Wordcraft's textbox.rs flow: each box lays
+   * the story out at its own line length, starting at the line where the box before it was cut.
+   */
+  private void textBoxes(Document doc, List<Page> pages) {
+    for (Page page : pages) page.textBoxLines.clear();
+    var chains = TextBoxes.chains(doc);
+    var chained = new HashSet<String>();
+    for (List<String> chain : chains) chained.addAll(chain);
+    var placed = new HashMap<String, PlacedPicture>();
+    var pageOf = new HashMap<String, Page>();
+    for (Page page : pages)
+      for (PlacedPicture pic : page.paintedPictures()) {
+        String id = pic.picture().id();
+        if (chained.contains(id)) {
+          if (!placed.containsKey(id)) {
+            placed.put(id, pic);
+            pageOf.put(id, page);
+          }
+          continue;
         }
-        clip = new float[] {x0, y0, x1 - x0, y1 - y0};
+        var d = pic.picture().drawing;
+        if (storyLaidOut(d)) boxLines(doc, page, pic, d.storyOrText(id + "-t"), id, null, false);
       }
-      boolean turned = angle % 360 != 0;
-      for (Line l : laid.lines) {
-        var line = new Line(-1, -1, -1, l.paragraphId, pic.page() < 0 ? page.number : pic.page(),
-            turned ? l.x : ox + l.x, turned ? l.y : oy + l.y, raw(l), l.marker);
-        if (turned) line.turned(angle, ox, oy);
-        line.textBox = pic.picture().id();
-        line.boxCell = l.boxCell;
-        line.boxClip = clip;
-        page.textBoxLines.add(line);
+    for (List<String> chain : chains) {
+      var head = placed.get(chain.get(0));
+      if (head == null) continue;
+      var blocks = TextBoxes.story(doc, chain.get(0));
+      if (blocks == null) continue;
+      Cut cut = null;
+      for (int i = 0; i < chain.size(); i++) {
+        var pic = placed.get(chain.get(i));
+        if (pic == null) continue;
+        cut = boxLines(doc, pageOf.get(chain.get(i)), pic, blocks, chain.get(0), cut, i + 1 < chain.size());
+        if (cut == null) break;
       }
     }
   }
+
+  /** Where a linked box's text continues: the line of paragraph {@code id} holding {@code start}. */
+  private static final class Cut {
+    final String id;
+    final int start;
+
+    Cut(String id, int start) {
+      this.id = id;
+      this.start = start;
+    }
+  }
+
+  /**
+   * Lays out {@code blocks} (the story of box {@code story}) in box {@code pic} from {@code from}
+   * (null: the start). With {@code flow}, only the lines that fit are kept and the cut where the
+   * rest continues is returned; otherwise null.
+   */
+  private Cut boxLines(Document doc, Page page, PlacedPicture pic, Sequence<Block> blocks,
+      String story, Cut from, boolean flow) {
+    var d = pic.picture().drawing;
+    float[] rect = DrawingOps.textRect(d, pic.width(), pic.height());
+    if (rect[2] < 1 || rect[3] < 1) return flow ? from : null;
+    // As Wordcraft's textbox.rs: turned text runs along the box's height and its lines stack
+    // across its width (top-to-bottom ones from the right edge, bottom-to-top ones from the
+    // left); stacked text is one letter to a line.
+    var direction = d.get("textDirection", "horizontal");
+    int turn = "rotate90".equals(direction) ? 1 : "rotate270".equals(direction) ? 2 : 0;
+    boolean stacked = "stacked".equals(direction);
+    float along = turn == 0 ? rect[2] : rect[3], across = turn == 0 ? rect[3] : rect[2];
+    var laid = boxStory(doc, blocks, page.number, stacked ? STACK_WIDTH : along);
+    var lines = laid.lines;
+    float used = laid.height;
+    Cut next = null;
+    if (from != null || flow) {
+      // A linked box shows the story from the cut line down, moved up to its top, and keeps
+      // what fits (at least one line) when the text continues in another box.
+      float top = 0;
+      if (from != null) {
+        top = Float.NaN;
+        for (Line l : lines)
+          if (l.paragraphId.equals(from.id) && l.end > from.start) {
+            top = l.y;
+            break;
+          }
+        if (Float.isNaN(top)) return null;
+      }
+      var kept = new ArrayList<Line>();
+      float cutY = Float.MAX_VALUE, limit = across + .5f;
+      used = 0;
+      for (Line l : lines) {
+        if (l.y < top - .5f) continue;
+        float ly = l.y - top;
+        if (flow && !kept.isEmpty() && ly + l.height > limit) {
+          if (ly < cutY) {
+            cutY = ly;
+            next = new Cut(l.paragraphId, l.start);
+          }
+          continue;
+        }
+        if (next != null && ly >= cutY) continue;
+        kept.add(new Line(-1, -1, -1, l.paragraphId, l.page, l.x, ly, raw(l), l.marker));
+        kept.get(kept.size() - 1).boxCell = l.boxCell;
+        used = Math.max(used, ly + l.height);
+      }
+      lines = kept;
+    }
+    var valign = d.get("valign", "middle");
+    float slack = across - used;
+    float off = "top".equals(valign) || slack < 0 ? 0 : "bottom".equals(valign) ? slack : slack / 2;
+    float bx = pic.x() + rect[0], by = pic.y() + rect[1];
+    float ox = turn == 1 ? bx + rect[2] - off : turn == 2 ? bx + off : bx;
+    float oy = turn == 1 ? by : turn == 2 ? by + rect[3] : by + off;
+    float angle = turn == 1 ? 90 : turn == 2 ? -90 : 0;
+    float[] clip = {bx, by, rect[2], rect[3]};
+    // A rotated box turns its story about the box centre with it (Wordcraft's Draw::Rotated).
+    float rotation = d.num("rotation", 0) % 360;
+    if (rotation != 0) {
+      double r = Math.toRadians(rotation);
+      float cx = pic.x() + pic.width() / 2, cy = pic.y() + pic.height() / 2;
+      float c = (float) Math.cos(r), sn = (float) Math.sin(r), dx = ox - cx, dy = oy - cy;
+      ox = cx + dx * c - dy * sn;
+      oy = cy + dx * sn + dy * c;
+      angle += rotation;
+      // The clip is the turned text area's page bounds.
+      float x0 = Float.MAX_VALUE, y0 = Float.MAX_VALUE, x1 = -Float.MAX_VALUE, y1 = -Float.MAX_VALUE;
+      for (int k = 0; k < 4; k++) {
+        float px = bx + (k % 2) * rect[2] - cx, py = by + (k / 2) * rect[3] - cy;
+        float qx = cx + px * c - py * sn, qy = cy + px * sn + py * c;
+        x0 = Math.min(x0, qx);
+        y0 = Math.min(y0, qy);
+        x1 = Math.max(x1, qx);
+        y1 = Math.max(y1, qy);
+      }
+      clip = new float[] {x0, y0, x1 - x0, y1 - y0};
+    }
+    boolean turned = angle % 360 != 0;
+    for (Line l : lines) {
+      var line = new Line(-1, -1, -1, l.paragraphId, pic.page() < 0 ? page.number : pic.page(),
+          turned ? l.x : ox + l.x, turned ? l.y : oy + l.y, raw(l), l.marker);
+      if (turned) line.turned(angle, ox, oy);
+      line.textBox = pic.picture().id();
+      line.boxStory = story;
+      line.boxCell = l.boxCell;
+      line.boxClip = clip;
+      page.textBoxLines.add(line);
+    }
+    return next;
+  }
+
 
   /** A text box story laid out {@code width} points wide, as a header story is. */
   private StoryLayout boxStory(Document doc, Sequence<Block> blocks, int page, float width) {

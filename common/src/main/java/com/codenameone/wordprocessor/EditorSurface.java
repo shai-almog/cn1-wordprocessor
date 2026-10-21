@@ -667,7 +667,7 @@ public final class EditorSurface extends Container
     var result = layout();
     if (session.enclosingTextBox() != null) {
       var all = new ArrayList<LayoutEngine.Line>();
-      for (LayoutEngine.Page page : result.pages) all.addAll(page.textBoxLines(session.enclosingTextBox()));
+      for (LayoutEngine.Page page : result.pages) all.addAll(page.storyLines(session.enclosingTextBox()));
       return all;
     }
     if (session.noteStory() != null) {
@@ -2275,7 +2275,7 @@ public final class EditorSurface extends Container
     // In one of its cells, the cell's own lines (by their story path) only.
     String box = session.enclosingTextBox();
     if (box != null || line.textBox != null) {
-      if (box == null || !box.equals(line.textBox)) return -1;
+      if (box == null || !box.equals(line.boxStory)) return -1;
       if (session.textBoxStory() != null ? line.boxCell != null
           : !java.util.Arrays.equals(line.boxCell, session.cellPath())) return -1;
       var story = session.editingDocument();
@@ -2369,8 +2369,8 @@ public final class EditorSurface extends Container
 
   /** Enters the story a pressed line belongs to: a body cell, a note table's cell or the body. */
   private void enterLine(LayoutEngine.Line line) {
-    if (line.textBox != null && line.boxCell != null) session.enterTextBoxCell(line.textBox, line.boxCell);
-    else if (line.textBox != null) session.enterTextBox(line.textBox);
+    if (line.textBox != null && line.boxCell != null) session.enterTextBoxCell(line.boxStory, line.boxCell);
+    else if (line.textBox != null) session.enterTextBox(line.boxStory);
     else if (line.noteCell != null) session.enterNoteCell(line.note, line.noteCell);
     else if (line.row >= 0) session.enterCellPath(linePath(line));
     else if (session.noteStory() == null || editingBlock(line) < 0) session.leaveCell();

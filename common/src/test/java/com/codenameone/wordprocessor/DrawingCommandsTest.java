@@ -65,9 +65,20 @@ public class DrawingCommandsTest {
     int a = block(run(s, "insert.textBox", "text", "one two three four five six seven eight nine ten"));
     run(s, "picture.size", "block", a, "width", 60, "height", 30);
     int b = block(run(s, "insert.textBox", "text", ""));
-    Map<?, ?> moved = (Map<?, ?>) run(s, "shape.link", "block", a, "target", b);
-    assertTrue(((Number) moved.get("moved")).intValue() > 0);
-    assertFalse(drawing(s, b).get("text", "").isEmpty());
+    Map<?, ?> linked = (Map<?, ?>) run(s, "shape.link", "block", a, "target", b);
+    assertEquals(((Picture) s.document().blocks.get(b)).id(), linked.get("next"));
+    // The story stays in the first box and flows on into the second (Wordcraft's flow).
+    assertTrue(drawing(s, b).get("text", "").isEmpty());
+    assertEquals("one two three four five six seven eight nine ten", drawing(s, a).get("text", ""));
+    var page = new LayoutEngine(new PdfMetrics()).layout(s.document(), 0).pages.get(0);
+    String second = ((Picture) s.document().blocks.get(b)).id();
+    assertFalse(page.textBoxLines(second).isEmpty());
+    assertEquals(((Picture) s.document().blocks.get(a)).id(), page.textBoxLines(second).get(0).boxStory);
+    try {
+      run(s, "shape.link", "block", b, "target", a);
+      fail();
+    } catch (IllegalArgumentException expected) {
+    }
   }
 
   @Test
@@ -79,16 +90,16 @@ public class DrawingCommandsTest {
     run(s, "picture.size", "block", a, "width", 60, "height", 30);
     int b = block(run(s, "insert.textBox", "text", ""));
     assertTrue(s.inCell());
-    Map<?, ?> moved = (Map<?, ?>) run(s, "shape.link", "block", a, "target", b);
-    assertTrue(((Number) moved.get("moved")).intValue() > 0);
+    run(s, "shape.link", "block", a, "target", b);
     var cell = s.editingDocument();
     var first = ((Picture) cell.blocks.get(a)).drawing;
     var second = (Picture) cell.blocks.get(b);
     assertEquals(second.id(), first.get("linkNext", ""));
-    assertFalse(second.drawing.get("text", "").isEmpty());
+    assertEquals(java.util.Arrays.asList(((Picture) cell.blocks.get(a)).id(), second.id()),
+        TextBoxes.chains(s.document()).get(0));
     assertTrue(drawings(s.document()).isEmpty()); // both boxes stay in the cell
     s.undo();
-    assertTrue(((Picture) s.editingDocument().blocks.get(b)).drawing.get("text", "").isEmpty());
+    assertTrue(((Picture) s.editingDocument().blocks.get(a)).drawing.get("linkNext", "").isEmpty());
   }
 
   @Test

@@ -316,4 +316,36 @@ public class TextBoxStoryTest {
     }
     assertEquals(3, letters);
   }
+
+  @Test
+  public void linkedBoxesFlowOneStoryAndEditItFromAnyBox() throws Exception {
+    var story = new Sequence<Block>();
+    for (int i = 0; i < 8; i++) story = story.append(new Paragraph("p" + (40 + i), RichText.of("Line " + i)));
+    var head = Picture.drawing("i5", Drawing.of("textBox").with("valign", "top").with("linkNext", "i6").story(story), 120, 60, "", "left");
+    var tail = Picture.drawing("i6", Drawing.of("textBox").with("valign", "top"), 120, 400, "", "left");
+    var d = new Document(new Sequence<Block>().append(head).append(new Paragraph("p1", RichText.of("Body")))
+        .append(tail), PageSpec.A4, "T", 60);
+    var page = new LayoutEngine(new PdfMetrics()).layout(d, 0).pages.get(0);
+    var first = page.textBoxLines("i5");
+    var rest = page.textBoxLines("i6");
+    assertTrue(first.size() >= 1 && first.size() < 8);
+    assertEquals(8, first.size() + rest.size());
+    assertEquals("p40", first.get(0).paragraphId);
+    assertEquals("p" + (40 + first.size()), rest.get(0).paragraphId);
+    // The continued text starts at the top of the second box.
+    LayoutEngine.PlacedPicture second = null;
+    for (LayoutEngine.PlacedPicture p : page.pictures) if (p.picture().id().equals("i6")) second = p;
+    assertEquals(second.y() + 7.2f, rest.get(0).y, .5f);
+    for (LayoutEngine.Line l : rest) assertEquals("i5", l.boxStory);
+    // Entering the second box edits the first box's story.
+    var s = new Session(d);
+    s.enterTextBox("i6");
+    assertEquals("i5", s.textBoxStory());
+    s.select(7, 6, 6);
+    s.typeText("!", 0);
+    s.leaveCell();
+    assertEquals("Line 7!", ((Paragraph) TextBoxes.find(s.document(), "i5").drawing.story.get(7)).text.toString());
+    assertNull(TextBoxes.find(s.document(), "i6").drawing.story);
+    assertEquals(java.util.Arrays.asList("i5", "i6"), TextBoxes.chains(s.document()).get(0));
+  }
 }

@@ -146,6 +146,7 @@ public final class Session {
    * in text box {@code id}, as clicking a cell inside a text box does in Wordcraft.
    */
   public void enterTextBoxCell(String id, int[] path) {
+    id = TextBoxes.head(document(), id);
     if (id.equals(enclosingTextBox()) && java.util.Arrays.equals(path, cellPath())) return;
     if (!id.equals(textBoxStory())) {
       leaveCell();
@@ -170,12 +171,14 @@ public final class Session {
     finishComposition();
     cells = null;
     span = null;
+    // A linked box shows its chain's story: the first box's (Wordcraft's shown_story).
+    id = TextBoxes.head(document(), id);
     if (cell != null && id.equals(cell.textBox)) return;
     leaveCell();
     var box = TextBoxes.find(document, id);
     if (box == null || box.drawing == null || !box.drawing.storyKind())
       throw new IllegalArgumentException("Unknown text box");
-    var blocks = box.drawing.storyOrText(id + "-t");
+    var blocks = TextBoxes.story(document, id);
     if (blocks == null) blocks = Sequence.<Block>of(java.util.Collections.<Block>singletonList(
         new Paragraph(id + "-t0", new RichText())));
     var view =
