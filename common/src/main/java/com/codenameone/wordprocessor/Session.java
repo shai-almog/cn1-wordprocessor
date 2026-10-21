@@ -1642,7 +1642,17 @@ public final class Session {
           (body, change) ->
               range.map(
                   body,
-                  (p, a, b) -> a >= b ? p : p.text(p.text.format(a, b, key, value, change))),
+                  (p, a, b) -> {
+                    // As Wordcraft's format_range: a fully selected paragraph (empty ones
+                    // included) also gets its mark formatted; a partly selected one keeps its
+                    // mark, and a hyperlink never reaches the mark (it would follow Enter).
+                    boolean whole = a == 0 && b == p.text.length();
+                    var mark = p.text.markStyle();
+                    var text = a >= b ? p.text : p.text.format(a, b, key, value, change);
+                    text =
+                        text.markStyle(whole && !"link".equals(key) ? mark.with(key, value) : mark);
+                    return text == p.text ? p : p.text(text);
+                  }),
           "format");
       return;
     }
@@ -1838,6 +1848,22 @@ public final class Session {
   /** Rewrites each selected paragraph (one undo step); per-paragraph values such as swaps. */
   public interface ParagraphMap {
     Paragraph map(Paragraph p);
+  }
+
+  /**
+   * Wordcraft's para indent/outdent over the selected paragraphs: a list paragraph moves one
+   * level, any other snaps its left indent to the next (or previous) 36pt tab stop. Tab and
+   * Shift+Tab do this for a selection spanning paragraphs (text.tab, text.backTab).
+   */
+  public void stepIndent(final boolean outdent) {
+    mapParagraphs(
+        p -> {
+          if (!p.list.isEmpty())
+            return p.with(
+                "listLevel", String.valueOf(Math.max(0, Math.min(8, p.listLevel + (outdent ? -1 : 1)))));
+          float steps = outdent ? (float) Math.ceil(p.indent / 36f) - 1 : (float) Math.floor(p.indent / 36f) + 1;
+          return p.with("indent", String.valueOf(Math.max(0f, steps * 36f)));
+        });
   }
 
   public void mapParagraphs(final ParagraphMap f) {

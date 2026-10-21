@@ -121,4 +121,49 @@ public class MixedSelectionTest {
     for (Block b : NestedTableTest.outer(s).blocks(0, 0)) assertFalse(b instanceof Table);
     assertEquals(2, NestedTableTest.outer(s).rows());
   }
+
+  @Test
+  public void formattingAcrossFormatsMarksOfWholeParagraphsOnly() {
+    var s = NestedTableTest.sample();
+    s.selectAcross(BODY, 0, 0, INNER, 0, 3);
+    s.format("bold", "true");
+    assertTrue(s.document().paragraph(0).text.markStyle().bold);
+    assertTrue(NestedTableTest.outer(s).cell(0, 0).get(0).text.markStyle().bold);
+    var inner = NestedTableTest.inner(s).cell(0, 0).get(0).text;
+    assertFalse(inner.markStyle().bold);
+    assertTrue(inner.styleAt(1).bold);
+    s.selectAcross(BODY, 0, 0, INNER, 0, 5);
+    s.format("link", "https://example.com");
+    assertEquals("", s.document().paragraph(0).text.markStyle().link);
+  }
+
+  @Test
+  public void tabIndentsAndWordDeleteDeletesTheSelection() {
+    var s = NestedTableTest.sample();
+    s.selectAcross(INNER, 0, 2, BODY, 0, 2);
+    s.stepIndent(false);
+    assertEquals(36f, s.document().paragraph(0).indent, 0.01);
+    assertEquals(36f, NestedTableTest.inner(s).cell(0, 0).get(0).indent, 0.01);
+    assertNotNull(s.mixedSelection());
+    s.stepIndent(true);
+    assertEquals(0f, s.document().paragraph(0).indent, 0.01);
+    TextNavigation.deleteWord(s, false);
+    assertNull(s.mixedSelection());
+    assertEquals("Bo", s.document().paragraph(0).text.toString());
+    assertEquals("ner", innerText(s));
+  }
+
+  @Test
+  public void selectionCellTakesANestedPath() {
+    var s = NestedTableTest.sample();
+    new Commands()
+        .execute(
+            s,
+            "selection.cell",
+            Json.object(
+                "path", java.util.Arrays.asList(1, 0, 0, 1, 0, 0),
+                "paragraph", 0, "start", 1, "end", 3));
+    assertArrayEquals(INNER, s.cellPath());
+    assertEquals("nn", s.selectedText());
+  }
 }

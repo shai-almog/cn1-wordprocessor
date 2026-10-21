@@ -87,7 +87,8 @@ public final class TextNavigation {
   /** Delete the selected range or one word through the normal undo/revision transaction. */
   public static void deleteWord(Session session, boolean forward) {
     var selection = session.selection();
-    if (session.cellSelection() != null || !selection.collapsed()) {
+    // Any selection, a cross-story one included, is deleted whole (Wordcraft's delete_word_*).
+    if (session.cellSelection() != null || session.mixedSelection() != null || !selection.collapsed()) {
       session.replace("");
       return;
     }

@@ -3010,6 +3010,12 @@ public final class EditorSurface extends Container
           didEdit();
           return;
         }
+        if (session.mixedSelection() != null) {
+          // A selection spanning paragraphs indents them, as Wordcraft's text.tab does.
+          session.stepIndent(extend);
+          didEdit();
+          return;
+        }
         if (!p.list.isEmpty()) {
           session.paragraph(
               "listLevel",

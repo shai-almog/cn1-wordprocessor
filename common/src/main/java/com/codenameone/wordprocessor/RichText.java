@@ -475,6 +475,16 @@ public final class RichText {
     return new RichText(join(join(l[0], r.root), right[1]), r.emptyStyle);
   }
 
+  /** The paragraph mark's formatting (what an empty paragraph shows and types with). */
+  public TextStyle markStyle() {
+    return emptyStyle;
+  }
+
+  /** This text with its paragraph mark formatted as {@code mark}. */
+  public RichText markStyle(TextStyle mark) {
+    return mark == emptyStyle ? this : new RichText(root, mark);
+  }
+
   public RichText format(int a, int b, final String key, final String value) {
     range(a, b);
     Node[] l = split(root, a), r = split(l[1], b - a);

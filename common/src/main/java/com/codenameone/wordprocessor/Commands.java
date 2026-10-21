@@ -292,9 +292,15 @@ public final class Commands {
           return null;
         });
     query(
-        "selection.cell", "block:integer,row:integer,column:integer,paragraph:integer,start:integer,end:integer",
-        "Select rich text in a table cell", (s, a) -> {
-          s.enterCell(integer(a, "block"), integer(a, "row"), integer(a, "column"));
+        "selection.cell",
+        "block?:integer,row?:integer,column?:integer,path?:array,paragraph:integer,start:integer,end:integer",
+        "Select rich text in a table cell; path [block,row,column,...] reaches a nested cell", (s, a) -> {
+          if (a.get("path") instanceof List<?>) {
+            int[] path = matchPath(a);
+            if (path.length == 0 || path.length % 3 != 0)
+              throw new IllegalArgumentException("path is [block,row,column] per table level");
+            s.enterCellPath(path);
+          } else s.enterCell(integer(a, "block"), integer(a, "row"), integer(a, "column"));
           s.select(integer(a, "paragraph"), integer(a, "start"), integer(a, "end"));
           return null;
         });

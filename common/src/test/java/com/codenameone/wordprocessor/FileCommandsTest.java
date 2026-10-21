@@ -154,6 +154,25 @@ public class FileCommandsTest {
   }
 
   @Test
+  public void accessibilityChecksTablesAsWordcraft() {
+    var s = new Session(Document.empty());
+    s.replace("Body");
+    s.insertTable(3, 3);
+    s.setCell(1, 0, 0, "a");
+    s.setCell(1, 2, 0, "b");
+    s.mergeCells(1, 2, 0, 1, 2);
+    Map<?, ?> r = (Map<?, ?>) run(s, "file.accessibility");
+    var codes = new StringBuilder();
+    for (Object o : (List<?>) r.get("issues")) codes.append(((Map<?, ?>) o).get("code")).append(' ');
+    String c = codes.toString();
+    assertTrue(c, c.contains("table-alt-text"));
+    assertTrue(c, c.contains("blank-row"));
+    assertTrue(c, c.contains("blank-column"));
+    assertTrue(c, c.contains("merged-cells"));
+    assertTrue(c, c.contains("table-header"));
+  }
+
+  @Test
   public void speechDurationScalesWithRateAndEngineIsReplaceable() {
     assertTrue(Speech.duration("one two three four", 2f) < Speech.duration("one two three four", 1f));
     assertTrue(Speech.duration("a b c d e f g h", 1f) > Speech.duration("a b", 1f));

@@ -242,9 +242,14 @@ final class FileCommands implements Commands.Extension {
       if (b instanceof Picture picture) {
         if (picture.alt.trim().isEmpty())
           issues.add(issue("error", i, "missing-alt-text", "Picture has no alternative text"));
+        // As Wordcraft's "floating" tip: a wrapped object's reading order is unclear.
+        if (!"inline".equals(picture.wrap()))
+          issues.add(
+              issue("tip", i, "floating", "Object isn't in line with text, so its reading order is unclear"));
       } else if (b instanceof Table t) {
-        if (t.format.headerRows == 0)
+        if (t.rows() >= 2 && t.format.headerRows == 0)
           issues.add(issue("warning", i, "table-header", "Table has no header row"));
+        tableChecks(t, i, issues);
       } else if (b instanceof Paragraph p) {
         final int block = i;
         int level =
@@ -296,6 +301,37 @@ final class FileCommands implements Commands.Extension {
     int errors = 0;
     for (Object o : issues) if ("error".equals(((Map<?, ?>) o).get("severity"))) errors++;
     return Json.object("errors", errors, "issues", issues);
+  }
+
+  /** Wordcraft's tableAltText, blankRow, blankColumn and mergedCells checks. */
+  private static void tableChecks(Table t, int i, List<Object> issues) {
+    if ((t.format.title == null || t.format.title.trim().isEmpty())
+        && (t.format.description == null || t.format.description.trim().isEmpty()))
+      issues.add(issue("warning", i, "table-alt-text", "Table has no alternative text"));
+    int rows = t.rows(), cols = t.columns();
+    boolean[][] empty = new boolean[rows][cols];
+    boolean filled = false;
+    for (int r = 0; r < rows; r++)
+      for (int c = 0; c < cols; c++) {
+        empty[r][c] = true;
+        for (Paragraph p : t.cell(r, c)) empty[r][c] &= p.text.plainText().trim().isEmpty();
+        filled |= !empty[r][c];
+      }
+    // A table with nothing in it yet is being filled in, not used for spacing.
+    if (rows >= 2 && filled)
+      for (int r = 0; r < rows; r++) {
+        boolean all = true;
+        for (int c = 0; c < cols; c++) all &= empty[r][c];
+        if (all) issues.add(issue("warning", i, "blank-row", "Row " + (r + 1) + " of a table is empty: it looks like spacing"));
+      }
+    if (cols >= 2 && rows >= 2 && filled)
+      for (int c = 0; c < Math.min(cols, 63); c++) {
+        boolean all = true;
+        for (int r = 0; r < rows; r++) all &= empty[r][c];
+        if (all) issues.add(issue("warning", i, "blank-column", "Column " + (c + 1) + " of a table is empty: it looks like spacing"));
+      }
+    if (!t.merges.isEmpty())
+      issues.add(issue("tip", i, "merged-cells", "Table has merged cells, which screen readers can lose track of"));
   }
 
   private static Map<String, Object> issue(String severity, int block, String code, String message) {
