@@ -2115,6 +2115,37 @@ public final class EditorSurface extends Container
     } else host.updateTextInputState(input, getEditingState());
   }
 
+  /** True while a platform text input session delivers keys through {@link #onKeyCommand}. */
+  boolean textInputActive() {
+    return input != null;
+  }
+
+  @Override
+  public void keyPressed(int keyCode) {
+    if (!rawKey(keyCode)) super.keyPressed(keyCode);
+  }
+
+  @Override
+  public void keyRepeated(int keyCode) {
+    if (!rawKey(keyCode)) super.keyRepeated(keyCode);
+  }
+
+  /**
+   * Raw key fallback, as Codename One's EditorView.handleNavKey: with no text input session bound
+   * (the simulator, or a port without the API) arrows and Backspace/Delete still edit. When input
+   * is active the platform delivers these through onKeyCommand, so they are not handled twice.
+   */
+  boolean rawKey(int keyCode) {
+    if (textInputActive()) return false;
+    Display d = Display.getInstance();
+    int command = EditKeys.rawCommand(keyCode, d.getGameAction(keyCode));
+    if (command < 0) return false;
+    onKeyCommand(
+        command,
+        EditKeys.rawModifiers(d.isShiftKeyDown(), d.isAltKeyDown(), d.isMetaKeyDown(), d.isControlKeyDown()));
+    return true;
+  }
+
   public void stopInput() {
     session.breakTypingGroup();
     finishComposing();

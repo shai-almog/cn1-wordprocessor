@@ -386,4 +386,69 @@ public class SimulatorUiTest {
           assertEquals(13, s.end());
         });
   }
+
+  // ---- 4. Raw key fallback and the Speech group --------------------------------------------
+
+  @Test
+  public void rawKeysNavigateOnlyWithoutTextInput() throws Exception {
+    edt(
+        () -> {
+          load("one two");
+          var editor = editor();
+          var d = Display.getInstance();
+          int right = d.getKeyCode(Display.GAME_RIGHT);
+          if (editor.textInputActive()) {
+            org.junit.Assert.assertFalse("Active input owns the keys", editor.rawKey(right));
+            return;
+          }
+          editor.keyPressed(right);
+          at(0, 1);
+          editor.keyRepeated(right);
+          at(0, 2);
+          editor.keyPressed(d.getKeyCode(Display.GAME_LEFT));
+          at(0, 1);
+          editor.keyPressed(127);
+          assertEquals("oe two", session().document().plainText().trim());
+          editor.keyPressed(8);
+          assertEquals("e two", session().document().plainText().trim());
+          at(0, 0);
+          org.junit.Assert.assertFalse("Letters are not raw editing keys", editor.rawKey('a'));
+        });
+  }
+
+  private static Component named(Component c, String name) {
+    if (name.equals(c.getName())) return c;
+    if (c instanceof Container k)
+      for (int i = 0; i < k.getComponentCount(); i++) {
+        Component f = named(k.getComponentAt(i), name);
+        if (f != null) return f;
+      }
+    return null;
+  }
+
+  @Test
+  public void reviewRibbonHasSpeechGroupWithPersistedSpeed() throws Exception {
+    String saved = AppOptions.get("readAloudRate");
+    try {
+      edt(
+          () -> {
+            Speech.rate(1.5f);
+            Object tracking = field(app, "trackingButton");
+            Method m = WordProcessor.class.getDeclaredMethod("review");
+            m.setAccessible(true);
+            Container review = (Container) m.invoke(app);
+            Field f = WordProcessor.class.getDeclaredField("trackingButton");
+            f.setAccessible(true);
+            f.set(app, tracking);
+            assertNotNull("Speech group", named(review, "Reading speed"));
+            @SuppressWarnings("unchecked")
+            com.codename1.ui.ComboBox<String> speed = (com.codename1.ui.ComboBox<String>) named(review, "Reading speed");
+            assertEquals("1.5x", speed.getSelectedItem());
+            speed.setSelectedIndex(0);
+            assertEquals(.5f, Speech.rate(), .001f);
+          });
+    } finally {
+      AppOptions.set("readAloudRate", saved);
+    }
+  }
 }

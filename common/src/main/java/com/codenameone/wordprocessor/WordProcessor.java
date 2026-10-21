@@ -3453,6 +3453,13 @@ public class WordProcessor {
                                 + " pages"),
                     true))),
         OfficeTheme.group(
+            "Speech",
+            OfficeTheme.row(
+                iconButton("Read Aloud", FontImage.MATERIAL_RECORD_VOICE_OVER, () -> readAloud("start"), true),
+                iconButton("Stop Reading", FontImage.MATERIAL_STOP, () -> readAloud("stop"), true),
+                iconButton("Dictate", FontImage.MATERIAL_MIC, this::dictate, true),
+                readingSpeed())),
+        OfficeTheme.group(
             "Comments",
             OfficeTheme.row(
                 iconButton("New comment", FontImage.MATERIAL_COMMENT, this::newComment, true),
@@ -4800,7 +4807,6 @@ public class WordProcessor {
   }
 
   private com.codename1.ui.util.UITimer readAloudTimer;
-  private float readAloudRate = 1f;
 
   /**
    * Read Aloud: speaks the sentence at the caret through {@link Speech}, then advances sentence by
@@ -4818,7 +4824,7 @@ public class WordProcessor {
     }
     Map<?, ?> r;
     try {
-      r = (Map<?, ?>) commands.execute(session, "review.readAloud", Json.object("action", action, "rate", readAloudRate));
+      r = (Map<?, ?>) commands.execute(session, "review.readAloud", Json.object("action", action, "rate", Speech.rate()));
     } catch (RuntimeException e) {
       return;
     }
@@ -4826,10 +4832,28 @@ public class WordProcessor {
     edited(false);
     if (!Boolean.TRUE.equals(r.get("reading"))) return;
     String text = String.valueOf(r.get("text"));
+    float readAloudRate = Speech.rate();
     Speech.engine().speak(text, readAloudRate);
     readAloudTimer =
         com.codename1.ui.util.UITimer.timer(
             (int) Speech.duration(text, readAloudRate), false, form, () -> readAloud("next"));
+  }
+
+  /** Reading speed choice for the Speech group; persisted in AppOptions and used by the next sentence. */
+  private Component readingSpeed() {
+    String[] labels = new String[Speech.RATES.length];
+    int selected = 2;
+    float current = Speech.rate();
+    for (int i = 0; i < labels.length; i++) {
+      labels[i] = Speech.label(Speech.RATES[i]);
+      if (Math.abs(Speech.RATES[i] - current) < .01f) selected = i;
+    }
+    var speed = new ComboBox<String>(labels);
+    speed.setName("Reading speed");
+    speed.setSelectedIndex(selected);
+    speed.addSelectionListener((o, n) -> Speech.rate(Speech.RATES[Math.max(0, n)]));
+    styleCombo(speed);
+    return speed;
   }
 
   /** Dictate: recognizes one utterance and inserts it at the caret. */

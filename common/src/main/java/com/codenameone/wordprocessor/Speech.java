@@ -114,4 +114,34 @@ final class Speech {
     long ms = (long) (Math.max(1, words) * 375 / Math.max(.25f, rate));
     return ms + 400;
   }
+
+  /** Read Aloud speeds offered in the ribbon, as Word's 0.5x..2x reading speed slider. */
+  static final float[] RATES = {.5f, .75f, 1f, 1.25f, 1.5f, 2f};
+
+  /** Ribbon label for a rate, for example "1.25x". */
+  static String label(float rate) {
+    int hundredths = Math.round(rate * 100);
+    String s = (hundredths / 100) + "." + (hundredths % 100 < 10 ? "0" : "") + (hundredths % 100);
+    if (s.endsWith("0")) s = s.substring(0, s.length() - 1);
+    if (s.endsWith(".0")) s = s.substring(0, s.length() - 2);
+    return s + "x";
+  }
+
+  /** The persisted Read Aloud rate (AppOptions "readAloudRate"), clamped to the offered range. */
+  static float rate() {
+    try {
+      return clamp(Float.parseFloat(AppOptions.get("readAloudRate")));
+    } catch (RuntimeException e) {
+      return 1f;
+    }
+  }
+
+  static void rate(float r) {
+    AppOptions.set("readAloudRate", String.valueOf(clamp(r)));
+  }
+
+  static float clamp(float r) {
+    if (Float.isNaN(r)) return 1f;
+    return Math.max(RATES[0], Math.min(RATES[RATES.length - 1], r));
+  }
 }

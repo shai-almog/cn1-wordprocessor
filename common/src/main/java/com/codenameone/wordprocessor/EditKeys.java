@@ -60,4 +60,34 @@ final class EditKeys {
   static boolean wordDelete(int modifiers) {
     return (modifiers & (TextInputClient.MOD_ALT | TextInputClient.MOD_CTRL)) != 0;
   }
+
+  /**
+   * Raw key fallback used when no platform text input session is bound (for example the
+   * simulator): the TextInputClient command for a key code and its game action, as Codename One's
+   * EditorView.handleNavKey resolves them, or -1 when the key is not an editing key.
+   */
+  static int rawCommand(int keyCode, int gameAction) {
+    switch (gameAction) {
+      case com.codename1.ui.Display.GAME_LEFT:
+        return TextInputClient.KEY_LEFT;
+      case com.codename1.ui.Display.GAME_RIGHT:
+        return TextInputClient.KEY_RIGHT;
+      case com.codename1.ui.Display.GAME_UP:
+        return TextInputClient.KEY_UP;
+      case com.codename1.ui.Display.GAME_DOWN:
+        return TextInputClient.KEY_DOWN;
+      default:
+        break;
+    }
+    if (keyCode == 8) return TextInputClient.KEY_BACKSPACE;
+    if (keyCode == 127) return TextInputClient.KEY_DELETE;
+    return -1;
+  }
+
+  /** Modifier mask from the raw modifier state; Meta (Cmd) and Ctrl both mean the line/document jump. */
+  static int rawModifiers(boolean shift, boolean alt, boolean meta, boolean ctrl) {
+    return (shift ? TextInputClient.MOD_SHIFT : 0)
+        | (alt ? TextInputClient.MOD_ALT : 0)
+        | (meta || ctrl ? TextInputClient.MOD_CTRL : 0);
+  }
 }
