@@ -3277,7 +3277,16 @@ public final class Session {
               long[] ids = {id};
               inserted.add(table.renumbered(ids));
               id = ids[0];
-            } else if (source instanceof Picture picture) inserted.add(picture.copy("i" + id++));
+            } else if (source instanceof Picture picture) {
+              var copy = picture.copy("i" + id++);
+              if (copy.drawing != null && copy.drawing.story != null) {
+                // A pasted text box's paragraphs get fresh ids (comments anchor by them).
+                long[] ids = {id};
+                copy = copy.drawing(copy.drawing.story(TextBoxes.renumber(copy.drawing.story, ids)));
+                id = ids[0];
+              }
+              inserted.add(copy);
+            }
           }
           if (inserted.get(0) instanceof Paragraph) {
             var p = (Paragraph) inserted.get(0);

@@ -40,6 +40,8 @@ final class DocxNotes {
       var links = new DocxLinks(parts, "word/_rels/" + kind + "s.xml.rels");
       DocxLists.Read lists = DocxLists.read(parts.get("word/numbering.xml"), warnings);
       var pictures = new DocxPictures(parts, "word/_rels/" + kind + "s.xml.rels");
+      Docx.stories(pictures, next, warnings, lists, styles, links,
+          comments != null ? comments : new DocxComments(Collections.<String, byte[]>emptyMap()));
       for (Element entry : Xml.children(Xml.parse(bytes), kind)) {
         String type = Xml.attr(entry, "type", "normal"), key = Xml.attr(entry, "id", "");
         if (!"normal".equals(type)) continue;
@@ -128,6 +130,7 @@ final class DocxNotes {
       out.append("<w:").append(kind).append(" w:type=\"separator\" w:id=\"-1\"><w:p><w:r><w:separator/></w:r></w:p></w:").append(kind).append(">");
       var links = new DocxLinks(parts, "word/_rels/" + name + ".xml.rels");
       var pictures = new DocxPictures(parts, "word/_rels/" + name + ".xml.rels");
+      Docx.stories(pictures, width, lists, tabs, links, commentsOrEmpty());
       for (Note note : notes) {
         if (!kind.equals(note.kind)) continue;
         out.append("<w:").append(kind).append(" w:id=\"").append(ids.get(note.id)).append("\">");

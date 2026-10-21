@@ -138,6 +138,7 @@ final class DocxFurniture {
       // The main part's marker flag does not cover header parts (as for note parts).
       boolean wasMarkers = comments.markers, wasSupported = comments.bookmarks.supported;
       comments.markers = true;
+      Docx.stories(pictures, id, warnings, lists, styles, links, comments);
       // Bookmark marks are read in header/footer parts too (as Wordcraft's marks in any story).
       for (Element child : Xml.children(Xml.parse(data), null)) {
         String name = Xml.local(child);
@@ -216,6 +217,7 @@ final class DocxFurniture {
               .append(R)
               .append("\">");
       var pictures = new DocxPictures(parts, relPath);
+      Docx.stories(pictures, document.page.contentWidth(), lists, tabs, links, marks());
       var story = document.furniture.blocks(key);
       for (Block block : story)
         if (block instanceof Paragraph para)

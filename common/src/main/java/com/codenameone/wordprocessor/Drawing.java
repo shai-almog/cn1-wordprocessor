@@ -34,10 +34,94 @@ public final class Drawing {
   public final String kind;
   private final TreeMap<String, String> props;
 
+  /**
+   * A text box's (or shape's) own block story, as Wordcraft's text boxes hold a part of blocks:
+   * paragraphs with ids, tables and pictures; null for a drawing whose text is the single
+   * "text" property (older files, WordArt, equations and linked boxes).
+   */
+  public final Sequence<Block> story;
+
   private Drawing(String kind, TreeMap<String, String> props) {
+    this(kind, props, null);
+  }
+
+  private Drawing(String kind, TreeMap<String, String> props, Sequence<Block> story) {
     if (!KINDS.contains(kind)) throw new IllegalArgumentException("Unknown drawing kind: " + kind);
     this.kind = kind;
     this.props = props;
+    this.story = story;
+  }
+
+  /** Whether this kind of drawing can hold a block story (Wordcraft's wps:txbx shapes). */
+  public boolean storyKind() {
+    return "textBox".equals(kind) || "shape".equals(kind);
+  }
+
+  /**
+   * This drawing with {@code blocks} as its text story; the "text" property mirrors its plain
+   * text (paragraphs on lines) for search, counts and the legacy text paths. Null or empty
+   * removes the story.
+   */
+  public Drawing story(Sequence<Block> blocks) {
+    if (blocks == null || blocks.size() == 0) return new Drawing(kind, props, null);
+    boolean any = false;
+    for (Block b : blocks) any |= b instanceof Paragraph;
+    if (!any) throw new IllegalArgumentException("A text box story needs a paragraph");
+    var next = new TreeMap<String, String>(props);
+    String plain = plainText(blocks);
+    if (plain.isEmpty()) next.remove("text");
+    else next.put("text", plain.length() > 200000 ? plain.substring(0, 200000) : plain);
+    return new Drawing(kind, next, blocks);
+  }
+
+  /** The story's text: paragraphs (and table cells) on their own lines. */
+  public static String plainText(Sequence<Block> blocks) {
+    var b = new StringBuilder();
+    appendText(b, blocks);
+    return b.toString();
+  }
+
+  private static void appendText(StringBuilder b, Sequence<Block> blocks) {
+    for (Block block : blocks)
+      if (block instanceof Paragraph p) {
+        if (b.length() > 0) b.append('\n');
+        b.append(p.text.plainText());
+      } else if (block instanceof Table t)
+        for (int r = 0; r < t.rows(); r++)
+          for (int c = 0; c < t.columns(); c++) if (!t.covered(r, c)) appendText(b, t.blocks(r, c));
+  }
+
+  /**
+   * The story shown for this drawing: its own, or for a legacy single-string text box the text
+   * as paragraphs formatted by the drawing's text properties (font size, bold, italic, color
+   * and alignment), with ids {@code prefix}0, {@code prefix}1 and so on. Null without text.
+   */
+  public Sequence<Block> storyOrText(String prefix) {
+    if (story != null) return story;
+    var text = get("text", "");
+    if (text.isEmpty() || !storyKind()) return null;
+    boolean box = "textBox".equals(kind);
+    var style = TextStyle.DEFAULT.with("size", FloatPosition.num(num("fontSize", 11)));
+    if (flag("bold")) style = style.with("bold", "true");
+    if (flag("italic")) style = style.with("italic", "true");
+    int color = color("textColor", box ? 0 : 0xffffff);
+    if (color >= 0) style = style.with("color", hex6(color));
+    var align = get("align", box ? "left" : "center");
+    if (!"center".equals(align) && !"right".equals(align)) align = "left";
+    var out = new Sequence<Block>();
+    int i = 0;
+    for (String line : DrawingOps.split(text, '\n')) {
+      var p = new Paragraph(prefix + i++, RichText.of(line, style));
+      if (!"left".equals(align)) p = p.with("align", align);
+      out = out.append(p.with("after", "0"));
+    }
+    return out;
+  }
+
+  private static String hex6(int rgb) {
+    var s = Integer.toHexString(rgb & 0xffffff);
+    while (s.length() < 6) s = "0" + s;
+    return s;
   }
 
   public static Drawing of(String kind) {
@@ -88,7 +172,11 @@ public final class Drawing {
     var next = new TreeMap<String, String>(props);
     if (value == null || value.isEmpty()) next.remove(key);
     else next.put(key, value);
-    return new Drawing(kind, next);
+    // Setting the plain text replaces a story whose text it does not match (the single-string
+    // editing paths: linked boxes, the text dialog); other properties keep the story.
+    var keep = story;
+    if (keep != null && "text".equals(key) && !plainText(keep).equals(value == null ? "" : value)) keep = null;
+    return new Drawing(kind, next, keep);
   }
 
   public Map<String, String> properties() {
@@ -146,7 +234,8 @@ public final class Drawing {
   }
 
   public boolean equals(Object o) {
-    return o instanceof Drawing d && d.kind.equals(kind) && d.props.equals(props);
+    return o instanceof Drawing d && d.kind.equals(kind) && d.props.equals(props)
+        && java.util.Objects.equals(d.story, story);
   }
 
   public int hashCode() {

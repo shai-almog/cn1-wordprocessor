@@ -101,6 +101,7 @@ public final class Docx {
     pictures.present = Xml.mayContain(root, "drawing") || Xml.mayContain(root, "oMath")
         || Xml.mayContain(root, "oMathPara");
     long[] id = {1};
+    stories(pictures, id, warnings, lists, styles, links, comments);
     links.notes = new DocxNotes(parts, id, warnings, styles, comments);
     var blocks = new ArrayList<Block>();
     var sectionElements = new LinkedHashMap<String, Element>();
@@ -252,6 +253,78 @@ public final class Docx {
       DocxLinks links,
       DocxComments comments) {
     return readTable(table, id, warnings, lists, styles, links, comments, null);
+  }
+
+  /**
+   * A w:txbxContent's blocks as a text box story (Wordcraft's text box part): paragraphs, with
+   * comment ranges and bookmarks, tables and pictures, ids from the part's counter.
+   */
+  static Sequence<Block> readStory(
+      Element content,
+      long[] id,
+      Set<String> warnings,
+      DocxLists.Read lists,
+      DocxStyles styles,
+      DocxLinks links,
+      DocxComments comments,
+      DocxPictures pictures) {
+    var out = new Sequence<Block>();
+    for (Element child : Xml.children(content, null)) {
+      String kind = Xml.local(child);
+      if ("tbl".equals(kind)) {
+        var table = readTable(child, id, warnings, lists, styles, links, comments, pictures);
+        if (table != null) out = out.append(table);
+      } else if ("p".equals(kind)) {
+        var paragraphWarnings = new LinkedHashSet<String>();
+        Paragraph p = paragraph(child, id, paragraphWarnings, lists, styles, links, comments);
+        // A drawing inside a text box (Word allows pictures, not text boxes) follows its paragraph.
+        var images = pictures == null ? java.util.Collections.<Picture>emptyList() : pictures.read(child, id, warnings);
+        if (!images.isEmpty()) paragraphWarnings.remove("Run feature: drawing");
+        warnings.addAll(paragraphWarnings);
+        if (images.isEmpty() || p.text.length() > 0) out = out.append(p);
+        for (Picture image : images)
+          out = out.append(image.drawing != null && image.drawing.story != null ? image.drawing(image.drawing.story(null)) : image);
+      }
+    }
+    if (out.size() > 0 && !(out.get(out.size() - 1) instanceof Paragraph))
+      out = out.append(new Paragraph("p" + id[0]++, new RichText()));
+    return out;
+  }
+
+  /** A text box story as w:txbxContent children (comment ranges and bookmarks included). */
+  static String writeStory(
+      Sequence<Block> story,
+      float width,
+      DocxLists lists,
+      DocxTabs tabs,
+      DocxLinks links,
+      DocxComments comments,
+      DocxPictures pictures) {
+    var b = new StringBuilder();
+    for (Block block : story)
+      if (block instanceof Paragraph p) writeParagraph(b, p, lists, tabs, links, comments);
+      else if (block instanceof Table t) writeTable(b, t, width, lists, tabs, links, comments, pictures);
+      else if (block instanceof Picture picture && pictures != null) pictures.write(b, picture);
+    if (story.size() == 0 || !(story.get(story.size() - 1) instanceof Paragraph)) b.append("<w:p/>");
+    return b.toString();
+  }
+
+  /** Lets {@code pictures} read and write text box stories with this part's context. */
+  static void stories(
+      DocxPictures pictures,
+      long[] id,
+      Set<String> warnings,
+      DocxLists.Read readLists,
+      DocxStyles styles,
+      DocxLinks links,
+      DocxComments comments) {
+    pictures.storyReader =
+        e -> readStory(e, id, warnings, readLists, styles, links, comments, pictures);
+  }
+
+  static void stories(
+      DocxPictures pictures, float width, DocxLists lists, DocxTabs tabs, DocxLinks links, DocxComments comments) {
+    pictures.storyWriter = s -> writeStory(s, width, lists, tabs, links, comments, pictures);
   }
 
   /** As above; {@code pictures} reads the cells' drawings (inline and floating) into the cell. */
@@ -736,6 +809,7 @@ static final char COLUMN_BREAK = '\u000B';
       var comments = new DocxComments(d);
       links.notes.comments = comments;
       var pictures = new DocxPictures(parts);
+      stories(pictures, d.page.contentWidth(), lists, tabs, links, comments);
       var furniture = new ArrayList<DocxFurniture>();
       boolean even = false;
       for (Section.Range section : d.sectionRanges()) even |= section.raw.furniture.differentEven;

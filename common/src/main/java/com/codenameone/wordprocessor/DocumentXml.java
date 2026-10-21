@@ -172,8 +172,17 @@ public final class DocumentXml {
     if (picture.drawing != null)
       b.append(" drawing=\"").append(Xml.attribute(controlsOut(picture.drawing.encode()))).append('"');
     b.append(">")
-        .append(com.codename1.util.Base64.encodeNoNewline(picture.originalBytes()))
-        .append("</picture>");
+        .append(com.codename1.util.Base64.encodeNoNewline(picture.originalBytes()));
+    if (picture.drawing != null && picture.drawing.story != null) {
+      // A text box's block story (paragraph ids in the document's id space, for comments).
+      b.append("<textStory>");
+      for (Block block : picture.drawing.story)
+        if (block instanceof Paragraph para) paragraph(b, para);
+        else if (block instanceof Table t) table(b, t);
+        else if (block instanceof Picture inner) picture(b, inner);
+      b.append("</textStory>");
+    }
+    b.append("</picture>");
   }
 
   private static void page(StringBuilder b, PageSpec p) {
@@ -219,7 +228,7 @@ public final class DocumentXml {
     var picture =
         new Picture(
             id(c, ids),
-            com.codename1.util.Base64.decode(Xml.text(c).getBytes("UTF-8")),
+            com.codename1.util.Base64.decode(pictureData(c).getBytes("UTF-8")),
             f(c, "width"),
             f(c, "height"),
             Xml.attr(c, "alt", ""),
@@ -228,7 +237,31 @@ public final class DocumentXml {
                 .wrap(Xml.attr(c, "wrap", "inline"), Xml.attr(c, "wrapPolygon", "")).position(Xml.attr(c, "position", "")));
     if (!Xml.attr(c, "drawing", "").isEmpty())
       picture = picture.drawing(Drawing.decode(controlsIn(Xml.attr(c, "drawing", ""))));
+    Element story = Xml.child(c, "textStory");
+    if (story != null && picture.drawing != null && picture.drawing.storyKind()) {
+      var blocks = new Sequence<Block>();
+      for (Element e : Xml.children(story, null))
+        if ("p".equals(Xml.local(e))) blocks = blocks.append(readParagraph(e, ids));
+        else if ("table".equals(Xml.local(e))) blocks = blocks.append(readTable(e, ids));
+        else if ("picture".equals(Xml.local(e))) blocks = blocks.append(readPicture(e, ids));
+      if (blocks.size() > 0) {
+        try {
+          picture = picture.drawing(picture.drawing.story(blocks));
+        } catch (IllegalArgumentException noParagraph) {
+          throw new IOException("Text box story without a paragraph");
+        }
+      }
+    }
     return picture;
+  }
+
+  /** A picture's base64 data: its own text, not a text box story's (older files: all text). */
+  private static String pictureData(Element c) {
+    if (Xml.child(c, "textStory") == null) return Xml.text(c);
+    var b = new StringBuilder();
+    for (int i = 0; i < c.getNumChildren(); i++)
+      if (c.getChildAt(i).isTextElement()) b.append(c.getChildAt(i).getText());
+    return b.toString();
   }
 
   private static PageSpec readPage(Element page) throws IOException {

@@ -417,7 +417,21 @@ public final class ReviewComment {
         if (found != null) return found;
       }
     }
+    // Text box stories (Wordcraft's text box parts), each a story of its own.
+    for (Picture box : TextBoxes.all(document)) {
+      found = scanFurniture(TEXT_BOX + box.id(), box.drawing.story, id, result);
+      if (found != null) return found;
+    }
     return null;
+  }
+
+  /** The anchor story key prefix of a text box story; the picture id follows. */
+  public static final String TEXT_BOX = "textbox:";
+
+  /** The text box picture id of an anchor in a text box story, or null. */
+  public static String textBox(Anchor a) {
+    return a == null || a.furniture == null || !a.furniture.startsWith(TEXT_BOX)
+        ? null : a.furniture.substring(TEXT_BOX.length());
   }
 
   private static Anchor scanFurniture(

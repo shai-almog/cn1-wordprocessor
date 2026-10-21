@@ -57,7 +57,7 @@ final class DocxDrawings {
           .append(Xml.attribute(dgm[2])).append("\" r:cs=\"").append(Xml.attribute(dgm[3])).append("\"/>");
     } else if ("shape".equals(d.kind) || "textBox".equals(d.kind)) {
       b.append("<a:graphicData uri=\"").append(WPS).append("\">");
-      shape(b, d, cx, cy);
+      shape(b, d, cx, cy, parts);
     } else {
       b.append("<a:graphicData uri=\"").append(WPG).append("\"><wpg:wgp xmlns:wpg=\"").append(WPG)
           .append("\"><wpg:cNvGrpSpPr/><wpg:grpSpPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"")
@@ -202,6 +202,10 @@ final class DocxDrawings {
   }
 
   private static void shape(StringBuilder b, Drawing d, long cx, long cy) {
+    shape(b, d, cx, cy, null);
+  }
+
+  private static void shape(StringBuilder b, Drawing d, long cx, long cy, DocxPictures parts) {
     boolean box = "textBox".equals(d.kind);
     String geometry = box ? "rect" : d.get("shape", "rect");
     b.append("<wps:wsp xmlns:wps=\"").append(WPS).append("\"><wps:cNvSpPr")
@@ -214,7 +218,11 @@ final class DocxDrawings {
     line(b, d.color("line", box ? 0 : 0x2f528f), d.num("lineWidth", 1), 255);
     b.append("</wps:spPr>");
     var text = d.get("text", "");
-    if (!text.isEmpty()) {
+    if (d.story != null && parts != null && parts.storyWriter != null) {
+      // The text box's own block story: paragraphs, runs, tables and comment ranges.
+      b.append("<wps:txbx><w:txbxContent>").append(parts.storyWriter.apply(d.story))
+          .append("</w:txbxContent></wps:txbx>");
+    } else if (!text.isEmpty()) {
       b.append("<wps:txbx><w:txbxContent>");
       for (String para : DrawingOps.split(text, '\n')) {
         var align = d.get("align", box ? "left" : "center");

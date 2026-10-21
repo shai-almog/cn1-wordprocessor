@@ -65,6 +65,12 @@ final class DocxPictures {
     return descendant(paragraph, "drawing") != null;
   }
 
+  /** Reads a w:txbxContent as a text box story in the owning part's context, or null. */
+  java.util.function.Function<Element, Sequence<Block>> storyReader;
+
+  /** Writes a text box story as w:txbxContent children in the owning part's context, or null. */
+  java.util.function.Function<Sequence<Block>, String> storyWriter;
+
   /** False when the part has no drawing or equation, so paragraphs need no picture search. */
   boolean present = true;
 
@@ -89,6 +95,7 @@ final class DocxPictures {
         Drawing drawing = DocxDrawings.extension(container);
         if (drawing == null) drawing = DocxDrawings.shape(container, warnings, rid -> parts.get(targets.get(rid)));
         if (drawing == null && extent0 != null) drawing = object(container, extent0, warnings);
+        drawing = story(container, drawing);
         if (drawing != null && !"inline".equals(wrap[0]) && !"equation".equals(drawing.kind))
           drawing = drawing.with("wrap", wrap[0]).with("wrapPolygon", wrap[1]).with("position", wrap[3]);
         if (drawing != null && extent0 != null) {
@@ -130,6 +137,22 @@ final class DocxPictures {
       return;
     }
     for (Element child : Xml.children(e, null)) collect(child, result, id, warnings);
+  }
+
+  /**
+   * A shape's or text box's w:txbxContent as its block story (as Wordcraft reads text box parts);
+   * group members keep their text as a string.
+   */
+  private Drawing story(Element container, Drawing drawing) {
+    if (drawing == null || !drawing.storyKind() || storyReader == null) return drawing;
+    if (descendant(container, "wgp") != null) return drawing;
+    Element wsp = descendant(container, "wsp");
+    Element content = wsp == null ? null : descendant(wsp, "txbxContent");
+    if (content == null) return drawing;
+    var blocks = storyReader.apply(content);
+    boolean any = false;
+    for (Block b : blocks) any |= b instanceof Paragraph;
+    return any ? drawing.story(blocks) : drawing;
   }
 
   /**
