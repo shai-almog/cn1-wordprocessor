@@ -47,7 +47,18 @@ public final class ListNumbers {
       java.util.Arrays.asList(
           "decimal", "lowerLetter", "upperLetter", "lowerRoman", "upperRoman", "outline", "legal",
           "bullet", "decimalZero", "ordinal", "cardinalText", "ordinalText", "chicago",
-          "numberInDash", "none");
+          "numberInDash", "none", "ideographDigital", "koreanDigital2", "taiwaneseDigital",
+          "japaneseCounting", "japaneseLegal", "japaneseDigitalTenThousand", "aiueo", "aiueoFullWidth",
+          "iroha", "irohaFullWidth", "decimalFullWidth", "decimalFullWidth2", "decimalHalfWidth",
+          "decimalEnclosedCircle", "decimalEnclosedCircleChinese", "decimalEnclosedFullstop",
+          "decimalEnclosedParen", "ideographEnclosedCircle", "ideographTraditional", "ideographZodiac",
+          "ideographZodiacTraditional", "ideographLegalTraditional", "taiwaneseCounting",
+          "taiwaneseCountingThousand", "chineseCounting", "chineseCountingThousand",
+          "chineseLegalSimplified", "koreanCounting", "koreanDigital", "koreanLegal", "ganada", "chosung",
+          // Kept and written back, drawn as decimal (as in Wordcraft, which does not draw them yet).
+          "hebrew1", "hebrew2", "arabicAlpha", "arabicAbjad", "hindiVowels", "hindiConsonants",
+          "hindiNumbers", "hindiCounting", "thaiLetters", "thaiNumbers", "thaiCounting", "russianLower",
+          "russianUpper", "vietnameseCounting");
 
   public static boolean valid(String listFormat) {
     int bar = listFormat.indexOf('|');
@@ -97,6 +108,8 @@ public final class ListNumbers {
 
   public static String format(int number, String format) {
     format = levelFormat(format, 0);
+    String cjk = CjkNumbers.format(number, format);
+    if (cjk != null) return cjk;
     if (format.endsWith("Letter")) {
       // Word letters repeat past z (aa, bb, ...), as Wordcraft; at most 780 (30 z's).
       if (number <= 0) return "";
