@@ -3486,7 +3486,8 @@ public class WordProcessor {
             "Compare",
             OfficeTheme.row(
                 iconButton(
-                    "Compare documents", FontImage.MATERIAL_COMPARE, this::compareDialog, true))),
+                    "Compare documents", FontImage.MATERIAL_COMPARE, this::compareDialog, true),
+                button("Combine\u2026", this::combineDialog))),
         OfficeTheme.group(
             "Changes",
             OfficeTheme.row(
@@ -3526,32 +3527,76 @@ public class WordProcessor {
         (name, path, bytes) ->
             safe(
                 () -> {
-                  try {
-                    Document revised;
-                    if (name.toLowerCase().endsWith(".docx")) {
-                      Docx.Opened opened = Docx.read(new ByteArrayInputStream(bytes));
-                      if (!opened.warnings.isEmpty()
-                          && !showDialog(
-                              "Compatibility report",
-                              new SpanLabelCompat(join(opened.warnings)),
-                              "Compare copy",
-                              "Cancel")) return;
-                      revised = opened.document;
-                    } else if (name.toLowerCase().endsWith(".doc")) {
-                      revised = DocBinary.read(bytes).document;
-                    } else if (name.toLowerCase().endsWith(".odt")) {
-                      revised = Odt.read(new ByteArrayInputStream(bytes)).document;
-                    } else if (name.toLowerCase().endsWith(".cn1doc"))
-                      revised = ProjectFile.read(bytes).document;
-                    else if (name.toLowerCase().endsWith(".txt"))
-                      revised =
-                          TextFormats.read(new String(bytes, "UTF-8"), RichTextFormat.PLAIN_TEXT);
-                    else
-                      throw new IllegalArgumentException("Choose a DOCX, CN1DOC or text document");
-                    compareOptions(revised);
-                  } catch (IOException error) {
-                    throw new IllegalArgumentException(error.getMessage());
-                  }
+                  Document revised = revisedCopy(name, bytes, "Compare copy");
+                  if (revised != null) compareOptions(revised);
+                }));
+  }
+
+  /** Reads a reviewer's copy for Compare or Combine; null when the compatibility report is cancelled. */
+  private Document revisedCopy(String name, byte[] bytes, String proceed) {
+    try {
+      String lower = name.toLowerCase();
+      if (lower.endsWith(".docx")) {
+        Docx.Opened opened = Docx.read(new ByteArrayInputStream(bytes));
+        if (!opened.warnings.isEmpty()
+            && !showDialog(
+                "Compatibility report", new SpanLabelCompat(join(opened.warnings)), proceed, "Cancel"))
+          return null;
+        return opened.document;
+      }
+      if (lower.endsWith(".doc")) return DocBinary.read(bytes).document;
+      if (lower.endsWith(".odt")) return Odt.read(new ByteArrayInputStream(bytes)).document;
+      if (lower.endsWith(".cn1doc")) return ProjectFile.read(bytes).document;
+      if (lower.endsWith(".txt"))
+        return TextFormats.read(new String(bytes, "UTF-8"), RichTextFormat.PLAIN_TEXT);
+      throw new IllegalArgumentException("Choose a DOCX, DOC, ODT, CN1DOC or text document");
+    } catch (IOException error) {
+      throw new IllegalArgumentException(error.getMessage());
+    }
+  }
+
+  /**
+   * Review > Combine (Wordcraft review.combine): merges a reviewer's revised copy into this
+   * document as that reviewer's tracked changes, keeping the copy's comments.
+   */
+  private void combineDialog() {
+    editor.stopInput();
+    if (files == null) throw new IllegalArgumentException("File picker is unavailable");
+    files.open(
+        (name, path, bytes) ->
+            safe(
+                () -> {
+                  Document revised = revisedCopy(name, bytes, "Combine copy");
+                  if (revised == null) return;
+                  String who = revised.properties.get("lastModifiedBy");
+                  var author = field(who == null || who.trim().isEmpty() ? "Reviewer" : who);
+                  if (!showDialog(
+                      "Combine documents",
+                      BoxLayout.encloseY(
+                          OfficeTheme.label(
+                              "Merge the reviewer's copy into this document as tracked changes.",
+                              12,
+                              OfficeTheme.INK),
+                          formRow("Label changes with", author)),
+                      "Combine",
+                      "Cancel")) return;
+                  Map<?, ?> result =
+                      (Map<?, ?>)
+                          commands.execute(
+                              session,
+                              "review.combine",
+                              Json.object(
+                                  "xml", DocumentXml.write(revised), "author", author.getText()));
+                  editor.resetScroll();
+                  edited();
+                  showDialog(
+                      "Combine complete",
+                      result.get("changes")
+                          + " changed ranges from "
+                          + result.get("author")
+                          + ". Use Accept or Reject to review them.",
+                      "OK",
+                      null);
                 }));
   }
 
@@ -3656,7 +3701,9 @@ public class WordProcessor {
     for (ReviewComment c : session.document().comments) {
       var row = new Container(BoxLayout.y());
       OfficeTheme.space(row, 6, 6, 8, 8);
-      row.add(new Label(c.author + (c.resolved ? " \u00b7 Resolved" : "")));
+      String when = ReviewComment.displayDate(c.date);
+      row.add(new Label(c.author + (when.isEmpty() ? "" : " \u00b7 " + when)
+          + (c.resolved ? " \u00b7 Resolved" : "")));
       row.add(new SpanLabelCompat(c.text));
       for (int replyIndex = 0; replyIndex < c.replies.size(); replyIndex++) {
         final int index = replyIndex;
@@ -3664,7 +3711,9 @@ public class WordProcessor {
         var editReply = button("Edit reply", () -> editComment(dialog, c, index));
         editReply.setAccessibilityText("Edit reply " + (index + 1) + " by " + reply.author);
         Container replyView =
-            BoxLayout.encloseY(new Label(reply.author), new SpanLabelCompat(reply.text), editReply);
+            BoxLayout.encloseY(
+                new Label(reply.author + (reply.date.isEmpty() ? "" : " \u00b7 " + ReviewComment.displayDate(reply.date))),
+                new SpanLabelCompat(reply.text), editReply);
         OfficeTheme.space(replyView, 4, 4, 16, 0);
         row.add(replyView);
       }
@@ -3797,6 +3846,11 @@ public class WordProcessor {
     });
     view("view.marks", "Show or hide formatting marks", "value?:boolean", a ->
         editor.setShowMarks(Commands.flag(a, "value", !editor.isShowMarks())));
+    view("view.hiddenText", "Always show hidden text, apart from the other formatting marks",
+        "value?:boolean", a -> {
+          setOption("showHiddenText", String.valueOf(
+              Commands.flag(a, "value", !AppOptions.flag("showHiddenText"))));
+        });
     view("view.ruler", "Show or hide the ruler", "value?:boolean", a -> {
       showRulers(Commands.flag(a, "value", ruler.isHidden()));
     });
@@ -5505,6 +5559,8 @@ public class WordProcessor {
         pane.add(settingsHeading("Show in document"));
         pane.add(settingsFlag("Comments", "showComments"));
         pane.add(settingsFlag("Hide ink annotations", "hideInk"));
+        pane.add(settingsHeading("Always show these formatting marks"));
+        pane.add(settingsFlag("Hidden text", "showHiddenText"));
       }
       case "AutoCorrect" -> {
         pane.add(settingsHeading("As you type"));

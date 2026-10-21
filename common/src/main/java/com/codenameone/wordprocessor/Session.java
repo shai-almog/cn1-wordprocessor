@@ -886,7 +886,9 @@ public final class Session {
           }
           var comments = new ArrayList<ReviewComment>(document.comments);
           var id = "c" + document.nextId;
-          comments.add(new ReviewComment(id, author, text, startId, start, endId, end, false));
+          comments.add(
+              new ReviewComment(id, author, text, startId, start, endId, end, false,
+                  java.util.Collections.<ReviewComment.Reply>emptyList(), ReviewComment.now()));
           document = document.blocks(document.blocks, document.nextId + 1).comments(comments);
         });
   }
@@ -1587,7 +1589,8 @@ public final class Session {
                         comment.endId,
                         z,
                         comment.resolved,
-                        comment.replies));
+                        comment.replies,
+                        comment.date));
             }
             for (Bookmark mark : new ArrayList<Bookmark>(bookmarks.values())) {
               int a =

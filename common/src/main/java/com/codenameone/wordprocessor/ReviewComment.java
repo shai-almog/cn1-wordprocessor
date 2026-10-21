@@ -6,16 +6,46 @@ public final class ReviewComment {
   public final int start, end;
   public final boolean resolved;
   public final java.util.List<Reply> replies;
+  /** When the comment was written, ISO 8601 (Wordcraft Comment.date, w:date); "" when unknown. */
+  public final String date;
 
   public static final class Reply {
     public final String author, text;
+    /** ISO 8601 or "". */
+    public final String date;
 
     public Reply(String author, String text) {
+      this(author, text, "");
+    }
+
+    public Reply(String author, String text, String date) {
       if (author == null || text == null || author.trim().isEmpty() || text.trim().isEmpty())
         throw new IllegalArgumentException("Enter a reply author and text");
       this.author = author;
       this.text = text;
+      this.date = date == null ? "" : date;
     }
+  }
+
+  /** The current UTC time as Word writes w:date (second precision, Z). */
+  public static String now() {
+    var c = java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone("UTC"));
+    c.setTime(new java.util.Date());
+    return c.get(java.util.Calendar.YEAR) + "-" + two(c.get(java.util.Calendar.MONTH) + 1) + "-"
+        + two(c.get(java.util.Calendar.DAY_OF_MONTH)) + "T" + two(c.get(java.util.Calendar.HOUR_OF_DAY))
+        + ":" + two(c.get(java.util.Calendar.MINUTE)) + ":" + two(c.get(java.util.Calendar.SECOND)) + "Z";
+  }
+
+  private static String two(int v) {
+    return v < 10 ? "0" + v : String.valueOf(v);
+  }
+
+  /** A date for display: "2024-03-05 14:07" from ISO 8601, "" when absent or malformed. */
+  public static String displayDate(String iso) {
+    if (iso == null || iso.length() < 10) return "";
+    String day = iso.substring(0, 10);
+    if (iso.length() >= 16 && iso.charAt(10) == 'T') return day + " " + iso.substring(11, 16);
+    return day;
   }
 
   public ReviewComment(
@@ -49,6 +79,21 @@ public final class ReviewComment {
       int end,
       boolean resolved,
       java.util.List<Reply> replies) {
+    this(id, author, text, startId, start, endId, end, resolved, replies, "");
+  }
+
+  public ReviewComment(
+      String id,
+      String author,
+      String text,
+      String startId,
+      int start,
+      String endId,
+      int end,
+      boolean resolved,
+      java.util.List<Reply> replies,
+      String date) {
+    this.date = date == null ? "" : date;
     this.replies = java.util.Collections.unmodifiableList(new java.util.ArrayList<Reply>(replies));
     if (id == null
         || author == null
@@ -68,13 +113,22 @@ public final class ReviewComment {
   }
 
   public ReviewComment resolved(boolean value) {
-    return new ReviewComment(id, author, text, startId, start, endId, end, value, replies);
+    return new ReviewComment(id, author, text, startId, start, endId, end, value, replies, date);
   }
 
   public ReviewComment reply(String author, String text) {
+    return reply(author, text, now());
+  }
+
+  public ReviewComment reply(String author, String text, String date) {
     var next = new java.util.ArrayList<Reply>(replies);
-    next.add(new Reply(author, text));
-    return new ReviewComment(id, this.author, this.text, startId, start, endId, end, false, next);
+    next.add(new Reply(author, text, date));
+    return new ReviewComment(id, this.author, this.text, startId, start, endId, end, false, next, this.date);
+  }
+
+  /** This comment with its date replaced. */
+  public ReviewComment dated(String value) {
+    return new ReviewComment(id, author, text, startId, start, endId, end, resolved, replies, value);
   }
 
   /** Replaces thread text or one reply without changing authors, anchors or resolution. */
@@ -84,10 +138,10 @@ public final class ReviewComment {
     if (replyIndex < -1 || replyIndex >= replies.size())
       throw new IllegalArgumentException("Unknown reply");
     if (replyIndex == -1)
-      return new ReviewComment(id, author, value, startId, start, endId, end, resolved, replies);
+      return new ReviewComment(id, author, value, startId, start, endId, end, resolved, replies, date);
     var next = new java.util.ArrayList<Reply>(replies);
-    next.set(replyIndex, new Reply(replies.get(replyIndex).author, value));
-    return new ReviewComment(id, author, text, startId, start, endId, end, resolved, next);
+    next.set(replyIndex, new Reply(replies.get(replyIndex).author, value, replies.get(replyIndex).date));
+    return new ReviewComment(id, author, text, startId, start, endId, end, resolved, next, date);
   }
 
   /**
@@ -277,7 +331,7 @@ public final class ReviewComment {
   private static ReviewComment relocated(ReviewComment comment, Document document, int[] range) {
     return new ReviewComment(comment.id, comment.author, comment.text,
         document.blocks.get(range[0]).id(), range[1], document.blocks.get(range[2]).id(),
-        range[3], comment.resolved, comment.replies);
+        range[3], comment.resolved, comment.replies, comment.date);
   }
 
   private static java.util.List<ReviewComment> move(
@@ -326,6 +380,6 @@ public final class ReviewComment {
     start = Math.min(start, a.value.text.length());
     end = Math.min(end, z.value.text.length());
     if (!validRange(after, startId, start, endId, end)) return null;
-    return new ReviewComment(c.id, c.author, c.text, startId, start, endId, end, c.resolved, c.replies);
+    return new ReviewComment(c.id, c.author, c.text, startId, start, endId, end, c.resolved, c.replies, c.date);
   }
 }

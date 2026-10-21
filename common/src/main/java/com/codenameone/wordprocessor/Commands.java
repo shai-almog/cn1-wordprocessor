@@ -1277,6 +1277,8 @@ public final class Commands {
                     c.author,
                     "text",
                     c.text,
+                    "date",
+                    c.date,
                     "replies",
                     replies(c),
                     "resolved",
@@ -1326,7 +1328,7 @@ public final class Commands {
   private static List<Object> replies(ReviewComment c) {
     var out = new ArrayList<Object>();
     for (ReviewComment.Reply reply : c.replies)
-      out.add(Json.object("author", reply.author, "text", reply.text));
+      out.add(Json.object("author", reply.author, "text", reply.text, "date", reply.date));
     return out;
   }
 

@@ -32,7 +32,7 @@ final class DocxComments {
         byParagraph.put(Xml.attr(p, "paraId", ""), Xml.attr(c, "id", ""));
       }
       definitions.put(
-          Xml.attr(c, "id", ""), new String[] {Xml.attr(c, "author", "Author"), text.toString()});
+          Xml.attr(c, "id", ""), new String[] {Xml.attr(c, "author", "Author"), text.toString(), Xml.attr(c, "date", "")});
     }
     bytes = parts.get("word/commentsExtended.xml");
     if (bytes != null)
@@ -137,7 +137,9 @@ final class DocxComments {
               start,
               endIds.get(id),
               end,
-              resolved.contains(id)));
+              resolved.contains(id),
+              java.util.Collections.<ReviewComment.Reply>emptyList(),
+              e.getValue()[2]));
     }
     for (Map.Entry<String, String> reply : parents.entrySet()) {
       var parent = reply.getValue();
@@ -157,7 +159,7 @@ final class DocxComments {
       for (int i = 0; i < result.size(); i++)
         if (result.get(i).id.equals("comment" + parent)) {
           var root = result.get(i);
-          result.set(i, root.reply(definition[0], definition[1]).resolved(root.resolved));
+          result.set(i, root.reply(definition[0], definition[1], definition[2]).resolved(root.resolved));
           found = true;
           break;
         }
@@ -259,9 +261,9 @@ final class DocxComments {
     int replyId = comments.size();
     for (int i = 0; i < comments.size(); i++) {
       var c = comments.get(i);
-      writeComment(b, i, c.author, c.text);
+      writeComment(b, i, c.author, c.text, c.date);
       for (ReviewComment.Reply reply : c.replies)
-        writeComment(b, replyId++, reply.author, reply.text);
+        writeComment(b, replyId++, reply.author, reply.text, reply.date);
     }
     parts.put("word/comments.xml", b.append("</w:comments>").toString().getBytes("UTF-8"));
     part(
@@ -294,12 +296,13 @@ final class DocxComments {
         "application/vnd.openxmlformats-officedocument.wordprocessingml.commentsExtended+xml");
   }
 
-  private static void writeComment(StringBuilder b, int id, String author, String text) {
+  private static void writeComment(StringBuilder b, int id, String author, String text, String date) {
     b.append("<w:comment w:id=\"")
         .append(id)
         .append("\" w:author=\"")
-        .append(Xml.escape(author))
-        .append("\">");
+        .append(Xml.escape(author));
+    if (!date.isEmpty()) b.append("\" w:date=\"").append(Xml.escape(date));
+    b.append("\">");
     String[] paragraphs = TextUtil.split(text, '\n');
     for (int line = 0; line < paragraphs.length; line++) {
       b.append("<w:p");

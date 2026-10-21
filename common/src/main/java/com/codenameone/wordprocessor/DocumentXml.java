@@ -105,13 +105,15 @@ public final class DocumentXml {
           .append("\" end=\"")
           .append(c.end)
           .append("\" resolved=\"")
-          .append(c.resolved)
-          .append("\"><text>")
+          .append(c.resolved);
+      if (!c.date.isEmpty()) b.append("\" date=\"").append(Xml.escape(c.date));
+      b.append("\"><text>")
           .append(Xml.escape(c.text))
           .append("</text>");
       for (ReviewComment.Reply reply : c.replies)
         b.append("<reply author=\"")
             .append(Xml.escape(reply.author))
+            .append(reply.date.isEmpty() ? "" : "\" date=\"" + Xml.escape(reply.date))
             .append("\">")
             .append(Xml.escape(reply.text))
             .append("</reply>");
@@ -256,7 +258,7 @@ public final class DocumentXml {
   private static List<ReviewComment.Reply> readReplies(Element comment) {
     var replies = new ArrayList<ReviewComment.Reply>();
     for (Element r : Xml.children(comment, "reply"))
-      replies.add(new ReviewComment.Reply(Xml.attr(r, "author", "Author"), Xml.text(r)));
+      replies.add(new ReviewComment.Reply(Xml.attr(r, "author", "Author"), Xml.text(r), Xml.attr(r, "date", "")));
     return replies;
   }
 
@@ -462,7 +464,8 @@ public final class DocumentXml {
                   Xml.attr(c, "endId", ""),
                   Integer.parseInt(Xml.attr(c, "end", "0")),
                   flag(c, "resolved"),
-                  readReplies(c)));
+                  readReplies(c),
+                  Xml.attr(c, "date", "")));
         else if ("furniture".equals(Xml.local(c))) {
           furniture = readFurniture(c, ids);
         } else if ("sections".equals(Xml.local(c))

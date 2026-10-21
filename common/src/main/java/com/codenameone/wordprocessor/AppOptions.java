@@ -39,6 +39,8 @@ public final class AppOptions {
     d.put("printMarkup", "true");
     d.put("showComments", "true");
     d.put("hideInk", "false");
+    // Display > Hidden text: shown without turning on every formatting mark (Wordcraft marks.hidden).
+    d.put("showHiddenText", "false");
     d.put("officeTheme", "system");
     // The page goes dark with the app in Dark Mode, as in Word; View > Dark Page overrides it.
     d.put("darkPage", "true");

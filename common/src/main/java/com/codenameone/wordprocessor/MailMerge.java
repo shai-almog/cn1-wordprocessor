@@ -466,7 +466,8 @@ public final class MailMerge {
                 id(c.endId, "p"),
                 offset(c.endId, c.end),
                 c.resolved,
-                c.replies));
+                c.replies,
+                c.date));
       var marks = new LinkedHashMap<String, Bookmark>();
       for (Bookmark b : source.bookmarks.values()) {
         var name = names.get(b.name);

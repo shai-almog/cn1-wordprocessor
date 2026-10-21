@@ -168,8 +168,8 @@ final class OfficeCommands implements Commands.Extension {
           var out = new ArrayList<Object>();
           for (ReviewComment rc : s.document().comments) {
             var replies = new ArrayList<Object>();
-            for (ReviewComment.Reply r : rc.replies) replies.add(Json.object("author", r.author, "text", r.text));
-            out.add(Json.object("id", rc.id, "author", rc.author, "text", rc.text, "resolved", rc.resolved, "replies", replies));
+            for (ReviewComment.Reply r : rc.replies) replies.add(Json.object("author", r.author, "text", r.text, "date", r.date));
+            out.add(Json.object("id", rc.id, "author", rc.author, "text", rc.text, "date", rc.date, "resolved", rc.resolved, "replies", replies));
           }
           return Json.object("shown", AppOptions.flag("showComments"), "comments", out);
         });

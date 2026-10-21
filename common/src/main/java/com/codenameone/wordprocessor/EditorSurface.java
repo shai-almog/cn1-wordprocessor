@@ -1060,6 +1060,25 @@ public final class EditorSurface extends Container
     return (r + shift) << 16 | (g + shift) << 8 | (b + shift);
   }
 
+  /**
+   * Hidden text is drawn (with its dotted underline) with formatting marks on or with the
+   * separate Display option "Hidden text" (Wordcraft's prefs.marks.hidden).
+   */
+  public boolean isShowHidden() {
+    return showMarks || AppOptions.flag("showHiddenText");
+  }
+
+  private void paintHiddenUnderline(Graphics g, LayoutEngine.Line line, int lx, int ly, float scale) {
+    g.setColor(OfficeTheme.chrome(0x5b7fa6));
+    for (LayoutEngine.Span span : line.spans) {
+      if (!span.style.characters.hidden) continue;
+      int sx = lx + Math.round(span.x * scale), sy = ly + Math.round(span.top * scale);
+      var f = font(span.glyphStyle, zoom);
+      for (int x = sx; x < sx + Math.round(span.width * scale); x += 3)
+        g.fillRect(x, sy + f.getHeight() - 1, 1, 1);
+    }
+  }
+
   public void setShowMarks(boolean value) {
     showMarks = value;
     repaint();
@@ -1774,7 +1793,7 @@ public final class EditorSurface extends Container
               Math.round(line.height * scale));
         }
         for (LayoutEngine.Span span : line.spans) {
-          if (span.style.characters.hidden && !showMarks) continue;
+          if (span.style.characters.hidden && !isShowHidden()) continue;
           var f = font(span.glyphStyle, zoom);
           g.setFont(f);
           int sx = lx + Math.round(span.x * scale), sy = ly + Math.round(span.top * scale);
@@ -1837,6 +1856,7 @@ public final class EditorSurface extends Container
           }
         }
         if (showMarks) paintMarks(g, line, lx, ly, scale);
+        else if (isShowHidden()) paintHiddenUnderline(g, line, lx, ly, scale);
         g.setColor(ink(0x242424));
         for (float bar : line.barTabs)
           g.fillRect(

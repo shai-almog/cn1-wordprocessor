@@ -95,6 +95,7 @@ public class WordXmlTest {
     assertEquals(1, Notes.all(d).size());
     assertEquals(1, d.comments.size());
     assertEquals("Ann", d.comments.get(0).author);
+    assertEquals("2005-01-02T03:04:00Z", d.comments.get(0).date);
     int pictures = 0;
     boolean box = false;
     for (int i = 0; i < d.blocks.size(); i++)
