@@ -1944,9 +1944,9 @@ public final class EditorSurface extends Container
       var text = lineParagraph(line).text.toString();
       int a = clicks == 2 ? Math.min(offset, text.length()) : 0, z = clicks == 2 ? a : text.length();
       if (clicks == 2) {
-        while (a > 0 && isWordChar(text.charAt(a - 1))) a--;
-        while (z < text.length() && isWordChar(text.charAt(z))) z++;
-        if (a == z && z < text.length()) z++;
+        int[] word = TextNavigation.wordAt(text, a);
+        a = word[0];
+        z = word[1];
       }
       session.select(block, a, z);
       dragBlock = -1;
@@ -2037,10 +2037,8 @@ public final class EditorSurface extends Container
     else session.leaveCell();
     var text = lineParagraph(line).text.toString();
     int offset = Math.min(offsetAt(line, x), text.length());
-    int a = offset, z = offset;
-    while (a > 0 && isWordChar(text.charAt(a - 1))) a--;
-    while (z < text.length() && isWordChar(text.charAt(z))) z++;
-    if (a == z && z < text.length()) z++;
+    int[] word = TextNavigation.wordAt(text, offset);
+    int a = word[0], z = word[1];
     session.select(editingBlock(line), a, z);
     dragBlock = editingBlock(line);
     dragAnchor = a;
@@ -2061,10 +2059,6 @@ public final class EditorSurface extends Container
       if (level >= 1 && level <= 6) return level;
     }
     return -1;
-  }
-
-  private static boolean isWordChar(char c) {
-    return Unicode.letterOrDigit(c) || Unicode.mark(c);
   }
 
   private int[] handlePoint(boolean anchor) {

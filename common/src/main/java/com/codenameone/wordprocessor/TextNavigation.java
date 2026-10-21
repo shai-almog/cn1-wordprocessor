@@ -31,6 +31,22 @@ public final class TextNavigation {
     return new int[] {block, offset};
   }
 
+  /**
+   * The word around {@code offset} selected by a double click or long press: the run of letters,
+   * digits and marks touching the offset, or the single next character when none is.
+   */
+  static int[] wordAt(String text, int offset) {
+    int a = Math.max(0, Math.min(offset, text.length())), z = a;
+    while (a > 0 && isWordChar(text.charAt(a - 1))) a--;
+    while (z < text.length() && isWordChar(text.charAt(z))) z++;
+    if (a == z && z < text.length()) z++;
+    return new int[] {a, z};
+  }
+
+  private static boolean isWordChar(char c) {
+    return Unicode.letterOrDigit(c) || Unicode.mark(c);
+  }
+
   /** Paragraph shortcuts retain the active story and do not jump across embedded blocks. */
   public static int[] paragraph(Document document, int block, int offset, boolean forward) {
     if (!forward && offset > 0) return new int[] {block, 0};
