@@ -2796,7 +2796,7 @@ public final class EditorSurface extends Container
         if (content == null) return;
         Display.getInstance().copyToClipboard(content);
         if ("cut".equals(action)) {
-          session.replace("");
+          session.cut();
           didEdit();
         }
       }

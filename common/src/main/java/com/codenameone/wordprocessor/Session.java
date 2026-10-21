@@ -1231,7 +1231,9 @@ public final class Session {
     transact(
         s -> {
           var before = document;
+          var moves = id == null ? Collections.<String>emptySet() : Revisions.moveNames(document, id);
           document = Revisions.resolve(document, id, accept);
+          document = Revisions.resolveMoves(document, moves, accept);
           document = document.comments(ReviewComment.reanchor(before, document));
           selectFirst();
         });
@@ -1264,13 +1266,29 @@ public final class Session {
     transact(
         s -> {
           var before = document;
+          var moves = selectedMoveNames(selected);
           document = Revisions.resolveSelection(document, selected, accept, props, paragraphMark);
+          document = Revisions.resolveMoves(document, moves, accept);
           document = document.comments(ReviewComment.reanchor(before, document));
           int block = Math.min(selected.startBlock(), document.blocks.size() - 1);
           int offset = Math.min(selected.start(), document.paragraph(block).text.length());
           selection = new Selection(block, offset, offset);
           insertionStyle = null;
         });
+  }
+
+  /** The moves with an end in the selected body range (their other ends resolve with them). */
+  private Set<String> selectedMoveNames(Selection range) {
+    var names = new LinkedHashSet<String>();
+    int first = range.startBlock(), last = range.endBlock();
+    for (Revisions.Change c : Revisions.list(document)) {
+      if (c.revision.move == null || !c.story.isEmpty() || c.row >= 0 || c.block < first || c.block > last) continue;
+      if (c.block == first && c.end < range.start() && first != last) continue;
+      if (c.block == first && first == last && (c.end < range.start() || c.start > range.end())) continue;
+      if (c.block == last && c.start > range.end() && first != last) continue;
+      names.add(c.revision.move);
+    }
+    return names;
   }
 
   public void selectRevision(Revisions.Change change) {
@@ -2880,9 +2898,90 @@ public final class Session {
     insertionStyle = null;
   }
 
+  /** The tracked deletion the last cut recorded (Wordcraft moves.rs PendingMove), or null. */
+  private String pendingMoveId, pendingMoveText;
+  private Document pendingMoveDocument;
+
+  /**
+   * Cut: deletes the selection. Under Track Changes, a cut big enough to be moved (a paragraph or
+   * a sentence, Wordcraft move_sized) is remembered, so the paste right after it records a move.
+   */
+  public String cut() {
+    var text = selectedText();
+    if (selection.collapsed() && cells == null) return text;
+    long first = document.nextId;
+    replace("");
+    pendingMoveId = null;
+    if (document.trackChanges && moveSized(text))
+      for (Revisions.Change c : Revisions.list(document))
+        if (!c.revision.inserted() && "delete".equals(c.revision.kind) && c.revision.move == null
+            && idAtLeast(c.revision.id, first)) {
+          pendingMoveId = c.revision.id;
+          pendingMoveText = text;
+          pendingMoveDocument = document;
+          break;
+        }
+    return text;
+  }
+
+  private static boolean idAtLeast(String id, long first) {
+    try {
+      return Long.parseLong(id) >= first;
+    } catch (NumberFormatException e) {
+      return false;
+    }
+  }
+
+  /** Whether cut text is moved rather than deleted and reinserted (Wordcraft move_sized). */
+  static boolean moveSized(String text) {
+    int end = text.length();
+    while (end > 0 && (text.charAt(end - 1) == ' ' || text.charAt(end - 1) == '\u00a0')) end--;
+    String t = text.substring(0, end);
+    if (t.indexOf('\n') >= 0) return true;
+    while (end > 0 && "\"'\u201d\u2019)".indexOf(text.charAt(end - 1)) >= 0) end--;
+    if (end == 0 || ".!?\u2026".indexOf(text.charAt(end - 1)) < 0) return false;
+    t = text.substring(0, end).trim();
+    for (int i = 0; i < t.length(); i++) if (Character.isWhitespace(t.charAt(i))) return true;
+    return false;
+  }
+
+  /**
+   * After a tracked paste of exactly what the last cut removed, names the cut's deletion and the
+   * paste's insertion as the two ends of one move.
+   */
+  private void linkMove(Document beforePaste, long first, String pasted) {
+    String source = pendingMoveId;
+    boolean match = source != null && beforePaste == pendingMoveDocument && pendingMoveText.equals(pasted);
+    pendingMoveId = null;
+    pendingMoveDocument = null;
+    if (!match || !document.trackChanges) return;
+    var taken = new HashSet<String>();
+    var inserted = new HashSet<String>();
+    for (Revisions.Change c : Revisions.list(document)) {
+      if (c.revision.move != null) taken.add(c.revision.move);
+      if (c.revision.inserted() && idAtLeast(c.revision.id, first)) inserted.add(c.revision.id);
+    }
+    if (inserted.isEmpty()) return;
+    int n = 1;
+    while (taken.contains("move" + n)) n++;
+    var ids = new HashSet<String>(inserted);
+    ids.add(source);
+    document = Revisions.nameMove(document, ids, "move" + n);
+  }
+
   /** Clipboard TSV fills a table rectangle; ordinary typing continues to insert literal text. */
   public void pasteText(String text) {
     if (!inCell() || text.indexOf('\t') < 0) {
+      if (pendingMoveId != null && document.trackChanges) {
+        var before = document;
+        long first = document.nextId;
+        transact(
+            s -> {
+              replace(text);
+              linkMove(before, first, text);
+            });
+        return;
+      }
       replace(text);
       return;
     }
@@ -2990,7 +3089,13 @@ public final class Session {
       return;
     }
     if (document.trackChanges) {
-      transact(s -> trackedPaste(fragment));
+      var before = document;
+      long first = document.nextId;
+      transact(
+          s -> {
+            trackedPaste(fragment);
+            if (pendingMoveId != null) linkMove(before, first, Revisions.resolve(fragment, null, true).plainText());
+          });
       return;
     }
     if (inCell() && !fragment.sections.isEmpty())

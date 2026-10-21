@@ -192,6 +192,58 @@ public final class Revisions {
     return d.blocks(blocks, d.nextId).sections(sections, d.lastSection);
   }
 
+  /** The move names carried by the changes whose ids are given, or that a selection holds. */
+  static Set<String> moveNames(Document d, String id) {
+    var names = new LinkedHashSet<String>();
+    for (Change c : list(d))
+      if (c.revision.move != null && (id == null || id.equals(c.revision.id))) names.add(c.revision.move);
+    return names;
+  }
+
+  /**
+   * Resolves every revision that is an end of one of the named moves: accepting or rejecting
+   * either end of a move resolves both (Wordcraft cmd/moves.rs resolve).
+   */
+  static Document resolveMoves(Document d, Set<String> names, boolean accept) {
+    if (names.isEmpty()) return d;
+    var ids = new LinkedHashSet<String>();
+    for (Change c : list(d)) if (c.revision.move != null && names.contains(c.revision.move)) ids.add(c.revision.id);
+    for (String id : ids) d = resolve(d, id, accept);
+    return d;
+  }
+
+  /** Names the revisions with the given ids as ends of the move {@code name}, in the body and cells. */
+  static Document nameMove(Document d, Set<String> ids, String name) {
+    var blocks = new Sequence<Block>();
+    for (Block block : d.blocks) {
+      if (block instanceof Paragraph p) block = nameMove(p, ids, name);
+      else if (block instanceof Table t) {
+        for (int r = 0; r < t.rows(); r++)
+          for (int c = 0; c < t.columns(); c++)
+            if (!t.covered(r, c)) {
+              var cell = new Sequence<Paragraph>();
+              for (Paragraph p : t.cell(r, c)) cell = cell.append(nameMove(p, ids, name));
+              t = t.setCell(r, c, cell);
+            }
+        block = t;
+      }
+      blocks = blocks.append(block);
+    }
+    return d.blocks(blocks, d.nextId);
+  }
+
+  private static Paragraph nameMove(Paragraph p, Set<String> ids, String name) {
+    return p.text(p.text.mapStyles(s -> s.revision == null ? s : s.revision(named(s.revision, ids, name))))
+        .breakRevision(named(p.breakRevision, ids, name));
+  }
+
+  private static Revision named(Revision r, Set<String> ids, String name) {
+    if (r == null) return null;
+    var prior = named(r.previous, ids, name);
+    var result = prior == r.previous ? r : r.previous(prior);
+    return ids.contains(r.id) && !"format".equals(r.kind) ? result.move(name) : result;
+  }
+
   public static Document resolve(Document d, String id, boolean accept) {
     var sections = new LinkedHashMap<String, Section>(d.sections);
     var blocks = resolveBlocks(d.blocks, id, accept, sections);

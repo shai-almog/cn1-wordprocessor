@@ -416,10 +416,8 @@ final class CatalogCommands implements Commands.Extension {
         });
     c.edit("edit.cut", "",
         "Delete the selection; returns the removed text", (s, a) -> {
-          var text = s.selectedText();
           WorkflowCommands.record(s);
-          if (!s.selection().collapsed()) s.replace("");
-          return text;
+          return s.cut();
         });
     c.edit("edit.paste", "text:string",
         "Paste plain text at the selection", (s, a) -> {

@@ -211,6 +211,14 @@ public final class TextStyle {
 
   public TextStyle markup() {
     if (revision == null) return this;
+    if (revision.move != null) {
+      // Moved text, as Wordcraft's display: green, double strikethrough where it was and
+      // double underline where it went.
+      var moved = with("color", "1a7f37");
+      return revision.inserted()
+          ? moved.with("underlineStyle", "double")
+          : moved.with("doubleStrike", "true");
+    }
     var result = with("color", revision.inserted() ? "1261a0" : "b32222");
     return revision.inserted()
         ? (hasUnderline() ? result : result.with("underline", "true"))

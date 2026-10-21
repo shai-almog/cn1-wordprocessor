@@ -57,6 +57,7 @@ public final class Docx {
     var main = parts.get("word/document.xml");
     if (main == null) throw new IOException("Missing word/document.xml");
     Element root = Xml.parse(main);
+    RevisionFormats.markMoves(root);
     Element body = Xml.child(root, "body");
     if (body == null) throw new IOException("Missing document body");
     var warnings = new LinkedHashSet<String>();
@@ -413,6 +414,8 @@ static final char COLUMN_BREAK = '\u000B';
     Element markProps = props == null ? null : Xml.child(props, "rPr");
     if (markProps != null) {
       Element insert = Xml.child(markProps, "ins"), delete = Xml.child(markProps, "del");
+      if (insert == null) insert = Xml.child(markProps, "moveTo");
+      if (delete == null) delete = Xml.child(markProps, "moveFrom");
       Revision mark = insert == null ? null : RevisionFormats.docxRead(insert);
       if (delete != null) mark = RevisionFormats.docxRead(delete).previous(mark);
       paragraph = paragraph.breakRevision(mark);
@@ -1402,10 +1405,7 @@ static final char COLUMN_BREAK = '\u000B';
     tabs.write(b, p);
     if (p.breakRevision != null) {
       b.append("<w:rPr>");
-      for (var r = p.breakRevision; r != null; r = r.previous) {
-        RevisionFormats.start(b, r.previous(null));
-        RevisionFormats.end(b, r.previous(null));
-      }
+      for (var r = p.breakRevision; r != null; r = r.previous) RevisionFormats.mark(b, r);
       b.append("</w:rPr>");
     }
     if (p.formatRevision != null) {
@@ -1426,6 +1426,7 @@ static final char COLUMN_BREAK = '\u000B';
     }
     int sectionStart = b.length();
     b.append(section).append("</w:pPr>");
+    RevisionFormats.markRanges(b, p.breakRevision);
     if (p.format.columnBreak) b.append("<w:r><w:br w:type=\"column\"/></w:r>");
     b.append(prefix);
     var outer = links.base;
@@ -1561,7 +1562,7 @@ static final char COLUMN_BREAK = '\u000B';
   }
 
   static void writeRun(StringBuilder b, String text, TextStyle s, DocxLinks links) {
-    writeRun(b, text, s, links, s.revision != null && !s.revision.inserted());
+    writeRun(b, text, s, links, s.revision != null && !s.revision.inserted() && s.revision.move == null);
   }
 
   static void writeRun(

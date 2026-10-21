@@ -4,13 +4,20 @@ package com.codenameone.wordprocessor;
 public final class Revision {
   public final String id, kind, author, date;
   public final Revision previous;
+  /**
+   * The name linking the two ends of a tracked move (w:moveFrom / w:moveTo, ECMA-376
+   * 17.13.5.21-28), or null: a deletion with a name is the moved-away source, an insertion the
+   * destination. Accepting or rejecting either end resolves both (Wordcraft cmd/moves.rs).
+   */
+  public final String move;
 
   public Revision(String id, String kind, String author, String date) {
-    this(id, kind, author, date, null);
+    this(id, kind, author, date, null, null);
   }
 
-  private Revision(String id, String kind, String author, String date, Revision previous) {
+  private Revision(String id, String kind, String author, String date, Revision previous, String move) {
     this.previous = previous;
+    this.move = move == null || move.isEmpty() || "format".equals(kind) ? null : move;
     if (id == null
         || id.isEmpty()
         || author == null
@@ -24,7 +31,12 @@ public final class Revision {
   }
 
   public Revision previous(Revision value) {
-    return new Revision(id, kind, author, date, value);
+    return new Revision(id, kind, author, date, value, move);
+  }
+
+  /** This revision as one end of the move named {@code name} (null: an ordinary change). */
+  public Revision move(String name) {
+    return new Revision(id, kind, author, date, previous, name);
   }
 
   public record Resolution(boolean removed, Revision remaining) {}
@@ -53,7 +65,8 @@ public final class Revision {
         && id.equals(r.id)
         && kind.equals(r.kind)
         && author.equals(r.author)
-        && date.equals(r.date);
+        && date.equals(r.date)
+        && (move == null ? r.move == null : move.equals(r.move));
   }
 
   public int hashCode() {

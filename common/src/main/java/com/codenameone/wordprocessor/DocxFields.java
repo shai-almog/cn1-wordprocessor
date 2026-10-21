@@ -97,7 +97,7 @@ final class DocxFields {
         || "commentRangeEnd".equals(kind)
         || "bookmarkStart".equals(kind)
         || "bookmarkEnd".equals(kind)) return;
-    if ("ins".equals(kind) || "del".equals(kind)) {
+    if (RevisionFormats.tracked(kind)) {
       var before = revision;
       revision = RevisionFormats.docxRead(node).previous(before);
       for (Element child : Xml.children(node, null)) node(child, link);
