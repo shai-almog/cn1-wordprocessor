@@ -199,6 +199,100 @@ public class ZoteroTest {
     }
   }
 
+  private static List<Object> args(Object... v) {
+    return Arrays.asList(v);
+  }
+
+  @SuppressWarnings("unchecked")
+  private static List<Object> ids(Object fields) {
+    return (List<Object>) ((List<Object>) fields).get(0);
+  }
+
+  @SuppressWarnings("unchecked")
+  private static List<Object> notes(Object fields) {
+    return (List<Object>) ((List<Object>) fields).get(2);
+  }
+
+  @Test
+  public void citationsInTableCellsAreListedAndEdited() {
+    var s = new Session(Document.empty());
+    s.replace("Body");
+    s.insertTable(1, 2);
+    int table = -1;
+    for (int b = 0; b < s.document().blocks.size(); b++) if (s.document().blocks.get(b) instanceof Table) table = b;
+    s.enterCell(table, 0, 1);
+    s.replace("Cell ");
+    var bridge = new ZoteroBridge(s, HOST);
+    bridge.handle("Application_getActiveDocument", args(3));
+    assertEquals(Boolean.TRUE, bridge.handle("Document_canInsertField", args(1)));
+    var t = (List<?>) bridge.handle("Document_insertField", args(1, "ReferenceMark", 0));
+    Object id = t.get(0);
+    bridge.handle("Field_setCode", args(1, id, CODE));
+    bridge.handle("Field_setText", args(1, id, "(Doe, 2020)", false));
+    bridge.handle("Document_complete", args(1));
+    if (s.inCell()) s.leaveCell();
+    var cell = ((Table) s.document().blocks.get(table)).cell(0, 1).get(0);
+    assertEquals("Cell (Doe, 2020)", cell.text.plainText().replace(InlineField.OBJECT, ""));
+    var b2 = new ZoteroBridge(s, HOST);
+    b2.handle("Application_getActiveDocument", args(3));
+    var f = b2.handle("Document_getFields", args(1, "ReferenceMark"));
+    assertEquals(1, ids(f).size());
+    assertEquals("(Doe, 2020)", b2.handle("Field_getText", args(1, ids(f).get(0))));
+    s.enterCell(table, 0, 1);
+    s.select(0, 7, 7);
+    assertNotNull(b2.handle("Document_cursorInField", args(1)));
+  }
+
+  @Test
+  public void noteStylesInsertFootnotesAndConvertBetweenTextAndNotes() {
+    var s = new Session(Document.empty());
+    s.replace("Claim");
+    var bridge = new ZoteroBridge(s, HOST);
+    bridge.handle("Application_getActiveDocument", args(3));
+    var t = (List<?>) bridge.handle("Document_insertField", args(1, "ReferenceMark", 1));
+    Object id = t.get(0);
+    assertEquals(1, t.get(2));
+    bridge.handle("Field_setCode", args(1, id, CODE));
+    bridge.handle("Field_setText", args(1, id, "Doe, Title, 2020.", false));
+    var f = bridge.handle("Document_getFields", args(1, "ReferenceMark"));
+    assertEquals(List.of(1), notes(f));
+    assertEquals("Doe, Title, 2020.", bridge.handle("Field_getText", args(1, id)));
+    assertEquals(1, Notes.references(s.document()).size());
+    assertEquals("footnote", Notes.references(s.document()).get(0).note.kind);
+    // To an endnote, then into the text: the empty notes are removed, the id is kept.
+    bridge.handle("Field_convert", args(1, id, "ReferenceMark", 2));
+    assertEquals("endnote", Notes.references(s.document()).get(0).note.kind);
+    assertEquals(1, Notes.references(s.document()).size());
+    bridge.handle("Document_convert", args(1, List.of(id), "ReferenceMark", List.of(0)));
+    assertEquals(0, Notes.references(s.document()).size());
+    f = bridge.handle("Document_getFields", args(1, "ReferenceMark"));
+    assertEquals(List.of(id), ids(f));
+    assertEquals(List.of(0), notes(f));
+    assertEquals("Doe, Title, 2020.", bridge.handle("Field_getText", args(1, id)));
+    assertTrue(s.document().paragraph(0).text.plainText().startsWith("Claim"));
+  }
+
+  @Test
+  public void placeholdersBecomeFieldsAndTransferIsRefused() {
+    var s = new Session(Document.empty());
+    s.replace("See Doe here");
+    s.select(0, 4, 7);
+    s.format("link", "https://www.zotero.org/?k1&id=7");
+    var bridge = new ZoteroBridge(s, HOST);
+    bridge.handle("Application_getActiveDocument", args(3));
+    var r = (List<?>) bridge.handle("Document_convertPlaceholdersToFields", args(1, List.of("k1"), 0));
+    assertEquals(1, ((List<?>) r.get(0)).size());
+    Object id = ((List<?>) r.get(0)).get(0);
+    assertEquals("Doe", bridge.handle("Field_getText", args(1, id)));
+    assertEquals(1, ZoteroBridge.fields(s.document()).size());
+    try {
+      bridge.handle("Document_exportDocument", args(1));
+      fail();
+    } catch (UnsupportedOperationException expected) {
+      assertTrue(expected.getMessage().indexOf("document transfer") >= 0);
+    }
+  }
+
   @Test
   public void malformedFramesAndCallsAreReportedNotFatal() throws Exception {
     var s = new Session(Document.empty());
@@ -218,9 +312,12 @@ public class ZoteroTest {
             out,
             b);
     assertTrue(o.completed);
-    assertEquals(6, o.errors.size());
-    for (String r : replies(out.toByteArray()).subList(0, 6)) assertTrue(r, r.startsWith("ERR:"));
-    assertTrue(ZoteroBridge.fields(s.document()).isEmpty());
+    assertEquals(5, o.errors.size());
+    for (String r : replies(out.toByteArray()).subList(0, 5)) assertTrue(r, r.startsWith("ERR:"));
+    // A note style's insertField makes a footnote holding the field (Wordcraft's insert_field).
+    var list = ZoteroBridge.fields(s.document());
+    assertEquals(1, list.size());
+    assertEquals(1, list.get(0).noteIndex);
 
     var huge = new ByteArrayOutputStream();
     huge.write(new byte[] {0, 0, 0, 1, 0x7f, 0, 0, 0});

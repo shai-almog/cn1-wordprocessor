@@ -10,8 +10,12 @@ import java.util.List;
  * across inserts and deletes within a session, as Zotero expects stable ids until
  * Document_complete.
  *
- * <p>Limits (see docs/STATUS.md): citations live in body paragraphs only (not table cells,
- * footnotes or endnotes), so note styles are rejected. Document_insertText keeps Zotero's rich
+ * <p>As in Wordcraft, citations live in body paragraphs, table cells, footnotes and endnotes;
+ * a note's fields are listed at its reference mark with the note's number, and note citation
+ * styles insert (Document_insertField) or move (Document_convert, Field_convert) a citation into
+ * a new footnote or endnote. Placeholder links (Document_convertPlaceholdersToFields) become
+ * fields. Document transfer (import/exportDocument) is refused as Wordcraft refuses it: fields
+ * are already stored the way Word keeps them. Document_insertText keeps Zotero's rich
  * formatting as runs and paragraphs; a field is one atomic run, so its result keeps only the
  * formatting shared by the whole result.
  */
@@ -28,15 +32,69 @@ public final class ZoteroBridge implements Zotero.Handler {
     default void activate() {}
   }
 
-  private final Session session;
+  private final Session root;
+  /** The session edits go through: the root, or a scratch session on a note's paragraphs. */
+  private Session session;
+  private String noteId;
   private final Host host;
   private long nextId = 1, docId;
   private final List<Long> ids = new ArrayList<>();
   private Long caretAfter;
 
   public ZoteroBridge(Session session, Host host) {
+    this.root = session;
     this.session = session;
     this.host = host;
+  }
+
+  /** Makes {@link #session} edit f's story: the body, its table cell, or its note. */
+  private void focus(Located f) {
+    commit();
+    if (f.note != null) {
+      Note n = note(f.note);
+      var paragraphs = new Sequence<Block>();
+      for (Paragraph p : n.paragraphs) paragraphs = paragraphs.append(p);
+      Document d = root.document();
+      session = new Session(new Document(paragraphs, d.page, d.title, d.nextId).styles(d.styles));
+      noteId = f.note;
+    } else if (f.table >= 0) root.enterCell(f.table, f.row, f.column);
+    else if (root.inCell()) root.leaveCell();
+  }
+
+  /** Writes a focused note's edited paragraphs back (one undo step) and returns to the root. */
+  private void commit() {
+    if (session == root) return;
+    var paragraphs = new Sequence<Paragraph>();
+    for (Block b : session.document().blocks) paragraphs = paragraphs.append((Paragraph) b);
+    String id = noteId;
+    session = root;
+    noteId = null;
+    root.updateNote(id, note(id).paragraphs(paragraphs));
+  }
+
+  private Note note(String id) {
+    final Note[] found = {null};
+    Notes.map(
+        root.document(),
+        n -> {
+          if (n.id.equals(id)) found[0] = n;
+          return n;
+        });
+    if (found[0] == null) throw new IllegalArgumentException("Unknown note " + id);
+    return found[0];
+  }
+
+  /** f re-found in the focused story (after edits there), by its start mark. */
+  private Located local(Located f) {
+    for (Located l : storyFields(session.editingDocument().blocks))
+      if (l.block == f.block && l.offset == f.offset) return l.place(f);
+    throw new IllegalStateException("Field moved");
+  }
+
+  private Located global(int k) {
+    Located f = fields(root.document()).get(k);
+    focus(f);
+    return f;
   }
 
   /**
@@ -50,6 +108,18 @@ public final class ZoteroBridge implements Zotero.Handler {
     final InlineField field;
     int endBlock, endOffset;
     boolean hasEnd;
+    /** The story: a table cell (table block, row, column) or a note (id, number); else the body. */
+    int table = -1, row = -1, column = -1, noteIndex;
+    String note;
+
+    Located place(Located from) {
+      table = from.table;
+      row = from.row;
+      column = from.column;
+      note = from.note;
+      noteIndex = from.noteIndex;
+      return this;
+    }
 
     Located(int block, int offset, InlineField field) {
       this.block = block;
@@ -136,39 +206,96 @@ public final class ZoteroBridge implements Zotero.Handler {
     return b1 != b2 ? Integer.compare(b1, b2) : Integer.compare(o1, o2);
   }
 
+  /**
+   * Every Zotero field in document order, as Wordcraft lists them: the body's, a table's cells'
+   * at the table, and each note's fields at its reference mark. Block indices are relative to
+   * the field's story (the body, the cell's paragraphs or the note's paragraphs).
+   */
   static List<Located> fields(Document d) {
     var out = new ArrayList<Located>();
-    final Located[] open = {null};
-    for (int i = 0; i < d.blocks.size(); i++) {
-      if (!(d.blocks.get(i) instanceof Paragraph p) || !p.text.hasFields()) continue;
-      final int block = i;
-      p.text.visit(
-          new RichText.Visitor() {
-            public void run(int offset, String text, TextStyle style) {}
-
-            public void field(int offset, InlineField f, TextStyle style) {
-              if (f.rangeEnd() && open[0] != null) {
-                open[0].endBlock = block;
-                open[0].endOffset = offset;
-                open[0].hasEnd = true;
-                open[0] = null;
-              } else if (Zotero.is(f)) {
-                close(d, open[0]);
-                var l = new Located(block, offset, f);
-                out.add(l);
-                open[0] = f.rangeStart() ? l : null;
-              }
-            }
-          });
-    }
-    close(d, open[0]);
+    walk(d.blocks, new Located(-1, -1, null), out, new int[2], true);
     return out;
   }
 
-  private static void close(Document d, Located l) {
+  /** The fields of one story's own paragraphs (no cells or notes), block indices local. */
+  static List<Located> storyFields(Sequence<? extends Block> blocks) {
+    var out = new ArrayList<Located>();
+    walk(blocks, new Located(-1, -1, null), out, null, false);
+    return out;
+  }
+
+  private static void walk(Sequence<? extends Block> blocks, Located place, List<Located> out, int[] notes, boolean deep) {
+    final Located[] open = {null};
+    for (int i = 0; i < blocks.size(); i++) {
+      Block blk = blocks.get(i);
+      if (blk instanceof Table t) {
+        if (!deep || place.table >= 0 || place.note != null) continue;
+        for (int r = 0; r < t.rows(); r++)
+          for (int c = 0; c < t.columns(); c++) {
+            if (t.covered(r, c)) continue;
+            var cell = new Located(-1, -1, null);
+            cell.table = i;
+            cell.row = r;
+            cell.column = c;
+            var paragraphs = new Sequence<Block>();
+            for (Paragraph cp : t.cell(r, c)) paragraphs = paragraphs.append(cp);
+            walk(paragraphs, cell, out, notes, true);
+          }
+        continue;
+      }
+      if (!(blk instanceof Paragraph p)) continue;
+      final var events = new ArrayList<Object[]>();
+      final int block = i;
+      if (p.text.hasFields())
+        p.text.visit(
+            new RichText.Visitor() {
+              public void run(int offset, String text, TextStyle style) {}
+
+              public void field(int offset, InlineField f, TextStyle style) {
+                events.add(new Object[] {offset, f});
+              }
+            });
+      if (deep && place.note == null)
+        p.text.mapNotes(
+            (offset, note) -> {
+              events.add(new Object[] {offset, note});
+              return note;
+            });
+      events.sort((x, y) -> (Integer) x[0] - (Integer) y[0]);
+      for (Object[] e : events) {
+        int offset = (Integer) e[0];
+        if (e[1] instanceof Note n) {
+          int k = "footnote".equals(n.kind) ? 0 : 1;
+          if (n.mark == null || n.mark.isEmpty()) notes[k]++;
+          var np = new Located(-1, -1, null);
+          np.note = n.id;
+          np.noteIndex = Math.max(1, notes[k]);
+          var paragraphs = new Sequence<Block>();
+          for (Paragraph q : n.paragraphs) paragraphs = paragraphs.append(q);
+          walk(paragraphs, np, out, notes, true);
+          continue;
+        }
+        InlineField f = (InlineField) e[1];
+        if (f.rangeEnd() && open[0] != null) {
+          open[0].endBlock = block;
+          open[0].endOffset = offset;
+          open[0].hasEnd = true;
+          open[0] = null;
+        } else if (Zotero.is(f)) {
+          close(blocks, open[0]);
+          var l = new Located(block, offset, f).place(place);
+          out.add(l);
+          open[0] = f.rangeStart() ? l : null;
+        }
+      }
+    }
+    close(blocks, open[0]);
+  }
+
+  private static void close(Sequence<? extends Block> blocks, Located l) {
     if (l == null) return;
     l.endBlock = l.block;
-    l.endOffset = ((Paragraph) d.blocks.get(l.block)).text.length();
+    l.endOffset = ((Paragraph) blocks.get(l.block)).text.length();
   }
 
   /** The text between a range field's marks, paragraphs joined by newlines. */
@@ -236,7 +363,7 @@ public final class ZoteroBridge implements Zotero.Handler {
   }
 
   private List<Located> sync() {
-    var list = fields(session.document());
+    var list = fields(root.document());
     if (list.size() != ids.size()) {
       ids.clear();
       for (int i = 0; i < list.size(); i++) ids.add(nextId++);
@@ -285,17 +412,217 @@ public final class ZoteroBridge implements Zotero.Handler {
   }
 
   private static List<Object> triple(long id, Located f) {
-    return Arrays.asList(id, Zotero.code(f.field.instruction), 0);
+    return Arrays.asList(id, Zotero.code(f.field.instruction), f.noteIndex);
   }
 
-  private void requireInText(long noteType) {
-    if (noteType != 0)
-      throw new IllegalArgumentException(
-          "Footnote and endnote citation styles are not supported yet; choose an in-text style");
+  /** The note kind a Zotero note type names (1 footnote, 2 endnote), else null (in the text). */
+  private static String noteKind(long noteType) {
+    return noteType == 1 ? "footnote" : noteType == 2 ? "endnote" : null;
+  }
+
+  /**
+   * Inserts a field holding content (the placeholder when null) at the root's selection, in a
+   * new footnote or endnote for a note style when the selection is not in a note already, as
+   * Wordcraft's insert_field. Returns the new field's id; its index is added to ids.
+   */
+  private long insertAt(long noteType, String content, String code) {
+    sync();
+    String marker = "TEMP#" + nextId;
+    String kind = noteKind(noteType);
+    if (kind != null) {
+      var before = new java.util.HashSet<String>();
+      for (Notes.Reference r : Notes.references(root.document())) before.add(r.note.id);
+      root.insertNote(kind, "", "");
+      String id = null;
+      for (Notes.Reference r : Notes.references(root.document())) if (!before.contains(r.note.id)) id = r.note.id;
+      var np = new Located(0, 0, null);
+      np.note = id;
+      focus(np);
+      session.select(0, 0, 0);
+    }
+    final Session s = session;
+    s.transact(
+        x -> {
+          s.insertField(new InlineField(Zotero.stored(marker), "", false, false).start());
+          s.replace(content == null ? PLACEHOLDER : content);
+          s.insertField(InlineField.end());
+        });
+    commit();
+    var list = fields(root.document());
+    for (int k = 0; k < list.size(); k++)
+      if (marker.equals(Zotero.code(list.get(k).field.instruction))) {
+        Located f = list.get(k);
+        focus(f);
+        Located l = local(f);
+        replaceField(l, new InlineField(Zotero.stored(code), l.field.result, l.field.locked, l.field.showCode, l.field.formats));
+        commit();
+        long id = nextId++;
+        ids.add(Math.min(k, ids.size()), id);
+        return id;
+      }
+    throw new IllegalStateException("The new field was not found");
+  }
+
+  /**
+   * Moves citation k to the text (0), a footnote (1) or an endnote (2), keeping its code and
+   * text, as Wordcraft's convert_field: a note left empty is removed and the citation takes its
+   * reference mark's place; otherwise it goes right after the mark. Ids keep their order.
+   */
+  private void convert(int k, long noteType) {
+    Located f = fields(root.document()).get(k);
+    String current = f.note == null ? null : note(f.note).kind;
+    String target = noteKind(noteType);
+    if (current == null ? target == null : current.equals(target)) return;
+    if (f.note != null && !"footnote".equals(current) && !"endnote".equals(current)) return;
+    focus(f);
+    Located l = local(f);
+    String code = Zotero.code(l.field.instruction), text = text(session.editingDocument(), l);
+    session.selectRange(l.block, l.offset, l.endBlock, l.endOffset + (l.hasEnd || l.atomic() ? 1 : 0));
+    session.replace("");
+    boolean empty = true;
+    for (Block b : session.editingDocument().blocks)
+      if (b instanceof Paragraph p && p.text.plainText().trim().length() > 0) empty = false;
+    commit();
+    if (f.note != null) {
+      root.selectNote(f.note);
+      var sel = root.selection();
+      if (empty) root.replace("");
+      else root.select(sel.block, sel.end(), sel.end());
+    }
+    ids.remove(k);
+    insertAt(noteType, text, code);
+  }
+
+  /** Every placeholder link to Zotero ("https://www.zotero.org/?" + key, optionally "&..."). */
+  private Object[] findLink(String url) {
+    final Object[] hit = {null};
+    for (Located f : allParagraphs()) {
+      if (hit[0] != null) break;
+      Paragraph p = paragraphOf(f);
+      final int[] range = {-1, -1};
+      p.text.visit(
+          new RichText.Visitor() {
+            public void run(int offset, String text, TextStyle style) {
+              String l = style.link;
+              boolean on = l != null && (l.equals(url) || (l.startsWith(url) && l.length() > url.length() && l.charAt(url.length()) == '&'));
+              if (on && (range[0] < 0 || range[1] == offset)) {
+                if (range[0] < 0) range[0] = offset;
+                range[1] = offset + text.length();
+              } else if (range[0] >= 0) range[1] = -range[1] - 1; // ended
+            }
+
+            public void field(int offset, InlineField f, TextStyle style) {}
+          });
+      if (range[0] >= 0) hit[0] = new Object[] {f, range[0], range[1] < 0 ? -range[1] - 1 : range[1]};
+    }
+    return (Object[]) hit[0];
+  }
+
+  /** One Located per paragraph of every story (block = paragraph index in its story). */
+  private List<Located> allParagraphs() {
+    var out = new ArrayList<Located>();
+    var d = root.document();
+    for (int i = 0; i < d.blocks.size(); i++) {
+      Block b = d.blocks.get(i);
+      if (b instanceof Paragraph p) {
+        out.add(new Located(i, 0, null));
+        notesOf(p, out);
+      } else if (b instanceof Table t)
+        for (int r = 0; r < t.rows(); r++)
+          for (int c = 0; c < t.columns(); c++) {
+            if (t.covered(r, c)) continue;
+            int k = 0;
+            for (Paragraph cp : t.cell(r, c)) {
+              var l = new Located(k++, 0, null);
+              l.table = i;
+              l.row = r;
+              l.column = c;
+              out.add(l);
+              notesOf(cp, out);
+            }
+          }
+    }
+    return out;
+  }
+
+  private static void notesOf(Paragraph p, List<Located> out) {
+    p.text.mapNotes(
+        (offset, n) -> {
+          for (int k = 0; k < n.paragraphs.size(); k++) {
+            var l = new Located(k, 0, null);
+            l.note = n.id;
+            out.add(l);
+          }
+          return n;
+        });
+  }
+
+  private Paragraph paragraphOf(Located f) {
+    if (f.note != null) return note(f.note).paragraphs.get(f.block);
+    if (f.table >= 0) return ((Table) root.document().blocks.get(f.table)).cell(f.row, f.column).get(f.block);
+    return root.document().paragraph(f.block);
+  }
+
+  static final String PLACEHOLDER_URL = "https://www.zotero.org/?";
+
+  /** Document_convertPlaceholdersToFields: each placeholder link becomes a field holding its text. */
+  private Object convertPlaceholders(List<?> keys, long noteType) {
+    var newIds = new ArrayList<Long>();
+    for (Object key : keys) {
+      String k = key instanceof Number n ? "" + n.longValue() : String.valueOf(key);
+      Object[] hit = findLink(PLACEHOLDER_URL + k);
+      if (hit == null) throw new IllegalArgumentException("Placeholder " + k + " was not found");
+      Located f = (Located) hit[0];
+      int a0 = (Integer) hit[1], b0 = (Integer) hit[2];
+      focus(f);
+      String text = paragraphOf(f).text.plainText().substring(a0, b0);
+      session.select(f.block, a0, b0);
+      session.replace("");
+      if (f.note != null) {
+        // Already in a note: the field goes where the link was.
+        final Session s = session;
+        String marker = "TEMP#" + nextId;
+        s.transact(
+            x -> {
+              s.insertField(new InlineField(Zotero.stored(marker), "", false, false).start());
+              s.replace(text);
+              s.insertField(InlineField.end());
+            });
+        commit();
+        sync();
+        var list = fields(root.document());
+        for (int i = 0; i < list.size(); i++)
+          if (marker.equals(Zotero.code(list.get(i).field.instruction))) {
+            Located g = list.get(i);
+            focus(g);
+            Located l = local(g);
+            replaceField(l, new InlineField(Zotero.stored("TEMP"), l.field.result, false, false, l.field.formats));
+            commit();
+            newIds.add(ids.get(i));
+          }
+      } else newIds.add(insertAt(noteType, text, "TEMP"));
+    }
+    var list = sync();
+    var codes = new ArrayList<Object>();
+    var notes = new ArrayList<Object>();
+    for (Long id : newIds) {
+      int k = ids.indexOf(id);
+      codes.add(k >= 0 ? Zotero.code(list.get(k).field.instruction) : "");
+      notes.add(k >= 0 ? list.get(k).noteIndex : 0);
+    }
+    return Arrays.asList(new ArrayList<Object>(newIds), codes, notes);
   }
 
   @Override
   public Object handle(String method, List<Object> a) {
+    try {
+      return dispatch(method, a);
+    } finally {
+      commit();
+    }
+  }
+
+  private Object dispatch(String method, List<Object> a) {
     switch (method) {
       case "Application_getActiveDocument": {
         long theirs = num(a, 0, PROTOCOL_VERSION);
@@ -309,8 +636,8 @@ public final class ZoteroBridge implements Zotero.Handler {
         host.activate();
         return null;
       case "Document_canInsertField":
-        return session.cellSelection() == null
-            && session.document().blocks.get(session.selection().block) instanceof Paragraph;
+        return root.cellSelection() == null
+            && root.editingDocument().blocks.get(root.selection().block) instanceof Paragraph;
       case "Document_getDocumentData":
         return Zotero.prefs(session.document());
       case "Document_setDocumentData": {
@@ -320,10 +647,12 @@ public final class ZoteroBridge implements Zotero.Handler {
         return null;
       }
       case "Document_cursorInField": {
-        var sel = session.selection();
+        var sel = root.selection();
         var list = sync();
         for (int k = 0; k < list.size(); k++) {
           Located f = list.get(k);
+          // Only fields in the story the caret is in: the body or the current cell.
+          if (f.note != null || f.table != root.cellBlock() || f.row != root.cellRow() || f.column != root.cellColumn()) continue;
           // The caret at the start mark or anywhere in the field's text, or a selection that
           // overlaps the field, as Wordcraft's cursor_in_field.
           boolean in = sel.collapsed()
@@ -335,25 +664,10 @@ public final class ZoteroBridge implements Zotero.Handler {
         return null;
       }
       case "Document_insertField": {
-        requireInText(num(a, 2, 0));
-        sync();
-        // A start mark, the placeholder as ordinary text and an end mark, as one undo step.
-        session.transact(
-            s -> {
-              session.insertField(new InlineField(Zotero.stored("TEMP"), "", false, false).start());
-              session.replace(PLACEHOLDER);
-              session.insertField(InlineField.end());
-            });
-        var sel = session.selection();
-        var list = fields(session.document());
-        for (int k = 0; k < list.size(); k++)
-          if (list.get(k).endBlock == sel.block && list.get(k).endOffset == sel.caret - 1) {
-            long id = nextId++;
-            ids.add(Math.min(k, ids.size()), id);
-            caretAfter = id;
-            return triple(id, list.get(k));
-          }
-        throw new IllegalStateException("The new field was not found");
+        long id = insertAt(num(a, 2, 0), null, "TEMP");
+        caretAfter = id;
+        var list = sync();
+        return triple(id, list.get(ids.indexOf(id)));
       }
       case "Document_getFields": {
         var list = sync();
@@ -361,7 +675,7 @@ public final class ZoteroBridge implements Zotero.Handler {
         var notes = new ArrayList<Object>();
         for (Located f : list) {
           codes.add(Zotero.code(f.field.instruction));
-          notes.add(0);
+          notes.add(f.noteIndex);
         }
         return Arrays.asList(new ArrayList<Object>(ids), codes, notes);
       }
@@ -373,41 +687,69 @@ public final class ZoteroBridge implements Zotero.Handler {
         setBibliographyStyle(a);
         return null;
       case "Document_convert": {
+        if (!(arg(a, 1) instanceof List<?> l)) throw new IllegalArgumentException("Field ids must be a list");
         Object notes = a.size() > 3 ? a.get(3) : null;
-        if (notes instanceof List<?> l) for (Object n : l) requireInText(n instanceof Number x ? x.longValue() : 0);
-        else requireInText(notes instanceof Number x ? x.longValue() : 0);
+        var targets = new ArrayList<Long>();
+        for (Object o : l) targets.add(id(o));
+        for (int i = 0; i < targets.size(); i++) {
+          long nt = notes instanceof List<?> nl ? (i < nl.size() && nl.get(i) instanceof Number x ? x.longValue() : 0)
+              : notes instanceof Number x ? x.longValue() : 0;
+          convertKeepingId(targets.get(i), nt);
+        }
         return null;
       }
       case "Field_convert":
-        index(arg(a, 1));
-        requireInText(num(a, 3, 0));
+        convertKeepingId(id(arg(a, 1)), num(a, 3, 0));
         return null;
+      case "Document_convertPlaceholdersToFields": {
+        if (!(arg(a, 1) instanceof List<?> l)) throw new IllegalArgumentException("Placeholder ids must be a list");
+        return convertPlaceholders(l, num(a, 2, 0));
+      }
+      case "Document_importDocument":
+      case "Document_exportDocument":
+        throw new UnsupportedOperationException(
+            "This editor doesn't support Zotero's document transfer; the citations are already stored the way Word keeps them");
       case "Document_complete": {
         if (caretAfter != null) {
           int k = ids.indexOf(caretAfter);
           var list = sync();
-          if (k >= 0 && k < list.size())
-            session.select(list.get(k).endBlock, list.get(k).endOffset + 1, list.get(k).endOffset + 1);
+          if (k >= 0 && k < list.size()) {
+            Located f = list.get(k);
+            if (f.note != null) {
+              root.selectNote(f.note);
+              var sel = root.selection();
+              root.select(sel.block, sel.end(), sel.end());
+            } else {
+              focus(f);
+              root.select(f.endBlock, f.endOffset + 1, f.endOffset + 1);
+            }
+          }
         }
         caretAfter = null;
         return null;
       }
       case "Field_delete": {
         int k = index(arg(a, 1));
-        Located f = fields(session.document()).get(k);
+        Located f = local(global(k));
         session.selectRange(f.block, f.offset, f.endBlock, f.endOffset + (f.hasEnd || f.atomic() ? 1 : 0));
         session.replace("");
         ids.remove(k);
         return null;
       }
       case "Field_select": {
-        Located f = fields(session.document()).get(index(arg(a, 1)));
+        Located f = global(index(arg(a, 1)));
+        if (f.note != null) {
+          // A note's text is edited in its own pane: select its reference mark.
+          commit();
+          root.selectNote(f.note);
+          return null;
+        }
         session.selectRange(f.block, f.offset, f.endBlock, f.endOffset + (f.hasEnd || f.atomic() ? 1 : 0));
         return null;
       }
       case "Field_removeCode": {
         int k = index(arg(a, 1));
-        Located f = fields(session.document()).get(k);
+        Located f = local(global(k));
         session.transact(
             s -> {
               if (f.hasEnd) {
@@ -420,21 +762,24 @@ public final class ZoteroBridge implements Zotero.Handler {
         ids.remove(k);
         return null;
       }
-      case "Field_getText":
-        return text(session.document(), fields(session.document()).get(index(arg(a, 1))));
+      case "Field_getText": {
+        Located f = local(global(index(arg(a, 1)))); // focuses f's story first
+        return text(session.editingDocument(), f);
+      }
       case "Field_setText": {
         final int k = index(arg(a, 1));
+        final Located at = global(k);
         final var rich = runs(str(a, 2), bool(a, 3));
         // As Wordcraft's set_text: the text between the marks is replaced by the formatted
         // runs, newlines starting paragraphs; one undo step.
         session.transact(
             s -> {
-              Located f = fields(session.document()).get(k);
+              Located f = local(at);
               if (f.atomic()) {
                 replaceField(f, f.field.start());
                 session.select(f.block, f.offset + 1, f.offset + 1);
                 session.insertField(InlineField.end());
-                f = fields(session.document()).get(k);
+                f = local(at);
               }
               session.selectRange(f.block, f.offset + 1, f.endBlock, f.endOffset);
               insertRich(rich);
@@ -445,14 +790,14 @@ public final class ZoteroBridge implements Zotero.Handler {
                 session.selectRange(f.block, f.offset, end.block, end.caret);
                 session.applyStyle(BIB_STYLE);
               }
-              Located g = fields(session.document()).get(k);
+              Located g = local(at);
               session.select(g.endBlock, g.endOffset + (g.hasEnd ? 1 : 0), g.endOffset + (g.hasEnd ? 1 : 0));
             });
         return null;
       }
       case "Field_setCode": {
         int k = index(arg(a, 1));
-        Located f = fields(session.document()).get(k);
+        Located f = local(global(k));
         String code = str(a, 2);
         replaceField(
             f, new InlineField(Zotero.stored(code), f.field.result, f.field.locked, f.field.showCode, f.field.formats));
@@ -465,11 +810,21 @@ public final class ZoteroBridge implements Zotero.Handler {
 
   static final String BIB_STYLE = "Bibliography";
 
+  /** Converts the field with this id, which keeps its id. */
+  private void convertKeepingId(long id, long noteType) {
+    int k = index(id);
+    int size = ids.size();
+    convert(k, noteType);
+    // convert re-added the field under a new id at its new index; give it back the old one.
+    int at = ids.size() == size ? ids.indexOf(nextId - 1) : -1;
+    if (at >= 0) ids.set(at, id);
+  }
+
   private void ensureBibliographyStyle() {
-    if (session.document().styles.containsKey(BIB_STYLE)) return;
-    ParagraphStyle normal = session.document().styles.get("Normal");
+    if (root.document().styles.containsKey(BIB_STYLE)) return;
+    ParagraphStyle normal = root.document().styles.get("Normal");
     if (normal == null) normal = ParagraphStyle.defaults().get("Normal");
-    session.defineStyle(new ParagraphStyle(BIB_STYLE, BIB_STYLE, normal.paragraph, normal.text));
+    root.defineStyle(new ParagraphStyle(BIB_STYLE, BIB_STYLE, normal.paragraph, normal.text));
   }
 
   private static float twips(long v) {
@@ -490,16 +845,16 @@ public final class ZoteroBridge implements Zotero.Handler {
         if (o instanceof Number n) stops.add(new TabStop(Math.max(0, twips(n.longValue())), "left", "none"));
       }
     ensureBibliographyStyle();
-    ParagraphStyle old = session.document().styles.get(BIB_STYLE);
+    ParagraphStyle old = root.document().styles.get(BIB_STYLE);
     float spacing = line > 0 ? Math.max(.5f, Math.min(5f, line / 240f)) : 1f;
     Paragraph p = old.paragraph.with("indent", "" + twips(body)).with("firstIndent", "" + twips(first))
         .with("spacing", "" + spacing).with("lineRule", "auto").with("before", "0")
         .with("after", "" + Math.max(0, twips(entry))).with("tabs", TabStop.encode(stops));
-    session.defineStyle(new ParagraphStyle(BIB_STYLE, old.name, p, old.text));
+    root.defineStyle(new ParagraphStyle(BIB_STYLE, old.name, p, old.text));
   }
 
   private void replaceField(Located f, InlineField value) {
-    final String pid = ((Paragraph) session.document().blocks.get(f.block)).id;
+    final String pid = ((Paragraph) session.editingDocument().blocks.get(f.block)).id;
     session.mapFields((paragraph, at, field) -> pid.equals(paragraph) && at == f.offset ? value : field);
   }
 

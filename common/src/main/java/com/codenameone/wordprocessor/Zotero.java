@@ -40,6 +40,7 @@ public final class Zotero {
   public enum Command {
     ADD_EDIT_CITATION("addEditCitation", "Add/Edit Citation"),
     ADD_EDIT_BIBLIOGRAPHY("addEditBibliography", "Add/Edit Bibliography"),
+    ADD_NOTE("addNote", "Add Note"),
     REFRESH("refresh", "Refresh"),
     SET_DOC_PREFS("setDocPrefs", "Document Preferences"),
     REMOVE_CODES("removeCodes", "Unlink Citations");

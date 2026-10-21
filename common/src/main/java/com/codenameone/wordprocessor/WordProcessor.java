@@ -2218,6 +2218,7 @@ public class WordProcessor {
                     true),
                 BoxLayout.encloseY(
                     button("Add/Edit Bibliography", () -> zotero(Zotero.Command.ADD_EDIT_BIBLIOGRAPHY)),
+                    button("Add Note", () -> zotero(Zotero.Command.ADD_NOTE)),
                     button("Refresh", () -> zotero(Zotero.Command.REFRESH))),
                 BoxLayout.encloseY(
                     button("Document Preferences", () -> zotero(Zotero.Command.SET_DOC_PREFS)),
