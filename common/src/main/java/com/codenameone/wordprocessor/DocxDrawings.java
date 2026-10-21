@@ -1,5 +1,6 @@
 package com.codenameone.wordprocessor;
 
+import java.util.List;
 import java.util.Set;
 import com.codename1.xml.Element;
 
@@ -66,6 +67,7 @@ final class DocxDrawings {
       DrawingOps.Ops ops = DrawingOps.build(d, p.width, p.height);
       for (DrawingOps.Path path : ops.paths) path(b, path);
       for (DrawingOps.Text text : ops.texts) text(b, text);
+      if (parts != null && parts.storyWriter != null) memberStories(b, d, parts);
       if (parts != null)
         for (DrawingOps.Image im : ops.images) {
           String rel;
@@ -284,6 +286,61 @@ final class DocxDrawings {
     b.append("</wps:spPr><wps:bodyPr/></wps:wsp>");
   }
 
+  /**
+   * Group members holding a block story, each as a text box shape over its member (turned with
+   * it and its group) with its story as w:txbxContent, named with its member index so this app
+   * reads it back as that member's story (DocxPictures.memberStories).
+   */
+  private static void memberStories(StringBuilder b, Drawing d, DocxPictures parts) {
+    var items = d.items();
+    float gw = 0, gh = 0;
+    for (String[] f : items)
+      if (f != null) {
+        gw = Math.max(gw, Float.parseFloat(f[0]) + Float.parseFloat(f[2]));
+        gh = Math.max(gh, Float.parseFloat(f[1]) + Float.parseFloat(f[3]));
+      }
+    for (int k : d.storyMembers()) {
+      if (k >= items.size() || items.get(k) == null) continue;
+      String[] f = items.get(k);
+      Drawing member;
+      float x, y, w, h;
+      try {
+        member = Drawing.decode(f[4]);
+        x = Float.parseFloat(f[0]);
+        y = Float.parseFloat(f[1]);
+        w = Float.parseFloat(f[2]);
+        h = Float.parseFloat(f[3]);
+      } catch (RuntimeException malformed) {
+        continue;
+      }
+      float group = d.num("rotation", 0), cx = x + w / 2, cy = y + h / 2;
+      if (group % 360 != 0) {
+        double r = Math.toRadians(group);
+        float c = (float) Math.cos(r), sn = (float) Math.sin(r), dx = cx - gw / 2, dy = cy - gh / 2;
+        cx = gw / 2 + dx * c - dy * sn;
+        cy = gh / 2 + dx * sn + dy * c;
+      }
+      long rot = Math.round(((((member.num("rotation", 0) + group) % 360) + 360) % 360) * 60000.0);
+      float inset = member.num("inset", 7.2f);
+      String valign = member.get("valign", "middle"), direction = member.get("textDirection", "horizontal");
+      b.append("<wps:wsp xmlns:wps=\"").append(WPS).append("\"><wps:cNvPr id=\"0\" name=\"")
+          .append(DocxPictures.MEMBER_STORY).append(k).append("\"/><wps:cNvSpPr txBox=\"1\"/><wps:spPr><a:xfrm")
+          .append(rot == 0 ? "" : " rot=\"" + rot + "\"").append("><a:off x=\"").append(emu(Math.max(0, cx - w / 2)))
+          .append("\" y=\"").append(emu(Math.max(0, cy - h / 2))).append("\"/><a:ext cx=\"").append(emu(w))
+          .append("\" cy=\"").append(emu(h)).append("\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom>")
+          .append("<a:noFill/><a:ln><a:noFill/></a:ln></wps:spPr><wps:txbx><w:txbxContent>")
+          .append(parts.storyWriter.apply(d.memberStory(k))).append("</w:txbxContent></wps:txbx><wps:bodyPr");
+      long ins = emu(inset);
+      b.append(" lIns=\"").append(ins).append("\" tIns=\"").append(ins).append("\" rIns=\"").append(ins)
+          .append("\" bIns=\"").append(ins).append("\" anchor=\"")
+          .append("top".equals(valign) ? "t" : "bottom".equals(valign) ? "b" : "ctr").append('"');
+      if ("rotate90".equals(direction)) b.append(" vert=\"vert\"");
+      else if ("rotate270".equals(direction)) b.append(" vert=\"vert270\"");
+      else if ("stacked".equals(direction)) b.append(" vert=\"wordArtVert\"");
+      b.append("/></wps:wsp>");
+    }
+  }
+
   private static void text(StringBuilder b, DrawingOps.Text t) {
     b.append("<wps:wsp xmlns:wps=\"").append(WPS).append("\"><wps:cNvSpPr txBox=\"1\"/><wps:spPr><a:xfrm");
     if (t.rotation() != 0) b.append(" rot=\"").append(t.rotation() * 60000L).append('"');
@@ -351,8 +408,14 @@ final class DocxDrawings {
 
   /** As above, reading group pictures' bytes by relationship id through blips (null: dropped). */
   static Drawing shape(Element container, Set<String> warnings, java.util.function.Function<String, byte[]> blips) {
+    return shape(container, warnings, blips, null);
+  }
+
+  /** As above, adding a group's member elements to {@code order} in member (items) order. */
+  static Drawing shape(Element container, Set<String> warnings,
+      java.util.function.Function<String, byte[]> blips, List<Element> order) {
     Element wgp = DocxPictures.descendant(container, "wgp");
-    if (wgp != null) return group(wgp, container, warnings, blips);
+    if (wgp != null) return group(wgp, container, warnings, blips, order);
     Element wsp = DocxPictures.descendant(container, "wsp");
     if (wsp == null) return null;
     return wsp(wsp);
@@ -365,7 +428,7 @@ final class DocxDrawings {
    * "picture" member); member and group a:xfrm rot turn them as there.
    */
   static Drawing group(Element wgp, Element container, Set<String> warnings,
-      java.util.function.Function<String, byte[]> blips) {
+      java.util.function.Function<String, byte[]> blips, List<Element> order) {
     Element extent = Xml.child(container, "extent");
     float w = extent == null ? 0 : Xml.number(Xml.attr(extent, "cx", "0")) / 12700f;
     float h = extent == null ? 0 : Xml.number(Xml.attr(extent, "cy", "0")) / 12700f;
@@ -377,7 +440,7 @@ final class DocxDrawings {
         t = new float[] {-ch[0] * w / ch[2], -ch[1] * h / ch[3], w / ch[2], h / ch[3]};
     }
     var items = new StringBuilder();
-    members(wgp, t, 0, items, warnings, blips);
+    members(wgp, t, 0, items, warnings, blips, order);
     if (items.length() == 0) return null;
     Drawing g = Drawing.of("canvas").with("fill", "none").with("line", "none").with("group", "true")
         .with("items", items.toString());
@@ -400,12 +463,12 @@ final class DocxDrawings {
   }
 
   private static void members(Element g, float[] t, int depth, StringBuilder items, Set<String> warnings,
-      java.util.function.Function<String, byte[]> blips) {
+      java.util.function.Function<String, byte[]> blips, List<Element> order) {
     for (Element m : Xml.children(g, null)) {
       String n = Xml.local(m);
       if ("AlternateContent".equals(n)) {
         Element choice = Xml.child(m, "Choice");
-        if (choice != null) members(choice, t, depth, items, warnings, blips);
+        if (choice != null) members(choice, t, depth, items, warnings, blips, order);
         continue;
       }
       if ("grpSp".equals(n)) {
@@ -416,7 +479,7 @@ final class DocxDrawings {
         if (c == null) c = b;
         float kx = c[2] > 0 ? b[2] / c[2] : 1, ky = c[3] > 0 ? b[3] / c[3] : 1;
         members(m, new float[] {t[0] + (b[0] - c[0] * kx) * t[2], t[1] + (b[1] - c[1] * ky) * t[3], t[2] * kx, t[3] * ky},
-            depth + 1, items, warnings, blips);
+            depth + 1, items, warnings, blips, order);
       } else if ("wsp".equals(n) || "pic".equals(n)) {
         Element pr = Xml.child(m, "spPr"), x = pr == null ? null : Xml.child(pr, "xfrm");
         float[] b = x == null ? null : box(x, "off", "ext");
@@ -441,6 +504,7 @@ final class DocxDrawings {
         if (x != null && !Xml.attr(x, "rot", "").isEmpty())
           d = d.with("rotation", String.valueOf(Math.round(Xml.number(Xml.attr(x, "rot", "0")) / 60000f)));
         if (items.length() > 0) items.append('\u001e');
+        if (order != null) order.add(m);
         items.append(t[0] + b[0] * t[2]).append('\u001f').append(t[1] + b[1] * t[3]).append('\u001f')
             .append(Math.max(0, b[2] * t[2])).append('\u001f').append(Math.max(0, b[3] * t[3])).append('\u001f')
             .append(d.encode());

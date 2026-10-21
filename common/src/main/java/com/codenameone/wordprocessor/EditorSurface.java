@@ -2183,7 +2183,8 @@ public final class EditorSurface extends Container
     if (id == null) return null;
     LayoutEngine.Line best = null;
     float distance = Float.MAX_VALUE;
-    for (LayoutEngine.Line l : p.textBoxLines(id)) {
+    for (LayoutEngine.Line l : p.textBoxLines) {
+      if (!id.equals(l.textBox)) continue;
       // A turned or rotated box's line is hit in its unturned frame.
       float[] f = l.toFrame(x, y);
       float fx = f[0], fy = f[1];
@@ -2557,7 +2558,7 @@ public final class EditorSurface extends Container
         if (px >= pic.x() && px <= pic.x() + pic.width() && py >= pic.y() && py <= pic.y() + pic.height()) {
           // Inside a text box's text area the press edits its story (Wordcraft's text box part);
           // its margin band selects and drags the box.
-          if (line != null && pic.picture().id().equals(line.textBox)) break;
+          if (line != null && pic.picture().id().equals(line.boxPicture)) break;
           stopInput();
           if (!selectObject(pic)) continue;
           if (clickEquation(pic, px, py)) return;

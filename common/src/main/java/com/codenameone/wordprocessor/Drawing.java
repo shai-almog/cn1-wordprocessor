@@ -41,15 +41,77 @@ public final class Drawing {
    */
   public final Sequence<Block> story;
 
+  /**
+   * A group's members' block stories by member index (the order of its "items"), as Wordcraft's
+   * group members hold text box parts; null when no member has one.
+   */
+  private final TreeMap<Integer, Sequence<Block>> members;
+
   private Drawing(String kind, TreeMap<String, String> props) {
-    this(kind, props, null);
+    this(kind, props, null, null);
   }
 
   private Drawing(String kind, TreeMap<String, String> props, Sequence<Block> story) {
+    this(kind, props, story, null);
+  }
+
+  private Drawing(String kind, TreeMap<String, String> props, Sequence<Block> story,
+      TreeMap<Integer, Sequence<Block>> members) {
     if (!KINDS.contains(kind)) throw new IllegalArgumentException("Unknown drawing kind: " + kind);
     this.kind = kind;
     this.props = props;
     this.story = story;
+    this.members = members == null || members.isEmpty() ? null : members;
+  }
+
+  /** The members of a group (canvas "items"): {x, y, w, h, encoding} each. */
+  public List<String[]> items() {
+    var out = new ArrayList<String[]>();
+    String all = get("items", "");
+    if (all.isEmpty()) return out;
+    for (String item : DrawingOps.split(all, '\u001e')) {
+      var f = DrawingOps.split(item, '\u001f');
+      out.add(f.size() == 5 ? f.toArray(new String[5]) : null);
+    }
+    return out;
+  }
+
+  /** Member {@code k}'s block story, or null. */
+  public Sequence<Block> memberStory(int k) {
+    return members == null ? null : members.get(k);
+  }
+
+  /** The member indexes holding a story, ascending. */
+  public java.util.Set<Integer> storyMembers() {
+    return members == null ? Collections.<Integer>emptySet() : Collections.unmodifiableSet(members.keySet());
+  }
+
+  /**
+   * This group with member {@code k}'s story replaced (null or empty removes it); the member's
+   * own "text" property mirrors its plain text as a text box's does.
+   */
+  public Drawing memberStory(int k, Sequence<Block> blocks) {
+    var items = items();
+    if (k < 0 || k >= items.size() || items.get(k) == null) throw new IllegalArgumentException("No group member " + k);
+    var next = members == null ? new TreeMap<Integer, Sequence<Block>>() : new TreeMap<Integer, Sequence<Block>>(members);
+    String[] item = items.get(k);
+    var member = decode(item[4]);
+    if (blocks == null || blocks.size() == 0) next.remove(k);
+    else {
+      next.put(k, blocks);
+      member = member.story(blocks).story(null);
+    }
+    var b = new StringBuilder();
+    for (int i = 0; i < items.size(); i++) {
+      String[] f = items.get(i);
+      if (f == null) continue;
+      if (b.length() > 0) b.append('\u001e');
+      for (int j = 0; j < 4; j++) b.append(f[j]).append('\u001f');
+      b.append(i == k ? member.encode() : f[4]);
+    }
+    var props = new TreeMap<String, String>(this.props);
+    props.put("items", b.toString());
+    return new Drawing(kind, props, story, next);
   }
 
   /** Whether this kind of drawing can hold a block story (Wordcraft's wps:txbx shapes). */
@@ -63,7 +125,7 @@ public final class Drawing {
    * removes the story.
    */
   public Drawing story(Sequence<Block> blocks) {
-    if (blocks == null || blocks.size() == 0) return new Drawing(kind, props, null);
+    if (blocks == null || blocks.size() == 0) return new Drawing(kind, props, null, members);
     boolean any = false;
     for (Block b : blocks) any |= b instanceof Paragraph;
     if (!any) throw new IllegalArgumentException("A text box story needs a paragraph");
@@ -71,7 +133,7 @@ public final class Drawing {
     String plain = plainText(blocks);
     if (plain.isEmpty()) next.remove("text");
     else next.put("text", plain.length() > 200000 ? plain.substring(0, 200000) : plain);
-    return new Drawing(kind, next, blocks);
+    return new Drawing(kind, next, blocks, members);
   }
 
   /** The story's text: paragraphs (and table cells) on their own lines. */
@@ -176,7 +238,8 @@ public final class Drawing {
     // editing paths: linked boxes, the text dialog); other properties keep the story.
     var keep = story;
     if (keep != null && "text".equals(key) && !plainText(keep).equals(value == null ? "" : value)) keep = null;
-    return new Drawing(kind, next, keep);
+    // Replacing a group's members drops their stories.
+    return new Drawing(kind, next, keep, "items".equals(key) ? null : members);
   }
 
   public Map<String, String> properties() {
@@ -235,7 +298,7 @@ public final class Drawing {
 
   public boolean equals(Object o) {
     return o instanceof Drawing d && d.kind.equals(kind) && d.props.equals(props)
-        && java.util.Objects.equals(d.story, story);
+        && java.util.Objects.equals(d.story, story) && java.util.Objects.equals(d.members, members);
   }
 
   public int hashCode() {

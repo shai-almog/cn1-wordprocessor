@@ -24,11 +24,50 @@ public final class TextBoxes {
     return out;
   }
 
-  /** The drawing picture with {@code id} anywhere in the document, or null. */
+  /**
+   * A group member's text box id: the group picture's id, a slash and the member's index (its
+   * place in the group's items), as Wordcraft's group members hold text box parts of their own.
+   */
+  public static String memberId(String picture, int member) {
+    return picture + "/" + member;
+  }
+
+  /** The member index of a group member's id, or -1 for a picture's own id. */
+  static int member(String id) {
+    int slash = id.lastIndexOf('/');
+    if (slash < 0) return -1;
+    try {
+      return Integer.parseInt(id.substring(slash + 1));
+    } catch (NumberFormatException e) {
+      return -1;
+    }
+  }
+
+  private static String picture(String id) {
+    return member(id) < 0 ? id : id.substring(0, id.lastIndexOf('/'));
+  }
+
+  /** Whether {@code id} names a text box or shape (or group member) that can hold a story. */
+  public static boolean isBox(Document d, String id) {
+    var p = find(d, id);
+    if (p == null || p.drawing == null) return false;
+    int k = member(id);
+    if (k < 0) return p.drawing.storyKind();
+    var items = p.drawing.items();
+    if (k >= items.size() || items.get(k) == null) return false;
+    try {
+      return Drawing.decode(items.get(k)[4]).storyKind();
+    } catch (RuntimeException e) {
+      return false;
+    }
+  }
+
+  /** The drawing picture with {@code id} (for a group member: its group) anywhere, or null. */
   public static Picture find(Document d, String id) {
+    final String wanted = picture(id);
     final Picture[] found = {null};
     map(d, p -> {
-      if (found[0] == null && p.id().equals(id)) found[0] = p;
+      if (found[0] == null && p.id().equals(wanted)) found[0] = p;
       return p;
     });
     return found[0];
@@ -84,6 +123,13 @@ public final class TextBoxes {
   public static Sequence<Block> story(Document d, String id) {
     var box = find(d, id);
     if (box == null || box.drawing == null) return null;
+    int k = member(id);
+    if (k >= 0) {
+      var own = box.drawing.memberStory(k);
+      if (own != null) return own;
+      var items = box.drawing.items();
+      return k < items.size() && items.get(k) != null ? Drawing.decode(items.get(k)[4]).storyOrText(id + "-t") : null;
+    }
     var out = box.drawing.storyOrText(id + "-t");
     for (List<String> c : chains(d)) {
       if (!c.get(0).equals(id)) continue;
@@ -103,6 +149,11 @@ public final class TextBoxes {
    * (the story flows through them).
    */
   public static Document setStory(Document d, String id, Sequence<Block> story) {
+    int k = member(id);
+    if (k >= 0) {
+      String group = picture(id);
+      return map(d, p -> p.id().equals(group) && p.drawing != null ? p.drawing(p.drawing.memberStory(k, story)) : p);
+    }
     var tails = new java.util.HashSet<String>();
     for (List<String> c : chains(d)) if (c.get(0).equals(id)) tails.addAll(c.subList(1, c.size()));
     return map(d, p -> {

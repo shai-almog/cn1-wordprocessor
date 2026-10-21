@@ -127,7 +127,9 @@ public final class DrawingOps {
         ops.fill(rect(0, 0, w, h), fill, d.color("line", 0xbfbfbf), d.num("lineWidth", .75f));
       }
       ink(ops, d.get("strokes", ""));
+      int index = -1;
       for (String item : split(d.get("items", ""), '\u001e')) {
+        index++;
         var f = split(item, '\u001f');
         if (f.size() != 5) continue;
         try {
@@ -138,6 +140,8 @@ public final class DrawingOps {
           Drawing member = Drawing.decode(f.get(4));
           if (!turnsItself(member.kind)) rotate(child, 0, 0, 0, mw / 2, mh / 2, member.num("rotation", 0));
           for (Path p : child.paths) offset(p.points, x, y);
+          // A member holding a block story has it laid out by the layout engine instead.
+          if (d.memberStory(index) != null) child.texts.clear();
           for (Text t : child.texts)
             ops.texts.add(new Text(t.text, t.x + x, t.y + y, t.width, t.size, t.color, t.bold, t.italic, t.align, t.outline, t.rotation, t.spin));
           for (Image m : child.images)

@@ -182,6 +182,16 @@ public final class DocumentXml {
         else if (block instanceof Picture inner) picture(b, inner);
       b.append("</textStory>");
     }
+    if (picture.drawing != null)
+      for (int k : picture.drawing.storyMembers()) {
+        // A group member's block story, by its member index.
+        b.append("<textStory member=\"").append(k).append("\">");
+        for (Block block : picture.drawing.memberStory(k))
+          if (block instanceof Paragraph para) paragraph(b, para);
+          else if (block instanceof Table t) table(b, t);
+          else if (block instanceof Picture inner) picture(b, inner);
+        b.append("</textStory>");
+      }
     b.append("</picture>");
   }
 
@@ -237,7 +247,24 @@ public final class DocumentXml {
                 .wrap(Xml.attr(c, "wrap", "inline"), Xml.attr(c, "wrapPolygon", "")).position(Xml.attr(c, "position", "")));
     if (!Xml.attr(c, "drawing", "").isEmpty())
       picture = picture.drawing(Drawing.decode(controlsIn(Xml.attr(c, "drawing", ""))));
-    Element story = Xml.child(c, "textStory");
+    Element story = null;
+    for (Element e : Xml.children(c, "textStory")) {
+      if (Xml.attr(e, "member", "").isEmpty()) {
+        if (story == null) story = e;
+        continue;
+      }
+      if (picture.drawing == null) continue;
+      var blocks = new Sequence<Block>();
+      for (Element x : Xml.children(e, null))
+        if ("p".equals(Xml.local(x))) blocks = blocks.append(readParagraph(x, ids));
+        else if ("table".equals(Xml.local(x))) blocks = blocks.append(readTable(x, ids));
+        else if ("picture".equals(Xml.local(x))) blocks = blocks.append(readPicture(x, ids));
+      try {
+        picture = picture.drawing(picture.drawing.memberStory(Integer.parseInt(Xml.attr(e, "member", "")), blocks));
+      } catch (IllegalArgumentException bad) {
+        throw new IOException("Invalid group member story");
+      }
+    }
     if (story != null && picture.drawing != null && picture.drawing.storyKind()) {
       var blocks = new Sequence<Block>();
       for (Element e : Xml.children(story, null))

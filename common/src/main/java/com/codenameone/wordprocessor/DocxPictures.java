@@ -93,9 +93,11 @@ final class DocxPictures {
         String[] wrap = inline != null ? new String[] {"inline", "", "left", ""} : anchorWrap(anchor);
         Element extent0 = Xml.child(container, "extent"), props0 = Xml.child(container, "docPr");
         Drawing drawing = DocxDrawings.extension(container);
-        if (drawing == null) drawing = DocxDrawings.shape(container, warnings, rid -> parts.get(targets.get(rid)));
+        var order = new java.util.ArrayList<Element>();
+        if (drawing == null) drawing = DocxDrawings.shape(container, warnings, rid -> parts.get(targets.get(rid)), order);
         if (drawing == null && extent0 != null) drawing = object(container, extent0, warnings);
         drawing = story(container, drawing);
+        drawing = memberStories(container, drawing, order);
         if (drawing != null && !"inline".equals(wrap[0]) && !"equation".equals(drawing.kind))
           drawing = drawing.with("wrap", wrap[0]).with("wrapPolygon", wrap[1]).with("position", wrap[3]);
         if (drawing != null && extent0 != null) {
@@ -139,9 +141,51 @@ final class DocxPictures {
     for (Element child : Xml.children(e, null)) collect(child, result, id, warnings);
   }
 
+  /** The name marking a group member's story shape this app writes into a group (with its index). */
+  static final String MEMBER_STORY = "cnMemberStory ";
+
+  /**
+   * Group members' w:txbxContent as their block stories, as Wordcraft's group members hold text
+   * box parts: a foreign group's members by their place ({@code order}, the items' order), a
+   * group this app wrote by the member story shapes it marks with their index.
+   */
+  private Drawing memberStories(Element container, Drawing drawing, List<Element> order) {
+    if (drawing == null || storyReader == null || !"canvas".equals(drawing.kind) || drawing.get("items", "").isEmpty())
+      return drawing;
+    Element wgp = descendant(container, "wgp");
+    if (wgp == null) return drawing;
+    var found = new java.util.TreeMap<Integer, Element>();
+    if (order.isEmpty()) {
+      for (Element m : Xml.children(wgp, null)) {
+        if (!"wsp".equals(Xml.local(m))) continue;
+        Element nv = descendant(m, "cNvPr");
+        String name = nv == null ? "" : Xml.attr(nv, "name", "");
+        if (!name.startsWith(MEMBER_STORY)) continue;
+        try {
+          found.put(Integer.parseInt(name.substring(MEMBER_STORY.length()).trim()), m);
+        } catch (NumberFormatException junk) {
+          // not a member story shape
+        }
+      }
+    } else for (int k = 0; k < order.size(); k++) if ("wsp".equals(Xml.local(order.get(k)))) found.put(k, order.get(k));
+    for (java.util.Map.Entry<Integer, Element> e : found.entrySet()) {
+      Element content = descendant(e.getValue(), "txbxContent");
+      if (content == null) continue;
+      var blocks = storyReader.apply(content);
+      boolean any = false;
+      for (Block b : blocks) any |= b instanceof Paragraph;
+      try {
+        if (any) drawing = drawing.memberStory(e.getKey(), blocks);
+      } catch (IllegalArgumentException noMember) {
+        // a marked shape without its member
+      }
+    }
+    return drawing;
+  }
+
   /**
    * A shape's or text box's w:txbxContent as its block story (as Wordcraft reads text box parts);
-   * group members keep their text as a string.
+   * group members' stories are read by memberStories.
    */
   private Drawing story(Element container, Drawing drawing) {
     if (drawing == null || !drawing.storyKind() || storyReader == null) return drawing;

@@ -175,9 +175,7 @@ public final class Session {
     id = TextBoxes.head(document(), id);
     if (cell != null && id.equals(cell.textBox)) return;
     leaveCell();
-    var box = TextBoxes.find(document, id);
-    if (box == null || box.drawing == null || !box.drawing.storyKind())
-      throw new IllegalArgumentException("Unknown text box");
+    if (!TextBoxes.isBox(document, id)) throw new IllegalArgumentException("Unknown text box");
     var blocks = TextBoxes.story(document, id);
     if (blocks == null) blocks = Sequence.<Block>of(java.util.Collections.<Block>singletonList(
         new Paragraph(id + "-t0", new RichText())));
@@ -3365,6 +3363,12 @@ public final class Session {
                 copy = copy.drawing(copy.drawing.story(TextBoxes.renumber(copy.drawing.story, ids)));
                 id = ids[0];
               }
+              if (copy.drawing != null)
+                for (int k : copy.drawing.storyMembers()) {
+                  long[] ids = {id};
+                  copy = copy.drawing(copy.drawing.memberStory(k, TextBoxes.renumber(copy.drawing.memberStory(k), ids)));
+                  id = ids[0];
+                }
               inserted.add(copy);
             }
           }

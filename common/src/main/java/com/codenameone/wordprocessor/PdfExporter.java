@@ -749,10 +749,18 @@ public final class PdfExporter {
     if (page.textBoxLines.isEmpty()) return;
     var lines = page.textBoxLines(pic.picture().id());
     if (lines.isEmpty()) return;
-    float[] c = lines.get(0).boxClip;
-    content.append("q ").append(n(c[0])).append(' ').append(n(spec.height - c[1] - c[3])).append(' ')
-        .append(n(c[2])).append(' ').append(n(c[3])).append(" re W n\n");
-    for (LayoutEngine.Line line : lines) paint.paint(line);
+    // Each box (a group's members have their own) clips its lines to its text area.
+    float[] open = null;
+    for (LayoutEngine.Line line : lines) {
+      float[] c = line.boxClip;
+      if (c != open) {
+        if (open != null) content.append("Q\n");
+        content.append("q ").append(n(c[0])).append(' ').append(n(spec.height - c[1] - c[3])).append(' ')
+            .append(n(c[2])).append(' ').append(n(c[3])).append(" re W n\n");
+        open = c;
+      }
+      paint.paint(line);
+    }
     content.append("Q\n");
   }
 

@@ -261,4 +261,24 @@ public class WordXmlTest {
     assertEquals("line", pics.get(3).drawing.get("shape", ""));
     assertEquals(2, pics.get(3).drawing.num("lineWidth", 0), .01f);
   }
+
+  @Test
+  public void word2003VmlTextBoxReadsAsAStory() throws Exception {
+    String xml = "<?xml version=\"1.0\"?><w:wordDocument xmlns:w=\"" + W2003 + "\""
+        + " xmlns:v=\"urn:schemas-microsoft-com:vml\"><w:body>"
+        + "<w:p><w:r><w:pict><v:shape style=\"width:144pt;height:72pt\"><v:textbox><w:txbxContent>"
+        + "<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>Bold</w:t></w:r><w:r><w:t> lead</w:t></w:r></w:p>"
+        + "<w:p><w:pPr><w:jc w:val=\"center\"/></w:pPr><w:r><w:t>Second</w:t></w:r></w:p>"
+        + "</w:txbxContent></v:textbox></v:shape></w:pict></w:r></w:p></w:body></w:wordDocument>";
+    var d = open(xml).document;
+    var boxes = TextBoxes.all(d);
+    assertEquals(1, boxes.size());
+    var story = boxes.get(0).drawing.story;
+    assertEquals(2, story.size());
+    var first = (Paragraph) story.get(0);
+    assertEquals("Bold lead", first.text.toString());
+    assertTrue(first.text.styleAt(0).bold);
+    assertFalse(first.text.styleAt(6).bold);
+    assertEquals("Second", ((Paragraph) story.get(1)).text.toString());
+  }
 }

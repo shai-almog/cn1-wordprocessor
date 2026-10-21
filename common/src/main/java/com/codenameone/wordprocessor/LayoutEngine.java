@@ -105,6 +105,9 @@ public final class LayoutEngine {
      */
     public String boxStory;
 
+    /** For a text box line: the picture it is drawn over (a group member's group). */
+    public String boxPicture;
+
     /** A text box line's clip rectangle on the page {x, y, width, height}, in points. */
     public float[] boxClip;
 
@@ -497,7 +500,7 @@ public final class LayoutEngine {
     public List<Line> textBoxLines(String id) {
       if (textBoxLines.isEmpty()) return Collections.emptyList();
       var out = new ArrayList<Line>();
-      for (Line l : textBoxLines) if (id.equals(l.textBox)) out.add(l);
+      for (Line l : textBoxLines) if (id.equals(l.boxPicture)) out.add(l);
       return out;
     }
 
@@ -1728,6 +1731,23 @@ public final class LayoutEngine {
         }
         var d = pic.picture().drawing;
         if (storyLaidOut(d)) boxLines(doc, page, pic, d.storyOrText(id + "-t"), id, null, false);
+        else if (d != null) {
+          // Group members holding a story: laid out in the member's frame inside the group.
+          var items = d.storyMembers().isEmpty() ? null : d.items();
+          for (int k : d.storyMembers()) {
+            if (items == null || k >= items.size() || items.get(k) == null) continue;
+            String[] f = items.get(k);
+            try {
+              var member = Drawing.decode(f[4]);
+              float[] frame = {pic.x() + Float.parseFloat(f[0]), pic.y() + Float.parseFloat(f[1]),
+                  Float.parseFloat(f[2]), Float.parseFloat(f[3])};
+              String mid = TextBoxes.memberId(id, k);
+              boxLines(doc, page, pic, member, mid, frame, d.num("rotation", 0), d.memberStory(k), mid, null, false);
+            } catch (RuntimeException malformed) {
+              // an unreadable member shows no text
+            }
+          }
+        }
       }
     for (List<String> chain : chains) {
       var head = placed.get(chain.get(0));
@@ -1762,8 +1782,19 @@ public final class LayoutEngine {
    */
   private Cut boxLines(Document doc, Page page, PlacedPicture pic, Sequence<Block> blocks,
       String story, Cut from, boolean flow) {
-    var d = pic.picture().drawing;
-    float[] rect = DrawingOps.textRect(d, pic.width(), pic.height());
+    return boxLines(doc, page, pic, pic.picture().drawing, pic.picture().id(),
+        new float[] {pic.x(), pic.y(), pic.width(), pic.height()}, 0, blocks, story, from, flow);
+  }
+
+  /**
+   * As above for box {@code d} (a picture's drawing or a group member) with id {@code id} at
+   * page frame {@code frame} {x, y, w, h}; {@code groupRotation} turns it about {@code pic}'s
+   * centre after its own rotation (a member of a rotated group).
+   */
+  private Cut boxLines(Document doc, Page page, PlacedPicture pic, Drawing d, String id,
+      float[] frame, float groupRotation, Sequence<Block> blocks, String story, Cut from,
+      boolean flow) {
+    float[] rect = DrawingOps.textRect(d, frame[2], frame[3]);
     if (rect[2] < 1 || rect[3] < 1) return flow ? from : null;
     // As Wordcraft's textbox.rs: turned text runs along the box's height and its lines stack
     // across its width (top-to-bottom ones from the right edge, bottom-to-top ones from the
@@ -1812,38 +1843,36 @@ public final class LayoutEngine {
     var valign = d.get("valign", "middle");
     float slack = across - used;
     float off = "top".equals(valign) || slack < 0 ? 0 : "bottom".equals(valign) ? slack : slack / 2;
-    float bx = pic.x() + rect[0], by = pic.y() + rect[1];
+    float bx = frame[0] + rect[0], by = frame[1] + rect[1];
     float ox = turn == 1 ? bx + rect[2] - off : turn == 2 ? bx + off : bx;
     float oy = turn == 1 ? by : turn == 2 ? by + rect[3] : by + off;
     float angle = turn == 1 ? 90 : turn == 2 ? -90 : 0;
-    float[] clip = {bx, by, rect[2], rect[3]};
-    // A rotated box turns its story about the box centre with it (Wordcraft's Draw::Rotated).
+    // A rotated box turns its story about the box centre with it, and a group member's story
+    // turns with its group about the group's centre (Wordcraft's Draw::Rotated).
     float rotation = d.num("rotation", 0) % 360;
-    if (rotation != 0) {
-      double r = Math.toRadians(rotation);
-      float cx = pic.x() + pic.width() / 2, cy = pic.y() + pic.height() / 2;
-      float c = (float) Math.cos(r), sn = (float) Math.sin(r), dx = ox - cx, dy = oy - cy;
-      ox = cx + dx * c - dy * sn;
-      oy = cy + dx * sn + dy * c;
-      angle += rotation;
-      // The clip is the turned text area's page bounds.
-      float x0 = Float.MAX_VALUE, y0 = Float.MAX_VALUE, x1 = -Float.MAX_VALUE, y1 = -Float.MAX_VALUE;
-      for (int k = 0; k < 4; k++) {
-        float px = bx + (k % 2) * rect[2] - cx, py = by + (k / 2) * rect[3] - cy;
-        float qx = cx + px * c - py * sn, qy = cy + px * sn + py * c;
-        x0 = Math.min(x0, qx);
-        y0 = Math.min(y0, qy);
-        x1 = Math.max(x1, qx);
-        y1 = Math.max(y1, qy);
-      }
-      clip = new float[] {x0, y0, x1 - x0, y1 - y0};
+    float[] spins = {rotation, frame[0] + frame[2] / 2, frame[1] + frame[3] / 2,
+        groupRotation % 360, pic.x() + pic.width() / 2, pic.y() + pic.height() / 2};
+    float[] origin = spin(spins, ox, oy);
+    ox = origin[0];
+    oy = origin[1];
+    angle += spins[0] + spins[3];
+    // The clip is the turned text area's page bounds.
+    float x0 = Float.MAX_VALUE, y0 = Float.MAX_VALUE, x1 = -Float.MAX_VALUE, y1 = -Float.MAX_VALUE;
+    for (int k = 0; k < 4; k++) {
+      float[] q = spin(spins, bx + (k % 2) * rect[2], by + (k / 2) * rect[3]);
+      x0 = Math.min(x0, q[0]);
+      y0 = Math.min(y0, q[1]);
+      x1 = Math.max(x1, q[0]);
+      y1 = Math.max(y1, q[1]);
     }
+    float[] clip = {x0, y0, x1 - x0, y1 - y0};
     boolean turned = angle % 360 != 0;
     for (Line l : lines) {
       var line = new Line(-1, -1, -1, l.paragraphId, pic.page() < 0 ? page.number : pic.page(),
           turned ? l.x : ox + l.x, turned ? l.y : oy + l.y, raw(l), l.marker);
       if (turned) line.turned(angle, ox, oy);
-      line.textBox = pic.picture().id();
+      line.textBox = id;
+      line.boxPicture = pic.picture().id();
       line.boxStory = story;
       line.boxCell = l.boxCell;
       line.boxClip = clip;
@@ -1852,6 +1881,18 @@ public final class LayoutEngine {
     return next;
   }
 
+
+  /** Point (x, y) turned by each (degrees, centre x, centre y) triple of {@code spins} in turn. */
+  private static float[] spin(float[] spins, float x, float y) {
+    for (int i = 0; i + 2 < spins.length; i += 3) {
+      if (spins[i] == 0) continue;
+      double r = Math.toRadians(spins[i]);
+      float c = (float) Math.cos(r), sn = (float) Math.sin(r), dx = x - spins[i + 1], dy = y - spins[i + 2];
+      x = spins[i + 1] + dx * c - dy * sn;
+      y = spins[i + 2] + dx * sn + dy * c;
+    }
+    return new float[] {x, y};
+  }
 
   /** A text box story laid out {@code width} points wide, as a header story is. */
   private StoryLayout boxStory(Document doc, Sequence<Block> blocks, int page, float width) {

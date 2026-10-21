@@ -348,4 +348,70 @@ public class TextBoxStoryTest {
     assertNull(TextBoxes.find(s.document(), "i6").drawing.story);
     assertEquals(java.util.Arrays.asList("i5", "i6"), TextBoxes.chains(s.document()).get(0));
   }
+
+  static Document groupWithMemberText() throws Exception {
+    String member = "<wps:wsp><wps:cNvSpPr txBox=\"1\"/><wps:spPr><a:xfrm><a:off x=\"914400\" y=\"0\"/>"
+        + "<a:ext cx=\"914400\" cy=\"914400\"/></a:xfrm><a:prstGeom prst=\"rect\"/></wps:spPr><wps:txbx><w:txbxContent>"
+        + "<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>Member</w:t></w:r><w:r><w:t> text</w:t></w:r></w:p>"
+        + "<w:p><w:r><w:t>More</w:t></w:r></w:p></w:txbxContent></wps:txbx><wps:bodyPr anchor=\"t\"/></wps:wsp>";
+    String plain = "<wps:wsp><wps:cNvSpPr/><wps:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"914400\" cy=\"914400\"/>"
+        + "</a:xfrm><a:prstGeom prst=\"ellipse\"/></wps:spPr><wps:bodyPr/></wps:wsp>";
+    String w = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
+    String xml = "<?xml version=\"1.0\"?><pkg:package xmlns:pkg=\"http://schemas.microsoft.com/office/2006/xmlPackage\">"
+        + "<pkg:part pkg:name=\"/word/document.xml\"><pkg:xmlData><w:document xmlns:w=\"" + w + "\""
+        + " xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\""
+        + " xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\""
+        + " xmlns:wpg=\"http://schemas.microsoft.com/office/word/2010/wordprocessingGroup\""
+        + " xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><w:body>"
+        + "<w:p><w:r><w:drawing><wp:inline><wp:extent cx=\"1828800\" cy=\"914400\"/><wp:docPr id=\"1\" name=\"g\"/>"
+        + "<a:graphic><a:graphicData><wpg:wgp><wpg:grpSpPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"1828800\" cy=\"914400\"/>"
+        + "<a:chOff x=\"0\" y=\"0\"/><a:chExt cx=\"1828800\" cy=\"914400\"/></a:xfrm></wpg:grpSpPr>" + plain + member
+        + "</wpg:wgp></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>"
+        + "</w:body></w:document></pkg:xmlData></pkg:part></pkg:package>";
+    return Docx.read(new java.io.ByteArrayInputStream(xml.getBytes("UTF-8"))).document;
+  }
+
+  static Picture group(Document d) {
+    for (Block b : d.blocks) if (b instanceof Picture p && p.drawing != null && p.drawing.flag("group")) return p;
+    throw new AssertionError("no group");
+  }
+
+  @Test
+  public void groupMemberTextIsAStoryLaidOutEditedAndSaved() throws Exception {
+    var d = groupWithMemberText();
+    var g = group(d);
+    assertEquals(java.util.Collections.singleton(1), g.drawing.storyMembers());
+    var story = g.drawing.memberStory(1);
+    assertEquals(2, story.size());
+    assertTrue(((Paragraph) story.get(0)).text.styleAt(0).bold);
+    assertFalse(((Paragraph) story.get(0)).text.styleAt(7).bold);
+    // The member's text is not drawn as a string; the layout places its story in the member.
+    assertTrue(DrawingOps.build(g.drawing, 144, 72).texts.isEmpty());
+    var page = new LayoutEngine(new PdfMetrics()).layout(d, 0).pages.get(0);
+    LayoutEngine.PlacedPicture placed = null;
+    for (LayoutEngine.PlacedPicture p : page.pictures) if (p.picture() == g) placed = p;
+    var lines = page.textBoxLines(g.id());
+    assertTrue(lines.size() >= 2);
+    String id = TextBoxes.memberId(g.id(), 1);
+    assertEquals(id, lines.get(0).textBox);
+    assertEquals(placed.x() + 72 + 7.2f, lines.get(0).x, .5f);
+    assertEquals(placed.y() + 7.2f, lines.get(0).y, .5f);
+    // Edited in place as a story of its own.
+    var s = new Session(d);
+    s.enterTextBox(id);
+    assertEquals(id, s.textBoxStory());
+    s.select(1, 4, 4);
+    s.typeText("!", 0);
+    s.leaveCell();
+    var edited = group(s.document()).drawing;
+    assertEquals("More!", ((Paragraph) edited.memberStory(1).get(1)).text.toString());
+    // Saved and read back in DOCX and the native format.
+    var out = new java.io.ByteArrayOutputStream();
+    Docx.write(s.document(), out);
+    var back = group(Docx.read(new java.io.ByteArrayInputStream(out.toByteArray())).document).drawing;
+    assertEquals("More!", ((Paragraph) back.memberStory(1).get(1)).text.toString());
+    assertTrue(((Paragraph) back.memberStory(1).get(0)).text.styleAt(0).bold);
+    var nat = group(DocumentXml.read(DocumentXml.write(s.document()))).drawing;
+    assertEquals("More!", ((Paragraph) nat.memberStory(1).get(1)).text.toString());
+  }
 }
