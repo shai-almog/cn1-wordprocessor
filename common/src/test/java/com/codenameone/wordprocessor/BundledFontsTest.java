@@ -26,7 +26,7 @@ public class BundledFontsTest {
     assertEquals(12,loads.size());
     for (Map.Entry<String,Integer> face:loads.entrySet()) {
       assertEquals(face.getKey(),Integer.valueOf(1),face.getValue());
-      assertTrue(pdf.contains("/BaseFont /"+face.getKey().substring(1,face.getKey().length()-4)));
+      assertTrue(pdf.contains("+"+face.getKey().substring(1,face.getKey().length()-4)));
     }
     assertTrue(pdf.contains("/ToUnicode"));
     assertTrue(pdf.contains("<03bb>"));

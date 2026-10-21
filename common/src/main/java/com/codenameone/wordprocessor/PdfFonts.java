@@ -31,7 +31,10 @@ final class PdfFonts {
     return face;
   }
 
-  /** The chosen face then each loadable fallback face, loading fallbacks only when needed. */
+  /**
+   * The chosen face, each loadable fallback face (loaded only when needed), then installed system
+   * fonts ranked per script.
+   */
   private final class Chain implements PdfShaping.Coverage {
     final Face primary;
     final List<String> rest;
@@ -57,9 +60,14 @@ final class PdfFonts {
             broken.add(name);
           }
         }
-        if (i >= loaded.size()) return primary;
+        if (i >= loaded.size()) break;
         if (loaded.get(i).font.glyph(cp) != 0) return loaded.get(i);
       }
+      if (cp >= 0x80 && !(cp >= 0xd800 && cp <= 0xdfff) && !PdfShaping.mark(cp)) {
+        var face = system(cp);
+        if (face != null) return face;
+      }
+      return primary;
     }
 
     public boolean covers(int cp) {
@@ -71,43 +79,120 @@ final class PdfFonts {
     }
   }
 
-  /** Unkerned advance of shaped text, in points. */
-  float width(TextStyle style, String text, float size) throws IOException {
+  private Face system(int cp) {
+    var entry = SystemFonts.find(cp);
+    if (entry == null) return null;
+    var name = entry.pdfName();
+    if (broken.contains(name)) return null;
+    var face = faces.get(name);
+    if (face != null) return face;
+    try {
+      face = new Face(name, SystemFonts.bytes(entry), faces.size() + 4);
+      faces.put(name, face);
+      return face;
+    } catch (IOException | RuntimeException unusable) {
+      broken.add(name);
+      return null;
+    }
+  }
+
+  /** Characters that stay in the face of the character before them (marks, viramas, joiners). */
+  private static boolean combining(int cp) {
+    int indic = PdfShaping.indic(cp);
+    return PdfShaping.mark(cp) || cp == 0x200c || indic >= 2 && indic != 5;
+  }
+
+  /** Face runs of {@code text}: {face, from, to} split at face and script changes. */
+  private List<Object[]> runs(Chain chain, String text) throws IOException {
+    var runs = new ArrayList<Object[]>();
+    Face face = null;
+    String script = null;
+    for (int i = 0; i < text.length(); ) {
+      int cp = text.charAt(i), end = i + 1;
+      if (cp >= 0xd800 && cp <= 0xdbff && end < text.length()) {
+        int low = text.charAt(end);
+        if (low >= 0xdc00 && low <= 0xdfff) {
+          cp = 0x10000 + ((cp - 0xd800) << 10) + low - 0xdc00;
+          end++;
+        }
+      }
+      String s = PdfShaping.script(cp);
+      Face f = face != null && (combining(cp) || face.font.glyph(cp) != 0 && cp < 0x80)
+          ? face : chain.pick(cp);
+      if (face != null && combining(cp) && face.font.glyph(cp) == 0 && f.font.glyph(cp) == 0)
+        f = face;
+      boolean split = face == null || f != face || s != null && script != null && !s.equals(script)
+          && !combining(cp);
+      if (split) runs.add(new Object[] {f, i, end});
+      else runs.get(runs.size() - 1)[2] = end;
+      face = f;
+      if (s != null) script = s;
+      i = end;
+    }
+    return runs;
+  }
+
+  /** Shaped glyphs per run, runs in visual order. */
+  private List<Object[]> shaped(TextStyle style, String text, boolean rtl, boolean kerning)
+      throws IOException {
     var chain = new Chain(style);
+    var out = new ArrayList<Object[]>();
+    for (Object[] run : runs(chain, text)) {
+      var face = (Face) run[0];
+      out.add(new Object[] {face, PdfShaping.shapeRun(face.font, face.layout(), text,
+          (Integer) run[1], (Integer) run[2], rtl, kerning)});
+    }
+    if (rtl) Collections.reverse(out);
+    return out;
+  }
+
+  /** Unkerned advance of shaped text, in points. */
+  @SuppressWarnings("unchecked")
+  float width(TextStyle style, String text, float size) throws IOException {
     float width = 0;
-    for (int[] u : PdfShaping.shape(text, false, chain)) {
-      var font = chain.pick(u[0]).font;
-      width += font.scaled(font.advance(font.glyph(u[0]))) * size / 1000;
+    for (Object[] run : shaped(style, text, false, false)) {
+      var font = ((Face) run[0]).font;
+      for (var g : (List<OpenType.Glyph>) run[1]) width += font.scaled(g.adv) * size / 1000;
     }
     return width;
   }
 
-  /** Text-showing operators: a font selection and a kerned TJ array for each face run. */
+  /** Text-showing operators: a font selection and a positioned TJ array for each face run. */
   String show(TextStyle style, String text, boolean rtl, String size) throws IOException {
     return show(style, text, rtl, size, true);
   }
 
+  @SuppressWarnings("unchecked")
   String show(TextStyle style, String text, boolean rtl, String size, boolean kerning)
       throws IOException {
-    var chain = new Chain(style);
     var out = new StringBuilder();
-    Face current = null;
-    int previous = 0;
-    for (int[] u : PdfShaping.shape(text, rtl, chain)) {
-      var face = chain.pick(u[0]);
-      int glyph = face.font.glyph(u[0]);
-      if (face != current) {
-        if (current != null) out.append(">] TJ ");
-        out.append("/F").append(face.number).append(' ').append(size).append(" Tf [<");
-        current = face;
-      } else {
-        int kern = kerning ? face.font.kern(previous, glyph) : 0;
-        if (kern != 0) out.append("> ").append(-face.font.scaled(kern)).append(" <");
+    float points = Float.parseFloat(size);
+    int rise = 0;
+    for (Object[] run : shaped(style, text, rtl, kerning)) {
+      var face = (Face) run[0];
+      var font = face.font;
+      var glyphs = (List<OpenType.Glyph>) run[1];
+      if (glyphs.isEmpty()) continue;
+      out.append(out.length() == 0 ? "" : " ").append("/F").append(face.number).append(' ')
+          .append(size).append(" Tf [<");
+      int pen = 0, shown = 0;
+      for (var g : glyphs) {
+        int dy = font.scaled(g.dy);
+        if (dy != rise) {
+          out.append(">] TJ ").append(PdfExporter.n(dy * points / 1000)).append(" Ts [<");
+          rise = dy;
+        }
+        int adjust = pen + font.scaled(g.dx) - shown;
+        if (adjust != 0) out.append("> ").append(-adjust).append(" <");
+        shown += adjust + font.scaled(font.advance(g.id));
+        pen += font.scaled(g.adv);
+        var piece = g.start < g.end ? text.substring(g.start, g.end) : "";
+        out.append(hex(face.cid(g.id, piece)));
       }
-      previous = glyph;
-      out.append(hex(face.cid(u[0], text.substring(u[1], u[2]))));
+      if (pen != shown) out.append("> ").append(shown - pen).append(" <");
+      out.append(">] TJ");
     }
-    if (current != null) out.append(">] TJ");
+    if (rise != 0) out.append(" 0 Ts");
     return out.toString();
   }
 
@@ -146,15 +231,22 @@ final class PdfFonts {
       font = new TrueType(bytes);
     }
 
-    /** CID showing code point {@code cp}'s glyph (or .notdef) and extracting as {@code text}. */
-    int cid(int cp, String text) throws IOException {
-      if (cp < 32 || cp >= 0xd800 && cp <= 0xdfff) cp = 0;
-      var key = cp + ":" + text;
+    private OpenType layout;
+
+    OpenType layout() {
+      if (layout == null) layout = new OpenType(font);
+      return layout;
+    }
+
+    /** CID showing glyph {@code glyph} and extracting as {@code text}. */
+    int cid(int glyph, String text) throws IOException {
+      if (glyph < 0 || glyph >= font.glyphs) glyph = 0;
+      var key = glyph + ":" + text;
       var cid = codes.get(key);
       if (cid == null) {
         if (codes.size() == 65535) throw new IOException("Too many PDF font characters");
         codes.put(key, cid = codes.size() + 1);
-        glyphCodes.add(cp);
+        glyphCodes.add(glyph);
         texts.add(text);
       }
       return cid;
@@ -162,19 +254,35 @@ final class PdfFonts {
 
     String encode(String text) throws IOException {
       var out = new StringBuilder("<");
-      for (int[] u : PdfShaping.shape(text, false, cp -> false))
-        out.append(hex(cid(u[0], text.substring(u[1], u[2]))));
+      for (int[] u : PdfShaping.shape(text, false, cp -> false)) {
+        int cp = u[0];
+        int glyph = cp < 32 || cp >= 0xd800 && cp <= 0xdfff ? 0 : font.glyph(cp);
+        out.append(hex(cid(glyph, text.substring(u[1], u[2]))));
+      }
       return out.append('>').toString();
     }
 
+    /** Subset tag: six capitals derived from the used glyphs, as PDF 9.6.4 asks. */
+    String tag() {
+      int h = glyphCodes.hashCode() ^ name.hashCode();
+      var sb = new StringBuilder();
+      for (int i = 0; i < 6; i++) {
+        sb.append((char) ('A' + (h % 26 + 26) % 26));
+        h = h / 26 + i * 7919;
+      }
+      return sb.append('+').append(name).toString();
+    }
+
     int install(List<byte[]> objects) throws IOException {
-      int file = add(objects, stream("/Length1 " + font.data.length, font.data, true));
+      byte[] subset = FontSubset.subset(font, glyphCodes);
+      String base = tag();
+      int file = add(objects, stream("/Length1 " + subset.length, subset, true));
       int descriptor =
           add(
               objects,
               ascii(
                   "<< /Type /FontDescriptor /FontName /"
-                      + name
+                      + base
                       + " /Flags 32 /FontBBox ["
                       + font.box()
                       + "] /ItalicAngle "
@@ -189,6 +297,9 @@ final class PdfFonts {
                       + file
                       + " 0 R >>"));
       byte[] mapping = new byte[(codes.size() + 1) * 2];
+      // Glyphs that extract as nothing (later glyphs of a cluster) get no ToUnicode entry.
+      int mapped = 0;
+      for (String t : texts) if (!t.isEmpty()) mapped++;
       StringBuilder widths = new StringBuilder("[1 ["),
           unicode =
               new StringBuilder(
@@ -205,19 +316,19 @@ final class PdfFonts {
                   """);
       int count = 0;
       for (int i = 0; i < glyphCodes.size(); i++) {
-        if (count % 100 == 0)
-          unicode.append(Math.min(100, codes.size() - count)).append(" beginbfchar\n");
-        int cid = i + 1, glyph = font.glyph(glyphCodes.get(i));
+        int cid = i + 1, glyph = glyphCodes.get(i);
         mapping[2 * cid] = (byte) (glyph >> 8);
         mapping[2 * cid + 1] = (byte) glyph;
         widths.append(font.scaled(font.advance(glyph))).append(' ');
-        unicode.append('<').append(hex(cid)).append("> <");
         var text = texts.get(i);
-        if (text.isEmpty()) text = " ";
-        for (int k = 0; k < text.length() && k < 32; k++) unicode.append(hex(text.charAt(k)));
+        if (text.isEmpty()) continue;
+        if (count % 100 == 0)
+          unicode.append(Math.min(100, mapped - count)).append(" beginbfchar\n");
+        unicode.append('<').append(hex(cid)).append("> <");
+        for (int k = 0; k < text.length() && k < 64; k++) unicode.append(hex(text.charAt(k)));
         unicode.append(">\n");
         count++;
-        if (count % 100 == 0 || count == codes.size()) unicode.append("endbfchar\n");
+        if (count % 100 == 0 || count == mapped) unicode.append("endbfchar\n");
       }
       unicode.append("endcmap\nCMapName currentdict /CMap defineresource pop\nend\nend\n");
       int map = add(objects, stream("", mapping, true));
@@ -227,7 +338,7 @@ final class PdfFonts {
               objects,
               ascii(
                   "<< /Type /Font /Subtype /CIDFontType2 /BaseFont /"
-                      + name
+                      + base
                       + " /CIDSystemInfo << /Registry (Adobe) /Ordering (Identity) /Supplement 0 >>"
                       + " /FontDescriptor "
                       + descriptor
@@ -241,7 +352,7 @@ final class PdfFonts {
           objects,
           ascii(
               "<< /Type /Font /Subtype /Type0 /BaseFont /"
-                  + name
+                  + base
                   + " /Encoding /Identity-H /DescendantFonts ["
                   + descendant
                   + " 0 R] /ToUnicode "
@@ -470,7 +581,7 @@ final class PdfFonts {
       return n;
     }
 
-    private int coverage(int table, int glyph) throws IOException {
+    int coverage(int table, int glyph) throws IOException {
       int format = u16(table), n = u16(table + 2);
       if (format == 1) {
         int low = 0, high = n - 1;
@@ -489,7 +600,7 @@ final class PdfFonts {
       return -1;
     }
 
-    private int classOf(int table, int glyph) throws IOException {
+    int classOf(int table, int glyph) throws IOException {
       int format = u16(table);
       if (format == 1) {
         int start = u16(table + 2), n = u16(table + 4);

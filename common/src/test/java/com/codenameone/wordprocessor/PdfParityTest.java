@@ -25,9 +25,9 @@ public class PdfParityTest {
   @Test
   public void missingGlyphsFallBackToNotoFacesAndUncoveredTextStillExports() throws Exception {
     var out = pdf(session("Hello \u05e9\u05dc\u05d5\u05dd \u0645\u0631\u062d\u0628\u0627 \u4e2d").document());
-    assertTrue(out.contains("/BaseFont /SourceSerif4-Regular"));
-    assertTrue(out.contains("/BaseFont /NotoSansHebrew-Regular"));
-    assertTrue(out.contains("/BaseFont /NotoNaskhArabic-Regular"));
+    assertTrue(out.contains("+SourceSerif4-Regular"));
+    assertTrue(out.contains("+NotoSansHebrew-Regular"));
+    assertTrue(out.contains("+NotoNaskhArabic-Regular"));
     var fonts = new PdfFonts(FONTS);
     var shown = fonts.show(TextStyle.DEFAULT, "a\u05d0\u4e2d", false, "12");
     // Latin face, Hebrew fallback, then back to the chosen face's .notdef for the CJK character.
@@ -65,8 +65,9 @@ public class PdfParityTest {
   @Test
   public void exportedArabicHasLogicalToUnicodeForShapedGlyphs() throws Exception {
     var out = pdf(session("\u0644\u0627\u0645").document());
-    // Lam-alef ligature maps back to U+0644 U+0627.
-    assertTrue(out.contains("<06440627>"));
+    // Lam-alef extracts as both logical letters, whether the face ligates it or (as Noto Naskh
+    // does through contextual GSUB) shows two joined glyphs.
+    assertTrue(out.contains("<06440627>") || out.contains("<0644>") && out.contains("<0627>"));
   }
 
   @Test

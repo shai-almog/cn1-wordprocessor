@@ -72,7 +72,7 @@ public class EmbeddedPdfTest {
             .layout(doc, 0);
     byte[] bytes = PdfExporter.write(doc.page, layout, FONTS);
     var pdf = new String(bytes, "ISO-8859-1");
-    for (String face : faces) assertTrue(face, pdf.contains("/BaseFont /" + face));
+    for (String face : faces) assertTrue(face, pdf.contains("+" + face));
     assertTrue(pdf.contains("/FontFile2"));
     assertTrue(pdf.contains("/ToUnicode"));
     assertTrue(pdf.contains("<20ac>"));
