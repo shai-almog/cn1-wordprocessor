@@ -298,6 +298,33 @@ public class ChartSmartArtTest {
   }
 
   @Test
+  public void cachedDrawingCarriesConnectorsAndCycleRing() throws Exception {
+    String nodes = "Plan\n\tA\n\tB\nBuild\nShip";
+    String hier = DocxSmartArt.drawingXml(Drawing.of("smartArt").with("layout", "hierarchy").with("nodes", nodes), 432, 252);
+    Xml.parse(hier.getBytes("UTF-8"));
+    // Trunk, bar and one drop per second-row node (A, B, Build, Ship).
+    assertEquals(6, count(hier, "prst=\"line\""));
+    String radial = DocxSmartArt.drawingXml(Drawing.of("smartArt").with("layout", "radial").with("nodes", nodes), 432, 252);
+    assertEquals(2, count(radial, "prst=\"line\"")); // a spoke to Build and Ship
+    String cycle = DocxSmartArt.drawingXml(Drawing.of("smartArt").with("layout", "cycle").with("nodes", nodes), 432, 252);
+    int ring = cycle.indexOf("prst=\"ellipse\"");
+    assertTrue(ring > 0 && cycle.indexOf("<a:noFill/>", ring - 400) > 0); // the unfilled ring comes first
+    // Read back as Word would, the connectors draw as open strokes.
+    String shapes = DocxCharts.shapes(Xml.parse(hier.getBytes("UTF-8")), Math.round(432 * 12700.0), Math.round(252 * 12700.0));
+    var ops = new DrawingOps.Ops();
+    DrawingOps.savedShapes(ops, shapes, 432, 252);
+    int open = 0;
+    for (var p : ops.paths) if (!p.closed()) open++;
+    assertEquals(6, open);
+  }
+
+  private static int count(String s, String sub) {
+    int n = 0;
+    for (int i = s.indexOf(sub); i >= 0; i = s.indexOf(sub, i + 1)) n++;
+    return n;
+  }
+
+  @Test
   public void hostileChartsAndDiagramsAreBounded() throws Exception {
     var many = new StringBuilder("<c:lineChart>");
     for (int s = 0; s < 60; s++) many.append(ser("S,\n" + s, new String[] {"a,b"}, new String[] {"NaN"}, "cat", "val"));

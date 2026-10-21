@@ -268,7 +268,7 @@ final class DocxSmartArt {
 
   /**
    * The cached dsp:drawing of a SmartArt drawing laid out at w x h points: the node shapes the
-   * app draws (connector lines are not part of the cache), each with its fill, outline and text.
+   * app draws, its hierarchy/spoke connector lines and the cycle ring, each with its fill, outline and text.
    */
   static String drawingXml(Drawing d, float w, float h) {
     DrawingOps.Ops ops = DrawingOps.build(d.with("shapes", "").with("dgmKey", ""), w, h);
@@ -282,13 +282,14 @@ final class DocxSmartArt {
       float x = (Float) s[1], y = (Float) s[2], sw = (Float) s[3], sh = (Float) s[4];
       int fill = (Integer) s[5], line = (Integer) s[6], text = (Integer) s[7];
       b.append("<dsp:sp modelId=\"").append(modelId(0x10000 + k++)).append("\"><dsp:nvSpPr><dsp:cNvPr id=\"0\" name=\"\"/>")
-          .append("<dsp:cNvSpPr/></dsp:nvSpPr><dsp:spPr><a:xfrm><a:off x=\"").append(emu(x)).append("\" y=\"")
+          .append("<dsp:cNvSpPr/></dsp:nvSpPr><dsp:spPr><a:xfrm").append(s.length > 9 && Boolean.TRUE.equals(s[9]) ? " flipH=\"1\"" : "")
+          .append("><a:off x=\"").append(emu(x)).append("\" y=\"")
           .append(emu(y)).append("\"/><a:ext cx=\"").append(emu(sw)).append("\" cy=\"").append(emu(sh))
           .append("\"/></a:xfrm><a:prstGeom prst=\"").append(s[0]).append("\"><a:avLst/></a:prstGeom>");
       if (fill < 0) b.append("<a:noFill/>");
       else b.append("<a:solidFill><a:srgbClr val=\"").append(hex(fill)).append("\"/></a:solidFill>");
       if (line < 0) b.append("<a:ln><a:noFill/></a:ln>");
-      else b.append("<a:ln w=\"12700\"><a:solidFill><a:srgbClr val=\"").append(hex(line)).append("\"/></a:solidFill></a:ln>");
+      else b.append("<a:ln w=\"").append("line".equals(s[0]) ? 19050 : 12700).append("\"><a:solidFill><a:srgbClr val=\"").append(hex(line)).append("\"/></a:solidFill></a:ln>");
       b.append("</dsp:spPr><dsp:style><a:lnRef idx=\"2\"><a:scrgbClr r=\"0\" g=\"0\" b=\"0\"/></a:lnRef><a:fillRef idx=\"1\">")
           .append("<a:scrgbClr r=\"0\" g=\"0\" b=\"0\"/></a:fillRef><a:effectRef idx=\"0\"><a:scrgbClr r=\"0\" g=\"0\" b=\"0\"/>")
           .append("</a:effectRef><a:fontRef idx=\"minor\"><a:srgbClr val=\"").append(hex(text))

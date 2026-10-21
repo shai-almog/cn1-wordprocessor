@@ -70,6 +70,16 @@ public final class DrawingOps {
       shapes.add(new Object[] {prst, x, y, w, h, fill, line, textColor, text});
     }
 
+    /**
+     * A straight connector drawn and recorded as a "line" shape (flipped when it runs up-right),
+     * so the cached SmartArt drawing carries the hierarchy and spoke lines as Wordcraft's does.
+     */
+    void connector(float x0, float y0, float x1, float y1, int stroke, float width) {
+      line(new float[] {x0, y0, x1, y1}, stroke, width, 255);
+      shapes.add(new Object[] {"line", Math.min(x0, x1), Math.min(y0, y1), Math.abs(x1 - x0), Math.abs(y1 - y0), -1,
+          stroke, -1, "", (x1 - x0) * (y1 - y0) < 0});
+    }
+
     void fill(float[] pts, int fill, int stroke, float width) {
       paths.add(new Path(pts, true, fill, stroke, width, 255));
     }
@@ -638,6 +648,8 @@ public final class DrawingOps {
       float cx = w / 2, cy = h / 2, rad = Math.min(w, h) * .35f;
       float bw = Math.min(w, h) * .3f, bh = bw * .6f;
       ops.line(ellipse(cx, cy, rad, rad), 0xa5a5a5, 1.5f, 255);
+      // The ring behind the nodes is cached too, first so it stays under them.
+      ops.shape("ellipse", cx - rad, cy - rad, rad * 2, rad * 2, -1, 0xa5a5a5, -1, "");
       for (int i = 0; i < n; i++) {
         double a = -Math.PI / 2 + 2 * Math.PI * i / n;
         float bx = cx + (float) Math.cos(a) * rad - bw / 2, by = cy + (float) Math.sin(a) * rad - bh / 2;
@@ -652,11 +664,11 @@ public final class DrawingOps {
       if (m > 0) {
         float gap = 10, bw = Math.min(bw0, (w - gap * (m - 1)) / m);
         float total = bw * m + gap * (m - 1), sx = (w - total) / 2, by = h - bh;
-        ops.line(new float[] {w / 2, bh, w / 2, (bh + by) / 2}, 0x7f7f7f, 1, 255);
-        ops.line(new float[] {sx + bw / 2, (bh + by) / 2, sx + total - bw / 2, (bh + by) / 2}, 0x7f7f7f, 1, 255);
+        ops.connector(w / 2, bh, w / 2, (bh + by) / 2, 0x7f7f7f, 1);
+        if (m > 1) ops.connector(sx + bw / 2, (bh + by) / 2, sx + total - bw / 2, (bh + by) / 2, 0x7f7f7f, 1);
         for (int i = 0; i < m; i++) {
           float bx = sx + i * (bw + gap);
-          ops.line(new float[] {bx + bw / 2, (bh + by) / 2, bx + bw / 2, by}, 0x7f7f7f, 1, 255);
+          ops.connector(bx + bw / 2, (bh + by) / 2, bx + bw / 2, by, 0x7f7f7f, 1);
           node(ops, label, second.get(i), Collections.<String>emptyList(), bx, by, bw, bh, smartColor(d, i + 1));
         }
       }
@@ -677,7 +689,7 @@ public final class DrawingOps {
       int m = n - 1;
       for (int i = 0; i < m; i++) {
         double a = -Math.PI / 2 + 2 * Math.PI * i / m;
-        ops.line(new float[] {cx, cy, cx + (float) Math.cos(a) * rad, cy + (float) Math.sin(a) * rad}, 0xa5a5a5, 1, 255);
+        ops.connector(cx, cy, cx + (float) Math.cos(a) * rad, cy + (float) Math.sin(a) * rad, 0xa5a5a5, 1);
       }
       ops.fill(ellipse(cx, cy, r0, r0), smartColor(d, 0), 0xffffff, 1);
       ops.shape("ellipse", cx - r0, cy - r0, r0 * 2, r0 * 2, smartColor(d, 0), 0xffffff, 0xffffff, top.get(0));
@@ -730,7 +742,11 @@ public final class DrawingOps {
       for (int i = 1; i < 12; i++) v[i] = Xml.integer(f.get(i), 0);
       float x = v[1] * w / 10000, y = v[2] * h / 10000, sw = Math.max(0, v[3] * w / 10000), sh = Math.max(0, v[4] * h / 10000);
       int fill = (int) v[5], stroke = (int) v[6], color = (int) v[7];
-      if (sw > 0 && sh > 0 && (fill >= 0 || stroke >= 0)) {
+      boolean inv = "lineInv".equals(f.get(0));
+      if ((inv || "line".equals(f.get(0))) && stroke >= 0 && sw + sh > 0) {
+        // Cached SmartArt connectors: an open stroke corner to corner of the box.
+        ops.line(inv ? new float[] {x, y + sh, x + sw, y} : new float[] {x, y, x + sw, y + sh}, stroke, 1, 255);
+      } else if (sw > 0 && sh > 0 && (fill >= 0 || stroke >= 0)) {
         String g = SHAPES.contains(f.get(0)) || "roundRect".equals(f.get(0)) ? f.get(0) : "rect";
         float[] p = offset(geometry(g, sw, sh), x, y);
         if (fill >= 0) ops.fill(p, fill, stroke, stroke >= 0 ? .75f : 0);

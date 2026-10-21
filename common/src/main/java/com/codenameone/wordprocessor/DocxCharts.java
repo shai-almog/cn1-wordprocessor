@@ -415,6 +415,8 @@ final class DocxCharts {
       long x = emu(xfrm, "off", "x"), y = emu(xfrm, "off", "y"), w = emu(xfrm, "ext", "cx"), h = emu(xfrm, "ext", "cy");
       Element geom = pr == null ? null : Xml.child(pr, "prstGeom");
       String prst = geom == null ? "rect" : Xml.attr(geom, "prst", "rect").replace(",", "");
+      // A flipped connector runs from bottom-left to top-right; keep that direction.
+      if ("line".equals(prst) && "1".equals(Xml.attr(xfrm, "flipH", ""))) prst = "lineInv";
       int fill = pr != null && (Xml.child(pr, "solidFill") != null || Xml.child(pr, "noFill") != null)
           ? color(Xml.child(pr, "solidFill") != null ? Xml.child(pr, "solidFill") : pr)
           : style == null ? -1 : color(Xml.child(style, "fillRef"));
