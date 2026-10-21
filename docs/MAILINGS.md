@@ -14,6 +14,6 @@ The spreadsheet reader handles shared/inline strings, cached formula values, boo
 
 - Formulas are not recalculated, arbitrary Excel number formats and workbook formatting are not applied, and external data sources are not supported.
 - Atomic multiline fields show line breaks as spaces in preview; Finish & Merge emits real line breaks.
-- Not implemented: full nested-field evaluation, advanced switches, number/date format switches, persistent recipient links, compound filters, multiple sort keys, email delivery, printer-feed calibration.
+- Not implemented: full nested-field evaluation, advanced switches, number/date format switches, persistent recipient links, compound filters, multiple sort keys, email delivery, printer-feed calibration (as in Wordcraft: its `crates/engine/src/cmd/mailings.rs` rules take one MERGEFIELD condition and it has no format switches in merge, recipient sorting/filtering or mail delivery).
 - Workbook file-picker interaction and physical mobile keyboard/touch are not verified.
 - DOCX field round-trip is not complete Word field compatibility.

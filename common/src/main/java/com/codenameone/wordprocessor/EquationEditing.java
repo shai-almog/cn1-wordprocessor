@@ -35,7 +35,7 @@ final class EquationEditing {
    * are selected for their commands).
    */
   static EquationEditing at(Session s, int block) {
-    var blocks = s.document().blocks;
+    var blocks = s.editingDocument().blocks;
     if (block >= 0) return block < blocks.size() ? display(s, block) : null;
     var sel = s.selection();
     if (sel.block < 0 || sel.block >= blocks.size()) return null;
@@ -57,7 +57,7 @@ final class EquationEditing {
 
   /** The inline equation field at offset {@code at} of paragraph {@code block}, or null. */
   static EquationEditing inline(Session s, int block, int at) {
-    var blocks = s.document().blocks;
+    var blocks = s.editingDocument().blocks;
     if (block < 0 || block >= blocks.size() || !(blocks.get(block) instanceof Paragraph para)) return null;
     if (at < 0 || at >= para.text.length()) return null;
     InlineField f = para.text.fieldAt(at);
@@ -65,14 +65,14 @@ final class EquationEditing {
   }
 
   private static EquationEditing display(Session s, int block) {
-    Block b = s.document().blocks.get(block);
+    Block b = s.editingDocument().blocks.get(block);
     return b instanceof Picture p && p.drawing != null && "equation".equals(p.drawing.kind)
         ? new EquationEditing(s, block, -1, p.drawing.get("text", "")) : null;
   }
 
   /** The linear text the document holds for this equation now. */
   String stored() {
-    Block b = session.document().blocks.get(block);
+    Block b = session.editingDocument().blocks.get(block);
     if (field < 0) return b instanceof Picture p && p.drawing != null ? p.drawing.get("text", "") : "";
     InlineField f = b instanceof Paragraph para && field < para.text.length() ? para.text.fieldAt(field) : null;
     return Equation.inline(f) ? Equation.inlineText(f) : "";
@@ -100,7 +100,7 @@ final class EquationEditing {
 
   /** Sets an equation's linear text: a display block's drawing, or an inline field. */
   static void write(Session s, int block, int field, String text) {
-    Block b = s.document().blocks.get(block);
+    Block b = s.editingDocument().blocks.get(block);
     if (field < 0) {
       if (!(b instanceof Picture p) || p.drawing == null || !"equation".equals(p.drawing.kind))
         throw new IllegalArgumentException("Select an equation");

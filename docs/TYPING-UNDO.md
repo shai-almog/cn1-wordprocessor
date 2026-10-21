@@ -10,6 +10,6 @@ Ctrl-Up/Down moves among paragraph starts (Shift keeps the anchor). Mac Option-U
 
 ## Limitations
 
-- Cross-cell selection is not supported.
+- A text selection stays within one story (the body or one table cell); selecting across cells makes a rectangular cell selection (`CellSelection`, see [TABLE-SELECTION.md](TABLE-SELECTION.md)) rather than a text range.
 - Broad IME behavior, physical mobile input and typing-group behavior on mobile are not verified.
 - Browser file, offline and mobile behavior is not fully verified. See [STATUS.md](STATUS.md).

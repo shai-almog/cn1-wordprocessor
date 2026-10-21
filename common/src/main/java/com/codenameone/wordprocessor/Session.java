@@ -2539,6 +2539,20 @@ public final class Session {
     transact(s -> document = document.blocks(document.blocks.set(block, next), document.nextId));
   }
 
+  /**
+   * Replaces the picture at {@code block} and inserts {@code added} right after it in the story
+   * being edited (a cell's blocks while a cell object is selected), as one undo step.
+   */
+  public void replacePictureAndAdd(final int block, final Picture next, final Picture added) {
+    if (!(document.blocks.get(block) instanceof Picture))
+      throw new IllegalArgumentException("Select a picture");
+    pictureStory(block);
+    transact(s -> {
+      long id = document.nextId;
+      document = document.blocks(document.blocks.set(block, next).insert(block + 1, added.copy("i" + id)), id + 1);
+    });
+  }
+
   /** Replace a picture's crop, border and orientation as one undo step. */
   public void pictureLook(final int block, final Picture.Look look) {
     if (!(document.blocks.get(block) instanceof Picture))

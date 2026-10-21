@@ -124,6 +124,54 @@ public class CellPictureEditingTest {
   }
 
   @Test
+  public void inkToShapeStaysInTheCell() {
+    var canvas = Picture.drawing("k1", Drawing.of("ink"), 100, 60, "", "left");
+    var s = new Session(table(new Paragraph("a", RichText.of("top")), canvas, new Paragraph("b", new RichText())));
+    s.enterCellPath(new int[] {1, 0, 0});
+    run(s, "draw.pen", "block", 1, "points", "0,0 40,0 40,30 0,30 0,0");
+    assertEquals("rect", run(s, "draw.inkToShape", "block", 1));
+    var cell = ((Table) s.document().blocks.get(1)).blocks(0, 0);
+    assertTrue(cell.get(2) instanceof Picture);
+    assertEquals("shape", ((Picture) cell.get(2)).drawing.kind);
+    assertEquals(3, s.document().blocks.size());
+    s.undo();
+    assertEquals(3, ((Table) s.document().blocks.get(1)).blocks(0, 0).size());
+  }
+
+  @Test
+  public void cellEquationsNumberWithinTheCell() {
+    var e1 = Picture.drawing("e1", Drawing.of("equation").with("text", "a").with("display", "true"), 100, 20, "", "left");
+    var e2 = Picture.drawing("e2", Drawing.of("equation").with("text", "b").with("display", "true"), 100, 20, "", "left");
+    var s = new Session(table(new Paragraph("a", RichText.of("top")), e1, e2, new Paragraph("b", new RichText())));
+    s.enterCellPath(new int[] {1, 0, 0});
+    assertEquals(1, run(s, "equation.number", "block", 1));
+    assertEquals(2, run(s, "equation.number", "block", 2));
+    assertTrue(s.inCell());
+    var cell = ((Table) s.document().blocks.get(1)).blocks(0, 0);
+    assertEquals("1", ((Picture) cell.get(1)).drawing.get("number", ""));
+    assertEquals("2", ((Picture) cell.get(2)).drawing.get("number", ""));
+  }
+
+  @Test
+  public void cellEquationsEditInPlace() {
+    var e1 = Picture.drawing("e1", Drawing.of("equation").with("text", "E=mc").with("display", "true"), 100, 20, "", "left");
+    var s = new Session(table(new Paragraph("a", RichText.of("top")), e1, new Paragraph("b", new RichText())));
+    s.enterCellPath(new int[] {1, 0, 0});
+    run(s, "equation.edit", "block", 1, "steps", "end\ntype:^2 ");
+    var cell = ((Table) s.document().blocks.get(1)).blocks(0, 0);
+    assertEquals("E=mc^2", ((Picture) cell.get(1)).drawing.get("text", ""));
+    // An inline equation in a cell paragraph.
+    s.enterCellPath(new int[] {1, 0, 0});
+    s.select(0, 3, 3);
+    run(s, "insert.equation", "text", "x");
+    assertTrue(s.inCell());
+    s.select(0, 4, 4);
+    run(s, "equation.edit", "steps", "end\ntype:+y");
+    var p = (Paragraph) ((Table) s.document().blocks.get(1)).blocks(0, 0).get(0);
+    assertEquals("x+y", Equation.inlineText(p.text.fieldAt(3)));
+  }
+
+  @Test
   public void placedCellPicturesCarryTheirCellPathAndIndex() throws Exception {
     var pic = new Picture("i1", png(), 80, 40, "x", "left");
     var d = table(new Paragraph("a", RichText.of("top")), pic, new Paragraph("b", new RichText()));

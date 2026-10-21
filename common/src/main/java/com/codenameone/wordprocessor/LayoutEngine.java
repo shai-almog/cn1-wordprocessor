@@ -1080,8 +1080,12 @@ public final class LayoutEngine {
 
     private TabStop nextTab(Paragraph p, float position) {
     for (TabStop tab : p.format.tabs)
-      if (!"bar".equals(tab.alignment) && tab.position > position + .01f) return tab;
-    return null;
+      if (!"bar".equals(tab.alignment) && tab.position > position + .01f)
+        return p.format.firstIndent < 0 && position < -.01f && tab.position > 0
+            ? new TabStop(0, "left", "none") : tab;
+    // A hanging first line has an implicit left stop at the paragraph indent, ahead of the default
+    // stops (Wordcraft layout/para.rs next_tab hanging_at).
+    return p.format.firstIndent < 0 && position < -.01f ? new TabStop(0, "left", "none") : null;
   }
 
   private float tabWidth(Paragraph p, String text, int offset, float x, float origin) {

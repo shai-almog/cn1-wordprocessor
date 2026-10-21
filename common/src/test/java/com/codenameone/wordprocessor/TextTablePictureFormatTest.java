@@ -94,6 +94,22 @@ public class TextTablePictureFormatTest {
   }
 
   @Test
+  public void rtfPictInsideCellImportsAsCellPicture() throws Exception {
+    var hex = new StringBuilder();
+    for (byte b : PictureTest.rgba()) hex.append(String.format("%02x", b & 0xff));
+    Document d = TextFormats.read("{\\rtf1\\ansi\\trowd\\cellx2000\\cellx4000 a{\\pict\\pngblip\\picwgoal600\\pichgoal300 "
+        + hex + "}\\cell b\\cell\\row}", RichTextFormat.RTF);
+    Table t = null;
+    for (Block b : d.blocks) if (b instanceof Table x) t = x;
+    assertNotNull(t);
+    Picture pic = null;
+    for (Block b : t.blocks(0, 0)) if (b instanceof Picture p) pic = p;
+    assertNotNull("cell picture", pic);
+    assertArrayEquals(PictureTest.rgba(), pic.bytes());
+    assertEquals("b", Table.cellText(t.cell(0, 1)));
+  }
+
+  @Test
   public void htmlColspanRowspanAndTh() throws Exception {
     Document d = TextFormats.read(
         "<p>x</p><TABLE><tr><th colspan=2>H</th></tr><tr><td rowspan=\"2\">a</td><td>b</td></tr>"

@@ -115,7 +115,7 @@ public final class EditorSurface extends Container
    */
   private boolean clickEquation(LayoutEngine.PlacedPicture pic, float px, float py) {
     var d = pic.picture().drawing;
-    if (readOnly() || d == null || !"equation".equals(d.kind) || pic.inCell()) return false;
+    if (readOnly() || d == null || !"equation".equals(d.kind)) return false;
     var e = EquationEditing.at(session, pic.block());
     if (e == null) return false;
     e.hit(d, pic.width(), pic.height(), fontMetrics, px - pic.x(), py - pic.y());
@@ -136,7 +136,8 @@ public final class EditorSurface extends Container
     for (LayoutEngine.Span span : line.spans) {
       if (!InlineField.OBJECT.equals(span.text) || !span.displayText.isEmpty()) continue;
       if (px < span.x || px > span.x + span.width) continue;
-      var e = EquationEditing.inline(session, line.block, span.start);
+      // The line's paragraph in the story being edited (a cell or note story the caller entered).
+      var e = EquationEditing.inline(session, editingBlock(line), span.start);
       if (e == null) continue;
       float baseline = span.top + font(span.glyphStyle, zoom).getAscent() / scale();
       var pic = Equation.placed(lineParagraph(line).text.fieldAt(span.start), span.glyphStyle, line.block, 0, 0, 0, span.width);
@@ -2341,9 +2342,9 @@ public final class EditorSurface extends Container
     }
     if (line == null) return;
     stopInput();
-    if (line.row < 0 && clickInlineEquation(line, x, y)) return;
     if (line.row >= 0) session.enterCellPath(linePath(line));
     else if (session.noteStory() == null || editingBlock(line) < 0) session.leaveCell();
+    if (clickInlineEquation(line, x, y)) return;
     int block = editingBlock(line), offset = offsetAt(line, x);
     if (block < 0) return;
     session.select(block, offset, offset);

@@ -78,7 +78,9 @@ final class TextBlocks {
         // HTML cells may hold nested tables (Wordcraft nests tables in cells); read them too.
         // Pictures in cells (<img>) are kept as cell pictures, as Wordcraft's cells hold them.
         String lower = source.toLowerCase();
-        boolean nested = format == RichTextFormat.HTML && (lower.indexOf("<table") >= 0 || lower.indexOf("<img") >= 0);
+        // RTF cells keep their \\pict groups as cell pictures too (Wordcraft's RTF reader).
+        boolean nested = format == RichTextFormat.HTML && (lower.indexOf("<table") >= 0 || lower.indexOf("<img") >= 0)
+            || format == RichTextFormat.RTF && source.indexOf("{\\pict") >= 0;
         Document d = TextFormats.read(source, format, nested);
         for (Block b : d.blocks)
           if (b instanceof Table inner) {

@@ -12,7 +12,7 @@ Native files and DOCX keep the rule and value, including named styles and tracke
 
 ## Limitations
 
-- Values below 0.06 are unsupported; DOCX input is clamped to that minimum.
+- Values below 0.06 are unsupported; DOCX input is clamped to that minimum (as in Wordcraft, which clamps multiple spacing to 0.06-132 in `crates/engine/src/cmd/para.rs` and its readers).
 - HTML and text interchange do not keep all spacing behavior.
 - Baseline positions and clipping of tight exact lines can differ from Word-style renderers.
 - Not every style-editor workflow is verified natively.

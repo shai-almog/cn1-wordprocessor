@@ -24,6 +24,6 @@ Grapheme-level movement is in [GRAPHEME-EDITING.md](GRAPHEME-EDITING.md); typing
 
 ## Limitations
 
-- Cross-cell selection is not supported.
+- A text selection stays within one story (the body or one table cell); selecting across cells makes a rectangular cell selection (`CellSelection`, see [TABLE-SELECTION.md](TABLE-SELECTION.md)) rather than a text range.
 - Locale-specific word boundaries are not implemented.
 - IME composition is covered by tests and was checked on the Android emulator; keyboard behavior is not hand-verified on Windows, Linux, iOS or browser builds.

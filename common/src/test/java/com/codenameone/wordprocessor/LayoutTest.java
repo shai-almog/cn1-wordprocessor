@@ -114,6 +114,19 @@ public class LayoutTest {
   }
 
   @Test
+  public void hangingIndentImpliesTabStopBeforeDefaultStops() {
+    var s = new Session(Document.empty());
+    s.replace("a\tb");
+    s.paragraph("indent", "30");
+    s.paragraph("firstIndent", "-24");
+    s.paragraph("tabInterval", "10");
+    var d = s.document().page(new PageSpec(300, 500, 10, 10, 10, 10));
+    var lines = engine().layout(d, 0).pages.get(0).lines;
+    // The tab goes to the hanging indent (Wordcraft's implicit stop), not the default stop at -20.
+    assertEquals(24, lines.get(0).spans.get(2).x, .01);
+  }
+
+  @Test
   public void hangingAndRightIndentsAndCustomTabsAffectGeometry() {
     var s = new Session(Document.empty());
     s.replace("a\tb long words wrap onto a second line and then another");

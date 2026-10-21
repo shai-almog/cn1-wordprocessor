@@ -463,6 +463,12 @@ final class DrawingCommands implements Commands.Extension {
           var d =
               Drawing.of("shape").with("shape", shape).with("fill", "none")
                   .with("line", parts.size() > 1 ? parts.get(1) : "000000").with("lineWidth", parts.size() > 2 ? parts.get(2) : "1");
+          if (s.inCell()) {
+            // A cell's ink converts within the cell (Wordcraft's object paths run through cells).
+            s.replacePictureAndAdd(block, p.drawing(p.drawing.with("strokes", join(strokes, '|'))),
+                Picture.drawing("i0", d, w, "line".equals(shape) ? 12 : h, "Shape: " + shape, p.align));
+            return shape;
+          }
           var keep = s.selection();
           Sequence<Block> blocks = s.document().blocks;
           long id = s.document().nextId;
@@ -791,6 +797,19 @@ final class DrawingCommands implements Commands.Extension {
 
   /** Numbers every numbered equation 1, 2, 3 in document order; returns the count. */
   private static int renumber(Session s) {
+    if (s.inCell()) {
+      // A cell's equations count from 1 within the cell and leave the body count alone, as
+      // Wordcraft lays cell paragraphs out with eq_number 0 (layout/src/table.rs).
+      var cell = s.editingDocument().blocks;
+      int n = 0;
+      for (int i = 0; i < cell.size(); i++)
+        if (cell.get(i) instanceof Picture p && p.drawing != null && "equation".equals(p.drawing.kind)
+            && !p.drawing.get("number", "").isEmpty()) {
+          String next = String.valueOf(++n);
+          if (!next.equals(p.drawing.get("number", ""))) s.replacePicture(i, p.drawing(p.drawing.with("number", next)));
+        }
+      return n;
+    }
     var doc = s.document();
     Sequence<Block> blocks = doc.blocks;
     int n = 0;
