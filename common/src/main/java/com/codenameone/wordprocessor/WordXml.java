@@ -20,7 +20,9 @@ import java.util.Set;
  *       Lists (w:listDef/w:list) become a numbering part, w:hlink targets relationships,
  *       w:binData + v:imagedata pictures media parts, v:textbox text boxes DrawingML text boxes,
  *       w:hdr/w:ftr header and footer parts, inline w:footnote/w:endnote notes parts and
- *       aml:annotation comments a comments part. Other VML shapes are reported and dropped.
+ *       aml:annotation comments a comments part. VML lines, rectangles, rounded rectangles and
+ *       ovals become preset shapes; position:absolute shapes float (anchor, offsets or
+ *       alignment, w10:wrap). Other VML shapes are reported and dropped.
  * </ul>
  *
  * Import only. Bounded: the XML parser caps depth and size, parts are capped in number and size.
@@ -421,22 +423,62 @@ final class WordXml {
         if (image != null) picture(c, image, out);
         else if (box != null) textBox(c, box, out);
         else if ("group".equals(local)) shapes(c, out);
-        else warnings.add("Word 2003 XML drawing shapes other than pictures and text boxes are not imported");
+        else if (!vmlShape(c, local, out))
+          warnings.add("Word 2003 XML drawing shapes other than pictures, text boxes, lines, rectangles and ovals are not imported");
       }
     }
 
+    /** Whether the shape being converted floats (wp:anchor) rather than standing inline. */
+    boolean anchored;
+
     void open(Element shape, StringBuilder out, String what, String uri) {
+      open(shape, out, what, uri, size(Xml.attr(shape, "style", "")), 0, 0);
+    }
+
+    /**
+     * As Wordcraft's vml_float: position:absolute floats the shape, offset by left/margin-left
+     * and top/margin-top from mso-position-horizontal/vertical-relative (or aligned by
+     * mso-position-horizontal/vertical), wrapped as its w10:wrap says; without wrapping it is in
+     * front of the text, or behind it at a negative z-index. Anything else stays inline.
+     */
+    void open(Element shape, StringBuilder out, String what, String uri, long[] size, float dx, float dy) {
       if (!inRun) out.append("<w:r>");
-      long[] size = size(Xml.attr(shape, "style", ""));
-      out.append("<w:drawing><wp:inline><wp:extent cx=\"").append(size[0]).append("\" cy=\"")
-          .append(size[1]).append("\"/><wp:docPr id=\"").append(++shapes).append("\" name=\"")
+      String style = Xml.attr(shape, "style", "");
+      anchored = "absolute".equalsIgnoreCase(styleValue(style, "position"));
+      if (!anchored) out.append("<w:drawing><wp:inline>");
+      else {
+        String z = styleValue(style, "z-index");
+        boolean behind = z.startsWith("-");
+        Element w10 = Xml.child(shape, "wrap");
+        String type = w10 == null ? "none" : Xml.attr(w10, "type", "none");
+        out.append("<w:drawing><wp:anchor behindDoc=\"").append(behind ? 1 : 0).append("\" simplePos=\"0\">");
+        String hRel = styleValue(style, "mso-position-horizontal-relative"), vRel = styleValue(style, "mso-position-vertical-relative");
+        hRel = "page".equals(hRel) || "margin".equals(hRel) ? hRel : "char".equals(hRel) ? "character"
+            : "left-margin-area".equals(hRel) ? "leftMargin" : "right-margin-area".equals(hRel) ? "rightMargin"
+            : "inner-margin-area".equals(hRel) ? "insideMargin" : "outer-margin-area".equals(hRel) ? "outsideMargin" : "column";
+        vRel = "page".equals(vRel) || "margin".equals(vRel) || "line".equals(vRel) ? vRel
+            : "top-margin-area".equals(vRel) ? "topMargin" : "bottom-margin-area".equals(vRel) ? "bottomMargin"
+            : "inner-margin-area".equals(vRel) ? "insideMargin" : "outer-margin-area".equals(vRel) ? "outsideMargin" : "paragraph";
+        float x = length(styleValue(style, "left")) + length(styleValue(style, "margin-left")) + dx;
+        float y = length(styleValue(style, "top")) + length(styleValue(style, "margin-top")) + dy;
+        position(out, "H", hRel, styleValue(style, "mso-position-horizontal"), x);
+        position(out, "V", vRel, styleValue(style, "mso-position-vertical"), y);
+        out.append("<wp:extent cx=\"").append(size[0]).append("\" cy=\"").append(size[1]).append("\"/>");
+        out.append("square".equals(type) ? "<wp:wrapSquare wrapText=\"bothSides\"/>"
+            : "tight".equals(type) ? "<wp:wrapTight wrapText=\"bothSides\"/>"
+            : "through".equals(type) ? "<wp:wrapThrough wrapText=\"bothSides\"/>"
+            : "topAndBottom".equals(type) ? "<wp:wrapTopAndBottom/>" : "<wp:wrapNone/>");
+      }
+      if (!anchored) out.append("<wp:extent cx=\"").append(size[0]).append("\" cy=\"").append(size[1]).append("\"/>");
+      out.append("<wp:docPr id=\"").append(++shapes).append("\" name=\"")
           .append(what).append(' ').append(shapes).append("\" descr=\"")
           .append(Xml.attribute(Xml.attr(shape, "alt", ""))).append("\"/><a:graphic><a:graphicData uri=\"")
           .append(uri).append("\">");
     }
 
     void close(StringBuilder out) {
-      out.append("</a:graphicData></a:graphic></wp:inline></w:drawing>");
+      out.append("</a:graphicData></a:graphic>").append(anchored ? "</wp:anchor>" : "</wp:inline>").append("</w:drawing>");
+      anchored = false;
       if (!inRun) out.append("</w:r>");
     }
 
@@ -450,6 +492,41 @@ final class WordXml {
       out.append("<pic:pic><pic:blipFill><a:blip r:embed=\"").append(rel("image", path, false))
           .append("\"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill></pic:pic>");
       close(out);
+    }
+
+    /**
+     * v:line, v:rect, v:roundrect and v:oval as Wordcraft's read_vml: a preset shape with its
+     * fill (filled/fillcolor, white by default) and outline (stroked/strokecolor/strokeweight,
+     * black 0.75pt by default); a line spans from..to. Unstroked lines and empty shapes drop.
+     */
+    boolean vmlShape(Element shape, String local, StringBuilder out) {
+      String prst = "rect".equals(local) ? "rect" : "roundrect".equals(local) ? "roundRect"
+          : "oval".equals(local) ? "ellipse" : "line".equals(local) ? "line" : null;
+      if (prst == null) return false;
+      String fillOn = Xml.attr(shape, "filled", "t"), strokeOn = Xml.attr(shape, "stroked", "t");
+      boolean filled = !("f".equals(fillOn) || "false".equals(fillOn) || "0".equals(fillOn)) && !"line".equals(prst);
+      boolean stroked = !("f".equals(strokeOn) || "false".equals(strokeOn) || "0".equals(strokeOn));
+      String fill = filled ? vmlColor(Xml.attr(shape, "fillcolor", "white")) : null;
+      String stroke = stroked ? vmlColor(Xml.attr(shape, "strokecolor", "black")) : null;
+      if (stroke == null && (fill == null || "line".equals(prst))) return true;
+      float weight = length(Xml.attr(shape, "strokeweight", "0.75pt"));
+      if (!(weight > 0)) weight = .75f;
+      long[] size = size(Xml.attr(shape, "style", ""));
+      float dx = 0, dy = 0;
+      if ("line".equals(prst)) {
+        float[] a = point(Xml.attr(shape, "from", "0,0")), b = point(Xml.attr(shape, "to", "0,0"));
+        size = new long[] {Math.max(1, Math.round(Math.abs(b[0] - a[0]) * 12700)), Math.max(1, Math.round(Math.abs(b[1] - a[1]) * 12700))};
+        dx = Math.min(a[0], b[0]);
+        dy = Math.min(a[1], b[1]);
+      }
+      open(shape, out, "Shape", "http://schemas.microsoft.com/office/word/2010/wordprocessingShape", size, dx, dy);
+      out.append("<wps:wsp><wps:cNvSpPr/><wps:spPr><a:prstGeom prst=\"").append(prst).append("\"/>")
+          .append(fill == null ? "<a:noFill/>" : "<a:solidFill><a:srgbClr val=\"" + fill + "\"/></a:solidFill>")
+          .append("<a:ln w=\"").append(Math.round(weight * 12700)).append("\">")
+          .append(stroke == null ? "<a:noFill/>" : "<a:solidFill><a:srgbClr val=\"" + stroke + "\"/></a:solidFill>")
+          .append("</a:ln></wps:spPr><wps:bodyPr/></wps:wsp>");
+      close(out);
+      return true;
     }
 
     void textBox(Element shape, Element box, StringBuilder out) {
@@ -519,6 +596,46 @@ final class WordXml {
     }
   }
 
+  /** The value of key in a VML CSS-like style (the last declaration wins), or "". */
+  static String styleValue(String style, String key) {
+    String found = "";
+    for (String item : TextUtil.split(style, ';')) {
+      int colon = item.indexOf(':');
+      if (colon > 0 && item.substring(0, colon).trim().equalsIgnoreCase(key)) found = item.substring(colon + 1).trim();
+    }
+    return found;
+  }
+
+  private static void position(StringBuilder out, String axis, String rel, String align, float offset) {
+    out.append("<wp:position").append(axis).append(" relativeFrom=\"").append(rel).append("\">");
+    if ("left".equals(align) || "right".equals(align) || "center".equals(align) || "inside".equals(align)
+        || "outside".equals(align) || "top".equals(align) || "bottom".equals(align))
+      out.append("<wp:align>").append(align).append("</wp:align>");
+    else out.append("<wp:posOffset>").append(Math.round(Math.max(-20000, Math.min(20000, offset)) * 12700)).append("</wp:posOffset>");
+    out.append("</wp:position").append(axis).append('>');
+  }
+
+  /** A VML color (#rgb, #rrggbb or a basic name, an optional " [index]" ignored) as RRGGBB, or null. */
+  static String vmlColor(String v) {
+    if (v == null) return null;
+    v = v.trim();
+    int sp = v.indexOf(' ');
+    if (sp > 0) v = v.substring(0, sp);
+    if (v.startsWith("#")) {
+      String h = v.substring(1);
+      if (h.length() == 3) h = "" + h.charAt(0) + h.charAt(0) + h.charAt(1) + h.charAt(1) + h.charAt(2) + h.charAt(2);
+      if (h.length() != 6) return null;
+      for (int i = 0; i < 6; i++) if (Character.digit(h.charAt(i), 16) < 0) return null;
+      return h.toUpperCase();
+    }
+    String[] names = {"black", "000000", "white", "FFFFFF", "red", "FF0000", "green", "008000", "lime", "00FF00",
+        "blue", "0000FF", "yellow", "FFFF00", "aqua", "00FFFF", "cyan", "00FFFF", "fuchsia", "FF00FF", "magenta",
+        "FF00FF", "gray", "808080", "grey", "808080", "silver", "C0C0C0", "maroon", "800000", "navy", "000080",
+        "olive", "808000", "purple", "800080", "teal", "008080"};
+    for (int i = 0; i < names.length; i += 2) if (names[i].equalsIgnoreCase(v)) return names[i + 1];
+    return null;
+  }
+
   /** VML width/height from a CSS-like style, in EMU; 100 by 50 points when absent. */
   static long[] size(String style) {
     float w = 100, h = 50;
@@ -539,6 +656,19 @@ final class WordXml {
     return new long[] {(long) (Math.min(w, 20000) * 12700), (long) (Math.min(h, 20000) * 12700)};
   }
 
+  /** A VML "x,y" point in points. */
+  private static float[] point(String v) {
+    int comma = v.indexOf(',');
+    String x = comma < 0 ? v : v.substring(0, comma), y = comma < 0 ? "0" : v.substring(comma + 1);
+    return new float[] {lengthOrZero(x.trim()), lengthOrZero(y.trim())};
+  }
+
+  private static float lengthOrZero(String v) {
+    if (v.isEmpty()) return 0;
+    float f = v.endsWith("pt") || v.endsWith("in") || v.endsWith("cm") || v.endsWith("mm") || v.endsWith("px") ? length(v) : length(v + "pt");
+    return Float.isNaN(f) || Float.isInfinite(f) ? 0 : Math.max(-20000, Math.min(20000, f));
+  }
+
   private static float length(String v) {
     float scale = 0.75f; // VML lengths without units are pixels
     String n = v;
@@ -547,7 +677,12 @@ final class WordXml {
     else if (v.endsWith("cm")) { scale = 72 / 2.54f; n = v.substring(0, v.length() - 2); }
     else if (v.endsWith("mm")) { scale = 72 / 25.4f; n = v.substring(0, v.length() - 2); }
     else if (v.endsWith("px")) n = v.substring(0, v.length() - 2);
-    float f = Xml.number(n.trim());
+    float f;
+    try {
+      f = Xml.number(n.trim());
+    } catch (NumberFormatException notALength) {
+      return 0;
+    }
     return Float.isNaN(f) || Float.isInfinite(f) ? 0 : f * scale;
   }
 }

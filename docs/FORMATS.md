@@ -177,13 +177,21 @@ Shapes, text boxes, WordArt, charts, SmartArt, display equations, ink/canvases, 
 - PDF draws vector paths with base-font text. Partial transparency is blended against white, and characters outside WinAnsi print as "?".
 - HTML exports inline SVG.
 - Text wrapping is block-granular:
-  - Square/tight/through wrap narrows whole paragraphs that start beside a left- or right-aligned object; with a
-    `wp:wrapPolygon` the cut is the outline's horizontal extent at the paragraph's first line.
+  - `wp:positionH`/`wp:positionV` are kept as the object's position (relativeFrom page, margin, column,
+    character, left/right/inside/outside margin, paragraph, line, top/bottom margin; `wp:posOffset` or `wp:align`)
+    and written back. Layout places the object there (paragraph and line offsets from the anchor paragraph's top).
+  - Text beside a positioned Square float is narrowed line by line; Tight/Through use the wrap polygon's
+    extent over each line; Top and Bottom moves lines below the object. Each line keeps one text segment, on
+    the side with more room. An anchor aligned in its column at the paragraph (what the app itself writes)
+    stays a paragraph-placed object whose square/tight wrap narrows whole paragraphs as before.
   - Behind/in-front objects take no space (`behindDoc` picks behind).
-  - There is no free positioning or per-line contour wrapping.
+  - Dragging an object floats it at the drop point (page-relative on its anchor's page); `arrange.bounds`
+    and `arrange.nudge` do the same from commands.
 - Groups (`wpg:wgp`) flatten their members through nested `chOff`/`chExt` spaces as Wordcraft's group_members;
   freeforms (`a:custGeom`) flatten cubic/quadratic Beziers into 16 steps, `fill="none"` paths stay open and
-  `arcTo` is skipped (as in Wordcraft). Pictures inside groups and group rotation are dropped.
+  `arcTo` is skipped (as in Wordcraft). Pictures inside groups are kept as picture members (PNG/JPEG
+  bytes), drawn on screen and in PDF (image XObjects) and written as `pic:pic`; member and group `a:xfrm rot`
+  turn shapes and pictures (group text moves with the turn but its glyphs stay upright).
 
 ## Content controls (2026-10-17)
 
@@ -235,7 +243,7 @@ page/margin/column/paragraph offsets and none/square/top-and-bottom/behind/tight
 for header stories (PlcSpaHdr anchors with the header drawing), and OfficeArt groups (SpgrContainer with its
 FSPGR space and members' ChildAnchor rectangles, nested groups) written as `wpg:wgp`. The editor model then
 treats floating DOCX drawings as it does for .docx (a separate paragraph keeping its wrap kind). Not yet:
-encrypted or Word 6/95 files (rejected), pictures inside groups, shape rotation, line widths and gradients, paragraph-mark revisions, comment
+encrypted or Word 6/95 files (rejected), shape rotation, line widths and gradients, paragraph-mark revisions, comment
 and bookmark boundaries inside table-row end marks, per-cell borders/shading, and list-style formatting
 carried by styles. As in Wordcraft: freeforms (no path read) and formatting revisions are not imported.
 Wordcraft drops comments and revision marks.
@@ -286,7 +294,10 @@ new file. Import only.
   `v:textbox` to an inline DrawingML text box; `w:hdr`/`w:ftr` in `w:sectPr` to header/footer
   parts (`odd` = default, `first`, `even`); inline `w:footnote`/`w:endnote` to notes parts with
   references; `aml:annotation` `Word.Comment.Start/End/Comment` to comment ranges, references and
-  a comments part. Limitations: floating VML positioning is not kept (pictures and boxes become
-  inline); VML shapes other than pictures and text boxes, linked (non-`binData`) pictures and
+  a comments part. `position:absolute` VML shapes become `wp:anchor` floats (left/margin-left,
+  top/margin-top, `mso-position-horizontal/vertical-relative` and alignment, `w10:wrap`, negative
+  `z-index` behind), and `v:line` (from/to), `v:rect`, `v:roundrect` and `v:oval` preset shapes with
+  fill/stroke colors and stroke weight, as Wordcraft's read_vml. Limitations: VML rotation and flips are
+  not kept; other VML shapes, linked (non-`binData`) pictures and
   undecodable picture data are dropped with a warning; comment dates are not read. Namespace prefixes
   are matched by the conventional `w:`/`wx:`/`aml:` names, not by resolved URIs.

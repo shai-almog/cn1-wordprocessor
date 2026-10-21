@@ -174,4 +174,45 @@ public class WordXmlTest {
       // bounded
     }
   }
+
+  @Test
+  public void word2003VmlFloatsAndShapes() throws Exception {
+    String xml = "<?xml version=\"1.0\"?><w:wordDocument xmlns:w=\"" + W2003 + "\""
+        + " xmlns:v=\"urn:schemas-microsoft-com:vml\" xmlns:w10=\"urn:schemas-microsoft-com:office:word\"><w:body>"
+        + "<w:p><w:r><w:pict><w:binData w:name=\"wordml://1.png\">" + PNG + "</w:binData>"
+        + "<v:shape style=\"position:absolute;margin-left:100pt;margin-top:20pt;width:36pt;height:36pt;"
+        + "mso-position-horizontal-relative:page;mso-position-vertical-relative:margin\">"
+        + "<v:imagedata src=\"wordml://1.png\"/><w10:wrap type=\"square\"/></v:shape></w:pict></w:r></w:p>"
+        + "<w:p><w:r><w:pict><v:rect style=\"position:absolute;width:50pt;height:30pt;z-index:-1;"
+        + "mso-position-horizontal:center;mso-position-horizontal-relative:margin\" fillcolor=\"#f00\" stroked=\"f\"/>"
+        + "</w:pict></w:r></w:p>"
+        + "<w:p><w:r><w:pict><v:oval style=\"width:40pt;height:20pt\" fillcolor=\"blue\" strokecolor=\"#00ff00 [3]\"/>"
+        + "</w:pict></w:r></w:p>"
+        + "<w:p><w:r><w:pict><v:line style=\"position:absolute;mso-position-horizontal-relative:page;"
+        + "mso-position-vertical-relative:page\" from=\"200pt,300pt\" to=\"100pt,350pt\" strokeweight=\"2pt\">"
+        + "<w10:wrap type=\"topAndBottom\"/></v:line></w:pict></w:r></w:p>"
+        + "</w:body></w:wordDocument>";
+    var opened = open(xml);
+    var pics = new java.util.ArrayList<Picture>();
+    for (Block b : opened.document.blocks) if (b instanceof Picture pic) pics.add(pic);
+    assertEquals(opened.warnings.toString(), 4, pics.size());
+    assertEquals("square", pics.get(0).wrap());
+    assertEquals("page,,100;margin,,20", pics.get(0).position());
+    assertEquals("behind", pics.get(1).wrap());
+    assertEquals("margin,center,0;paragraph,,0", pics.get(1).position());
+    assertEquals("rect", pics.get(1).drawing.get("shape", ""));
+    assertEquals("FF0000", pics.get(1).drawing.get("fill", ""));
+    assertEquals("none", pics.get(1).drawing.get("line", ""));
+    assertEquals("inline", pics.get(2).wrap());
+    assertEquals("ellipse", pics.get(2).drawing.get("shape", ""));
+    assertEquals("0000FF", pics.get(2).drawing.get("fill", ""));
+    assertEquals("00FF00", pics.get(2).drawing.get("line", ""));
+    // A line spans from..to: its box starts at the smaller corner.
+    assertEquals("topBottom", pics.get(3).wrap());
+    assertEquals("page,,100;page,,300", pics.get(3).position());
+    assertEquals(100, pics.get(3).width, .01f);
+    assertEquals(50, pics.get(3).height, .01f);
+    assertEquals("line", pics.get(3).drawing.get("shape", ""));
+    assertEquals(2, pics.get(3).drawing.num("lineWidth", 0), .01f);
+  }
 }
