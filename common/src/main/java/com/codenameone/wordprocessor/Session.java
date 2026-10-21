@@ -2380,42 +2380,30 @@ public final class Session {
   /** Select the atomic reference, including references inside table cells. */
   public void selectNote(String id) {
     leaveCell();
-    for (int b = 0; b < document.blocks.size(); b++) {
-      var block = document.blocks.get(b);
-      if (block instanceof Paragraph paragraph) {
-        int offset = noteOffset(paragraph, id);
-        if (offset >= 0) {
-          select(b, offset, offset + 1);
-          return;
-        }
-      } else if (block instanceof Table table) {
-        for (int r = 0; r < table.rows(); r++)
-          for (int c = 0; c < table.columns(); c++) {
-            if (table.covered(r, c)) continue;
-            var cell = table.cell(r, c);
-            for (int p = 0; p < cell.size(); p++) {
-              int offset = noteOffset(cell.get(p), id);
-              if (offset >= 0) {
-                enterCell(b, r, c);
-                select(p, offset, offset + 1);
-                return;
-              }
-            }
-          }
+    // References in document order, body and table cells at any depth.
+    for (Notes.Reference ref : Notes.references(document))
+      if (ref.note.id.equals(id)) {
+        enterCellPath(ref.path);
+        int block = ref.path.length > 0 ? ref.paragraph : ref.block;
+        select(block, ref.offset, ref.offset + 1);
+        return;
       }
-    }
     throw new IllegalArgumentException("Unknown note");
   }
 
   public void nextNote(boolean previous) {
     var refs = Notes.references(document());
     if (refs.isEmpty()) return;
-    int b = inCell() ? cellBlock() : selection.block, r = cellRow(), c = cellColumn();
-    int p = inCell() ? selection.block : 0, offset = previous ? selection.start() : selection.end();
+    var here =
+        new MixedRange.Pos(
+            inCell() ? cellPath() : new int[0],
+            selection.block,
+            previous ? selection.start() : selection.end());
     Notes.Reference target = previous ? refs.get(refs.size() - 1) : refs.get(0);
     for (int i = 0; i < refs.size(); i++) {
       var ref = refs.get(previous ? refs.size() - i - 1 : i);
-      int compare = ref.compare(b, r, c, p, offset);
+      var at = new MixedRange.Pos(ref.path, ref.path.length > 0 ? ref.paragraph : ref.block, ref.offset);
+      int compare = MixedRange.compare(at, here);
       if (previous ? compare < 0 : compare >= 0) {
         target = ref;
         break;

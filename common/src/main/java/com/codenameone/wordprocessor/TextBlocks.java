@@ -97,6 +97,8 @@ final class TextBlocks {
 
   private static final class Spec {
     String source;
+    /** Content already read (an RTF cell holding nested tables), used instead of source. */
+    Sequence<Block> blocks;
     int rows = 1, columns = 1;
     boolean hMergeStart, hMerge, vMergeStart, vMerge;
     String align = "";
@@ -104,8 +106,13 @@ final class TextBlocks {
 
   /** HTML-style placement with an occupancy grid, clamped so spans never overlap. */
   private String table(List<List<Spec>> rows) {
+    var t = buildTable(rows);
+    return t == null ? "" : add(t);
+  }
+
+  private Table buildTable(List<List<Spec>> rows) {
     int rowCount = Math.min(rows.size(), MAX_ROWS);
-    if (rowCount == 0) return "";
+    if (rowCount == 0) return null;
     boolean[][] used = new boolean[rowCount][MAX_COLUMNS];
     var placed = new ArrayList<int[]>();
     var specs = new ArrayList<Spec>();
@@ -131,7 +138,7 @@ final class TextBlocks {
         c += w;
       }
     }
-    if (columns == 0) return "";
+    if (columns == 0) return null;
     var cells = new ArrayList<List<Sequence<Block>>>();
     for (int r = 0; r < rowCount; r++) {
       var row = new ArrayList<Sequence<Block>>();
@@ -141,7 +148,8 @@ final class TextBlocks {
     var merges = new ArrayList<Table.Merge>();
     for (int i = 0; i < placed.size(); i++) {
       int[] p = placed.get(i);
-      Sequence<Block> content = cell(specs.get(i).source);
+      Sequence<Block> content =
+          specs.get(i).blocks != null ? specs.get(i).blocks : cell(specs.get(i).source);
       if (specs.get(i).align.length() > 0) {
         var aligned = new Sequence<Block>();
         for (Block block : content)
@@ -162,7 +170,7 @@ final class TextBlocks {
     } catch (IllegalArgumentException e) {
       t = Table.of(id(), cells, new ArrayList<Table.Merge>());
     }
-    return add(t);
+    return t;
   }
 
   private String picture(byte[] data, float width, float height, String alt) {
@@ -639,6 +647,12 @@ final class TextBlocks {
       boolean done = false;
       while (i < s.length() && !done) {
         char c = s.charAt(i);
+        if (c == '{' && (s.startsWith("{\\*\\nesttableprops", i) || s.startsWith("{\\nonesttables", i))) {
+          // A nested table's row properties (and its fallback text) belong to the cell content.
+          if (contentStart < 0) contentStart = i;
+          i = groupEnd(s, i);
+          continue;
+        }
         if (c == '\\') {
           String w = word(s, i);
           int e = wordEnd(s, i);
@@ -667,7 +681,9 @@ final class TextBlocks {
       var row = new ArrayList<Spec>();
       for (int c = 0; c < Math.max(defs.size(), Math.min(contents.size(), MAX_COLUMNS)); c++) {
         Spec d = c < defs.size() ? defs.get(c) : new Spec();
-        d.source = c < contents.size() ? rtfFragment(contents.get(c)) : "";
+        String content = c < contents.size() ? contents.get(c) : "";
+        d.source = rtfFragment(content);
+        if (content.indexOf("\\nestcell") >= 0) d.blocks = nestedCell(content);
         row.add(d);
       }
       rows.add(row);
@@ -676,7 +692,144 @@ final class TextBlocks {
       if (j < s.length() && s.charAt(j) == '\\' && "trowd".equals(word(s, j))) i = j;
       else break;
     }
-    // Translate RTF merge flags into spans, with merged-away cells removed for the grid.
+    var grid = mergedGrid(rows);
+    out.append(' ').append(table(grid)).append(' ');
+    return i;
+  }
+
+  /** A paragraph of RTF cell content with its table depth (\\itap) and how it ends. */
+  private static final class Unit {
+    final String rtf;
+    final int depth;
+    final boolean cellEnd;
+    /** Row properties of a nested row end ({\\*\\nesttableprops}), else null. */
+    final List<Spec> row;
+
+    Unit(String rtf, int depth, boolean cellEnd, List<Spec> row) {
+      this.rtf = rtf;
+      this.depth = depth;
+      this.cellEnd = cellEnd;
+      this.row = row;
+    }
+  }
+
+  /**
+   * Reads an RTF cell holding nested tables: paragraphs at \\itap 1 stay paragraphs, deeper runs
+   * (cells ended by \\nestcell, rows by {\\*\\nesttableprops ...\\nestrow}) become tables in the cell.
+   */
+  private Sequence<Block> nestedCell(String content) {
+    var units = new ArrayList<Unit>();
+    var cur = new StringBuilder();
+    int depth = 1;
+    for (int i = 0; i < content.length() && units.size() < 100000; ) {
+      char c = content.charAt(i);
+      if (c == '{') {
+        int end = groupEnd(content, i);
+        if (content.startsWith("{\\*\\nesttableprops", i)) {
+          var row = new ArrayList<Spec>();
+          Spec pending = new Spec();
+          for (int k = i + 1; k < end - 1; ) {
+            if (content.charAt(k) != '\\') {
+              k++;
+              continue;
+            }
+            String w = word(content, k);
+            if ("cellx".equals(w)) {
+              if (row.size() < MAX_COLUMNS) row.add(pending);
+              pending = new Spec();
+            } else if ("clmgf".equals(w)) pending.hMergeStart = true;
+            else if ("clmrg".equals(w)) pending.hMerge = true;
+            else if ("clvmgf".equals(w)) pending.vMergeStart = true;
+            else if ("clvmrg".equals(w)) pending.vMerge = true;
+            k = wordEnd(content, k);
+          }
+          int d = units.isEmpty() ? 2 : Math.max(2, units.get(units.size() - 1).depth);
+          units.add(new Unit("", d, false, row));
+          cur.setLength(0);
+        } else if (!content.startsWith("{\\nonesttables", i)) cur.append(content, i, end);
+        // (the \\nonesttables group is fallback text for readers without nested tables)
+        i = end;
+        continue;
+      }
+      if (c != '\\') {
+        cur.append(c);
+        i++;
+        continue;
+      }
+      String w = word(content, i);
+      int e = wordEnd(content, i);
+      if ("pard".equals(w)) depth = 1;
+      else if ("itap".equals(w)) depth = Math.max(1, Math.min(16, param(content, i)));
+      if ("par".equals(w) || "nestcell".equals(w)) {
+        units.add(new Unit(cur.toString(), depth, "nestcell".equals(w), null));
+        cur.setLength(0);
+      } else cur.append(content, i, e);
+      i = e;
+    }
+    if (cur.toString().trim().length() > 0) units.add(new Unit(cur.toString(), 1, false, null));
+    return nestedBlocks(units, 1);
+  }
+
+  private Sequence<Block> nestedBlocks(List<Unit> units, int level) {
+    var out = new Sequence<Block>();
+    for (int i = 0; i < units.size(); ) {
+      var u = units.get(i);
+      if (u.depth > level) {
+        int j = i;
+        while (j < units.size() && units.get(j).depth > level) j++;
+        var t = nestedTable(units.subList(i, j), level + 1);
+        if (t != null) out = out.append(t);
+        i = j;
+        continue;
+      }
+      i++;
+      if (u.row != null) continue;
+      for (Block b : cell(rtfFragment(u.rtf))) out = out.append(b);
+    }
+    if (out.size() == 0 || !(out.get(out.size() - 1) instanceof Paragraph))
+      out = out.append(new Paragraph(id(), new RichText()));
+    return out;
+  }
+
+  private Table nestedTable(List<Unit> units, int level) {
+    var rows = new ArrayList<List<Spec>>();
+    var cells = new ArrayList<Sequence<Block>>();
+    var cell = new ArrayList<Unit>();
+    for (Unit u : units) {
+      if (u.row != null && u.depth == level) {
+        if (!cell.isEmpty()) cells.add(nestedBlocks(cell, level));
+        cell.clear();
+        rows.add(nestedRow(u.row, cells));
+        cells.clear();
+        if (rows.size() > MAX_ROWS) return null;
+        continue;
+      }
+      cell.add(u);
+      if (u.depth == level && u.cellEnd) {
+        cells.add(nestedBlocks(cell, level));
+        cell.clear();
+      }
+    }
+    if (!cell.isEmpty()) cells.add(nestedBlocks(cell, level));
+    if (!cells.isEmpty()) rows.add(nestedRow(new ArrayList<Spec>(), cells));
+    return buildTable(mergedGrid(rows));
+  }
+
+  private List<Spec> nestedRow(List<Spec> defs, List<Sequence<Block>> cells) {
+    var row = new ArrayList<Spec>();
+    for (int c = 0; c < Math.max(defs.size(), Math.min(cells.size(), MAX_COLUMNS)); c++) {
+      Spec d = c < defs.size() ? defs.get(c) : new Spec();
+      d.blocks =
+          c < cells.size()
+              ? cells.get(c)
+              : new Sequence<Block>().append(new Paragraph(id(), new RichText()));
+      row.add(d);
+    }
+    return row;
+  }
+
+  /** RTF merge flags as spans, with merged-away cells removed for the grid. */
+  private static List<List<Spec>> mergedGrid(List<List<Spec>> rows) {
     for (int r = 0; r < rows.size(); r++) {
       List<Spec> row = rows.get(r);
       for (int c = 0; c < row.size(); c++) {
@@ -693,8 +846,7 @@ final class TextBlocks {
       for (Spec d : row) if (!d.hMerge && !d.vMerge) kept.add(d);
       grid.add(kept);
     }
-    out.append(' ').append(table(grid)).append(' ');
-    return i;
+    return grid;
   }
 
   private static String rtfFragment(String body) {
@@ -795,34 +947,59 @@ final class TextBlocks {
 
   static String rtfTable(Table t) {
     var b = new StringBuilder();
+    rtfTable(b, t, 1, 9360);
+    return b.toString();
+  }
+
+  /**
+   * Writes the table at depth {@code depth}: outer rows as \\trowd ... \\cell ... \\row, nested
+   * rows (Word's RTF 1.8 form) with \\itapN paragraphs ended by \\nestcell and row properties in
+   * {\\*\\nesttableprops ... \\nestrow}{\\nonesttables\\par}.
+   */
+  private static void rtfTable(StringBuilder b, Table t, int depth, float width) {
     for (int r = 0; r < t.rows(); r++) {
-      b.append("\\trowd\\trgaph108\\trleft0");
+      var defs = new StringBuilder("\\trowd\\trgaph108\\trleft0");
       float x = 0;
       for (int c = 0; c < t.columns(); c++) {
         Table.Merge owner = owner(t, r, c);
-        if (owner.rows > 1) b.append(owner.row == r ? "\\clvmgf" : "\\clvmrg");
-        if (owner.columns > 1) b.append(owner.column == c ? "\\clmgf" : "\\clmrg");
-        x += t.format.columnFraction(c) * 9360;
-        b.append("\\cellx").append(Math.round(x));
+        if (owner.rows > 1) defs.append(owner.row == r ? "\\clvmgf" : "\\clvmrg");
+        if (owner.columns > 1) defs.append(owner.column == c ? "\\clmgf" : "\\clmrg");
+        x += t.format.columnFraction(c) * width;
+        defs.append("\\cellx").append(Math.round(x));
       }
-      b.append('\n');
+      if (depth == 1) b.append(defs).append('\n');
       for (int c = 0; c < t.columns(); c++) {
-        b.append("\\pard\\plain\\intbl ");
-        if (!t.covered(r, c)) {
-          boolean first = true;
-          for (Paragraph p : t.cell(r, c)) {
-            if (!first) b.append("\\par ");
-            first = false;
-            if ("center".equals(p.align)) b.append("\\qc ");
-            else if ("right".equals(p.align)) b.append("\\qr ");
-            rtfRuns(b, p);
-          }
+        float cellWidth = t.format.columnFraction(c) * width;
+        if (t.covered(r, c)) {
+          b.append("\\pard\\plain\\intbl");
+          if (depth > 1) b.append("\\itap").append(depth);
+          b.append(' ').append(depth > 1 ? "\\nestcell\n" : "\\cell\n");
+          continue;
         }
-        b.append("\\cell\n");
+        var blocks = t.blocks(r, c);
+        for (int n = 0; n < blocks.size(); n++) {
+          var block = blocks.get(n);
+          if (block instanceof Table inner) {
+            rtfTable(b, inner, depth + 1, cellWidth);
+            continue;
+          }
+          var p = (Paragraph) block;
+          b.append("\\pard\\plain\\intbl");
+          if (depth > 1) b.append("\\itap").append(depth);
+          b.append(' ');
+          if ("center".equals(p.align)) b.append("\\qc ");
+          else if ("right".equals(p.align)) b.append("\\qr ");
+          rtfRuns(b, p);
+          if (n < blocks.size() - 1) b.append("\\par\n");
+        }
+        b.append(depth > 1 ? "\\nestcell\n" : "\\cell\n");
       }
-      b.append("\\row\n");
+      if (depth == 1) b.append("\\row\n");
+      else
+        b.append("{\\*\\nesttableprops")
+            .append(defs)
+            .append("\\nestrow}{\\nonesttables\\par}\n");
     }
-    return b.toString();
   }
 
   private static Table.Merge owner(Table t, int r, int c) {

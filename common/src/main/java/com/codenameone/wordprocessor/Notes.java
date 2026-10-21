@@ -10,36 +10,44 @@ public final class Notes {
 
   public static final class Reference {
     public final Note note;
+    /**
+     * The body block (paragraph, or outermost table) and that table's cell; {@link #path} is the
+     * full cell path for tables nested in cells, and {@code paragraph} the block index in the
+     * story at that path.
+     */
     public final int block, row, column, paragraph, offset;
-    Reference(Note note, int block, int row, int column, int paragraph, int offset) {
-      this.note = note; this.block = block; this.row = row; this.column = column;
-      this.paragraph = paragraph; this.offset = offset;
+    public final int[] path;
+
+    Reference(Note note, int[] path, int paragraph, int offset) {
+      this.note = note;
+      this.path = path;
+      this.block = path.length > 0 ? path[0] : paragraph;
+      this.row = path.length > 0 ? path[1] : -1;
+      this.column = path.length > 0 ? path[2] : -1;
+      this.paragraph = path.length > 0 ? paragraph : 0;
+      this.offset = offset;
     }
-    int compare(int b, int r, int c, int p, int o) {
-      int[] left = {block, row, column, paragraph, offset}, right = {b, r, c, p, o};
-      for (int i = 0; i < left.length; i++) if (left[i] != right[i]) return left[i] < right[i] ? -1 : 1;
-      return 0;
+
+    /** The paragraph holding the reference. */
+    public Paragraph paragraph(Document document) {
+      return (Paragraph)
+          MixedRange.story(document, path).get(path.length > 0 ? paragraph : block);
     }
   }
 
+  /** Note references in document order, in body paragraphs and table cells at any depth. */
   public static List<Reference> references(Document document) {
     var result = new ArrayList<Reference>();
-    for (int b = 0; b < document.blocks.size(); b++) {
-      var block = document.blocks.get(b);
-      if (block instanceof Paragraph paragraph) references(result, paragraph, b, -1, -1, 0);
-      else if (block instanceof Table table) {
-        for (int r = 0; r < table.rows(); r++) for (int c = 0; c < table.columns(); c++) {
-          if (table.covered(r, c)) continue;
-          var cell = table.cell(r, c);
-          for (int p = 0; p < cell.size(); p++) references(result, cell.get(p), b, r, c, p);
-        }
-      }
+    for (MixedRange.Covered c : MixedRange.paragraphs(document)) {
+      final int[] path = c.path;
+      final int p = c.block;
+      c.paragraph.text.mapNotes(
+          (offset, note) -> {
+            result.add(new Reference(note, path, p, offset));
+            return note;
+          });
     }
     return result;
-  }
-
-  private static void references(List<Reference> out, Paragraph value, int b, int r, int c, int p) {
-    value.text.mapNotes((offset, note) -> { out.add(new Reference(note, b, r, c, p, offset)); return note; });
   }
 
   public static List<Note> all(Document document) {
@@ -49,7 +57,13 @@ public final class Notes {
   }
 
   public static Document map(Document document, Mapper mapper) {
-    Sequence<Block> blocks = document.blocks;
+    var blocks = map(document.blocks, mapper);
+    return blocks == document.blocks ? document : document.blocks(blocks, document.nextId);
+  }
+
+  /** Maps notes in paragraphs and in table cells, nested tables included. */
+  private static Sequence<Block> map(Sequence<Block> blocks, Mapper mapper) {
+    var out = blocks;
     for (int i = 0; i < blocks.size(); i++) {
       Block original = blocks.get(i), value = original;
       if (original instanceof Paragraph paragraph) value = paragraph(paragraph, mapper);
@@ -57,18 +71,15 @@ public final class Notes {
         for (int row = 0; row < table.rows(); row++)
           for (int column = 0; column < table.columns(); column++) {
             if (table.covered(row, column)) continue;
-            Sequence<Paragraph> cell = table.cell(row, column), updated = cell;
-            for (int p = 0; p < cell.size(); p++) {
-              Paragraph old = cell.get(p), replacement = paragraph(old, mapper);
-              if (old != replacement) updated = updated.set(p, replacement);
-            }
-            if (updated != cell) table = table.setCell(row, column, updated);
+            var cell = table.blocks(row, column);
+            var updated = map(cell, mapper);
+            if (updated != cell) table = table.setBlocks(row, column, updated);
           }
         value = table;
       }
-      if (value != original) blocks = blocks.set(i, value);
+      if (value != original) out = out.set(i, value);
     }
-    return blocks == document.blocks ? document : document.blocks(blocks, document.nextId);
+    return out;
   }
 
   private static Paragraph paragraph(Paragraph paragraph, Mapper mapper) {
