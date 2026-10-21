@@ -115,6 +115,24 @@ public class BalloonsTest {
   }
 
   @Test
+  public void cardTextIsLaidOutWithTheParagraphEngine() {
+    // Wordcraft lays the comment part out with its paragraph engine: indents apply.
+    var d = commented();
+    var c = d.comments.get(0);
+    var para = new Paragraph("cp", RichText.of("indented")).with("indent", "20");
+    d = d.comments(java.util.Collections.singletonList(c.body(java.util.Collections.singletonList(para))));
+    var r = new LayoutEngine(METRICS).layout(d, 0);
+    var card = Balloons.layout(d, r, METRICS).get(0).get(0);
+    Balloons.Item name = null, text = null;
+    for (Balloons.Item it : card.items) {
+      if ("Ada".equals(it.text)) name = it;
+      if (it.text != null && it.text.startsWith("indented")) text = it;
+    }
+    assertNotNull(text);
+    assertEquals(name.x + 20, text.x, .01f);
+  }
+
+  @Test
   public void revisionsModeTakesDeletionsOutOfTheLayout() {
     var s = new Session(Document.empty());
     s.replace("keep gone stay");

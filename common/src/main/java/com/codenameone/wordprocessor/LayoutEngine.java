@@ -1936,6 +1936,26 @@ public final class LayoutEngine {
   }
 
   /** A text box story laid out {@code width} points wide, as a header story is. */
+  /**
+   * Lays {@code blocks} out {@code width} wide from (0, 0) with the full paragraph engine, as
+   * Wordcraft lays a comment's part out in its balloon. Returns the lines; {@code height[0]}
+   * receives the height used. The shared hidden/deleted switches are left as they were.
+   */
+  List<Line> frameLines(Document doc, Sequence<Block> blocks, float width, float[] height) {
+    boolean shown = CharacterMetrics.showHidden, deleted = CharacterMetrics.hideDeleted;
+    try {
+      CharacterMetrics.showHidden = showHidden;
+      nextCache = new HashMap<>();
+      nextByContent = new HashMap<>();
+      var laid = boxStory(doc, blocks, 0, width);
+      if (height != null) height[0] = laid.height;
+      return laid.lines;
+    } finally {
+      CharacterMetrics.showHidden = shown;
+      CharacterMetrics.hideDeleted = deleted;
+    }
+  }
+
   private StoryLayout boxStory(Document doc, Sequence<Block> blocks, int page, float width) {
     boolean was = enterStory();
     try {

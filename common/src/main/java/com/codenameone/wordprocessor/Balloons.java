@@ -118,62 +118,26 @@ public final class Balloons {
 
   /**
    * Lays out a comment's paragraphs in {@code width} from (x, y) with each run's own formatting,
-   * as Wordcraft lays out the comment's part in the card: words wrap greedily, each line as tall
-   * as its tallest run and aligned by its paragraph. Unformatted text takes the card's 9pt.
-   * Returns the y below the text.
+   * as Wordcraft lays out the comment's part in the card with its full paragraph engine
+   * (line breaking, alignment, indents, spacing and tabs). Unformatted text takes the card's
+   * 9pt. Returns the y below the text.
    */
-  static float rich(List<Item> items, List<Paragraph> paras, float x, float y, float width, TextStyle base, LayoutEngine.Metrics m) {
-    for (Paragraph p : paras) {
-      int n = p.text.length();
-      String text = p.text.toString();
-      var styles = new TextStyle[n];
-      var objects = new boolean[n];
-      p.text.fill(styles, objects);
-      var line = new ArrayList<Item>();
-      float lx = 0, lineH = m.height(base);
-      int i = 0;
-      while (i <= n) {
-        // The next word (with the spaces after it) as pieces of uniform style.
-        int end = i;
-        while (end < n && text.charAt(end) != ' ' && text.charAt(end) != '\n') end++;
-        while (end < n && text.charAt(end) == ' ') end++;
-        var word = new ArrayList<Item>();
-        float ww = 0;
-        for (int a = i; a < end; ) {
-          int b = a + 1;
-          while (b < end && styles[b].equals(styles[a])) b++;
-          var st = styleOf(styles[a], base);
-          String piece = objects[a] ? "" : text.substring(a, b);
-          float w = m.width(piece, st);
-          word.add(new Item(piece, ww, 0, w, sizeOf(st), st.bold, st.color == 0 ? 0x242424 : st.color, st));
-          ww += w;
-          a = b;
-        }
-        boolean breakAfter = end < n && text.charAt(end) == '\n';
-        if (!line.isEmpty() && lx + ww > width + .01f) {
-          y = flush(items, line, p, x, y, width, lx, lineH);
-          line.clear();
-          lx = 0;
-          lineH = m.height(base);
-        }
-        for (Item it : word) {
-          line.add(new Item(it.text, lx + it.x, 0, it.width, it.size, it.bold, it.color, it.style));
-          lineH = Math.max(lineH, m.height(it.style));
-        }
-        lx += ww;
-        if (breakAfter) {
-          y = flush(items, line, p, x, y, width, lx, lineH);
-          line.clear();
-          lx = 0;
-          lineH = m.height(base);
-          end++;
-        }
-        if (end >= n) break;
-        i = end;
+  static float rich(
+      List<Item> items, List<Paragraph> paras, float x, float y, float width, TextStyle base,
+      LayoutEngine.Metrics m, Document d, LayoutEngine engine) {
+    if (paras.isEmpty()) return y;
+    var blocks = new Sequence<Block>();
+    for (Paragraph p : paras) blocks = blocks.append(p.text(p.text.mapStyles(st -> styleOf(st, base))));
+    float[] used = {0};
+    for (LayoutEngine.Line line : engine.frameLines(d, blocks, width, used))
+      for (LayoutEngine.Span span : line.spans) {
+        String text = span.displayText;
+        if (text.isEmpty() || InlineField.OBJECT.equals(text)) continue;
+        var st = span.style;
+        items.add(new Item(text, x + line.x + span.x, y + line.y, span.width, sizeOf(st), st.bold,
+            st.color == 0 ? 0x242424 : st.color, st));
       }
-      y = flush(items, line, p, x, y, width, lx, lineH);
-    }
-    return y;
+    return y + used[0];
   }
 
   private static TextStyle styleOf(TextStyle s, TextStyle base) {
@@ -185,13 +149,6 @@ public final class Balloons {
     return s.size;
   }
 
-  private static float flush(List<Item> items, List<Item> line, Paragraph p, float x, float y, float width, float used, float h) {
-    String align = p.align;
-    float dx = "center".equals(align) ? (width - used) / 2 : "right".equals(align) ? width - used : 0;
-    for (Item it : line)
-      items.add(new Item(it.text, x + Math.max(0, dx) + it.x, y, it.width, it.size, it.bold, it.color, it.style));
-    return y + h;
-  }
 
   /**
    * The balloons for the unresolved body comment threads of {@code d} laid out in {@code r},
@@ -209,6 +166,7 @@ public final class Balloons {
   public static List<List<Card>> layout(
       Document d, LayoutEngine.Result r, LayoutEngine.Metrics m, String mode) {
     var pages = new ArrayList<List<Card>>();
+    var engine = new LayoutEngine(m);
     for (int i = 0; i < r.pages.size(); i++) pages.add(new ArrayList<Card>());
     boolean revisions = mode != null && !"inline".equals(mode);
     if (d.comments.isEmpty() && !revisions || r.pages.isEmpty()) return pages;
@@ -237,7 +195,7 @@ public final class Balloons {
         }
         items.add(new Item(name(author), x, y, inner, SIZE, true, k == 0 ? color : authorColor(d, author)));
         y += m.height(head) + 2;
-        y = rich(items, text, x, y, inner, body, m);
+        y = rich(items, text, x, y, inner, body, m, d, engine);
       }
       pages.get((int) at[0]).add(new Card(c.id, (int) at[0], at[1], at[2], items, y + PAD, color));
     }
