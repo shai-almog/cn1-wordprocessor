@@ -71,14 +71,22 @@ final class TextBlocks {
     return text;
   }
 
-  private Sequence<Paragraph> cell(String source) {
-    var out = new Sequence<Paragraph>();
+  private Sequence<Block> cell(String source) {
+    var out = new Sequence<Block>();
     if (source.trim().length() > 0) {
       try {
-        Document d = TextFormats.read(source, format, false);
+        // HTML cells may hold nested tables (Wordcraft nests tables in cells); read them too.
+        boolean nested = format == RichTextFormat.HTML && source.toLowerCase().indexOf("<table") >= 0;
+        Document d = TextFormats.read(source, format, nested);
         for (Block b : d.blocks)
-          if (b instanceof Paragraph p && (p.text.length() > 0 || out.size() == 0))
+          if (b instanceof Table inner) {
+            long[] n = {next};
+            out = out.append(inner.renumbered("x", "x", n));
+            next = n[0];
+          } else if (b instanceof Paragraph p && (p.text.length() > 0 || out.size() == 0))
             out = out.append(new Paragraph(id(), p.text).with("align", p.align));
+        if (out.size() > 0 && !(out.get(out.size() - 1) instanceof Paragraph))
+          out = out.append(new Paragraph(id(), new RichText()));
       } catch (RuntimeException ignored) {
         // A malformed cell keeps the table; it just loses that cell's text.
       }
@@ -124,32 +132,35 @@ final class TextBlocks {
       }
     }
     if (columns == 0) return "";
-    var cells = new ArrayList<List<Sequence<Paragraph>>>();
+    var cells = new ArrayList<List<Sequence<Block>>>();
     for (int r = 0; r < rowCount; r++) {
-      var row = new ArrayList<Sequence<Paragraph>>();
+      var row = new ArrayList<Sequence<Block>>();
       for (int c = 0; c < columns; c++) row.add(null);
       cells.add(row);
     }
     var merges = new ArrayList<Table.Merge>();
     for (int i = 0; i < placed.size(); i++) {
       int[] p = placed.get(i);
-      Sequence<Paragraph> content = cell(specs.get(i).source);
+      Sequence<Block> content = cell(specs.get(i).source);
       if (specs.get(i).align.length() > 0) {
-        var aligned = new Sequence<Paragraph>();
-        for (Paragraph para : content) aligned = aligned.append(para.with("align", specs.get(i).align));
+        var aligned = new Sequence<Block>();
+        for (Block block : content)
+          aligned =
+              aligned.append(
+                  block instanceof Paragraph para ? para.with("align", specs.get(i).align) : block);
         content = aligned;
       }
       cells.get(p[0]).set(p[1], content);
       if (p[2] > 1 || p[3] > 1) merges.add(new Table.Merge(p[0], p[1], p[2], p[3]));
     }
-    for (List<Sequence<Paragraph>> row : cells)
+    for (List<Sequence<Block>> row : cells)
       for (int c = 0; c < columns; c++)
-        if (row.get(c) == null) row.set(c, new Sequence<Paragraph>().append(new Paragraph(id(), new RichText())));
+        if (row.get(c) == null) row.set(c, new Sequence<Block>().append(new Paragraph(id(), new RichText())));
     Table t;
     try {
-      t = new Table(id(), cells, merges);
+      t = Table.of(id(), cells, merges);
     } catch (IllegalArgumentException e) {
-      t = new Table(id(), cells);
+      t = Table.of(id(), cells, new ArrayList<Table.Merge>());
     }
     return add(t);
   }

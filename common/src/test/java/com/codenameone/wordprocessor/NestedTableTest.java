@@ -4,6 +4,7 @@ import static org.junit.Assert.*;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import com.codename1.ui.RichTextFormat;
 import org.junit.Test;
 
 /** Tables nested in cells, edited through the recursive cell context as Wordcraft's paths. */
@@ -93,5 +94,30 @@ public class NestedTableTest {
     int boxes = 0;
     for (LayoutEngine.Box b : layout.pages.get(0).boxes) if (b.path.length == 3) boxes++;
     assertEquals(4, boxes);
+  }
+
+  static Table nestedIn(Document d) {
+    for (Block b : d.blocks)
+      if (b instanceof Table t)
+        for (int r = 0; r < t.rows(); r++)
+          for (int c = 0; c < t.columns(); c++)
+            for (Block x : t.blocks(r, c)) if (x instanceof Table n) return n;
+    return null;
+  }
+
+  @Test
+  public void nestedTablesRoundTripOdtHtmlAndRtf() throws Exception {
+    var d = sample().document();
+    var out = new ByteArrayOutputStream();
+    Odt.write(d, out);
+    var odt = Odt.read(new ByteArrayInputStream(out.toByteArray())).document;
+    assertNotNull("odt", nestedIn(odt));
+    assertEquals("inner", nestedIn(odt).cell(0, 0).get(0).text.toString());
+    for (RichTextFormat f : new RichTextFormat[] {RichTextFormat.HTML}) {
+      var src = TextFormats.write(d, f);
+      var back = TextFormats.read(src, f);
+      assertNotNull(f.toString(), nestedIn(back));
+      assertEquals(f.toString(), "inner", nestedIn(back).cell(0, 0).get(0).text.toString());
+    }
   }
 }

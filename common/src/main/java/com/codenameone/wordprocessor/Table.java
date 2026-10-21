@@ -412,6 +412,11 @@ public final class Table implements Block {
 
   /** A copy with fresh table and paragraph ids at every nesting level (for paste). */
   public Table renumbered(long[] id) {
+    return renumbered("p", "t", id);
+  }
+
+  /** As {@link #renumbered(long[])} with the given paragraph and table id prefixes. */
+  public Table renumbered(String paragraphPrefix, String tablePrefix, long[] id) {
     var out = new ArrayList<List<Sequence<Block>>>();
     for (int r = 0; r < rows(); r++) {
       var row = new ArrayList<Sequence<Block>>();
@@ -421,13 +426,13 @@ public final class Table implements Block {
           cell =
               cell.append(
                   b instanceof Table inner
-                      ? inner.renumbered(id)
-                      : ((Paragraph) b).copy("p" + id[0]++, ((Paragraph) b).text));
+                      ? inner.renumbered(paragraphPrefix, tablePrefix, id)
+                      : ((Paragraph) b).copy(paragraphPrefix + id[0]++, ((Paragraph) b).text));
         row.add(cell);
       }
       out.add(row);
     }
-    return new Table("t" + id[0]++, merges, format, out);
+    return new Table(tablePrefix + id[0]++, merges, format, out);
   }
 
   /** Cell text with nested tables flattened in reading order. */

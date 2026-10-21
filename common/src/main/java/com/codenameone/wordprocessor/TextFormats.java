@@ -206,37 +206,7 @@ public final class TextFormats {
             .append(";base64,")
             .append(com.codename1.util.Base64.encodeNoNewline(pic.bytes()))
             .append("\"></p>");
-      } else if (block instanceof Table t) {
-        b.append("<table style=\"").append(TableFormats.css(t.format)).append("\"");
-        if (!t.format.title.isEmpty())
-          b.append(" aria-label=\"").append(Xml.attribute(t.format.title)).append("\"");
-        if (!t.format.description.isEmpty())
-          b.append(" aria-description=\"").append(Xml.attribute(t.format.description)).append("\"");
-        b.append("><colgroup>");
-        for (int c = 0; c < t.columns(); c++)
-          b.append("<col style=\"width:").append(t.format.columnFraction(c) * 100).append("%\">");
-        b.append("</colgroup>");
-        for (int r = 0; r < t.rows(); r++) {
-          if (r == 0 && t.format.headerRows > 0) b.append("<thead>");
-          b.append("<tr style=\"height:").append(t.format.minHeight(r)).append("pt\">");
-          for (int c = 0; c < t.columns(); c++) {
-            if (t.covered(r, c)) continue;
-            var span = t.span(r, c);
-            b.append("<td rowspan=\"")
-                .append(span.rows)
-                .append("\" colspan=\"")
-                .append(span.columns)
-                .append("\" style=\"")
-                .append(TableFormats.css(t.format.cell(r, c)))
-                .append("\">");
-            for (Paragraph p : t.cell(r, c)) paragraph(b, p);
-            b.append("</td>");
-          }
-          b.append("</tr>");
-          if (r + 1 == t.format.headerRows) b.append("</thead>");
-        }
-        b.append("</table>");
-      }
+      } else if (block instanceof Table t) htmlTable(b, t);
     }
     for (String kind : new String[] {"footnote", "endnote"}) {
       boolean heading = false;
@@ -262,6 +232,41 @@ public final class TextFormats {
     }
     return b.append("</body></html>").toString();
   }
+
+  /** A table as HTML; nested tables are written inside their cells. */
+  private static void htmlTable(StringBuilder b, Table t) {
+    b.append("<table style=\"").append(TableFormats.css(t.format)).append("\"");
+    if (!t.format.title.isEmpty())
+      b.append(" aria-label=\"").append(Xml.attribute(t.format.title)).append("\"");
+    if (!t.format.description.isEmpty())
+      b.append(" aria-description=\"").append(Xml.attribute(t.format.description)).append("\"");
+    b.append("><colgroup>");
+    for (int c = 0; c < t.columns(); c++)
+      b.append("<col style=\"width:").append(t.format.columnFraction(c) * 100).append("%\">");
+    b.append("</colgroup>");
+    for (int r = 0; r < t.rows(); r++) {
+      if (r == 0 && t.format.headerRows > 0) b.append("<thead>");
+      b.append("<tr style=\"height:").append(t.format.minHeight(r)).append("pt\">");
+      for (int c = 0; c < t.columns(); c++) {
+        if (t.covered(r, c)) continue;
+        var span = t.span(r, c);
+        b.append("<td rowspan=\"")
+            .append(span.rows)
+            .append("\" colspan=\"")
+            .append(span.columns)
+            .append("\" style=\"")
+            .append(TableFormats.css(t.format.cell(r, c)))
+            .append("\">");
+        for (Block inner : t.blocks(r, c))
+          if (inner instanceof Paragraph p) paragraph(b, p);
+          else if (inner instanceof Table nested) htmlTable(b, nested);
+        b.append("</td>");
+      }
+      b.append("</tr>");
+      if (r + 1 == t.format.headerRows) b.append("</thead>");
+    }
+    b.append("</table>");
+    }
 
   private static void paragraph(final StringBuilder b, Paragraph p) {
     String tag =
