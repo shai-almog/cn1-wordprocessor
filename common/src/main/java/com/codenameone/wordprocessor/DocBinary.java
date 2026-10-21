@@ -1905,7 +1905,8 @@ final class DocBinary {
    * l/t/r/b, has child anchor}.
    */
   private long[] spContainer(long body, long len, int depth) {
-    long[] sh = {-1, 0, 0, -1, -1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    // 17: rotation (16.16 degrees), 18: FSP flags (fFlipH 0x40, fFlipV 0x80).
+    long[] sh = {-1, 0, 0, -1, -1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     art(body, body + len, depth + 1, sh);
     if (sh[0] >= 0 && shapes.size() < MAX_PARTS * 4) shapes.putIfAbsent(sh[0], sh);
     return sh;
@@ -1948,6 +1949,24 @@ final class DocBinary {
   }
 
   /** The media relationship id of BStore entry pib (1-based), or null when unreadable. */
+  /**
+   * As Wordcraft's docbin drawing: the shape's rotation (OPT 0x0004, 16.16 degrees clockwise) and
+   * FSP flips as a:xfrm attributes ("" for none).
+   */
+  private static String turn(long[] sh) {
+    if (sh.length < 19) return "";
+    double deg = sh[17] / 65536.0;
+    long rot = Math.round((((deg % 360) + 360) % 360) * 60000.0);
+    boolean h = (sh[18] & 0x40) != 0, v = (sh[18] & 0x80) != 0;
+    return (rot == 0 ? "" : " rot=\"" + rot + "\"") + (h ? " flipH=\"1\"" : "") + (v ? " flipV=\"1\"" : "");
+  }
+
+  private static String turned(String xml, long[] sh) {
+    String t = turn(sh);
+    int at = xml.indexOf("<a:xfrm>");
+    return t.isEmpty() || at < 0 ? xml : xml.substring(0, at) + "<a:xfrm" + t + ">" + xml.substring(at + 8);
+  }
+
   private String blipMedia(long pib) throws IOException {
     if (pib <= 0 || pib > blips.size()) return null;
     long[] e = blips.get((int) pib - 1);
@@ -1985,7 +2004,7 @@ final class DocBinary {
                 + "\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom></pic:spPr></pic:pic>"
             : m[2] > 0 ? null : wsp(m, x, y, w, h);
         if (wsp != null) {
-          g.append(wsp);
+          g.append(turned(wsp, m));
           n++;
         }
       }
@@ -2037,12 +2056,14 @@ final class DocBinary {
         shape[0] = u32(table, body);
         shape[1] = verInst >> 4;
         shape[7] = u32(table, body + 4) & 1;
+        if (shape.length > 18) shape[18] = u32(table, body + 4);
       } else if (type == 0xF00B && shape != null) {
         int n = verInst >> 4;
         for (int k = 0; k < n && k * 6L + 6 <= len; k++) {
           int id = u16(table, body + k * 6L) & 0x3FFF;
           long v = u32(table, body + k * 6L + 2);
           if (id == 0x104) shape[2] = v;
+          else if (id == 0x004 && shape.length > 17) shape[17] = (int) v;
           else if (id == 0x181) shape[3] = v;
           else if (id == 0x1C0) shape[4] = v;
           else if (id == 0x1BF && (v & 0x100000) != 0) shape[5] = v >> 4 & 1;
@@ -2102,12 +2123,12 @@ final class DocBinary {
     } else if (sh[2] > 0 && sh[2] <= blips.size()) {
       String id = blipMedia(sh[2]);
       if (id == null) return null;
-      graphic = picGraphic(id, pictures, cx, cy);
+      graphic = turned(picGraphic(id, pictures, cx, cy), sh);
     } else {
       String wsp = wsp(sh, 0, 0, cx, cy);
       if (wsp == null) return null;
       graphic = "<a:graphic xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\">"
-          + "<a:graphicData uri=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\">" + wsp
+          + "<a:graphicData uri=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\">" + turned(wsp, sh)
           + "</a:graphicData></a:graphic>";
     }
     int bx = flags >> 1 & 3, by = flags >> 3 & 3, wr = flags >> 5 & 15, n = ++floatIds;

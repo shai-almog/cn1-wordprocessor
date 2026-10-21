@@ -794,4 +794,28 @@ public class DocBinaryTest {
     assertEquals(72, ops.images.get(0).width(), .5f);
     assertFalse(ops.paths.isEmpty());
   }
+
+  /** As Wordcraft's docbin drawing: OPT rotation and FSP flips become a:xfrm rot/flipH. */
+  @Test
+  public void docShapeRotationAndFlips() throws Exception {
+    var d = new DocWriter();
+    d.run("Turn ");
+    int a = d.cp();
+    d.run("\u0008").para(0);
+    d.ccpText = d.cp();
+    d.tables.put(6, plc(0, d.ccpText));
+    byte[] dgg = rec(0xF, 0xF000, rec(0xF, 0xF001));
+    byte[] sp = rec(0xF, 0xF004, rec(2 | 1 << 4, 0xF00A, le32(1026), le32(0xA00 | 0x40)),
+        rec(3 | 1 << 4, 0xF00B, cat(le16(0x004), le32(90 << 16))));
+    byte[] dg = rec(0xF, 0xF002, rec(0xF, 0xF003, sp));
+    d.tables.put(50, cat(dgg, new byte[] {0}, dg));
+    d.tables.put(40, cat(plc(a, d.ccpText), fspa(1026, 0, 0, 2880, 1440, 1 << 1 | 1 << 3 | 3 << 5)));
+    String doc = part(DocBinary.convert(d.build()), "word/document.xml");
+    assertTrue(doc, doc.contains("<a:xfrm rot=\"5400000\" flipH=\"1\">"));
+    Picture p = null;
+    for (Block b : DocBinary.read(d.build()).document.blocks) if (b instanceof Picture x) p = x;
+    assertNotNull(p);
+    assertEquals(90, p.drawing.num("rotation", 0), .01f);
+    assertTrue(p.drawing.flag("flipH"));
+  }
 }
