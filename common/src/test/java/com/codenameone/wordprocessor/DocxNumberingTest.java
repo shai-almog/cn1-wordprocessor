@@ -24,7 +24,7 @@ public class DocxNumberingTest {
     assertEquals("Twenty-First", ListNumbers.format(21, "ordinalText"));
     assertEquals("Thirtieth", ListNumbers.format(30, "ordinalText"));
     assertEquals("Twelfth", ListNumbers.format(12, "ordinalText"));
-    assertEquals("†", ListNumbers.format(2, "chicago"));
+    assertEquals("\u2020", ListNumbers.format(2, "chicago"));
     assertEquals("**", ListNumbers.format(5, "chicago"));
     assertEquals("- 4 -", ListNumbers.format(4, "numberInDash"));
     assertEquals("", ListNumbers.format(4, "none"));
