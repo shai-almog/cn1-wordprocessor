@@ -712,7 +712,7 @@ public final class LayoutEngine {
                 ? 0
                 : "\t".equals(chunk)
                     ? tabWidth(p, text, a, pos, start == 0 ? p.format.firstIndent : 0)
-                    : metrics.width(display, s);
+                    : obj[a] ? objectWidth(p, a, display, s) : metrics.width(display, s);
         var math = obj[a] ? inlineMath(p, a, s) : null;
         if (math != null) {
           display = "";
@@ -726,7 +726,22 @@ public final class LayoutEngine {
           var stop = nextTab(p, pos + (start == 0 ? p.format.firstIndent : 0));
           display = stop == null ? "" : leader(stop.glyph(), s, w);
         }
-        line.spans.add(new Span(chunk, s, a, pos, w, 0, display));
+        var pieces = obj[a] && math == null && !s.characters.hidden ? fieldPieces(p, a) : null;
+        if (pieces == null) line.spans.add(new Span(chunk, s, a, pos, w, 0, display));
+        else {
+          // A field whose result carries formatted runs (a Zotero citation's italics, small caps,
+          // superscripts) draws each run in its own style. The first span owns the field's offset
+          // and its whole width (caret and selection); the rest are zero-length, drawing only.
+          float px = pos;
+          for (int k = 0; k < pieces.size(); k++) {
+            var piece = pieces.get(k);
+            var ps = piece.style(s);
+            float pw = metrics.width(piece.text, ps);
+            line.spans.add(k == 0 ? new Span(chunk, ps, a, px, w, 0, piece.text) : new Span("", ps, a + 1, px, pw, 0, piece.text));
+            px += pw;
+            line.height = Math.max(line.height, metrics.height(ps));
+          }
+        }
         pos += w;
         if (!s.characters.hidden) line.height = Math.max(line.height, metrics.height(s));
         a = b;
@@ -873,7 +888,8 @@ public final class LayoutEngine {
           && !p.text.objectAt(at)
           && !p.text.objectAt(next)
           && style.equals(p.text.styleAt(next))) next++;
-      width += metrics.width(p.text.displayAt(at, text.substring(at, next)), style);
+      width += p.text.objectAt(at) ? objectWidth(p, at, p.text.displayAt(at, text.substring(at, next)), style)
+          : metrics.width(p.text.displayAt(at, text.substring(at, next)), style);
       at = next;
     }
     return width;
@@ -898,13 +914,29 @@ public final class LayoutEngine {
         at = next;
         continue;
       }
-      width += metrics.width(p.text.displayAt(at, text.substring(at, next)), style);
+      width += p.text.objectAt(at) ? objectWidth(p, at, p.text.displayAt(at, text.substring(at, next)), style)
+          : metrics.width(p.text.displayAt(at, text.substring(at, next)), style);
       at = next;
     }
     return width;
   }
 
-  private TabStop nextTab(Paragraph p, float position) {
+  /** The pieces of a field at {@code at} with formatted runs inside its result, else null. */
+  private static java.util.List<InlineField.Piece> fieldPieces(Paragraph p, int at) {
+    var field = p.text.fieldAt(at);
+    return field == null ? null : field.pieces();
+  }
+
+  /** An inline object's width: a formatted field sums its runs, each in its own style. */
+  private float objectWidth(Paragraph p, int at, String display, TextStyle style) {
+    var pieces = fieldPieces(p, at);
+    if (pieces == null) return metrics.width(display, style);
+    float w = 0;
+    for (var piece : pieces) w += metrics.width(piece.text, piece.style(style));
+    return w;
+  }
+
+    private TabStop nextTab(Paragraph p, float position) {
     for (TabStop tab : p.format.tabs)
       if (!"bar".equals(tab.alignment) && tab.position > position + .01f) return tab;
     return null;
@@ -926,7 +958,8 @@ public final class LayoutEngine {
         String followingText = field == null ? text.substring(i, end) : field.display();
         boolean decimal = "decimal".equals(tab.alignment) && followingText.indexOf('.') >= 0;
         if (decimal) followingText = followingText.substring(0, followingText.indexOf('.'));
-        following += metrics.width(followingText, p.text.styleAt(i));
+        following += field != null && !decimal ? objectWidth(p, i, followingText, p.text.styleAt(i))
+            : metrics.width(followingText, p.text.styleAt(i));
         if (decimal) break;
         i = end;
       }

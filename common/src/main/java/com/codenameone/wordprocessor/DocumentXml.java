@@ -340,6 +340,7 @@ public final class DocumentXml {
                 .append(field.locked)
                 .append("\" showCode=\"")
                 .append(field.showCode)
+                .append(field.formats.isEmpty() ? "" : "\" formats=\"" + Xml.escape(field.formats))
                 .append("\">");
             run(o, "", style);
             b.append("</field>");
@@ -651,7 +652,8 @@ public final class DocumentXml {
                           Xml.attr(node, "instruction", ""),
                           Xml.attr(node, "result", ""),
                           flag(node, "locked"),
-                          flag(node, "showCode")),
+                          flag(node, "showCode"),
+                          Xml.attr(node, "formats", "")),
                       s)
                   : RichText.of(Xml.text(r), s));
     }

@@ -244,7 +244,8 @@ public final class ZoteroBridge implements Zotero.Handler {
         int k = index(arg(a, 1));
         Located f = fields(session.document()).get(k);
         var rich = runs(str(a, 2), bool(a, 3));
-        replaceField(f, f.field.result(plain(str(a, 2), bool(a, 3))));
+        // The field keeps the result's formatted runs (as Wordcraft keeps them between its marks).
+        replaceField(f, f.field.result(plain(str(a, 2), bool(a, 3)), formats(rich)));
         if (Zotero.code(f.field.instruction).regionMatches(true, 0, "BIBL", 0, 4)) {
           // As Wordcraft's set_text: the bibliography's paragraph takes the Bibliography style.
           ensureBibliographyStyle();
@@ -256,16 +257,6 @@ public final class ZoteroBridge implements Zotero.Handler {
                 session.selectRange(keep.anchorBlock, keep.anchor, keep.block, keep.caret);
               });
         }
-        if (bool(a, 3)) {
-          // The field is one atomic run: apply the formatting its whole result shares.
-          var keep = session.selection();
-          session.transact(
-              s -> {
-                session.select(f.block, f.offset, f.offset + 1);
-                for (String[] kv : uniform(rich)) session.format(kv[0], kv[1]);
-                session.selectRange(keep.anchorBlock, keep.anchor, keep.block, keep.caret);
-              });
-        }
         return null;
       }
       case "Field_setCode": {
@@ -273,7 +264,7 @@ public final class ZoteroBridge implements Zotero.Handler {
         Located f = fields(session.document()).get(k);
         String code = str(a, 2);
         replaceField(
-            f, new InlineField(Zotero.stored(code), f.field.result, f.field.locked, f.field.showCode));
+            f, new InlineField(Zotero.stored(code), f.field.result, f.field.locked, f.field.showCode, f.field.formats));
         return null;
       }
       default:
@@ -534,6 +525,22 @@ public final class ZoteroBridge implements Zotero.Handler {
           }
           session.select(end.block, end.caret, end.caret);
         });
+  }
+
+  /** The {@link InlineField#formats} encoding of rich runs ("" when none is formatted). */
+  static String formats(List<Run> runs) {
+    var b = new StringBuilder();
+    boolean any = false;
+    for (Run r : runs) {
+      if (r.text.length() == 0) continue;
+      int flags = (r.bold ? InlineField.BOLD : 0) | (r.italic ? InlineField.ITALIC : 0)
+          | (r.underline ? InlineField.UNDERLINE : 0) | (r.smallCaps ? InlineField.SMALL_CAPS : 0)
+          | ("superscript".equals(r.script) ? InlineField.SUPER : "subscript".equals(r.script) ? InlineField.SUB : 0);
+      any |= flags != 0;
+      if (b.length() > 0) b.append(';');
+      b.append(r.text.length()).append(':').append(flags);
+    }
+    return any ? b.toString() : "";
   }
 
   /** Formatting shared by every visible character of a result, for an atomic field's run. */

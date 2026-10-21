@@ -10,6 +10,14 @@ final class DocxLinks {
   /** Paragraph styles written to styles.xml, and the run base of the paragraph being written. */
   Map<String, ParagraphStyle> styles;
   TextStyle base;
+
+  /**
+   * Set while a body paragraph's runs are written: a Zotero bibliography field may then end the
+   * paragraph between entries ({@link #PARAGRAPH} is replaced with a paragraph break).
+   */
+  boolean paragraphMarks;
+
+  static final char PARAGRAPH = '\u0000';
   private static final String PATH = "word/_rels/document.xml.rels";
   private static final String NS = "http://schemas.openxmlformats.org/package/2006/relationships";
   private static final String TYPE =

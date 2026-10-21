@@ -8,7 +8,20 @@ public final class InlineField {
   public final String instruction, result;
   public final boolean locked, showCode;
 
+  /**
+   * Formatting inside the result, as Wordcraft keeps a Zotero citation's formatted runs between
+   * the field's separate and end marks: "length:flags" pieces joined by ';' covering the result,
+   * flags being {@link #BOLD}, {@link #ITALIC}, ... Empty when the result is uniformly formatted.
+   */
+  public final String formats;
+
+  public static final int BOLD = 1, ITALIC = 2, UNDERLINE = 4, SMALL_CAPS = 8, SUPER = 16, SUB = 32;
+
   public InlineField(String instruction, String result, boolean locked, boolean showCode) {
+    this(instruction, result, locked, showCode, "");
+  }
+
+  public InlineField(String instruction, String result, boolean locked, boolean showCode, String formats) {
     if (instruction == null
         || instruction.trim().isEmpty()
         || instruction.length() > (instruction.startsWith(Zotero.PREFIX) ? 1000000 : 8192)
@@ -18,6 +31,79 @@ public final class InlineField {
     this.result = result;
     this.locked = locked;
     this.showCode = showCode;
+    this.formats = formats == null || formats.length() > 200000 ? "" : formats;
+  }
+
+  /** A formatted piece of the result: its text (as displayed) and flags. */
+  public static final class Piece {
+    public final String text;
+    public final int flags;
+
+    Piece(String text, int flags) {
+      this.text = text;
+      this.flags = flags;
+    }
+
+    /** {@code base} with this piece's bold, italic, underline, small caps and script applied. */
+    public TextStyle style(TextStyle base) {
+      if (flags == 0) return base;
+      TextStyle s = base;
+      if ((flags & BOLD) != 0) s = s.with("bold", "true");
+      if ((flags & ITALIC) != 0) s = s.with("italic", "true");
+      if ((flags & UNDERLINE) != 0) s = s.with("underline", "true");
+      if ((flags & SMALL_CAPS) != 0) s = s.with("smallCaps", "true");
+      if ((flags & SUPER) != 0) s = s.with("script", "superscript");
+      else if ((flags & SUB) != 0) s = s.with("script", "subscript");
+      return s;
+    }
+  }
+
+  /**
+   * The displayed result split into its formatted pieces, or null when it has no inner
+   * formatting (or shows its code). Malformed or short encodings leave the rest unformatted.
+   */
+  public java.util.List<Piece> pieces() {
+    return showCode ? null : piecesOf(display());
+  }
+
+  /** As {@link #pieces()}, slicing {@code shown} (the result or its display, same length). */
+  public java.util.List<Piece> piecesOf(String shown) {
+    if (formats.isEmpty()) return null;
+    var out = new java.util.ArrayList<Piece>();
+    int at = 0, i = 0;
+    while (i < formats.length() && at < shown.length()) {
+      int semi = formats.indexOf(';', i);
+      if (semi < 0) semi = formats.length();
+      int colon = formats.indexOf(':', i);
+      if (colon < 0 || colon > semi) break;
+      int len = Xml.integer(formats.substring(i, colon), -1), flags = Xml.integer(formats.substring(colon + 1, semi), 0);
+      if (len <= 0) break;
+      int end = Math.min(shown.length(), at + len);
+      out.add(new Piece(shown.substring(at, end), flags & 63));
+      at = end;
+      i = semi + 1;
+    }
+    if (at < shown.length()) out.add(new Piece(shown.substring(at), 0));
+    return out.size() > 1 || (out.size() == 1 && out.get(0).flags != 0) ? out : null;
+  }
+
+  /** Flags of {@code s} that {@code base} lacks, for encoding a formatted result. */
+  public static int flags(TextStyle s, TextStyle base) {
+    return (s.bold && !base.bold ? BOLD : 0) | (s.italic && !base.italic ? ITALIC : 0)
+        | (s.underline && !base.underline ? UNDERLINE : 0)
+        | (s.characters.smallCaps && !base.characters.smallCaps ? SMALL_CAPS : 0)
+        | ("superscript".equals(s.script) && !s.script.equals(base.script) ? SUPER : 0)
+        | ("subscript".equals(s.script) && !s.script.equals(base.script) ? SUB : 0);
+  }
+
+  /** {@code text} as one unformatted piece. */
+  static java.util.List<Piece> plainPieces(String text) {
+    return java.util.Collections.singletonList(new Piece(text, 0));
+  }
+
+  /** As {@link #result(String)}, with the result's inner formatting. */
+  public InlineField result(String value, String formats) {
+    return new InlineField(instruction, value, locked, showCode, formats);
   }
 
   public String display() {
@@ -34,14 +120,14 @@ public final class InlineField {
   }
 
   public InlineField result(String value) {
-    return result.equals(value) ? this : new InlineField(instruction, value, locked, showCode);
+    return result.equals(value) ? this : new InlineField(instruction, value, locked, showCode, "");
   }
 
   public InlineField locked(boolean value) {
-    return value == locked ? this : new InlineField(instruction, result, value, showCode);
+    return value == locked ? this : new InlineField(instruction, result, value, showCode, formats);
   }
 
   public InlineField showCode(boolean value) {
-    return value == showCode ? this : new InlineField(instruction, result, locked, value);
+    return value == showCode ? this : new InlineField(instruction, result, locked, value, formats);
   }
 }

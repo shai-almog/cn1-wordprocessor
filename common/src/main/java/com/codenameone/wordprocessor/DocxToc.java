@@ -62,6 +62,7 @@ final class DocxToc {
     // including nested PAGEREFs, remain in the ordinary inline field reader.
     var stack = new ArrayList<Pending>();
     var complete = new ArrayList<Pending>();
+    var zotero = new ArrayList<List<Element>>();
     for (int index = 0; index < blocks.size(); index++) {
       var p = blocks.get(index);
       if (!"p".equals(Xml.local(p))) { stack.clear(); continue; }
@@ -82,6 +83,12 @@ final class DocxToc {
           } else if ("fldChar".equals(kind) && "end".equals(action)) {
             stack.remove(stack.size() - 1); f.nodes.add(token); f.last = index;
             if (stack.isEmpty() && f.separated && contents(f.instruction.toString())) complete.add(f);
+            else if (stack.isEmpty() && f.separated && f.last > f.first
+                && f.instruction.toString().trim().startsWith(Zotero.PREFIX + "BIBL")) {
+              var span = new ArrayList<Element>();
+              for (int i = f.first; i <= f.last; i++) span.add(blocks.get(i));
+              zotero.add(span);
+            }
           }
         }
       }
@@ -122,6 +129,30 @@ final class DocxToc {
       marker.setAttribute("w:instr", f.instruction.toString().trim());
       marker.setAttribute("w:fldLock", f.locked ? "1" : "0");
       header.addChild(marker);
+    }
+    // A Zotero bibliography spans one paragraph per entry, as Wordcraft writes it; the app keeps
+    // it as one field whose result has a line per entry, so the entries' runs join the first
+    // paragraph with a break between entries.
+    for (List<Element> span : zotero) {
+      Element head = span.get(0);
+      if (blocks.indexOf(head) < 0) continue;
+      for (int i = 1; i < span.size(); i++) {
+        Element p = span.get(i);
+        int at = blocks.indexOf(p);
+        if (at < 0) break;
+        Element run = new Element("w:r");
+        run.addChild(new Element("w:br"));
+        head.addChild(run);
+        for (int k = 0; k < p.getNumChildren(); ) {
+          Element c = (Element) p.getChildAt(k);
+          if ("pPr".equals(Xml.local(c))) k++;
+          else {
+            p.removeChildAt(k);
+            head.addChild(c);
+          }
+        }
+        blocks.remove(at);
+      }
     }
     return blocks;
   }

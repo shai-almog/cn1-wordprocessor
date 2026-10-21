@@ -280,6 +280,84 @@ public class ZoteroTest {
     s.insertField(new InlineField(Zotero.PREFIX + CODE, "(X)", false, false));
     var fields = (List<?>) b.handle("Document_getFields", Arrays.<Object>asList(1L));
     b.handle("Field_setText", Arrays.<Object>asList(1L, fields.get(0) instanceof List<?> l ? l.get(0) : 1L, "{\\rtf {\\i Ibid.}}", true));
-    assertTrue(s.document().paragraph(1).text.styleAt(4).italic);
+    assertEquals("5:2", s.document().paragraph(1).text.fieldAt(4).formats);
+  }
+
+  @Test
+  public void fieldResultKeepsMixedFormattingThroughLayoutDocxAndUndo() throws Exception {
+    var s = new Session(Document.empty());
+    s.replace("See ");
+    s.select(0, 4, 4);
+    s.insertField(new InlineField(Zotero.PREFIX + CODE, "(X)", false, false));
+    var b = new ZoteroBridge(s, HOST);
+    b.handle("Application_getActiveDocument", Arrays.<Object>asList(3L));
+    b.handle("Document_getFields", Arrays.<Object>asList(1L));
+    b.handle("Field_setText", Arrays.<Object>asList(1L, 1L, "{\\rtf Doe, {\\i Title}{\\super 2}}", true));
+    InlineField f = s.document().paragraph(0).text.fieldAt(4);
+    assertEquals("Doe, Title2", f.result);
+    assertEquals("5:0;5:2;1:16", f.formats);
+    assertFalse(s.document().paragraph(0).text.styleAt(4).italic); // the field run itself stays plain
+    var pieces = f.pieces();
+    assertEquals(3, pieces.size());
+    assertTrue(pieces.get(1).style(TextStyle.DEFAULT).italic);
+
+    // Layout draws each run in its style; the field's width is the sum of the styled runs.
+    var metrics = new PdfMetrics();
+    var lines = new LayoutEngine(metrics).layout(s.document(), 0).pages.get(0).allLines();
+    var spans = new ArrayList<LayoutEngine.Span>();
+    for (LayoutEngine.Span sp : lines.get(0).spans) if (sp.start >= 4) spans.add(sp);
+    assertEquals(3, spans.size());
+    assertEquals(InlineField.OBJECT, spans.get(0).text);
+    assertTrue(spans.get(1).style.italic && "Title".equals(spans.get(1).displayText));
+    assertEquals("superscript", spans.get(2).style.script);
+    TextStyle base = spans.get(0).style; // the first run is unformatted
+    float sum = metrics.width("Doe, ", base) + spans.get(1).width + spans.get(2).width;
+    assertEquals(sum, spans.get(0).width, .01f);
+    assertEquals(spans.get(1).x, spans.get(0).x + metrics.width("Doe, ", base), .01f);
+    assertEquals(spans.get(1).width, metrics.width("Title", base.with("italic", "true")), .01f);
+    assertNotEquals(metrics.width("Doe, Title2", base), sum, .01f);
+
+    // DOCX: formatted runs between separate and end, read back into the same field.
+    var out = new ByteArrayOutputStream();
+    Docx.write(s.document(), out);
+    String xml = docPart(out.toByteArray(), "word/document.xml");
+    int sep = xml.indexOf("fldCharType=\"separate\""), end = xml.indexOf("fldCharType=\"end\"");
+    String between = xml.substring(sep, end);
+    assertTrue(between, between.contains("<w:i/>") && between.contains("superscript") && between.contains(">Title<"));
+    InlineField back = Docx.read(new ByteArrayInputStream(out.toByteArray())).document.paragraph(0).text.fieldAt(4);
+    assertEquals("Doe, Title2", back.result);
+    assertEquals(f.formats, back.formats);
+    // The native format (and so copy/paste) keeps it too.
+    assertEquals(f.formats, DocumentXml.read(DocumentXml.write(s.document())).paragraph(0).text.fieldAt(4).formats);
+
+    // One undo step restores the old plain result.
+    s.undo();
+    assertEquals("(X)", s.document().paragraph(0).text.fieldAt(4).result);
+    assertEquals("", s.document().paragraph(0).text.fieldAt(4).formats);
+  }
+
+  @Test
+  public void bibliographyIsOneDocxParagraphPerEntry() throws Exception {
+    var s = new Session(Document.empty());
+    s.replace("Refs");
+    s.select(0, 4, 4);
+    s.insertField(new InlineField(Zotero.PREFIX + "BIBL {} CSL_BIBLIOGRAPHY", "old", false, false));
+    var b = new ZoteroBridge(s, HOST);
+    b.handle("Application_getActiveDocument", Arrays.<Object>asList(3L));
+    b.handle("Document_getFields", Arrays.<Object>asList(1L));
+    b.handle("Field_setText", Arrays.<Object>asList(1L, 1L, "{\\rtf Doe. {\\i Title}.\\par Roe. Other.\\par}", true));
+    var out = new ByteArrayOutputStream();
+    Docx.write(s.document(), out);
+    String xml = docPart(out.toByteArray(), "word/document.xml");
+    assertFalse(xml.indexOf('\u0000') >= 0);
+    String between = xml.substring(xml.indexOf("fldCharType=\"separate\""), xml.indexOf("fldCharType=\"end\""));
+    // The second entry starts its own Bibliography paragraph inside the field.
+    assertTrue(between, between.contains("</w:p><w:p><w:pPr><w:pStyle w:val=\"Bibliography\""));
+    assertTrue(between, between.contains(">Roe. Other.<") && between.contains("<w:i/>"));
+    Document back = Docx.read(new ByteArrayInputStream(out.toByteArray())).document;
+    InlineField f = back.paragraph(0).text.fieldAt(4);
+    assertEquals("Doe. Title.\nRoe. Other.", f.result);
+    assertEquals(s.document().paragraph(0).text.fieldAt(4).formats, f.formats);
+    assertEquals(1, ZoteroBridge.fields(back).size());
   }
 }

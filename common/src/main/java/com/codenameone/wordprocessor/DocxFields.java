@@ -72,11 +72,12 @@ final class DocxFields {
       }
       warnings.add("Nested field result is flattened within its parent field");
     }
-    checkResult(field.result, field.style);
+    String formats = instruction.startsWith(Zotero.PREFIX) ? formats(field.result, field.style) : "";
+    if (formats.isEmpty()) checkResult(field.result, field.style);
     checkInstruction(instruction);
     append(
         RichText.field(
-            new InlineField(instruction, field.result.plainText(), field.locked, false),
+            new InlineField(instruction, field.result.plainText(), field.locked, false, formats),
             field.style));
   }
 
@@ -208,6 +209,27 @@ final class DocxFields {
     }
   }
 
+  /** A Zotero result's formatted runs relative to the field's first-run style ("" if uniform). */
+  private static String formats(RichText result, TextStyle base) {
+    var b = new StringBuilder();
+    boolean[] any = {false};
+    result.visit(
+        new RichText.Visitor() {
+          public void run(int offset, String text, TextStyle style) {
+            if (text.isEmpty()) return;
+            int flags = InlineField.flags(style, base);
+            any[0] |= flags != 0;
+            if (b.length() > 0) b.append(';');
+            b.append(text.length()).append(':').append(flags);
+          }
+
+          public void field(int offset, InlineField f, TextStyle style) {
+            run(offset, InlineField.OBJECT, style);
+          }
+        });
+    return any[0] ? b.toString() : "";
+  }
+
   private void checkResult(RichText result, TextStyle first) {
     result.visit(
         (offset, text, style) -> {
@@ -249,7 +271,25 @@ final class DocxFields {
           .append(instruction)
           .append("></w:r>");
       b.append("<w:r><w:fldChar w:fldCharType=\"separate\"/></w:r>");
-      if (style.revision == null) Docx.writeRun(b, field.result, style, links);
+      var pieces = style.revision == null ? field.piecesOf(field.result) : null;
+      // A Zotero bibliography is one paragraph per entry between its marks, as Wordcraft writes it.
+      boolean split = style.revision == null && links.paragraphMarks && field.result.indexOf('\n') >= 0
+          && Zotero.code(field.instruction).regionMatches(true, 0, "BIBL", 0, 4);
+      if (pieces != null || split) {
+        // Formatted runs between separate and end, as Word and Wordcraft keep a citation's.
+        if (pieces == null) pieces = InlineField.plainPieces(field.result);
+        for (InlineField.Piece piece : pieces) {
+          String t = piece.text;
+          for (int i = 0; ; ) {
+            int nl = split ? t.indexOf('\n', i) : -1;
+            String part = nl < 0 ? t.substring(i) : t.substring(i, nl);
+            if (!part.isEmpty()) Docx.writeRun(b, part, piece.style(style), links);
+            if (nl < 0) break;
+            b.append(DocxLinks.PARAGRAPH);
+            i = nl + 1;
+          }
+        }
+      } else if (style.revision == null) Docx.writeRun(b, field.result, style, links);
       else Docx.writeRun(b, field.result, style.revision(null), links, !style.revision.inserted());
       b.append("<w:r><w:fldChar w:fldCharType=\"end\"/></w:r>");
       if (style.revision != null) RevisionFormats.end(b, style.revision);

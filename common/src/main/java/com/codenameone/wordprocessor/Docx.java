@@ -1237,6 +1237,7 @@ static final char COLUMN_BREAK = '\u000B';
     // pPr and then the direct one, so an element whose inputs equal the style's is omitted.
     var styleDefinition = links.styles == null ? null : links.styles.get(p.style);
     Paragraph base = styleDefinition == null ? null : styleDefinition.paragraph;
+    int paragraphStart = b.length();
     b.append("<w:p><w:pPr><w:pStyle w:val=\"").append(Xml.escape(p.style)).append("\"/>");
     if (base == null || !p.align.equals(base.align))
       b.append("<w:jc w:val=\"")
@@ -1319,14 +1320,27 @@ static final char COLUMN_BREAK = '\u000B';
       b.append(content.substring(content.indexOf("<w:pPr>"), content.lastIndexOf("</w:pPr>") + 8));
       b.append("</w:pPrChange>");
     }
+    int sectionStart = b.length();
     b.append(section).append("</w:pPr>");
     if (p.format.columnBreak) b.append("<w:r><w:br w:type=\"column\"/></w:r>");
     b.append(prefix);
     var outer = links.base;
     var style = links.styles == null ? null : links.styles.get(p.style);
     links.base = style == null ? null : style.text;
-    comments.content(b, p, links);
+    var runs = new StringBuilder();
+    boolean marks = links.paragraphMarks;
+    links.paragraphMarks = true;
+    comments.content(runs, p, links);
+    links.paragraphMarks = marks;
     links.base = outer;
+    String written = runs.toString();
+    if (written.indexOf(DocxLinks.PARAGRAPH) >= 0) {
+      // A Zotero bibliography's entries each end a paragraph with this paragraph's properties;
+      // the section properties stay on the last one.
+      String entryProps = b.toString().substring(paragraphStart, sectionStart) + "</w:pPr>";
+      written = written.replace("" + DocxLinks.PARAGRAPH, "</w:p>" + entryProps);
+    }
+    b.append(written);
     b.append(suffix).append("</w:p>");
   }
 
