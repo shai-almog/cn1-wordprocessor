@@ -66,4 +66,22 @@ public class MathLatexTest {
     assertFalse(s.mathLatex);
     assertNull(EquationEditing.inline(s, 99, 0));
   }
+
+  @Test
+  public void runStylesAndPhantoms() {
+    Equation.Node n = MathLatex.parse("\\mathbf{x}+\\boldsymbol{\\alpha}+\\mathsf{A}+\\mathtt{t}+\\text{if }");
+    String omml = Equation.omml(n);
+    assertTrue(omml, omml.contains("<m:sty m:val=\"b\"/></m:rPr><m:t xml:space=\"preserve\">x<"));
+    assertTrue(omml, omml.contains("<m:sty m:val=\"bi\"/>"));
+    assertTrue(omml, omml.contains("<m:scr m:val=\"sans-serif\"/>"));
+    assertTrue(omml, omml.contains("<m:scr m:val=\"monospace\"/>"));
+    assertTrue(omml, omml.contains("<m:nor/><m:sty m:val=\"p\"/>"));
+    assertEquals("\u27e1(x+1)", lin("\\phantom{x+1}"));
+    assertEquals("\u2b04y", lin("\\hphantom{y}"));
+    assertEquals("\u21f3y", lin("\\vphantom{y}"));
+    assertTrue(Equation.omml(MathLatex.parse("\\hphantom{y}")).contains("<m:zeroAsc m:val=\"1\"/><m:zeroDesc m:val=\"1\"/>"));
+    // Through linear text and back to LaTeX.
+    String tex = Equation.latex(Equation.fromLinear(lin("\\mathbf{x}\\phantom{y}")));
+    assertTrue(tex, tex.contains("\\mathbf{x}") && tex.contains("\\phantom"));
+  }
 }

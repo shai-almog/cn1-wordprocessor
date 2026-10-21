@@ -491,4 +491,26 @@ public class EquationEditorTest {
     e.hit(d, 400, 40, m, num[0] - 0.5f, num[1] + num[2] / 2);
     assertArrayEquals(new int[] {0, 0}, e.editor.pos.path);
   }
+
+  @Test
+  public void growTogglesAndStyledRunsSurviveEdits() {
+    var e = new EquationEditor("\u2211\u2592k+(a)");
+    e.pos = new EquationEditor.Pos(new int[] {0, 0}, 0);
+    boolean offered = false;
+    for (String[] a : e.structureActions()) offered |= "nary.toggleGrow".equals(a[1]) && "Grow with Argument".equals(a[2]);
+    assertTrue(offered);
+    assertTrue(e.applyStructure(0, "nary.toggleGrow"));
+    assertTrue(Equation.omml(Equation.fromLinear(e.linear())).contains("<m:grow m:val=\"1\"/>"));
+    e.pos = new EquationEditor.Pos(new int[] {2, 0}, 0);
+    assertTrue(e.applyStructure(0, "delim.toggleGrow"));
+    assertTrue(Equation.omml(Equation.fromLinear(e.linear())).contains("<m:grow m:val=\"0\"/>"));
+    assertTrue(e.applyStructure(0, "delim.toggleGrow"));
+    assertFalse(Equation.omml(Equation.fromLinear(e.linear())).contains("m:val=\"0\""));
+    // Typing inside a bold run keeps it bold, as Word does.
+    var b = new EquationEditor(Equation.linear(MathLatex.parse("\\mathbf{ab}")));
+    b.pos = new EquationEditor.Pos(null, 1);
+    b.insertText("c", false);
+    String omml = Equation.omml(Equation.fromLinear(b.linear()));
+    assertTrue(omml, omml.contains("<m:sty m:val=\"b\"/></m:rPr><m:t xml:space=\"preserve\">acb<"));
+  }
 }

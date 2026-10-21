@@ -174,4 +174,45 @@ public class EquationTest {
     for (int i = 0; i < 5000; i++) deep.append("^x");
     Equation.layout(Equation.fromLinear(deep.toString()), 12, new PdfMetrics());
   }
+
+  @Test
+  public void runStylesGrowAndPhantomsRoundTrip() throws Exception {
+    String xml = "<m:oMath xmlns:m=\"" + Equation.M + "\" xmlns:w=\"w\">"
+        + "<m:r><m:rPr><m:scr m:val=\"sans-serif\"/><m:sty m:val=\"b\"/></m:rPr><w:rPr><w:color w:val=\"FF0000\"/></w:rPr><m:t>v</m:t></m:r>"
+        + "<m:r><m:rPr><m:nor/></m:rPr><m:t>if</m:t></m:r>"
+        + "<m:nary><m:naryPr><m:chr m:val=\"\u2211\"/><m:grow m:val=\"1\"/></m:naryPr><m:sub/><m:sup/><m:e><m:r><m:t>k</m:t></m:r></m:e></m:nary>"
+        + "<m:d><m:dPr><m:grow m:val=\"0\"/></m:dPr><m:e><m:r><m:t>a</m:t></m:r></m:e></m:d>"
+        + "<m:phant><m:phantPr><m:show m:val=\"0\"/><m:zeroWid m:val=\"1\"/></m:phantPr><m:e><m:r><m:t>y</m:t></m:r></m:e></m:phant>"
+        + "</m:oMath>";
+    Equation.Node n = Equation.fromOmml(Xml.parse(xml));
+    // The stored linear text keeps every property, so an edited equation writes them back.
+    Equation.Node again = Equation.fromLinear(Equation.linear(n));
+    String out = Equation.omml(again);
+    assertTrue(out, out.contains("<m:scr m:val=\"sans-serif\"/><m:sty m:val=\"b\"/>"));
+    assertTrue(out, out.contains("<w:color w:val=\"FF0000\""));
+    assertTrue(out, out.contains("<m:nor/>"));
+    assertTrue(out, out.contains("<m:grow m:val=\"1\"/>"));
+    assertTrue(out, out.contains("<m:grow m:val=\"0\"/>"));
+    assertTrue(out, out.contains("<m:phantPr><m:show m:val=\"0\"/><m:zeroWid m:val=\"1\"/></m:phantPr>"));
+    assertEquals(Equation.linear(n), Equation.linear(again));
+    // Layout: the sans-serif bold run draws math alphanumerics, the phantom draws nothing and
+    // has no width, the grown operator is taller than the fixed one.
+    Equation.Box box = Equation.layout(again, 12, new PdfMetrics());
+    boolean sans = false, y = false;
+    for (Equation.Glyph g : box.glyphs) {
+      sans |= g.text().equals(new String(Character.toChars(0x1D603)));
+      y |= g.text().equals("y");
+    }
+    assertTrue(sans);
+    assertTrue(!y);
+    Equation.Box tall = Equation.layout(Equation.fromLinear("\u2211\ue005\u2592(a/b/c/d)"), 12, new PdfMetrics());
+    Equation.Box flat = Equation.layout(Equation.fromLinear("\u2211\u2592(a/b/c/d)"), 12, new PdfMetrics());
+    float tallOp = 0, flatOp = 0;
+    for (Equation.Glyph g : tall.glyphs) if (g.text().equals("\u2211")) tallOp = g.size();
+    for (Equation.Glyph g : flat.glyphs) if (g.text().equals("\u2211")) flatOp = g.size();
+    assertTrue(tallOp > flatOp);
+    // LaTeX export names the styles.
+    String tex = Equation.latex(again);
+    assertTrue(tex, tex.contains("\\mathsf{v}") && tex.contains("\\text{if}") && tex.contains("\\smash") == false);
+  }
 }

@@ -856,7 +856,7 @@ public final class DrawingOps {
     float base = d.flag("inline") ? 0 : (h - box.ascent - box.descent) / 2 + box.ascent;
     boolean upright = d.flag("normalText");
     for (Equation.Glyph g : box.glyphs)
-      ops.texts.add(new Text(g.text(), x + g.x(), base + g.y() - g.size(), g.width() + 1, g.size(), color, false,
+      ops.texts.add(new Text(g.text(), x + g.x(), base + g.y() - g.size(), g.width() + 1, g.size(), color, g.bold(),
           g.italic() && !upright, "left", -1, 0));
     for (float[] l : box.lines) {
       float[] pts = new float[l.length - 1];

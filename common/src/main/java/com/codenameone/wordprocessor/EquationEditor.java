@@ -79,6 +79,8 @@ final class EquationEditor {
   /** A mutable node: a run of text, or a structure with slots (rows of nodes). */
   static final class N {
     String kind, a, b, c;
+    /** {@link Equation.Node#x}: run properties, or an n-ary/delimiter grow flag. */
+    String x = "";
     String text;
     boolean normal;
     final List<List<N>> slots = new ArrayList<>();
@@ -101,6 +103,7 @@ final class EquationEditor {
       n.a = a;
       n.b = b;
       n.c = c;
+      n.x = x;
       n.text = text;
       n.normal = normal;
       n.hidden = hidden == null ? null : hidden.clone();
@@ -160,10 +163,15 @@ final class EquationEditor {
       return;
     }
     if ("run".equals(n.kind)) {
-      if (!n.a.isEmpty()) out.add(run(n.a, "1".equals(n.b)));
+      if (!n.a.isEmpty()) {
+        N r = run(n.a, "1".equals(n.b));
+        r.x = n.x;
+        out.add(r);
+      }
       return;
     }
     N m = new N();
+    m.x = n.x;
     m.kind = n.kind;
     m.a = n.a;
     m.b = n.b;
@@ -215,7 +223,7 @@ final class EquationEditor {
   }
 
   private static Equation.Node toNode(N n, int depth) {
-    if (n.run()) return Equation.run(n.text, n.normal);
+    if (n.run()) return Equation.run(n.text, n.normal, n.x);
     List<Equation.Node> args = new ArrayList<>();
     if (n.rowLens != null) {
       int k = 0;
@@ -227,7 +235,7 @@ final class EquationEditor {
     } else
       for (int i = 0; i < n.slots.size(); i++)
         args.add(toRow(n.slots.get(i), n.hidden == null || !n.hidden[i], depth));
-    return new Equation.Node(n.kind, n.a, n.b, n.c, args);
+    return new Equation.Node(n.kind, n.a, n.b, n.c, args, n.x);
   }
 
   /** Linear text of the whole equation. */
@@ -421,7 +429,7 @@ final class EquationEditor {
     for (int i = a.size() - 1; i >= 0; i--) {
       N n = a.get(i);
       if (n.run() && n.text.isEmpty()) a.remove(i);
-      else if (n.run() && i > 0 && a.get(i - 1).run() && a.get(i - 1).normal == n.normal) {
+      else if (n.run() && i > 0 && a.get(i - 1).run() && a.get(i - 1).normal == n.normal && a.get(i - 1).x.equals(n.x)) {
         a.get(i - 1).text += n.text;
         a.remove(i);
       }
@@ -934,11 +942,13 @@ final class EquationEditor {
             under ? "Change Limit Location to Subscript-Superscript" : "Change Limit Location to Under-Over"});
           out.add(new String[] {lv, "nary.toggleLower", n.hidden[1] ? "Show Lower Limit" : "Hide Lower Limit"});
           out.add(new String[] {lv, "nary.toggleUpper", n.hidden[2] ? "Show Upper Limit" : "Hide Upper Limit"});
+          out.add(new String[] {lv, "nary.toggleGrow", "1".equals(n.x) ? "Don't Grow with Argument" : "Grow with Argument"});
           break;
         }
         case "d":
           out.add(new String[] {lv, "delim.addSeparator", "Insert Argument After"});
           if (n.slots.size() > 1) out.add(new String[] {lv, "delim.deleteArgument", "Delete Argument"});
+          out.add(new String[] {lv, "delim.toggleGrow", "0".equals(n.x) ? "Stretch Brackets" : "Don't Stretch Brackets"});
           break;
         case "sSubSup":
           out.add(new String[] {lv, "script.removeSub", "Remove Subscript"});
@@ -1013,6 +1023,10 @@ final class EquationEditor {
       child = n.hidden[1] ? 0 : 1;
     } else if ("nary".equals(n.kind) && ("nary.limitsSide".equals(action) || "nary.limitsUnder".equals(action))) {
       n.b = "nary.limitsSide".equals(action) ? "subSup" : "undOvr";
+    } else if ("nary.toggleGrow".equals(action) && "nary".equals(n.kind)) {
+      n.x = "1".equals(n.x) ? "" : "1";
+    } else if ("delim.toggleGrow".equals(action) && "d".equals(n.kind)) {
+      n.x = "0".equals(n.x) ? "" : "0";
     } else if ("nary".equals(n.kind) && ("nary.toggleLower".equals(action) || "nary.toggleUpper".equals(action))) {
       int k = "nary.toggleLower".equals(action) ? 1 : 2;
       n.hidden[k] = !n.hidden[k];

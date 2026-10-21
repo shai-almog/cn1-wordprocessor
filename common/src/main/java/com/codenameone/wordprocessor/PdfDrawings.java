@@ -31,7 +31,8 @@ final class PdfDrawings {
       else if ("right".equals(t.align())) x += t.width() - width;
       c.append("BT ").append(rgb(t.color())).append(" rg ");
       if (t.outline() >= 0) c.append(rgb(t.outline())).append(" RG 0.75 w 2 Tr ");
-      c.append("/F0 ").append(n(t.size())).append(" Tf ");
+      // Bold text (a bold equation run, a bold label) uses the bold face of the base font set.
+      c.append(t.bold() ? "/F1 " : "/F0 ").append(n(t.size())).append(" Tf ");
       if (t.rotation() != 0) {
         double a = Math.toRadians(-t.rotation());
         float cos = (float) Math.cos(a), sin = (float) Math.sin(a);

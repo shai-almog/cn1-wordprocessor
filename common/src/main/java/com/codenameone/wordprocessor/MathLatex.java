@@ -323,15 +323,25 @@ final class MathLatex {
       case "begin":
         return environment(rawArg().trim());
       case "text": case "textrm": case "mbox": case "textnormal": case "textbf": case "textit": {
+        // Normal (non-math) text, as Wordcraft: m:nor with \textbf/\textit bold/italic.
         String t = rawArg();
-        return t.isEmpty() ? new ArrayList<>() : runOf(t, true);
+        String sty = "textbf".equals(c) ? "b" : "textit".equals(c) ? "i" : "p";
+        return t.isEmpty() ? new ArrayList<>() : one(Equation.run(t, true, "sty=" + sty + ";nor=1;"));
       }
       case "operatorname": case "operatorname*":
         return apply(one(Equation.run(rawArg(), true)));
       case "mathrm": case "rm": case "mathup":
         return restyle(arg(), null, 0);
-      case "mathbf": case "bf": case "mathit": case "boldsymbol": case "bm": case "mathsf": case "mathtt":
-        return arg();
+      case "mathbf": case "bf":
+        return style(arg(), "sty", "b", 0);
+      case "mathit":
+        return style(arg(), "sty", "i", 0);
+      case "boldsymbol": case "bm":
+        return style(arg(), "sty", "bi", 0);
+      case "mathsf":
+        return style(arg(), "scr", "sans-serif", 0);
+      case "mathtt":
+        return style(arg(), "scr", "monospace", 0);
       case "mathbb":
         return restyle(arg(), "double", 0);
       case "mathcal": case "mathscr":
@@ -345,8 +355,11 @@ final class MathLatex {
       case "boxed": case "fbox":
         return one(Equation.node("box", "borderBox", null, null, Equation.rowOf(arg())));
       case "phantom":
-        arg();
-        return new ArrayList<>();
+        return one(Equation.node("box", "phant", "0000", null, Equation.rowOf(arg())));
+      case "hphantom":
+        return one(Equation.node("box", "phant", "0011", null, Equation.rowOf(arg())));
+      case "vphantom":
+        return one(Equation.node("box", "phant", "0100", null, Equation.rowOf(arg())));
       case "overbrace": case "underbrace": case "overparen": case "underparen": {
         boolean top = c.startsWith("over");
         String chr = "overbrace".equals(c) ? "⏞" : "underbrace".equals(c) ? "⏟"
@@ -577,9 +590,35 @@ final class MathLatex {
         List<Equation.Node> args = new ArrayList<>();
         for (Equation.Node x : n.args)
           args.add("row".equals(x.kind) || "mr".equals(x.kind)
-              ? new Equation.Node(x.kind, x.a, x.b, x.c, restyle(x.args, script, depth + 1))
+              ? new Equation.Node(x.kind, x.a, x.b, x.c, restyle(x.args, script, depth + 1), x.x)
               : Equation.rowOf(restyle(one(x), script, depth + 1)));
-        out.add(new Equation.Node(n.kind, n.a, n.b, n.c, args));
+        out.add(new Equation.Node(n.kind, n.a, n.b, n.c, args, n.x));
+      } else out.add(n);
+    }
+    return out;
+  }
+
+  /**
+   * Every run inside {@code a} with run property {@code key} set to {@code value} (OMML m:sty or
+   * m:scr), as Wordcraft's restyle.
+   */
+  private static List<Equation.Node> style(List<Equation.Node> a, String key, String value, int depth) {
+    List<Equation.Node> out = new ArrayList<>();
+    for (Equation.Node n : a) {
+      if ("run".equals(n.kind)) {
+        String sty = "sty".equals(key) ? value : Equation.runProp(n.x, "sty");
+        String scr = "scr".equals(key) ? value : Equation.runProp(n.x, "scr");
+        boolean nor = "1".equals(Equation.runProp(n.x, "nor"));
+        String props = Equation.runProps(sty, scr, nor, "1".equals(Equation.runProp(n.x, "lit")), Equation.runProp(n.x, "w"));
+        if ("p".equals(sty)) props = "sty=p;" + props;
+        out.add(new Equation.Node("run", n.a, n.b, n.c, null, props));
+      } else if (depth < Equation.MAX_DEPTH) {
+        List<Equation.Node> args = new ArrayList<>();
+        for (Equation.Node x : n.args)
+          args.add("row".equals(x.kind) || "mr".equals(x.kind)
+              ? new Equation.Node(x.kind, x.a, x.b, x.c, style(x.args, key, value, depth + 1), x.x)
+              : Equation.rowOf(style(one(x), key, value, depth + 1)));
+        out.add(new Equation.Node(n.kind, n.a, n.b, n.c, args, n.x));
       } else out.add(n);
     }
     return out;
@@ -590,8 +629,8 @@ final class MathLatex {
     List<Equation.Node> out = new ArrayList<>();
     for (Equation.Node n : a) {
       Equation.Node last = out.isEmpty() ? null : out.get(out.size() - 1);
-      if (last != null && "run".equals(n.kind) && "run".equals(last.kind) && last.b.equals(n.b) && last.c.isEmpty() && n.c.isEmpty())
-        out.set(out.size() - 1, Equation.run(last.a + n.a, "1".equals(n.b)));
+      if (last != null && "run".equals(n.kind) && "run".equals(last.kind) && last.b.equals(n.b) && last.c.isEmpty() && n.c.isEmpty() && last.x.equals(n.x))
+        out.set(out.size() - 1, Equation.run(last.a + n.a, "1".equals(n.b), n.x));
       else out.add(n);
     }
     return out;

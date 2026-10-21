@@ -32,13 +32,40 @@ public final class Equation {
    * how an equation is stored, has no notation for it; a private-use character keeps it.
    */
   static final char SIDE_LIMITS = '\ue001';
+  /**
+   * A run with OMML run properties ({@code m:rPr} style, alphabet, normal text, literal, and the
+   * {@code w:rPr} run formatting) is written {@code RUN_OPEN props RUN_TEXT text RUN_CLOSE} in the
+   * stored linear text so its formatting survives editing; see {@link #runProps}.
+   */
+  static final char RUN_OPEN = '\ue002', RUN_TEXT = '\ue003', RUN_CLOSE = '\ue004';
+  /**
+   * Written after an n-ary operator whose operator grows with its argument ({@code m:grow} on), and
+   * before a delimiter whose brackets do not stretch ({@code m:grow} off), as Wordcraft's grow flags.
+   */
+  static final char GROW = '\ue005';
+  /** Written after a phantom character, then four 0/1 flags, for phantoms UnicodeMath has no character for. */
+  static final char PHANT_FLAGS = '\ue006';
+  /** UnicodeMath phantom/smash characters and their show, zeroWid, zeroAsc, zeroDesc flags. */
+  static final String[][] PHANTS = {
+    {"\u27e1", "0000"}, {"\u2b04", "0011"}, {"\u21f3", "0100"}, {"\u2b06", "1010"}, {"\u2b07", "1001"}, {"\u2b0c", "1100"}
+  };
 
   /** One node. Arguments are rows (kind "row") except where noted in {@link Equation}. */
   public static final class Node {
     public final String kind, a, b, c;
+    /**
+     * Extra properties: a run's OMML run properties ({@link #runProps}), "1" for an n-ary operator
+     * that grows with its argument, "0" for a delimiter whose brackets do not stretch.
+     */
+    public final String x;
     public final List<Node> args;
 
     Node(String kind, String a, String b, String c, List<Node> args) {
+      this(kind, a, b, c, args, null);
+    }
+
+    Node(String kind, String a, String b, String c, List<Node> args, String x) {
+      this.x = x == null ? "" : x;
       this.kind = kind;
       this.a = a == null ? "" : a;
       this.b = b == null ? "" : b;
@@ -67,6 +94,45 @@ public final class Equation {
 
   static Node run(String text, boolean normal) {
     return new Node("run", text, normal ? "1" : "", null, null);
+  }
+
+  /** A run with OMML run properties {@code props} (see {@link #runProps}). */
+  static Node run(String text, boolean normal, String props) {
+    return new Node("run", text, normal ? "1" : "", null, null, props);
+  }
+
+  /** {@code n} with extra properties {@code x}. */
+  static Node withX(Node n, String x) {
+    return new Node(n.kind, n.a, n.b, n.c, n.args, x);
+  }
+
+  /**
+   * Run properties as stored on a run: {@code key=value} pairs joined by ';' with the keys sty
+   * (b, i, bi), scr (script, fraktur, double-struck, sans-serif, monospace), nor and lit (1), and
+   * last w, the verbatim {@code w:rPr} XML.
+   */
+  static String runProps(String sty, String scr, boolean nor, boolean lit, String wRpr) {
+    var b = new StringBuilder();
+    if (sty != null && !sty.isEmpty() && !"p".equals(sty)) b.append("sty=").append(sty).append(';');
+    if (scr != null && !scr.isEmpty() && !"roman".equals(scr)) b.append("scr=").append(scr).append(';');
+    if (nor) b.append("nor=1;");
+    if (lit) b.append("lit=1;");
+    if (wRpr != null && !wRpr.isEmpty()) b.append("w=").append(wRpr);
+    return b.toString();
+  }
+
+  /** One property of {@link #runProps} ("" when absent). */
+  static String runProp(String props, String key) {
+    int at = 0;
+    while (at < props.length()) {
+      if (props.startsWith("w=", at)) return "w".equals(key) ? props.substring(at + 2) : "";
+      int end = props.indexOf(';', at);
+      if (end < 0) end = props.length();
+      String kv = props.substring(at, end);
+      if (kv.startsWith(key + "=")) return kv.substring(key.length() + 1);
+      at = end + 1;
+    }
+    return "";
   }
 
   static Node node(String kind, String a, String b, String c, Node... args) {
@@ -124,10 +190,20 @@ public final class Equation {
         var t = new StringBuilder();
         for (Element c : Xml.children(e, null))
           if ("t".equals(Xml.local(c))) t.append(Xml.text(c));
-        Element rPr = Xml.child(e, "rPr");
-        boolean normal = rPr != null && (Xml.child(rPr, "nor") != null
-            || "p".equals(prop(e, "rPr", "sty", "")));
-        return t.length() == 0 ? null : run(t.toString(), normal);
+        Element rPr = null, wRpr = null;
+        for (Element c : Xml.children(e, null))
+          if ("rPr".equals(Xml.local(c))) {
+            if (c.getTagName().startsWith("w:")) wRpr = c;
+            else rPr = c;
+          }
+        boolean nor = rPr != null && Xml.child(rPr, "nor") != null && !"0".equals(Xml.attr(Xml.child(rPr, "nor"), "val", "1"));
+        String sty = rPr == null || Xml.child(rPr, "sty") == null ? "" : Xml.attr(Xml.child(rPr, "sty"), "val", "");
+        String scr = rPr == null || Xml.child(rPr, "scr") == null ? "" : Xml.attr(Xml.child(rPr, "scr"), "val", "");
+        boolean lit = rPr != null && Xml.child(rPr, "lit") != null && !"0".equals(Xml.attr(Xml.child(rPr, "lit"), "val", "1"));
+        boolean normal = nor || "p".equals(sty);
+        String props = runProps(sty, scr, nor, lit, wRpr == null ? "" : Xml.write(wRpr));
+        if (!props.isEmpty() && "p".equals(sty)) props = "sty=p;" + props;
+        return t.length() == 0 ? null : run(t.toString(), normal, props);
       }
       case "f": {
         String type = prop(e, "fPr", "type", "bar");
@@ -146,12 +222,16 @@ public final class Equation {
       case "nary": {
         String chr = prop(e, "naryPr", "chr", "\u222b");
         String loc = prop(e, "naryPr", "limLoc", integral(chr) ? "subSup" : "undOvr");
-        return node("nary", chr, loc, null, arg(e, "e", depth, budget), arg(e, "sub", depth, budget), arg(e, "sup", depth, budget));
+        return withX(node("nary", chr, loc, null, arg(e, "e", depth, budget), arg(e, "sub", depth, budget), arg(e, "sup", depth, budget)),
+            on(e, "naryPr", "grow") ? "1" : "");
       }
       case "d": {
         var parts = new ArrayList<Node>();
         for (Element c : Xml.children(e, null)) if ("e".equals(Xml.local(c))) parts.add(container(c, depth + 1, budget));
-        return new Node("d", prop(e, "dPr", "begChr", "("), prop(e, "dPr", "endChr", ")"), prop(e, "dPr", "sepChr", "|"), parts);
+        String grow = prop(e, "dPr", "grow", "1");
+        boolean fixed = "0".equals(grow) || "off".equals(grow) || "false".equals(grow);
+        return new Node("d", prop(e, "dPr", "begChr", "("), prop(e, "dPr", "endChr", ")"), prop(e, "dPr", "sepChr", "|"), parts,
+            fixed ? "0" : "");
       }
       case "m": {
         var rows = new ArrayList<Node>();
@@ -178,7 +258,15 @@ public final class Equation {
         return node(k, null, null, null, arg(e, "e", depth, budget), arg(e, "lim", depth, budget));
       case "groupChr":
         return node("groupChr", prop(e, "groupChrPr", "chr", "\u23df"), prop(e, "groupChrPr", "pos", "bot"), null, arg(e, "e", depth, budget));
-      case "box": case "borderBox": case "phant":
+      case "phant": {
+        Element pr = Xml.child(e, "phantPr");
+        String show = pr == null || Xml.child(pr, "show") == null ? "1" : Xml.attr(Xml.child(pr, "show"), "val", "1");
+        boolean shown = !("0".equals(show) || "off".equals(show) || "false".equals(show));
+        String flags = (shown ? "1" : "0") + (on(e, "phantPr", "zeroWid") ? "1" : "0")
+            + (on(e, "phantPr", "zeroAsc") ? "1" : "0") + (on(e, "phantPr", "zeroDesc") ? "1" : "0");
+        return node("box", "phant", flags, null, arg(e, "e", depth, budget));
+      }
+      case "box": case "borderBox":
         return node("box", k, null, null, arg(e, "e", depth, budget));
       case "oMath": case "e":
         return container(e, depth + 1, budget);
@@ -325,8 +413,8 @@ public final class Equation {
         if (peek() == '\u2592') i++;
         Node body = scripted(stop);
         String loc = stacked ? "undOvr" : !base.b.isEmpty() ? base.b : integral(base.a) ? "subSup" : "undOvr";
-        out = node("nary", base.a, loc, null, body == null ? row() : strip(body),
-            sub == null ? row() : sub, sup == null ? row() : sup);
+        out = withX(node("nary", base.a, loc, null, body == null ? row() : strip(body),
+            sub == null ? row() : sub, sup == null ? row() : sup), base.x);
       } else if ("func".equals(base.c)) {
         Node name = run(base.a, true);
         if (sub != null && "lim".equals(base.a)) name = node("limLow", null, null, null, row(name), sub);
@@ -488,9 +576,36 @@ public final class Equation {
           for (Node r : m.args) rows.add(rowOf(new ArrayList<>(r.args)));
           return new Node("eqArr", null, null, null, rows);
         }
-        if (c == '\u25a1') {
+        if (c == '\u25a1' || c == '\u25ad') {
           i++;
-          return node("box", "box", null, null, operand(stop));
+          return node("box", c == '\u25ad' ? "borderBox" : "box", null, null, operand(stop));
+        }
+        for (String[] ph : PHANTS)
+          if (c == ph[0].charAt(0)) {
+            i++;
+            String flags = ph[1];
+            if (peek() == PHANT_FLAGS && i + 5 <= s.length()) {
+              flags = s.substring(i + 1, i + 5);
+              i += 5;
+            }
+            return node("box", "phant", flags, null, operand(stop));
+          }
+        if (c == GROW) {
+          // A delimiter whose brackets do not stretch.
+          i++;
+          Node g = primary(stop);
+          return g != null && "d".equals(g.kind) ? withX(g, "0") : g;
+        }
+        if (c == RUN_OPEN) {
+          int mid = s.indexOf(RUN_TEXT, i + 1), end = mid < 0 ? -1 : s.indexOf(RUN_CLOSE, mid + 1);
+          if (end < 0) {
+            i++;
+            return run("", false);
+          }
+          String props = s.substring(i + 1, mid);
+          i = end + 1;
+          boolean nor = "1".equals(runProp(props, "nor")) || "p".equals(runProp(props, "sty"));
+          return run(s.substring(mid + 1, end), nor, props);
         }
         if (c == '\u2581' || c == '\u00af') {
           i++;
@@ -505,7 +620,9 @@ public final class Equation {
           // SIDE_LIMITS after the operator: limits forced beside it (see SIDE_LIMITS).
           boolean side = i < s.length() && s.charAt(i) == SIDE_LIMITS;
           if (side) i++;
-          return new Node("run", String.valueOf(c), side ? "subSup" : "", "nary", null);
+          boolean grow = i < s.length() && s.charAt(i) == GROW;
+          if (grow) i++;
+          return new Node("run", String.valueOf(c), side ? "subSup" : "", "nary", null, grow ? "1" : "");
         }
         if ((c == '|' || c == '\u2016') && barCloses(c)) return group(c, String.valueOf(c));
         if (c == '\u251c') {
@@ -621,6 +738,10 @@ public final class Equation {
     int d = depth + 1;
     switch (n.kind) {
       case "run": {
+        if (!n.x.isEmpty()) {
+          b.append(RUN_OPEN).append(n.x).append(RUN_TEXT).append(n.a).append(RUN_CLOSE);
+          break;
+        }
         boolean func = "1".equals(n.b) && FUNCS.contains(" " + n.a + " ");
         boolean word = "1".equals(n.b) && !func && n.a.length() > 1 && simple(n.a);
         if (word) b.append('\\');
@@ -687,6 +808,7 @@ public final class Equation {
         boolean stacked = "undOvr".equals(n.b) && !def.equals(n.b);
         b.append(n.a);
         if ("subSup".equals(n.b) && !def.equals(n.b)) b.append(SIDE_LIMITS);
+        if ("1".equals(n.x)) b.append(GROW);
         if (!n.arg(1).empty()) {
           b.append(stacked ? '\u252c' : '_');
           op(n.arg(1), b, d);
@@ -705,6 +827,7 @@ public final class Equation {
         int pair = OPENERS.indexOf(n.a);
         boolean plain = !n.a.isEmpty() && pair >= 0 && n.b.equals(CLOSERS.substring(pair, pair + 1));
         boolean openOnly = !plain && !n.a.isEmpty() && pair >= 0 && n.b.isEmpty();
+        if ("0".equals(n.x)) b.append(GROW);
         if (!plain && !openOnly) b.append('\u251c');
         b.append(n.a);
         for (int i = 0; i < n.args.size(); i++) {
@@ -752,7 +875,11 @@ public final class Equation {
         op(n.arg(0), b, d);
         break;
       case "box":
-        b.append('\u25a1');
+        if ("phant".equals(n.a)) {
+          String flags = n.b.length() == 4 ? n.b : "0000", ch = null;
+          for (String[] ph : PHANTS) if (ph[1].equals(flags)) ch = ph[0];
+          b.append(ch != null ? ch : "\u27e1" + PHANT_FLAGS + flags);
+        } else b.append("borderBox".equals(n.a) ? '\u25ad' : '\u25a1');
         op(n.arg(0), b, d);
         break;
       default:
@@ -783,7 +910,20 @@ public final class Equation {
     switch (n.kind) {
       case "run":
         b.append("<m:r>");
-        if ("1".equals(n.b)) b.append("<m:rPr><m:sty m:val=\"p\"/></m:rPr>");
+        if (!n.x.isEmpty()) {
+          String sty = runProp(n.x, "sty"), scr = runProp(n.x, "scr");
+          boolean nor = "1".equals(runProp(n.x, "nor")), lit = "1".equals(runProp(n.x, "lit"));
+          if ("1".equals(n.b) && !nor && sty.isEmpty()) sty = "p";
+          if (lit || nor || !scr.isEmpty() || !sty.isEmpty()) {
+            b.append("<m:rPr>");
+            if (lit) b.append("<m:lit/>");
+            if (nor) b.append("<m:nor/>");
+            if (!scr.isEmpty()) b.append("<m:scr m:val=\"").append(Xml.attribute(scr)).append("\"/>");
+            if (!sty.isEmpty()) b.append("<m:sty m:val=\"").append(Xml.attribute(sty)).append("\"/>");
+            b.append("</m:rPr>");
+          }
+          b.append(runProp(n.x, "w"));
+        } else if ("1".equals(n.b)) b.append("<m:rPr><m:sty m:val=\"p\"/></m:rPr>");
         b.append("<m:t xml:space=\"preserve\">").append(Xml.escape(n.a)).append("</m:t></m:r>");
         break;
       case "row": case "mr":
@@ -820,6 +960,7 @@ public final class Equation {
       case "nary":
         b.append("<m:nary><m:naryPr><m:chr m:val=\"").append(Xml.attribute(n.a)).append("\"/><m:limLoc m:val=\"")
             .append(n.b.isEmpty() ? "undOvr" : n.b).append("\"/>");
+        if ("1".equals(n.x)) b.append("<m:grow m:val=\"1\"/>");
         if (n.arg(1).empty()) b.append("<m:subHide m:val=\"1\"/>");
         if (n.arg(2).empty()) b.append("<m:supHide m:val=\"1\"/>");
         b.append("</m:naryPr>");
@@ -830,7 +971,9 @@ public final class Equation {
         break;
       case "d":
         b.append("<m:d><m:dPr><m:begChr m:val=\"").append(Xml.attribute(n.a)).append("\"/><m:sepChr m:val=\"")
-            .append(Xml.attribute(n.c)).append("\"/><m:endChr m:val=\"").append(Xml.attribute(n.b)).append("\"/></m:dPr>");
+            .append(Xml.attribute(n.c)).append("\"/><m:endChr m:val=\"").append(Xml.attribute(n.b)).append("\"/>");
+        if ("0".equals(n.x)) b.append("<m:grow m:val=\"0\"/>");
+        b.append("</m:dPr>");
         for (Node c : n.args) wrap("e", c, b, depth);
         b.append("</m:d>");
         break;
@@ -881,6 +1024,14 @@ public final class Equation {
       case "box": {
         String tag = "borderBox".equals(n.a) || "phant".equals(n.a) ? n.a : "box";
         b.append("<m:").append(tag).append('>');
+        if ("phant".equals(n.a) && n.b.length() == 4) {
+          String[] names = {"show", "zeroWid", "zeroAsc", "zeroDesc"};
+          var pr = new StringBuilder();
+          for (int k = 0; k < 4; k++)
+            if (n.b.charAt(k) != (k == 0 ? '1' : '0'))
+              pr.append("<m:").append(names[k]).append(" m:val=\"").append(n.b.charAt(k) == '1' ? "1" : "0").append("\"/>");
+          if (pr.length() > 0) b.append("<m:phantPr>").append(pr).append("</m:phantPr>");
+        }
         wrap("e", n.arg(0), b, depth);
         b.append("</m:").append(tag).append('>');
         break;
@@ -949,6 +1100,20 @@ public final class Equation {
     int d = depth + 1;
     switch (n.kind) {
       case "run":
+        if (!n.x.isEmpty()) {
+          String sty = runProp(n.x, "sty"), scr = runProp(n.x, "scr");
+          String cmd = "1".equals(runProp(n.x, "nor")) ? "\\text" : "double-struck".equals(scr) ? "\\mathbb"
+              : "script".equals(scr) ? "\\mathcal" : "fraktur".equals(scr) ? "\\mathfrak" : "sans-serif".equals(scr) ? "\\mathsf"
+              : "monospace".equals(scr) ? "\\mathtt" : "b".equals(sty) ? "\\mathbf" : "bi".equals(sty) ? "\\boldsymbol"
+              : "i".equals(sty) ? "\\mathit" : "p".equals(sty) ? "\\mathrm" : null;
+          if (cmd != null) {
+            b.append(cmd).append('{');
+            if ("\\text".equals(cmd)) b.append(n.a);
+            else for (int i = 0; i < n.a.length(); i++) b.append(texChar(n.a.charAt(i)));
+            b.append('}');
+            break;
+          }
+        }
         if ("1".equals(n.b) && FUNCS.contains(" " + n.a + " ")) b.append('\\').append(n.a).append(' ');
         else if ("1".equals(n.b) && simple(n.a) && Unicode.letter(n.a.charAt(0))) b.append("\\mathrm{").append(n.a).append('}');
         else for (int i = 0; i < n.a.length(); i++) b.append(texChar(n.a.charAt(i)));
@@ -1074,7 +1239,8 @@ public final class Equation {
         group(n.arg(0), b, d);
         break;
       case "box":
-        b.append("borderBox".equals(n.a) ? "\\boxed" : "");
+        b.append("borderBox".equals(n.a) ? "\\boxed" : !"phant".equals(n.a) ? ""
+            : "0011".equals(n.b) ? "\\hphantom" : "0100".equals(n.b) ? "\\vphantom" : n.b.startsWith("1") ? "\\smash" : "\\phantom");
         group(n.arg(0), b, d);
         break;
       default:
@@ -1084,8 +1250,38 @@ public final class Equation {
 
   // ============================================================================ layout
 
+  /**
+   * {@code t} in math alphabet {@code scr} (Unicode math alphanumerics, as Wordcraft's
+   * math_alnum): letters and digits map, everything else is kept.
+   */
+  static String alphabet(String t, String scr, boolean bold) {
+    var b = new StringBuilder();
+    for (int k = 0; k < t.length(); k++) {
+      char ch = t.charAt(k);
+      String key = "double-struck".equals(scr) ? "double" : "script".equals(scr) ? "script" : "fraktur".equals(scr) ? "fraktur" : null;
+      String mapped = key == null ? null : EquationEditor.mathAlnum(key + ch);
+      if (mapped == null && ("sans-serif".equals(scr) || "monospace".equals(scr))) {
+        boolean sans = "sans-serif".equals(scr);
+        int cp = -1;
+        if (ch >= 'A' && ch <= 'Z') cp = (sans ? bold ? 0x1D5D4 : 0x1D5A0 : 0x1D670) + (ch - 'A');
+        else if (ch >= 'a' && ch <= 'z') cp = (sans ? bold ? 0x1D5EE : 0x1D5BA : 0x1D68A) + (ch - 'a');
+        else if (ch >= '0' && ch <= '9') cp = (sans ? bold ? 0x1D7EC : 0x1D7E2 : 0x1D7F6) + (ch - '0');
+        if (cp > 0) {
+          cp -= 0x10000;
+          mapped = new String(new char[] {(char) (0xd800 + (cp >> 10)), (char) (0xdc00 + (cp & 0x3ff))});
+        }
+      }
+      b.append(mapped == null ? String.valueOf(ch) : mapped);
+    }
+    return b.toString();
+  }
+
   /** A glyph run placed relative to its box origin (left edge, baseline). */
-  public record Glyph(String text, float x, float y, float size, boolean italic, float width) {}
+  public record Glyph(String text, float x, float y, float size, boolean italic, float width, boolean bold) {
+    public Glyph(String text, float x, float y, float size, boolean italic, float width) {
+      this(text, x, y, size, italic, width, false);
+    }
+  }
 
   /** A laid-out node: width, ascent and descent above/below the baseline, plus its primitives. */
   public static final class Box {
@@ -1095,7 +1291,7 @@ public final class Equation {
     public final List<float[]> lines = new ArrayList<>();
 
     void place(Box child, float dx, float dy) {
-      for (Glyph g : child.glyphs) glyphs.add(new Glyph(g.text, g.x + dx, g.y + dy, g.size, g.italic, g.width));
+      for (Glyph g : child.glyphs) glyphs.add(new Glyph(g.text, g.x + dx, g.y + dy, g.size, g.italic, g.width, g.bold));
       for (float[] l : child.lines) {
         float[] m = l.clone();
         for (int i = 0; i + 1 < m.length - 1; i += 2) {
@@ -1121,12 +1317,17 @@ public final class Equation {
   }
 
   private static Box text(String t, float size, boolean italic, LayoutEngine.Metrics metrics, float pad) {
+    return text(t, size, italic, false, metrics, pad);
+  }
+
+  private static Box text(String t, float size, boolean italic, boolean bold, LayoutEngine.Metrics metrics, float pad) {
     var style = TextStyle.DEFAULT.with("size", String.valueOf(size));
     if (italic) style = style.with("italic", "true");
+    if (bold) style = style.with("bold", "true");
     float w = metrics.width(t, style);
     if (w < t.length() * size * .25f) w = t.length() * size * .55f;
     var box = new Box();
-    box.glyphs.add(new Glyph(t, pad, 0, size, italic, w));
+    box.glyphs.add(new Glyph(t, pad, 0, size, italic, w, bold));
     box.width = w + pad * 2;
     box.ascent = size * .78f;
     box.descent = size * .24f;
@@ -1142,6 +1343,20 @@ public final class Equation {
         boolean letters = false;
         for (int i = 0; i < n.a.length(); i++) letters |= Unicode.letter(n.a.charAt(i));
         boolean spaced = n.a.length() == 1 && SPACED.indexOf(n.a.charAt(0)) >= 0;
+        if (!n.x.isEmpty()) {
+          // m:sty: explicit plain/bold/italic/bold italic; m:scr: a math alphabet, drawn with the
+          // Unicode math alphanumerics as Wordcraft's math_alnum does.
+          String sty = runProp(n.x, "sty"), scr = runProp(n.x, "scr");
+          boolean bold = "b".equals(sty) || "bi".equals(sty);
+          boolean italic = sty.isEmpty() ? letters && !"1".equals(n.b) && scr.isEmpty() && !"1".equals(runProp(n.x, "lit"))
+              : "i".equals(sty) || "bi".equals(sty);
+          String t = scr.isEmpty() ? n.a : alphabet(n.a, scr, bold);
+          if (!t.equals(n.a)) {
+            italic = false;
+            bold = bold && !"sans-serif".equals(scr);
+          }
+          return text(t, s, italic, bold, m, spaced ? s * .2f : 0);
+        }
         return text(n.a, s, letters && !"1".equals(n.b), m, spaced ? s * .2f : 0);
       }
       case "f": {
@@ -1204,11 +1419,13 @@ public final class Equation {
       case "nary": {
         boolean integral = integral(n.a);
         float os = s * (integral ? 1.6f : 1.4f);
+        Box body = layout(n.arg(0), s, m, d);
+        // m:grow: the operator grows to the height of its argument.
+        if ("1".equals(n.x)) os = Math.max(os, (body.ascent + body.descent) * 1.1f);
         Box op = text(n.a.isEmpty() ? "\u222b" : n.a, os, false, m, 0);
         float opy = os * .27f - axis;
         Box sub = n.arg(1).empty() ? null : layout(n.arg(1), s * .7f, m, d);
         Box sup = n.arg(2).empty() ? null : layout(n.arg(2), s * .7f, m, d);
-        Box body = layout(n.arg(0), s, m, d);
         var box = new Box();
         float opTop = op.ascent - opy, opBottom = op.descent + opy, x;
         float asc = opTop, desc = opBottom;
@@ -1254,7 +1471,8 @@ public final class Equation {
           asc = Math.max(asc, p.ascent);
           desc = Math.max(desc, p.descent);
         }
-        float ds = Math.max(s, (asc + desc) / 1.02f);
+        // m:grow off: the brackets keep the text size whatever the content's height.
+        float ds = "0".equals(n.x) ? s : Math.max(s, (asc + desc) / 1.02f);
         float center = (desc - asc) / 2, dy = center + ds * .27f;
         var box = new Box();
         if (!n.a.isEmpty()) {
@@ -1392,6 +1610,15 @@ public final class Equation {
       }
       case "box": {
         Box body = layout(n.arg(0), s, m, d);
+        if ("phant".equals(n.a) && n.b.length() == 4) {
+          // m:phant: hidden content keeps its space; zeroWid/zeroAsc/zeroDesc drop a dimension.
+          var box = new Box();
+          if (n.b.charAt(0) == '1') box.place(body, 0, 0);
+          box.width = n.b.charAt(1) == '1' ? 0 : body.width;
+          box.ascent = n.b.charAt(2) == '1' ? 0 : body.ascent;
+          box.descent = n.b.charAt(3) == '1' ? 0 : body.descent;
+          return box;
+        }
         if (!"borderBox".equals(n.a)) return body;
         var box = new Box();
         float p = s * .1f;
