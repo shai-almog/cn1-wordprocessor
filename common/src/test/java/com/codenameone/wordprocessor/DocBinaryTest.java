@@ -696,4 +696,59 @@ public class DocBinaryTest {
     String doc = part(DocBinary.convert(d.build()), "word/document.xml");
     assertFalse(doc.contains("<wp:anchor"));
   }
+
+  /** A group (FSPGR space 0..1000) of a rectangle and an ellipse, wrapped tight; a header float. */
+  private static DocWriter groupsAndHeaderFloat() {
+    var d = new DocWriter();
+    d.run("Group ");
+    int a = d.cp();
+    d.run("\u0008 end").para(0);
+    d.ccpText = d.cp();
+    int hddStart = d.cp();
+    d.run("\u0008Header").para(0);
+    int hlen = d.cp() - hddStart;
+    d.para(0);
+    d.ccpHdd = d.cp() - hddStart;
+    int[] hdd = new int[14];
+    for (int i = 7; i < 13; i++) hdd[i] = hlen;
+    hdd[13] = hlen + 1;
+    d.tables.put(11, plc(hdd));
+    d.tables.put(6, plc(0, d.ccpText));
+    d.sepx.add(bytes(0x09, 0x30, 2));
+    byte[] fspgr = cat(le32(0), le32(0), le32(1000), le32(1000));
+    byte[] head = rec(0xF, 0xF004, rec(1, 0xF009, fspgr), rec(2, 0xF00A, le32(3000), le32(0x201)));
+    byte[] m1 = rec(0xF, 0xF004, rec(2 | 1 << 4, 0xF00A, le32(3001), le32(0xA00)),
+        rec(0, 0xF00F, cat(le32(0), le32(0), le32(500), le32(500))));
+    byte[] m2 = rec(0xF, 0xF004, rec(2 | 3 << 4, 0xF00A, le32(3002), le32(0xA00)),
+        rec(0, 0xF00F, cat(le32(500), le32(500), le32(1000), le32(1000))));
+    byte[] dgg = rec(0xF, 0xF000, rec(0xF, 0xF001));
+    byte[] dg = rec(0xF, 0xF002, rec(0xF, 0xF003, rec(0xF, 0xF003, head, m1, m2)));
+    byte[] hdg = rec(0xF, 0xF002, rec(0xF, 0xF003, shape(3, 4001, new byte[0], 0)));
+    d.tables.put(50, cat(dgg, new byte[] {0}, dg, new byte[] {1}, hdg));
+    d.tables.put(40, cat(plc(a, d.ccpText), fspa(3000, 0, 0, 2880, 1440, 2 << 1 | 2 << 3 | 4 << 5)));
+    d.tables.put(41, cat(plc(0, d.ccpHdd), fspa(4001, 0, 0, 1440, 1440, 1 << 1 | 1 << 3 | 3 << 5)));
+    return d;
+  }
+
+  @Test
+  public void groupsWrapKindsAndHeaderFloatsTranslate() throws Exception {
+    var parts = DocBinary.convert(groupsAndHeaderFloat().build());
+    String doc = part(parts, "word/document.xml");
+    assertTrue(doc, doc.contains("<wpg:wgp") && doc.contains("<wp:wrapTight"));
+    assertTrue(doc.contains("prst=\"rect\"") && doc.contains("prst=\"ellipse\""));
+    assertTrue(doc.contains("<a:chExt cx=\"1000\" cy=\"1000\"/>"));
+    String header = "";
+    for (var e : parts.entrySet()) if (e.getKey().startsWith("word/header")) header += new String(e.getValue(), "UTF-8");
+    assertTrue(header, header.contains("<wp:anchor") && header.contains("prst=\"ellipse\""));
+    Document m = DocBinary.read(groupsAndHeaderFloat().build()).document;
+    Picture g = null;
+    for (Block b : m.blocks) if (b instanceof Picture p && p.drawing != null && p.drawing.flag("group")) g = p;
+    assertNotNull(m.plainText(), g);
+    assertEquals("tight", g.wrap());
+    // Two members, the second at the group's centre (2" x 1" frame: 72, 36 points).
+    String[] items = g.drawing.get("items", "").split("\u001e");
+    assertEquals(2, items.length);
+    assertEquals(72, Float.parseFloat(items[1].split("\u001f")[0]), .5f);
+    assertEquals(36, Float.parseFloat(items[1].split("\u001f")[1]), .5f);
+  }
 }

@@ -143,6 +143,14 @@ public final class DrawingOps {
     int fill = d.color("fill", fill0), line = d.color("line", line0);
     float lw = d.num("lineWidth", 1);
     int transparency = (int) Math.max(0, Math.min(100, d.num("transparency", 0)));
+    if ("custom".equals(geometry)) {
+      // A freeform: each subpath filled when closed, stroked when open (Wordcraft's freeform).
+      var closed = new ArrayList<Boolean>();
+      var paths = Freeform.paths(d.get("path", ""), w, h, closed);
+      int alpha = Math.round(255 * (100 - transparency) / 100f);
+      for (int i = 0; i < paths.size(); i++)
+        ops.paths.add(new Path(paths.get(i), closed.get(i), closed.get(i) ? fill : -1, line, lw, alpha));
+    } else {
     float[] pts = geometry(geometry, w, h);
     if ("line".equals(geometry) || "arrowLine".equals(geometry)) {
       ops.line(pts, line < 0 ? line0 : line, Math.max(lw, .5f), 255);
@@ -151,6 +159,7 @@ public final class DrawingOps {
     } else {
       ops.paths.add(
           new Path(pts, true, fill, line, lw, Math.round(255 * (100 - transparency) / 100f)));
+    }
     }
     var text = d.get("text", "");
     if (text.isEmpty()) return;

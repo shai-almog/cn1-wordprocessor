@@ -188,6 +188,10 @@ final class DocxPictures {
     return b.toString();
   }
 
+  private static boolean on(String v) {
+    return "1".equals(v) || "true".equals(v) || "on".equals(v);
+  }
+
   /** a:srcRect (1/1000 percent), a:xfrm rot (1/60000 degree) and flips, and a solid a:ln. */
   private static Picture.Look look(Element container, Set<String> warnings) {
     Element crop = descendant(container, "srcRect"), transform = descendant(container, "xfrm");
@@ -196,7 +200,15 @@ final class DocxPictures {
     if (crop != null) {
       String[] keys = {"l", "t", "r", "b"};
       for (int i = 0; i < 4; i++)
-        edges[i] = Math.max(0, Xml.number(Xml.attr(crop, keys[i], "0")) / 100000f);
+        edges[i] = Math.max(0, Math.min(1, Xml.number(Xml.attr(crop, keys[i], "0")) / 100000f));
+      // Clamped to 0..1 as Wordcraft; opposite edges leaving too little are scaled back to 94%.
+      for (int i = 0; i < 2; i++) {
+        float sum = edges[i] + edges[i + 2];
+        if (sum >= .95f) {
+          edges[i] *= .94f / sum;
+          edges[i + 2] *= .94f / sum;
+        }
+      }
     }
     int color = -1;
     float width = 0;
@@ -233,8 +245,8 @@ final class DocxPictures {
             alpha == null ? 0 : 100 - Math.round(Xml.number(Xml.attr(alpha, "amt", "100000")) / 1000f);
         var base =
             new Picture.Look(edges[0], edges[1], edges[2], edges[3], color, Math.min(72, width), rotation,
-                transform != null && "1".equals(Xml.attr(transform, "flipH", "0")),
-                transform != null && "1".equals(Xml.attr(transform, "flipV", "0")));
+                transform != null && on(Xml.attr(transform, "flipH", "0")),
+                transform != null && on(Xml.attr(transform, "flipV", "0")));
         try {
           return base.adjust(
               Math.max(-100, Math.min(100, bright)),
@@ -254,8 +266,8 @@ final class DocxPictures {
           color,
           Math.min(72, width),
           rotation,
-          transform != null && "1".equals(Xml.attr(transform, "flipH", "0")),
-          transform != null && "1".equals(Xml.attr(transform, "flipV", "0")));
+          transform != null && on(Xml.attr(transform, "flipH", "0")),
+          transform != null && on(Xml.attr(transform, "flipV", "0")));
     } catch (IllegalArgumentException ex) {
       warnings.add("Picture crop outside the supported range was removed");
       return Picture.Look.NONE.border(color, Math.min(72, width)).rotate(rotation, false, false);

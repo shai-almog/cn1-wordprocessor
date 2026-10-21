@@ -163,13 +163,32 @@ final class DocxDrawings {
     }
   }
 
+  /** A freeform's subpaths (Freeform) as a:custGeom in the shape's EMU space. */
+  private static void custom(StringBuilder b, String path, long cx, long cy) {
+    b.append("<a:custGeom><a:avLst/><a:gdLst/><a:ahLst/><a:cxnLst/><a:rect l=\"0\" t=\"0\" r=\"r\" b=\"b\"/><a:pathLst>");
+    var closed = new java.util.ArrayList<Boolean>();
+    var paths = Freeform.paths(path, cx, cy, closed);
+    for (int k = 0; k < paths.size(); k++) {
+      float[] p = paths.get(k);
+      b.append("<a:path w=\"").append(cx).append("\" h=\"").append(cy).append('"')
+          .append(closed.get(k) ? "" : " fill=\"none\"").append('>');
+      for (int i = 0; i < p.length; i += 2)
+        b.append(i == 0 ? "<a:moveTo>" : "<a:lnTo>").append("<a:pt x=\"").append(Math.round(p[i]))
+            .append("\" y=\"").append(Math.round(p[i + 1])).append("\"/>").append(i == 0 ? "</a:moveTo>" : "</a:lnTo>");
+      if (closed.get(k)) b.append("<a:close/>");
+      b.append("</a:path>");
+    }
+    b.append("</a:pathLst></a:custGeom>");
+  }
+
   private static void shape(StringBuilder b, Drawing d, long cx, long cy) {
     boolean box = "textBox".equals(d.kind);
     String geometry = box ? "rect" : d.get("shape", "rect");
     b.append("<wps:wsp xmlns:wps=\"").append(WPS).append("\"><wps:cNvSpPr")
         .append(box ? " txBox=\"1\"" : "").append("/><wps:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"")
-        .append(cx).append("\" cy=\"").append(cy).append("\"/></a:xfrm><a:prstGeom prst=\"")
-        .append(prst(geometry)).append("\"><a:avLst/></a:prstGeom>");
+        .append(cx).append("\" cy=\"").append(cy).append("\"/></a:xfrm>");
+    if ("custom".equals(geometry)) custom(b, d.get("path", ""), cx, cy);
+    else b.append("<a:prstGeom prst=\"").append(prst(geometry)).append("\"><a:avLst/></a:prstGeom>");
     int alpha = Math.round(255 * (100 - Math.max(0, Math.min(100, d.num("transparency", 0)))) / 100f);
     fill(b, d.color("fill", box ? 0xffffff : 0x4472c4), alpha);
     line(b, d.color("line", box ? 0 : 0x2f528f), d.num("lineWidth", 1), 255);
@@ -286,8 +305,83 @@ final class DocxDrawings {
 
   /** A Word shape or text box (wps:wsp outside a group), or null. */
   static Drawing shape(Element container, Set<String> warnings) {
+    Element wgp = DocxPictures.descendant(container, "wgp");
+    if (wgp != null) return group(wgp, container, warnings);
     Element wsp = DocxPictures.descendant(container, "wsp");
-    if (wsp == null || DocxPictures.descendant(container, "wgp") != null) return null;
+    if (wsp == null) return null;
+    return wsp(wsp);
+  }
+
+  /**
+   * A wpg:wgp group as Wordcraft's read_group/group_members: members flattened into the group's
+   * frame (points), nested groups mapped through their chOff/chExt (outer = x0 + inner * s), to
+   * depth 8. Members are shapes, text boxes and freeforms; pictures inside a group are dropped.
+   */
+  static Drawing group(Element wgp, Element container, Set<String> warnings) {
+    Element extent = Xml.child(container, "extent");
+    float w = extent == null ? 0 : Xml.number(Xml.attr(extent, "cx", "0")) / 12700f;
+    float h = extent == null ? 0 : Xml.number(Xml.attr(extent, "cy", "0")) / 12700f;
+    float[] t = {0, 0, 1 / 12700f, 1 / 12700f};
+    Element xfrm = groupXfrm(wgp);
+    if (xfrm != null) {
+      float[] ch = box(xfrm, "chOff", "chExt");
+      if (ch != null && ch[2] > 0 && ch[3] > 0 && w > 0 && h > 0)
+        t = new float[] {-ch[0] * w / ch[2], -ch[1] * h / ch[3], w / ch[2], h / ch[3]};
+    }
+    var items = new StringBuilder();
+    members(wgp, t, 0, items, warnings);
+    if (items.length() == 0) return null;
+    return Drawing.of("canvas").with("fill", "none").with("line", "none").with("group", "true")
+        .with("items", items.toString());
+  }
+
+  private static Element groupXfrm(Element g) {
+    Element pr = Xml.child(g, "grpSpPr");
+    return pr == null ? null : Xml.child(pr, "xfrm");
+  }
+
+  /** {x, y, w, h} in EMUs from an a:xfrm's offset and extent children, or null. */
+  private static float[] box(Element xfrm, String off, String ext) {
+    Element o = Xml.child(xfrm, off), e = Xml.child(xfrm, ext);
+    if (o == null || e == null) return null;
+    return new float[] {Xml.number(Xml.attr(o, "x", "0")), Xml.number(Xml.attr(o, "y", "0")),
+        Xml.number(Xml.attr(e, "cx", "0")), Xml.number(Xml.attr(e, "cy", "0"))};
+  }
+
+  private static void members(Element g, float[] t, int depth, StringBuilder items, Set<String> warnings) {
+    for (Element m : Xml.children(g, null)) {
+      String n = Xml.local(m);
+      if ("AlternateContent".equals(n)) {
+        Element choice = Xml.child(m, "Choice");
+        if (choice != null) members(choice, t, depth, items, warnings);
+        continue;
+      }
+      if ("grpSp".equals(n)) {
+        if (depth >= 8) continue;
+        Element x = groupXfrm(m);
+        float[] b = x == null ? null : box(x, "off", "ext"), c = x == null ? null : box(x, "chOff", "chExt");
+        if (b == null) continue;
+        if (c == null) c = b;
+        float kx = c[2] > 0 ? b[2] / c[2] : 1, ky = c[3] > 0 ? b[3] / c[3] : 1;
+        members(m, new float[] {t[0] + (b[0] - c[0] * kx) * t[2], t[1] + (b[1] - c[1] * ky) * t[3], t[2] * kx, t[3] * ky},
+            depth + 1, items, warnings);
+      } else if ("wsp".equals(n)) {
+        Element pr = Xml.child(m, "spPr"), x = pr == null ? null : Xml.child(pr, "xfrm");
+        float[] b = x == null ? null : box(x, "off", "ext");
+        if (b == null) continue;
+        Drawing d = wsp(m);
+        if (x != null && !Xml.attr(x, "rot", "").isEmpty())
+          d = d.with("rotation", String.valueOf(Math.round(Xml.number(Xml.attr(x, "rot", "0")) / 60000f)));
+        if (items.length() > 0) items.append('\u001e');
+        items.append(t[0] + b[0] * t[2]).append('\u001f').append(t[1] + b[1] * t[3]).append('\u001f')
+            .append(Math.max(0, b[2] * t[2])).append('\u001f').append(Math.max(0, b[3] * t[3])).append('\u001f')
+            .append(d.encode());
+      } else if ("pic".equals(n)) warnings.add("Picture inside a drawing group dropped");
+    }
+  }
+
+  /** One wps:wsp: preset or custom geometry, fill, line and text box text. */
+  static Drawing wsp(Element wsp) {
     Element nv = Xml.child(wsp, "cNvSpPr");
     boolean box = nv != null && "1".equals(Xml.attr(nv, "txBox", ""));
     Drawing d = Drawing.of(box ? "textBox" : "shape");
@@ -295,6 +389,13 @@ final class DocxDrawings {
     if (spPr != null) {
       Element geom = Xml.child(spPr, "prstGeom");
       if (!box && geom != null) d = d.with("shape", shapeName(Xml.attr(geom, "prst", "rect")));
+      Element cust = Xml.child(spPr, "custGeom");
+      if (!box && cust != null) {
+        Element xf = Xml.child(spPr, "xfrm");
+        float[] b = xf == null ? null : box(xf, "off", "ext");
+        String path = Freeform.read(cust, b == null ? 0 : b[2], b == null ? 0 : b[3]);
+        if (!path.isEmpty()) d = d.with("shape", "custom").with("path", path);
+      }
       if (Xml.child(spPr, "noFill") != null) d = d.with("fill", "none");
       Element solid = Xml.child(spPr, "solidFill");
       Element clr = solid == null ? null : Xml.child(solid, "srgbClr");

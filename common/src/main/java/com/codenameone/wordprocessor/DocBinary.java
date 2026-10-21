@@ -66,6 +66,8 @@ final class DocBinary {
   /** Main-drawing shapes by spid: {spid, shape type, pib, fill, line, filled, lined, group}. */
   private final Map<Long, long[]> shapes = new HashMap<>();
   private final Map<Long, long[]> textboxes = new HashMap<>();
+  /** Group members (shape arrays, nested groups included) by the group shape's spid. */
+  private final Map<Long, List<long[]>> groups = new HashMap<>();
   private int revIds, markIds, floatIds;
 
   private static final class Style {
@@ -1410,7 +1412,7 @@ final class DocBinary {
           break;
         }
         case 0x08: {
-          String f = main ? floats.get(cp) : null;
+          String f = noteKind == null ? floats.get(cp) : null;
           if (f != null) runs.element(rpr(cp), f);
           break;
         }
@@ -1848,7 +1850,8 @@ final class DocBinary {
     for (int guard = 0; at + 9 <= end && guard < 16; guard++) {
       long dl = u32(table, at + 5);
       if (u16(table, at + 3) != 0xF002 || dl > end - at - 9) break;
-      if (u8(table, at) == 0) art(at + 9, at + 9 + dl, 0, null);
+      // Both drawings: the main document's (dgglbl 0) and the headers' (1).
+      art(at + 9, at + 9 + dl, 0, null);
       at += 9 + dl;
     }
     long txbxBase = ccpText + ccpFtn + ccpHdd + ccpAtn + ccpEdn;
@@ -1859,16 +1862,112 @@ final class DocBinary {
         long lid = u32(table, tx[2] + k * 22L + 14);
         if (b > a) textboxes.putIfAbsent(lid, new long[] {txbxBase + a, txbxBase + b});
       }
-    long[] spa = plcAt(40, 26);
-    if (spa == null) return;
+    // PlcSpaMom anchors main-text CPs, PlcSpaHdr header-story CPs (relative to the header
+    // subdocument), as Wordcraft's drawing::anchors with its cp_base.
+    for (int which = 40; which <= 41; which++) {
+    long[] spa = plcAt(which, 26);
+    if (spa == null) continue;
+    long base = which == 40 ? 0 : ccpText + ccpFtn, limit = which == 40 ? ccpText : ccpHdd;
     for (int k = 0; k < spa[0]; k++) {
-      long cp = u32(table, spa[1] + k * 4L), d = spa[2] + k * 26L;
+      long rel = u32(table, spa[1] + k * 4L), cp = base + rel, d = spa[2] + k * 26L;
       long[] sh = shapes.get(u32(table, d));
-      if (cp >= ccpText || sh == null || floats.containsKey(cp) || floatIds >= MAX_PARTS) continue;
+      if (rel >= limit || sh == null || floats.containsKey(cp) || floatIds >= MAX_PARTS) continue;
       String x = anchor(sh, (int) u32(table, d + 4), (int) u32(table, d + 8), (int) u32(table, d + 12),
           (int) u32(table, d + 16), u16(table, d + 20));
       if (x != null) floats.put(cp, x);
     }
+    }
+  }
+
+  /**
+   * One SpContainer: {spid, spt, pib, fill, line, filled, stroked, fGroup, child l/t/r/b, group
+   * l/t/r/b, has child anchor}.
+   */
+  private long[] spContainer(long body, long len, int depth) {
+    long[] sh = {-1, 0, 0, -1, -1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    art(body, body + len, depth + 1, sh);
+    if (sh[0] >= 0 && shapes.size() < MAX_PARTS * 4) shapes.putIfAbsent(sh[0], sh);
+    return sh;
+  }
+
+  /**
+   * An SpgrContainer: its first shape is the group (FSPGR space), the rest members, nested
+   * groups recursively (as Wordcraft's officeart tree). Returns the group shape or null.
+   */
+  private long[] group(long at, long len, int depth) {
+    if (depth > 8) return null;
+    long end = at + len;
+    long[] head = null;
+    var members = new ArrayList<long[]>();
+    for (int guard = 0; at + 8 <= end && guard < 100000; guard++) {
+      int type = u16(table, at + 2);
+      long l = u32(table, at + 4), body = at + 8;
+      if (l > end - body) break;
+      long[] sh = type == 0xF004 ? spContainer(body, l, depth) : type == 0xF003 ? group(body, l, depth + 1) : null;
+      if (sh != null) {
+        if (head == null) head = sh;
+        else if (members.size() < 256) members.add(sh);
+      }
+      at = body + l;
+    }
+    if (head != null && head[0] >= 0 && !members.isEmpty()) groups.putIfAbsent(head[0], members);
+    return head;
+  }
+
+  /** A group's xfrm: its frame and its child space (FSPGR), as a grpSpPr. */
+  private static String groupXfrm(String tag, long x, long y, long cx, long cy, long[] g) {
+    long gw = g[14] - g[12], gh = g[15] - g[13];
+    if (gw <= 0 || gh <= 0) {
+      gw = cx;
+      gh = cy;
+    }
+    return "<" + tag + "><a:xfrm><a:off x=\"" + x + "\" y=\"" + y + "\"/><a:ext cx=\"" + cx + "\" cy=\"" + cy
+        + "\"/><a:chOff x=\"" + (gw == cx && g[14] <= g[12] ? 0 : g[12]) + "\" y=\"" + (gh == cy && g[15] <= g[13] ? 0 : g[13])
+        + "\"/><a:chExt cx=\"" + gw + "\" cy=\"" + gh + "\"/></a:xfrm></" + tag + ">";
+  }
+
+  /** Members at their child anchors; nested groups as wpg:grpSp. Pictures and freeforms are dropped. */
+  private int groupMembers(StringBuilder g, List<long[]> members, int depth) throws IOException {
+    int n = 0;
+    for (long[] m : members) {
+      if (m[16] == 0) continue;
+      long x = m[8], y = m[9], w = Math.max(1, m[10] - m[8]), h = Math.max(1, m[11] - m[9]);
+      if (m[7] != 0) {
+        List<long[]> inner = groups.get(m[0]);
+        if (inner == null || depth >= 8) continue;
+        var sub = new StringBuilder("<wpg:grpSp><wpg:cNvGrpSpPr/>").append(groupXfrm("wpg:grpSpPr", x, y, w, h, m));
+        if (groupMembers(sub, inner, depth + 1) == 0) continue;
+        g.append(sub).append("</wpg:grpSp>");
+        n++;
+      } else {
+        String wsp = m[2] > 0 ? null : wsp(m, x, y, w, h);
+        if (wsp != null) {
+          g.append(wsp);
+          n++;
+        }
+      }
+    }
+    return n;
+  }
+
+  /** A preset shape or text box as wps:wsp at (x, y) size (cx, cy), or null for freeforms. */
+  private String wsp(long[] sh, long x, long y, long cx, long cy) throws IOException {
+    String geom = prst((int) sh[1]);
+    if (geom == null) return null;
+    boolean box = sh[1] == 202;
+    var g = new StringBuilder("<wps:wsp xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:cNvSpPr");
+    g.append(box ? " txBox=\"1\"/>" : "/>").append("<wps:spPr><a:xfrm><a:off x=\"").append(x).append("\" y=\"").append(y)
+        .append("\"/><a:ext cx=\"").append(cx).append("\" cy=\"").append(cy).append("\"/></a:xfrm><a:prstGeom prst=\"").append(geom)
+        .append("\"><a:avLst/></a:prstGeom>");
+    g.append(sh[5] == 0 ? "<a:noFill/>" : "<a:solidFill><a:srgbClr val=\"" + color(sh[3], "FFFFFF") + "\"/></a:solidFill>");
+    g.append("<a:ln>").append(sh[6] == 0 ? "<a:noFill/>" : "<a:solidFill><a:srgbClr val=\"" + color(sh[4], "000000")
+        + "\"/></a:solidFill>").append("</a:ln></wps:spPr>");
+    long[] tb = textboxes.get(sh[0]);
+    if (tb != null) {
+      String body = blocks(walk(tb[0], tb[1], "textbox"));
+      if (!body.isEmpty()) g.append("<wps:txbx><w:txbxContent>").append(body).append("</w:txbxContent></wps:txbx>");
+    }
+    return g.append("<wps:bodyPr/></wps:wsp>").toString();
   }
 
   /** Collects BLIP store entries and shape properties from OfficeArt records. */
@@ -1881,10 +1980,16 @@ final class DocBinary {
       if (type == 0xF007) {
         if (blips.size() < MAX_PARTS) blips.add(new long[] {body, len});
       } else if (type == 0xF004) {
-        long[] sh = {-1, 0, 0, -1, -1, 1, 1, 0};
-        art(body, body + len, depth + 1, sh);
-        if (sh[0] >= 0 && shapes.size() < MAX_PARTS * 4) shapes.putIfAbsent(sh[0], sh);
+        spContainer(body, len, depth);
+      } else if (type == 0xF003) {
+        group(body, len, depth);
       } else if ((verInst & 0xF) == 0xF) art(body, body + len, depth + 1, shape);
+      else if ((type == 0xF00F || type == 0xF009) && shape != null && len >= 16) {
+        // ChildAnchor (a member's rectangle in its group's space) and FSPGR (the group's space).
+        int o = type == 0xF00F ? 8 : 12;
+        for (int k = 0; k < 4; k++) shape[o + k] = (int) u32(table, body + k * 4L);
+        if (type == 0xF00F) shape[16] = 1;
+      }
       else if (type == 0xF00A && shape != null && len >= 8) {
         shape[0] = u32(table, body);
         shape[1] = verInst >> 4;
@@ -1934,12 +2039,24 @@ final class DocBinary {
     return Math.max(-51206400L, Math.min(51206400L, twips * 635));
   }
 
-  /** A wp:anchor drawing for one FSPA, or null for groups, freeforms and unreadable pictures. */
+  /**
+   * A wp:anchor drawing for one FSPA, or null for freeforms (whose path Wordcraft does not read
+   * either) and unreadable pictures. Groups become wpg:wgp with their members.
+   */
   private String anchor(long[] sh, int xl, int yt, int xr, int yb, int flags) throws IOException {
-    if (sh[7] != 0) return null;
     long cx = Math.max(12700, Math.min(20116800L, emu((long) xr - xl))), cy = Math.max(12700, Math.min(20116800L, emu((long) yb - yt)));
     String graphic;
-    if (sh[2] > 0 && sh[2] <= blips.size()) {
+    if (sh[7] != 0) {
+      List<long[]> members = groups.get(sh[0]);
+      if (members == null) return null;
+      var g = new StringBuilder("<a:graphic xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\">"
+          + "<a:graphicData uri=\"http://schemas.microsoft.com/office/word/2010/wordprocessingGroup\">"
+          + "<wpg:wgp xmlns:wpg=\"http://schemas.microsoft.com/office/word/2010/wordprocessingGroup\"><wpg:cNvGrpSpPr/>");
+      g.append(groupXfrm("wpg:grpSpPr", 0, 0, cx, cy, sh));
+      int n = groupMembers(g, members, 0);
+      if (n == 0) return null;
+      graphic = g.append("</wpg:wgp></a:graphicData></a:graphic>").toString();
+    } else if (sh[2] > 0 && sh[2] <= blips.size()) {
       long[] e = blips.get((int) sh[2] - 1);
       long body = e[0], head = 36 + u8(table, body + 33);
       String[] ext = new String[1];
@@ -1953,27 +2070,19 @@ final class DocBinary {
       String id = media(img, ext[0]);
       graphic = picGraphic(id, pictures, cx, cy);
     } else {
-      String geom = prst((int) sh[1]);
-      if (geom == null) return null;
-      boolean box = sh[1] == 202;
-      var g = new StringBuilder("<a:graphic xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\">"
-          + "<a:graphicData uri=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\">"
-          + "<wps:wsp xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:cNvSpPr");
-      g.append(box ? " txBox=\"1\"/>" : "/>").append("<wps:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"").append(cx)
-          .append("\" cy=\"").append(cy).append("\"/></a:xfrm><a:prstGeom prst=\"").append(geom).append("\"><a:avLst/></a:prstGeom>");
-      g.append(sh[5] == 0 ? "<a:noFill/>" : "<a:solidFill><a:srgbClr val=\"" + color(sh[3], "FFFFFF") + "\"/></a:solidFill>");
-      g.append("<a:ln>").append(sh[6] == 0 ? "<a:noFill/>" : "<a:solidFill><a:srgbClr val=\"" + color(sh[4], "000000")
-          + "\"/></a:solidFill>").append("</a:ln></wps:spPr>");
-      long[] tb = textboxes.get(sh[0]);
-      if (tb != null) {
-        String body = blocks(walk(tb[0], tb[1], "textbox"));
-        if (!body.isEmpty()) g.append("<wps:txbx><w:txbxContent>").append(body).append("</w:txbxContent></wps:txbx>");
-      }
-      graphic = g.append("<wps:bodyPr/></wps:wsp></a:graphicData></a:graphic>").toString();
+      String wsp = wsp(sh, 0, 0, cx, cy);
+      if (wsp == null) return null;
+      graphic = "<a:graphic xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\">"
+          + "<a:graphicData uri=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\">" + wsp
+          + "</a:graphicData></a:graphic>";
     }
     int bx = flags >> 1 & 3, by = flags >> 3 & 3, wr = flags >> 5 & 15, n = ++floatIds;
     boolean behind = wr == 3 && (flags & 0x4000) != 0;
-    String wrap = wr == 1 ? "<wp:wrapTopAndBottom/>" : wr == 3 ? "<wp:wrapNone/>" : "<wp:wrapSquare wrapText=\"bothSides\"/>";
+    // Wrap kinds as Wordcraft's spa_float: 1 top and bottom, 3 none (behind by fBelowText),
+    // 4 tight, 5 through, otherwise square.
+    String wrap = wr == 1 ? "<wp:wrapTopAndBottom/>" : wr == 3 ? "<wp:wrapNone/>"
+        : wr == 4 ? "<wp:wrapTight wrapText=\"bothSides\"/>" : wr == 5 ? "<wp:wrapThrough wrapText=\"bothSides\"/>"
+        : "<wp:wrapSquare wrapText=\"bothSides\"/>";
     return "<w:drawing><wp:anchor distT=\"0\" distB=\"0\" distL=\"114300\" distR=\"114300\" simplePos=\"0\" relativeHeight=\""
         + n + "\" behindDoc=\"" + (behind ? 1 : 0) + "\" locked=\"0\" layoutInCell=\"1\" allowOverlap=\"1\">"
         + "<wp:simplePos x=\"0\" y=\"0\"/><wp:positionH relativeFrom=\"" + (bx == 1 ? "page" : bx == 0 ? "margin" : "column")
