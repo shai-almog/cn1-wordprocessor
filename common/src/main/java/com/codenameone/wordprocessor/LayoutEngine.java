@@ -1087,11 +1087,7 @@ public final class LayoutEngine {
         }
       var pages = new HashMap<String, Integer>();
       for (Notes.Reference ref : Notes.references(view)) {
-        var block = view.blocks.get(ref.block);
-        Paragraph p =
-            block instanceof Paragraph p1
-                ? p1
-                : ((Table) block).cell(ref.row, ref.column).get(ref.paragraph);
+        Paragraph p = ref.paragraph(view);
         var lines = byParagraph.get(p.id);
         if (lines != null)
           for (Line line : lines)

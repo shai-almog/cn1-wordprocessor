@@ -371,6 +371,8 @@ public class SimulatorUiTest {
           point[1] = r[1] + Math.max(1, r[3] / 2);
           session().select(1, 0, 0);
         });
+    // Let any click from an earlier test fall outside the multi-click window.
+    Thread.sleep(450);
     edt(
         () -> {
           var editor = editor();
