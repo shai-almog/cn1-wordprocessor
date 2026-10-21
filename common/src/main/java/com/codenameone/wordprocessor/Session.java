@@ -11,6 +11,8 @@ public final class Session {
   private Document document;
   private String reviewAuthor = "Author";
   private boolean trackFormatting = true;
+  /** Equations are typed in LaTeX rather than the linear format (Wordcraft's math_latex). */
+  boolean mathLatex;
   private CellContext cell;
   private CellSelection cells;
   private Document integratedSource, integratedDocument;

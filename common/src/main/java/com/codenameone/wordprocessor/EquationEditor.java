@@ -128,6 +128,8 @@ final class EquationEditor {
   /** The equation's root row. */
   List<N> root;
   Pos pos;
+  /** LaTeX input mode (Wordcraft's math_latex): build-up reads the typed text as LaTeX. */
+  boolean latex;
 
   EquationEditor(String linear) {
     root = parse(linear);
@@ -140,6 +142,14 @@ final class EquationEditor {
     List<N> out = new ArrayList<>();
     if (linear == null || linear.isEmpty() || HOLE.equals(linear)) return out;
     fromNode(Equation.fromLinear(linear), out, 0);
+    return out;
+  }
+
+  /** LaTeX math as editor nodes, through {@link MathLatex}. */
+  static List<N> parseLatex(String tex) {
+    List<N> out = new ArrayList<>();
+    if (tex == null || tex.isEmpty()) return out;
+    fromNode(MathLatex.parse(tex), out, 0);
     return out;
   }
 
@@ -775,6 +785,18 @@ final class EquationEditor {
     return false;
   }
 
+  /** Opening minus closing LaTeX braces (escaped braces excluded). */
+  static int braces(String text) {
+    int depth = 0;
+    for (int i = 0; i < text.length(); i++) {
+      char c = text.charAt(i);
+      if (c == '\\') i++;
+      else if (c == '{') depth++;
+      else if (c == '}') depth--;
+    }
+    return depth;
+  }
+
   /** More opening than closing brackets: the user is still typing the group. */
   static boolean openBrackets(String text) {
     int depth = 0;
@@ -805,15 +827,17 @@ final class EquationEditor {
       }
     List<N> region = new ArrayList<>(a.subList(start, at));
     String text = linear(region);
-    if (region.isEmpty() || !builds(text) || openBrackets(text)) {
+    // LaTeX mode builds up anything that parses differently, once its braces balance (as
+    // Wordcraft's build_up with latex set); unknown commands stay as text.
+    if (region.isEmpty() || (latex ? braces(text) != 0 : !builds(text) || openBrackets(text))) {
       tidy();
       return false;
     }
-    List<N> built = parse(text);
+    List<N> built = latex ? parseLatex(text) : parse(text);
     tidy(built, 0);
     List<N> merged = copyAll(region);
     tidy(merged, 0);
-    if (describe(merged).equals(describe(built)) || unbalanced(built, 0, text.indexOf('\u2524') >= 0)) {
+    if (describe(merged).equals(describe(built)) || !latex && unbalanced(built, 0, text.indexOf('\u2524') >= 0)) {
       tidy();
       return false;
     }

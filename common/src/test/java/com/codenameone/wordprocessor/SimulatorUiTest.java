@@ -516,4 +516,47 @@ public class SimulatorUiTest {
           assertNull(editor().equationEditing());
         });
   }
+
+  @Test
+  public void inlineEquationClickAndLatexInput() throws Exception {
+    edt(
+        () -> {
+          Method m = WordProcessor.class.getDeclaredMethod("equationRibbon");
+          m.setAccessible(true);
+          Container tab = (Container) m.invoke(app);
+          var session = session();
+          session.replaceDocument(Document.empty());
+          editor().commitText("x ");
+          new Commands().execute(session, "insert.equation", Json.object("text", "a/b", "display", false));
+          editor().commitText(" y");
+          editor().refresh();
+          int at = -1;
+          var para = (Paragraph) session.document().blocks.get(0);
+          for (int i = 0; i < para.text.length(); i++) if (Equation.inline(para.text.fieldAt(i))) at = i;
+          assertTrue(at > 0);
+          // The denominator's caret position, in the inline drawing's own coordinates.
+          var e0 = EquationEditing.inline(session, 0, at);
+          e0.editor.pos = new EquationEditor.Pos(new int[] {0, 1}, 1);
+          var d = Equation.inlineDrawing(para.text.fieldAt(at), TextStyle.DEFAULT);
+          float[] den = e0.caret(d, 20, 1, new PdfMetrics());
+          int[] pt = editor().inlineEquationPointForTest(0, at, den[0], den[1] + den[2] / 2);
+          assertNotNull(pt);
+          editor().clickForTest(pt[0], pt[1]);
+          var e = editor().equationEditing();
+          assertNotNull("a click on an inline equation enters it", e);
+          assertEquals(at, e.field);
+          assertArrayEquals(new int[] {0, 1}, e.editor.pos.path);
+          editor().endEquation(false);
+          // The Equation tab's LaTeX toggle: typed LaTeX builds up once its braces balance.
+          ((Button) named(tab, "LaTeX")).released();
+          assertTrue(session.mathLatex);
+          assertTrue(editor().editEquation() || editor().equationEditing() != null);
+          editor().equationEditing().editor.homeEnd(true);
+          editor().commitText("+\\frac{1}{2} ");
+          assertTrue(editor().equationEditing().stored().endsWith("1/2"));
+          editor().endEquation(false);
+          ((Button) named(tab, "Unicode")).released();
+          assertFalse(session.mathLatex);
+        });
+  }
 }

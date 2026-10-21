@@ -295,12 +295,13 @@ final class DrawingCommands implements Commands.Extension {
         });
 
     // ---------------------------------------------------------------- equations
-    c.edit("insert.equation", "text?:string,builtin?:string,display?:boolean",
+    c.edit("insert.equation", "text?:string,latex?:string,builtin?:string,display?:boolean",
         "Insert an equation in linear format (\\\\alpha, x^2, (a)/(b) ...) or a built-in one"
             + " (pythagoras, area, quadratic, binomial, expansion, euler, derivative, taylor, gaussian,"
             + " fourier, trig1, trig2, normal, bayes). On an empty line it is a display equation,"
             + " in text an inline one", (s, a) -> {
           String text = Commands.str(a, "text", "");
+          if (a.containsKey("latex")) text = Equation.linear(MathLatex.parse(Commands.str(a, "latex")));
           if (a.containsKey("builtin")) {
             text = Equation.builtIn(Commands.str(a, "builtin"));
             if (text == null) throw new IllegalArgumentException("Unknown built-in equation");
@@ -320,8 +321,16 @@ final class DrawingCommands implements Commands.Extension {
           return insert(s, d.with("display", String.valueOf(display)), width, height, "Equation");
         });
     c.edit("equation.inputFormat", "block?:integer,format:string",
-        "Show the equation in professional (built-up) or linear form",
-        (s, a) -> update(s, a, equation(s, a).with("format", oneOf(Commands.str(a, "format"), "professional", "linear"))));
+        "unicode|latex: how typed equations build up (the Equation tab's Unicode / LaTeX toggle, as"
+            + " Wordcraft's equation.inputFormat); professional|linear: show the equation built up or linear",
+        (s, a) -> {
+          String f = Commands.str(a, "format");
+          if ("unicode".equalsIgnoreCase(f) || "latex".equalsIgnoreCase(f)) {
+            s.mathLatex = "latex".equalsIgnoreCase(f);
+            return Json.object("format", s.mathLatex ? "latex" : "unicode");
+          }
+          return update(s, a, equation(s, a).with("format", oneOf(f, "professional", "linear")));
+        });
     c.edit("equation.convert", "block?:integer",
         "Toggle the equation between professional and linear form", (s, a) -> {
           Drawing d = equation(s, a);

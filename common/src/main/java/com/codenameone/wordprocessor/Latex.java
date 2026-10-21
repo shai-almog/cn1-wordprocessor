@@ -786,7 +786,8 @@ public final class Latex {
     void mathText(String body, boolean display) {
       // As in Wordcraft: $...$ and \(...\) become inline equations; $$...$$, \[...\] and the
       // equation environments become display (block) equations.
-      String linear = linear(body).trim();
+      // Wordcraft's LaTeX math parser (MathLatex) builds the structures; stored as linear text.
+      String linear = Equation.linear(MathLatex.parse(body)).trim();
       if (linear.isEmpty()) return;
       if (display && !sink.body) {
         // Table cells and notes hold paragraphs only: a centered paragraph with the equation.
@@ -1601,79 +1602,5 @@ public final class Latex {
 
   private static boolean letter(char c) {
     return c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c == '@';
-  }
-
-  /** TeX math source as readable linear text: symbols mapped, braces and spacing removed. */
-  static String linear(String tex) {
-    String[] map = {"alpha", "\u03b1", "beta", "\u03b2", "gamma", "\u03b3", "delta", "\u03b4", "epsilon",
-      "\u03b5", "varepsilon", "\u03b5", "zeta", "\u03b6", "eta", "\u03b7", "theta", "\u03b8", "iota", "\u03b9",
-      "kappa", "\u03ba", "lambda", "\u03bb", "mu", "\u03bc", "nu", "\u03bd", "xi", "\u03be", "pi", "\u03c0",
-      "rho", "\u03c1", "sigma", "\u03c3", "tau", "\u03c4", "phi", "\u03c6", "varphi", "\u03c6", "chi",
-      "\u03c7", "psi", "\u03c8", "omega", "\u03c9", "Gamma", "\u0393", "Delta", "\u0394", "Theta", "\u0398",
-      "Lambda", "\u039b", "Pi", "\u03a0", "Sigma", "\u03a3", "Phi", "\u03a6", "Psi", "\u03a8", "Omega",
-      "\u03a9", "cdot", "\u00b7", "times", "\u00d7", "div", "\u00f7", "pm", "\u00b1", "leq", "\u2264", "le",
-      "\u2264", "geq", "\u2265", "ge", "\u2265", "neq", "\u2260", "ne", "\u2260", "approx", "\u2248", "infty",
-      "\u221e", "sum", "\u2211", "prod", "\u220f", "int", "\u222b", "partial", "\u2202", "nabla", "\u2207",
-      "in", "\u2208", "rightarrow", "\u2192", "to", "\u2192", "leftarrow", "\u2190", "Rightarrow", "\u21d2",
-      "sqrt", "\u221a", "ldots", "\u2026", "cdots", "\u22ef", "forall", "\u2200", "exists", "\u2203",
-      "equiv", "\u2261", "sim", "\u223c", "propto", "\u221d", "circ", "\u2218", "subset", "\u2282", "cup",
-      "\u222a", "cap", "\u2229", "emptyset", "\u2205"};
-    var b = new StringBuilder();
-    int k = 0, len = tex.length();
-    while (k < len) {
-      char c = tex.charAt(k);
-      if (c == '\\') {
-        int a = ++k;
-        while (k < len && letter(tex.charAt(k))) k++;
-        if (k == a) {
-          if (k < len) {
-            char x = tex.charAt(k++);
-            if (x == '\\') b.append(' ');
-            else if ("{}$%&#_".indexOf(x) >= 0) b.append(x);
-            else b.append(' ');
-          }
-          continue;
-        }
-        String name = tex.substring(a, k);
-        if ("frac".equals(name) || "dfrac".equals(name) || "tfrac".equals(name)) {
-          int[] at = {k};
-          String num = Reader.group(tex, at, len), den = Reader.group(tex, at, len);
-          k = at[0];
-          b.append('(').append(linear(num)).append(")/(").append(linear(den)).append(')');
-          continue;
-        }
-        boolean found = false;
-        for (int m = 0; m < map.length; m += 2)
-          if (map[m].equals(name)) {
-            b.append(map[m + 1]);
-            found = true;
-            break;
-          }
-        if (!found && !("left".equals(name) || "right".equals(name) || "mathrm".equals(name)
-            || "mathbf".equals(name) || "mathit".equals(name) || "text".equals(name) || "label".equals(name)
-            || "nonumber".equals(name) || "quad".equals(name) || "qquad".equals(name)
-            || "displaystyle".equals(name) || "operatorname".equals(name) || "big".equals(name)
-            || "Big".equals(name) || "limits".equals(name)))
-          b.append(name);
-        if ("label".equals(name)) {
-          int[] at = {k};
-          Reader.group(tex, at, len);
-          k = at[0];
-        }
-        continue;
-      }
-      if (c == '{' || c == '}' || c == '&' || c == '$') {
-        k++;
-        continue;
-      }
-      if (c == '\n' || c == '\r' || c == '\t' || c == '~') c = ' ';
-      if (c == ' ' && (b.length() == 0 || b.charAt(b.length() - 1) == ' ')) {
-        k++;
-        continue;
-      }
-      if (c >= ' ') b.append(c);
-      k++;
-    }
-    return b.toString().trim();
   }
 }

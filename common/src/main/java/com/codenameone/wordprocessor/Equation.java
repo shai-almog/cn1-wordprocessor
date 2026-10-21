@@ -212,9 +212,9 @@ public final class Equation {
 
   // ============================================================================ linear format
 
-  private static final String FUNCS =
+  static final String FUNCS =
       " sin cos tan cot sec csc sinh cosh tanh csch sech coth arcsin arccos arctan log ln exp lim max min det gcd lg ";
-  private static final String NARY = "\u2211\u220f\u2210\u222b\u222c\u222d\u222e\u222f\u2230\u22c3\u22c2\u22c1\u22c0\u2a00\u2a01\u2a02\u2a04\u2a06";
+  static final String NARY = "\u2211\u220f\u2210\u222b\u222c\u222d\u222e\u222f\u2230\u22c3\u22c2\u22c1\u22c0\u2a00\u2a01\u2a02\u2a04\u2a06";
   private static final String[][] WORDS = {
     {"sum", "\u2211"}, {"prod", "\u220f"}, {"coprod", "\u2210"}, {"int", "\u222b"},
     {"iint", "\u222c"}, {"iiint", "\u222d"}, {"oint", "\u222e"}, {"bigcup", "\u22c3"},

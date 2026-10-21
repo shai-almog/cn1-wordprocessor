@@ -140,8 +140,8 @@ public class LatexTest {
     String all = plain(d);
     for (String expected : new String[] {
       "We study things.", "Introduction", "Quoted.", "x = {1, 2}", "A table", "[Picture: missing.png]",
-      "E = mc^2", "kept words end.", "Na\u00efve caf\u00e9 \u2014 done.", "the site", "a_b$",
-      "\u03b1 + x^2", "Second paragraph\nwith a break"
+      "E=mc^2", "kept words end.", "Na\u00efve caf\u00e9 \u2014 done.", "the site", "a_b$",
+      "\u03b1+x^2", "Second paragraph\nwith a break"
     }) assertTrue(expected + "\n---\n" + all, all.contains(expected));
     assertFalse(all.contains("comment"));
     assertFalse(all.contains("ignored"));

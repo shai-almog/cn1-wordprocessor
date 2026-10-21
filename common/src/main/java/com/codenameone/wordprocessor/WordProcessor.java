@@ -6729,11 +6729,33 @@ public class WordProcessor {
                   editor.requestFocus();
                 }),
                 button("Structure\u2026", this::equationStructureActions),
-                button("Done", () -> editor.endEquation(false)))),
+                button("Done", () -> editor.endEquation(false)),
+                OfficeTheme.row(mathInput("Unicode", "unicode"), mathInput("LaTeX", "latex")))),
         OfficeTheme.group("Structures", BoxLayout.encloseY(OfficeTheme.row(structures.subList(0, 6).toArray(new Component[0])),
             OfficeTheme.row(structures.subList(6, structures.size()).toArray(new Component[0])))),
         OfficeTheme.group("Symbols", BoxLayout.encloseY(OfficeTheme.row(symbols.subList(0, 4).toArray(new Component[0])),
             OfficeTheme.row(symbols.subList(4, symbols.size()).toArray(new Component[0])))));
+  }
+
+  private final java.util.List<Button> mathInputs = new ArrayList<>();
+
+  /**
+   * The Equation tab's Unicode / LaTeX input toggle (Wordcraft's equation.inputFormat): how
+   * typed equation text builds up, for the equation being edited and the ones after it.
+   */
+  private Button mathInput(String label, String format) {
+    if ("unicode".equals(format)) mathInputs.clear();
+    var b = button(label, () -> {
+      run("equation.inputFormat", Json.object("format", format));
+      boolean latex = "latex".equals(format);
+      var e = editor.equationEditing();
+      if (e != null) e.editor.latex = latex;
+      for (Button m : mathInputs) OfficeTheme.checked(m, "latex".equals(m.getClientProperty("mathInput")) == latex);
+    });
+    b.putClientProperty("mathInput", format);
+    mathInputs.add(b);
+    OfficeTheme.checked(b, "latex".equals(format) == (session != null && session.mathLatex));
+    return b;
   }
 
   /**

@@ -20,6 +20,7 @@ final class EquationEditing {
     this.block = block;
     this.field = field;
     editor = new EquationEditor(linear);
+    editor.latex = session.mathLatex;
     editor.homeEnd(true);
   }
 
@@ -52,6 +53,15 @@ final class EquationEditing {
       if (i == sel.block && b instanceof Paragraph para && para.text.length() > 0) break;
     }
     return null;
+  }
+
+  /** The inline equation field at offset {@code at} of paragraph {@code block}, or null. */
+  static EquationEditing inline(Session s, int block, int at) {
+    var blocks = s.document().blocks;
+    if (block < 0 || block >= blocks.size() || !(blocks.get(block) instanceof Paragraph para)) return null;
+    if (at < 0 || at >= para.text.length()) return null;
+    InlineField f = para.text.fieldAt(at);
+    return Equation.inline(f) ? new EquationEditing(s, block, at, Equation.inlineText(f)) : null;
   }
 
   private static EquationEditing display(Session s, int block) {

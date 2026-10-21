@@ -124,6 +124,49 @@ public final class EditorSurface extends Container
     return true;
   }
 
+  /**
+   * A click on an inline equation: in-place editing starts with the caret at the clicked slot,
+   * as a display equation does (Wordcraft's equation_hit for inline math). The drawing's origin
+   * is the span's left edge on the text baseline, as it is painted.
+   */
+  private boolean clickInlineEquation(LayoutEngine.Line line, int x, int y) {
+    if (readOnly() || !textLine(line)) return false;
+    float px = (x - viewportX() - pageX(line.page)) / scale() - line.x;
+    float py = (y - viewportY() + getScrollY() - pageY(line.page)) / scale() - line.y;
+    for (LayoutEngine.Span span : line.spans) {
+      if (!InlineField.OBJECT.equals(span.text) || !span.displayText.isEmpty()) continue;
+      if (px < span.x || px > span.x + span.width) continue;
+      var e = EquationEditing.inline(session, line.block, span.start);
+      if (e == null) continue;
+      float baseline = span.top + font(span.glyphStyle, zoom).getAscent() / scale();
+      var pic = Equation.placed(lineParagraph(line).text.fieldAt(span.start), span.glyphStyle, line.block, 0, 0, 0, span.width);
+      e.hit(pic.picture().drawing, pic.width(), pic.height(), fontMetrics, px - span.x, py - baseline);
+      equation = e;
+      repaint();
+      return true;
+    }
+    return false;
+  }
+
+  /** Test hook: a click at the screen point ({@code x}, {@code y}), through the editor's own caret placement. */
+  void clickForTest(int x, int y) {
+    placeCaret(x, y);
+  }
+
+  /** Test hook: the screen point of page-point offset ({@code dx}, {@code dy}) from the inline equation at {@code offset} of {@code block}. */
+  int[] inlineEquationPointForTest(int block, int offset, float dx, float dy) {
+    for (var page : layout().pages)
+      for (LayoutEngine.Line line : page.lines)
+      if (line.block == block && line.row < 0)
+        for (LayoutEngine.Span span : line.spans)
+          if (span.start == offset && InlineField.OBJECT.equals(span.text)) {
+            float baseline = span.top + font(span.glyphStyle, zoom).getAscent() / scale();
+            return new int[] {Math.round((line.x + span.x + dx) * scale() + viewportX() + pageX(line.page)),
+              Math.round((line.y + baseline + dy) * scale() + viewportY() - getScrollY() + pageY(line.page))};
+          }
+    return null;
+  }
+
   /** Test hook: a click at page-point ({@code px}, {@code py}) on the display equation in {@code block}. */
   boolean clickEquationForTest(int block, float px, float py) {
     for (var page : layout().pages)
@@ -2037,6 +2080,7 @@ public final class EditorSurface extends Container
     }
     if (line == null) return;
     stopInput();
+    if (line.row < 0 && clickInlineEquation(line, x, y)) return;
     if (line.row >= 0) session.enterCell(line.block, line.row, line.column);
     else session.leaveCell();
     int block = editingBlock(line), offset = offsetAt(line, x);
