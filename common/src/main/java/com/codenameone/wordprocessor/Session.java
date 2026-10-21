@@ -2549,7 +2549,7 @@ public final class Session {
    * body.
    */
   private void pictureStory(int block) {
-    if (inCell() && block >= 0 && block < document.blocks.size() && document.blocks.get(block) instanceof Picture)
+    if ((inCell() || noteStory() != null) && block >= 0 && block < document.blocks.size() && document.blocks.get(block) instanceof Picture)
       return;
     leaveCell();
   }

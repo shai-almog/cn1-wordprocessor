@@ -146,12 +146,14 @@ final class DrawingCommands implements Commands.Extension {
             if (into.length() > 0) into.append(i < fits || into.length() > 0 ? " " : "");
             into.append(lines.get(i));
           }
-          var keep = s.selection();
-          Sequence<Block> blocks = s.document().blocks;
-          blocks = blocks.set(from, source.drawing(d.with("text", first.toString()).with("linkNext", target.id())));
-          blocks = blocks.set(to, target.drawing(target.drawing.with("text", rest.toString())));
-          s.replaceDocument(s.document().blocks(blocks, s.document().nextId));
-          s.selectRange(keep.anchorBlock, keep.anchor, keep.block, keep.caret);
+          // Both boxes are in the story being edited: the body, or a table cell's blocks (as
+          // Wordcraft links boxes in any story), changed as one undo step.
+          var linked = source.drawing(d.with("text", first.toString()).with("linkNext", target.id()));
+          var continued = target.drawing(target.drawing.with("text", rest.toString()));
+          s.transact(x -> {
+            x.replacePicture(from, linked);
+            x.replacePicture(to, continued);
+          });
           return Json.object("moved", rest.length());
         });
 

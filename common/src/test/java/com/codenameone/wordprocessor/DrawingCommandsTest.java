@@ -71,6 +71,27 @@ public class DrawingCommandsTest {
   }
 
   @Test
+  public void textBoxesLinkInsideATableCell() {
+    var s = new Session(Document.empty());
+    s.insertTable(1, 1);
+    assertTrue(s.inCell());
+    int a = block(run(s, "insert.textBox", "text", "one two three four five six seven eight nine ten"));
+    run(s, "picture.size", "block", a, "width", 60, "height", 30);
+    int b = block(run(s, "insert.textBox", "text", ""));
+    assertTrue(s.inCell());
+    Map<?, ?> moved = (Map<?, ?>) run(s, "shape.link", "block", a, "target", b);
+    assertTrue(((Number) moved.get("moved")).intValue() > 0);
+    var cell = s.editingDocument();
+    var first = ((Picture) cell.blocks.get(a)).drawing;
+    var second = (Picture) cell.blocks.get(b);
+    assertEquals(second.id(), first.get("linkNext", ""));
+    assertFalse(second.drawing.get("text", "").isEmpty());
+    assertTrue(drawings(s.document()).isEmpty()); // both boxes stay in the cell
+    s.undo();
+    assertTrue(((Picture) s.editingDocument().blocks.get(b)).drawing.get("text", "").isEmpty());
+  }
+
+  @Test
   public void chartsSmartArtEquationsInkAndArrange() throws Exception {
     var s = new Session(Document.empty());
     int chart = block(run(s, "insert.chart", "type", "bar", "data", "x,Sales\nQ1,3\nQ2,5"));
