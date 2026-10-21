@@ -1807,9 +1807,11 @@ public final class LayoutEngine {
     var lines = laid.lines;
     float used = laid.height;
     Cut next = null;
-    if (from != null || flow) {
-      // A linked box shows the story from the cut line down, moved up to its top, and keeps
-      // what fits (at least one line) when the text continues in another box.
+    {
+      // As Wordcraft's fit_box: a box keeps the whole lines that fit its text area (at least
+      // the first), dropping a line that only partly fits and everything below it. A linked
+      // box shows the story from the cut line down, moved up to its top, and the next box of
+      // the chain continues at the first line it dropped.
       float top = 0;
       if (from != null) {
         top = Float.NaN;
@@ -1826,14 +1828,14 @@ public final class LayoutEngine {
       for (Line l : lines) {
         if (l.y < top - .5f) continue;
         float ly = l.y - top;
-        if (flow && !kept.isEmpty() && ly + l.height > limit) {
+        if (!kept.isEmpty() && ly + l.height > limit) {
           if (ly < cutY) {
             cutY = ly;
-            next = new Cut(l.paragraphId, l.start);
+            if (flow) next = new Cut(l.paragraphId, l.start);
           }
           continue;
         }
-        if (next != null && ly >= cutY) continue;
+        if (ly >= cutY) continue;
         kept.add(new Line(-1, -1, -1, l.paragraphId, l.page, l.x, ly, raw(l), l.marker));
         kept.get(kept.size() - 1).boxCell = l.boxCell;
         used = Math.max(used, ly + l.height);

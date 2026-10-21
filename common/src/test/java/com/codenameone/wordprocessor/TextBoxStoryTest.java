@@ -350,6 +350,25 @@ public class TextBoxStoryTest {
   }
 
   @Test
+  public void overflowingStoryIsCutAtALineAsWordcraftFitsABox() throws Exception {
+    var story = new Sequence<Block>();
+    for (int i = 0; i < 8; i++) story = story.append(new Paragraph("p" + (40 + i), RichText.of("Line " + i)));
+    for (String valign : new String[] {"top", "middle", "bottom"}) {
+      var box = Picture.drawing("i5", Drawing.of("textBox").with("valign", valign).story(story), 120, 50, "", "left");
+      var d = new Document(new Sequence<Block>().append(box).append(new Paragraph("p1", RichText.of("Body"))), PageSpec.A4, "T", 60);
+      var page = new LayoutEngine(new PdfMetrics()).layout(d, 0).pages.get(0);
+      LayoutEngine.PlacedPicture pic = null;
+      for (LayoutEngine.PlacedPicture p : page.pictures) if (p.picture().id().equals("i5")) pic = p;
+      var lines = page.textBoxLines("i5");
+      assertTrue(lines.size() >= 1 && lines.size() < 8);
+      // Whole lines only: every kept line ends inside the text area (inset 3.6pt top and bottom).
+      for (LayoutEngine.Line l : lines) assertTrue(valign, l.y + l.height <= pic.y() + 50 - 3.6f + .5f);
+      assertTrue(lines.get(0).y >= pic.y() + 3.6f - .5f);
+      assertEquals("p40", lines.get(0).paragraphId);
+    }
+  }
+
+  @Test
   public void linkedBoxesRoundTripAsWordLinksTheirTextBoxes() throws Exception {
     var story = new Sequence<Block>().append(new Paragraph("p40", RichText.of("Flows on")));
     var a = Picture.drawing("i5", Drawing.of("textBox").with("linkNext", "i6").story(story), 120, 60, "", "left");
