@@ -45,8 +45,15 @@ public final class Balloons {
     public final float x, y, width, size;
     public final boolean bold;
     public final int color;
+    /** The run's own formatting for comment text (Wordcraft lays out each comment's part); null otherwise. */
+    public final TextStyle style;
 
     Item(String text, float x, float y, float width, float size, boolean bold, int color) {
+      this(text, x, y, width, size, bold, color, null);
+    }
+
+    Item(String text, float x, float y, float width, float size, boolean bold, int color, TextStyle style) {
+      this.style = style;
       this.text = text;
       this.x = x;
       this.y = y;
@@ -110,6 +117,83 @@ public final class Balloons {
   }
 
   /**
+   * Lays out a comment's paragraphs in {@code width} from (x, y) with each run's own formatting,
+   * as Wordcraft lays out the comment's part in the card: words wrap greedily, each line as tall
+   * as its tallest run and aligned by its paragraph. Unformatted text takes the card's 9pt.
+   * Returns the y below the text.
+   */
+  static float rich(List<Item> items, List<Paragraph> paras, float x, float y, float width, TextStyle base, LayoutEngine.Metrics m) {
+    for (Paragraph p : paras) {
+      int n = p.text.length();
+      String text = p.text.toString();
+      var styles = new TextStyle[n];
+      var objects = new boolean[n];
+      p.text.fill(styles, objects);
+      var line = new ArrayList<Item>();
+      float lx = 0, lineH = m.height(base);
+      int i = 0;
+      while (i <= n) {
+        // The next word (with the spaces after it) as pieces of uniform style.
+        int end = i;
+        while (end < n && text.charAt(end) != ' ' && text.charAt(end) != '\n') end++;
+        while (end < n && text.charAt(end) == ' ') end++;
+        var word = new ArrayList<Item>();
+        float ww = 0;
+        for (int a = i; a < end; ) {
+          int b = a + 1;
+          while (b < end && styles[b].equals(styles[a])) b++;
+          var st = styleOf(styles[a], base);
+          String piece = objects[a] ? "" : text.substring(a, b);
+          float w = m.width(piece, st);
+          word.add(new Item(piece, ww, 0, w, sizeOf(st), st.bold, st.color == 0 ? 0x242424 : st.color, st));
+          ww += w;
+          a = b;
+        }
+        boolean breakAfter = end < n && text.charAt(end) == '\n';
+        if (!line.isEmpty() && lx + ww > width + .01f) {
+          y = flush(items, line, p, x, y, width, lx, lineH);
+          line.clear();
+          lx = 0;
+          lineH = m.height(base);
+        }
+        for (Item it : word) {
+          line.add(new Item(it.text, lx + it.x, 0, it.width, it.size, it.bold, it.color, it.style));
+          lineH = Math.max(lineH, m.height(it.style));
+        }
+        lx += ww;
+        if (breakAfter) {
+          y = flush(items, line, p, x, y, width, lx, lineH);
+          line.clear();
+          lx = 0;
+          lineH = m.height(base);
+          end++;
+        }
+        if (end >= n) break;
+        i = end;
+      }
+      y = flush(items, line, p, x, y, width, lx, lineH);
+    }
+    return y;
+  }
+
+  private static TextStyle styleOf(TextStyle s, TextStyle base) {
+    // A run without its own size takes the card's 9pt rather than the document default.
+    return s == null ? base : s.size == TextStyle.DEFAULT.size ? s.with("size", String.valueOf(SIZE)) : s;
+  }
+
+  private static float sizeOf(TextStyle s) {
+    return s.size;
+  }
+
+  private static float flush(List<Item> items, List<Item> line, Paragraph p, float x, float y, float width, float used, float h) {
+    String align = p.align;
+    float dx = "center".equals(align) ? (width - used) / 2 : "right".equals(align) ? width - used : 0;
+    for (Item it : line)
+      items.add(new Item(it.text, x + Math.max(0, dx) + it.x, y, it.width, it.size, it.bold, it.color, it.style));
+    return y + h;
+  }
+
+  /**
    * The balloons for the unresolved body comment threads of {@code d} laid out in {@code r},
    * per page. Card text is measured with {@code m}.
    */
@@ -144,7 +228,7 @@ public final class Balloons {
       int n = Math.min(c.replies.size(), MAX_REPLIES);
       for (int k = 0; k <= n; k++) {
         String author = k == 0 ? c.author : c.replies.get(k - 1).author;
-        String text = k == 0 ? c.text : c.replies.get(k - 1).text;
+        List<Paragraph> text = k == 0 ? c.paragraphs() : c.replies.get(k - 1).paragraphs();
         if (k > 0) {
           // A reply starts: a hairline between it and what it answers.
           y += 3;
@@ -153,10 +237,7 @@ public final class Balloons {
         }
         items.add(new Item(name(author), x, y, inner, SIZE, true, k == 0 ? color : authorColor(d, author)));
         y += m.height(head) + 2;
-        for (String line : wrap(text, inner, body, m)) {
-          items.add(new Item(line, x, y, inner, SIZE, false, 0x242424));
-          y += lh;
-        }
+        y = rich(items, text, x, y, inner, body, m);
       }
       pages.get((int) at[0]).add(new Card(c.id, (int) at[0], at[1], at[2], items, y + PAD, color));
     }

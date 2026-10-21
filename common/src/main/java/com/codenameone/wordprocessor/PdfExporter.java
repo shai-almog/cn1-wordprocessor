@@ -369,6 +369,9 @@ public final class PdfExporter {
         content.append("q ").append(n(s)).append(" 0 0 ").append(n(s)).append(" 0 ")
             .append(n(spec.height * (1 - s))).append(" cm\n");
       }
+      // Link rectangles follow the page into its scaled-down place, as Wordcraft's Fit::point.
+      final float fitK = balloons != null ? spec.width / (spec.width + Balloons.MARKUP_AREA) : 1,
+          fitDy = spec.height * (1 - fitK);
       int pageNumber = pageIndex;
       var furniture = Collections.newSetFromMap(new IdentityHashMap<LayoutEngine.Line, Boolean>());
       furniture.addAll(page.header);
@@ -410,9 +413,10 @@ public final class PdfExporter {
           if (link == null || link.isEmpty() || span.width <= 0) continue;
           var action = structure.action(link, layout, pageIds);
           if (action == null) continue;
-          objects.add(ascii("<< /Type /Annot /Subtype /Link /Rect [" + n(line.x + span.x) + ' '
-              + n(spec.height - line.y - line.height) + ' ' + n(line.x + span.x + span.width) + ' '
-              + n(spec.height - line.y) + "] /Border [0 0 0] " + action + " >>"));
+          objects.add(ascii("<< /Type /Annot /Subtype /Link /Rect [" + n(fitK * (line.x + span.x)) + ' '
+              + n(fitK * (spec.height - line.y - line.height) + fitDy) + ' '
+              + n(fitK * (line.x + span.x + span.width)) + ' '
+              + n(fitK * (spec.height - line.y) + fitDy) + "] /Border [0 0 0] " + action + " >>"));
           annotations.append(objects.size()).append(" 0 R ");
         }
         if (line.turn != 0) {
@@ -836,7 +840,7 @@ public final class PdfExporter {
             safe.append('?');
           }
         }
-        c.append("q ").append(color(it.color)).append(" rg BT /").append(it.bold ? "F1 " : "F0 ").append(n(it.size))
+        c.append("q ").append(color(it.color)).append(" rg BT /").append(it.bold ? (it.style != null && it.style.italic ? "F3 " : "F1 ") : it.style != null && it.style.italic ? "F2 " : "F0 ").append(n(it.size))
             .append(" Tf ").append(n(x)).append(' ').append(n(y - it.size)).append(" Td (")
             .append(literal(safe.toString())).append(") Tj ET Q\n");
       }

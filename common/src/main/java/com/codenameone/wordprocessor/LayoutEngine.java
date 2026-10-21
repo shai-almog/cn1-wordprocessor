@@ -781,8 +781,23 @@ public final class LayoutEngine {
     byContent = new HashMap<>();
   }
 
+  /**
+   * Tracked deletions take no room, as Wordcraft's deletions_in_balloons when the editor shows
+   * revisions in balloons (the "Deleted: ..." balloon stands at their place).
+   */
+  private boolean hideDeleted;
+
+  public void setHideDeleted(boolean value) {
+    if (value == hideDeleted) return;
+    hideDeleted = value;
+    metrics.clear();
+    cache = new HashMap<>();
+    byContent = new HashMap<>();
+  }
+
   private boolean hides(TextStyle s) {
-    return s.characters.hidden && !showHidden;
+    return s.characters.hidden && !showHidden
+        || hideDeleted && s.revision != null && !s.revision.inserted();
   }
 
   private int measured;
@@ -1536,6 +1551,7 @@ public final class LayoutEngine {
 
   private Result layoutOnce(Document doc, long revision) {
     CharacterMetrics.showHidden = showHidden;
+    CharacterMetrics.hideDeleted = hideDeleted;
     nextCache = new HashMap<>();
     nextByContent = new HashMap<>();
     measured = 0;

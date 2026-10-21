@@ -91,4 +91,65 @@ public class BalloonsTest {
     String plain = new String(PdfExporter.write(new Session(Document.empty()).document()), "ISO-8859-1");
     assertFalse(plain.contains(" 0 0 " + PdfExporter.n(s)));
   }
+
+  @Test
+  public void cardTextKeepsEachCommentsOwnFormatting() {
+    var d = commented();
+    var c = d.comments.get(0);
+    var rich = RichText.of("plain ", TextStyle.DEFAULT).concat(RichText.of("bold", TextStyle.DEFAULT.with("bold", "true").with("size", "14")));
+    d = d.comments(java.util.Collections.singletonList(c.body(java.util.Collections.singletonList(new Paragraph("cp", rich)))));
+    var r = new LayoutEngine(METRICS).layout(d, 0);
+    var card = Balloons.layout(d, r, METRICS).get(0).get(0);
+    Balloons.Item bold = null, plain = null;
+    for (Balloons.Item it : card.items) {
+      if ("bold".equals(it.text)) bold = it;
+      if ("plain ".equals(it.text)) plain = it;
+    }
+    assertNotNull(bold);
+    assertNotNull(plain);
+    assertTrue(bold.style.bold);
+    assertEquals(14, bold.size, .01f);
+    assertEquals(9, plain.size, .01f);
+    assertEquals(plain.y, bold.y, .01f);
+    assertTrue(bold.x > plain.x);
+  }
+
+  @Test
+  public void revisionsModeTakesDeletionsOutOfTheLayout() {
+    var s = new Session(Document.empty());
+    s.replace("keep gone stay");
+    s.trackChanges(true);
+    s.select(0, 5, 10);
+    s.deleteBackward();
+    var d = s.document();
+    var engine = new LayoutEngine(METRICS);
+    float inline = engine.layout(d, 0).pages.get(0).lines.get(0).width;
+    engine.setHideDeleted(true);
+    var r = engine.layout(d, 1);
+    float hidden = r.pages.get(0).lines.get(0).width;
+    assertEquals(inline - METRICS.width("gone ", TextStyle.DEFAULT), hidden, .5f);
+    boolean deleted = false;
+    for (Balloons.Card c : Balloons.layout(d, r, METRICS, "revisions").get(0))
+      for (Balloons.Item it : c.items) deleted |= it.text != null && it.text.startsWith("Deleted: gone");
+    assertTrue(deleted);
+  }
+
+  @Test
+  public void pdfLinkRectanglesScaleWithThePage() throws Exception {
+    var s = new Session(Document.empty());
+    s.replace("alpha beta");
+    s.select(0, 0, 5);
+    s.format("link", "https://example.com");
+    s.select(0, 6, 10);
+    s.addComment("Ada", "Note");
+    String pdf = new String(PdfExporter.write(s.document()), "ISO-8859-1");
+    float w = Document.empty().page.width, k = w / (w + 216f);
+    int at = pdf.indexOf("/Subtype /Link /Rect [");
+    assertTrue(at > 0);
+    String[] rect = pdf.substring(at + 22, pdf.indexOf(']', at)).trim().split(" ");
+    float x0 = Float.parseFloat(rect[0]), x1 = Float.parseFloat(rect[2]);
+    float left = Document.empty().page.left;
+    assertEquals(left * k, x0, 1f);
+    assertTrue(x1 < w * k);
+  }
 }

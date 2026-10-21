@@ -10,8 +10,20 @@ public final class CharacterMetrics {
    */
   static volatile boolean showHidden;
 
+  /**
+   * Whether tracked deletions take no room (Wordcraft's deletions_in_balloons: revisions shown in
+   * balloons take deleted text out of the layout). Set by the layout engine as showHidden.
+   */
+  static volatile boolean hideDeleted;
+
+  /** Whether text in {@code style} is left out of the layout: hidden, or a deletion in balloons. */
+  static boolean leftOut(TextStyle style) {
+    return style.characters.hidden && !showHidden
+        || hideDeleted && style.revision != null && !style.revision.inserted();
+  }
+
   public static float width(LayoutEngine.Metrics metrics, String text, TextStyle style) {
-    if (style.characters.hidden && !showHidden || text.isEmpty()) return 0;
+    if (leftOut(style) || text.isEmpty()) return 0;
     if (!style.characters.smallCaps && style.characters.spacing == 0)
       return metrics.width(style.displayText(text), style.renderedStyle())
           * style.characters.scale

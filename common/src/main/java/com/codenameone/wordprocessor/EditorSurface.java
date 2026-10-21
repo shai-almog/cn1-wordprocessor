@@ -363,7 +363,7 @@ public final class EditorSurface extends Container
             Math.round(line.height * scale));
       }
       for (LayoutEngine.Span span : line.spans) {
-        if (span.style.characters.hidden && !isShowHidden()) continue;
+        if (span.style.characters.hidden && !isShowHidden() || layoutDeleted && span.style.revision != null && !span.style.revision.inserted()) continue;
         var f = font(span.glyphStyle, zoom);
         g.setFont(f);
         int sx = lx + Math.round(span.x * scale), sy = ly + Math.round(span.top * scale);
@@ -1471,12 +1471,24 @@ public final class EditorSurface extends Container
     } else setZoom((getWidth() - 48) / (layout().maxWidth * pointsToPixels()));
   }
 
-  private boolean layoutHidden;
+  private boolean layoutHidden, layoutDeleted;
+
+  /**
+   * Wordcraft's revisions_in_balloons: with markup in balloons in "revisions" mode, tracked
+   * deletions leave the inline layout and a "Deleted: ..." balloon stands at their place.
+   */
+  boolean deletionsInBalloons() {
+    return !reflow && !draft && across <= 1 && "all".equals(markup) && "revisions".equals(Balloons.mode())
+        && AppOptions.flag("showComments");
+  }
 
   public LayoutEngine.Result layout() {
-    if (laidOut != session.document() || reflow && layoutViewport != getWidth() || layoutHidden != isShowHidden()) {
+    if (laidOut != session.document() || reflow && layoutViewport != getWidth() || layoutHidden != isShowHidden()
+        || layoutDeleted != deletionsInBalloons()) {
       layoutHidden = isShowHidden();
+      layoutDeleted = deletionsInBalloons();
       engine.setShowHidden(layoutHidden);
+      engine.setHideDeleted(layoutDeleted);
       layout =
           reflow
               ? engine.reflow(
@@ -1494,7 +1506,10 @@ public final class EditorSurface extends Container
   public LayoutEngine.Result printLayout() {
     Document printed = OfficeCommands.printable(session.document());
     // Print what Print Markup selects, never a display-only view (outline, Hide Ink, reflow).
-    if (!reflow && printed == session.document() && shown() == printed && !isShowHidden()) return layout();
+    if (!reflow && printed == session.document() && shown() == printed && !isShowHidden() && !deletionsInBalloons())
+      return layout();
+    // Paper prints revisions inline (Wordcraft's PDF lays deletions out unless markup is off).
+    engine.setHideDeleted(false);
     // Hidden text takes no room on paper; the screen layout is redone with it shown.
     engine.setShowHidden(false);
     laidOut = null;
@@ -1503,8 +1518,9 @@ public final class EditorSurface extends Container
 
   /** Paginate generated reference content with the same fonts as this editor. */
   public LayoutEngine.Result printLayout(Document document) {
-    if (isShowHidden()) {
+    if (isShowHidden() || deletionsInBalloons()) {
       engine.setShowHidden(false);
+      engine.setHideDeleted(false);
       laidOut = null;
     }
     return engine.layout(document, session.revision());
@@ -1624,11 +1640,16 @@ public final class EditorSurface extends Container
           g.drawLine(ix, iy, ix + Math.round(it.width * scale), iy);
           continue;
         }
-        var style = TextStyle.DEFAULT.with("size", String.valueOf(it.size));
-        if (it.bold) style = style.with("bold", "true");
+        var style = it.style != null ? it.style : TextStyle.DEFAULT.with("size", String.valueOf(it.size));
+        if (it.bold && it.style == null) style = style.with("bold", "true");
         g.setFont(font(style, zoom));
-        g.setColor(it.bold ? it.color : ink(it.color));
+        g.setColor(it.bold && it.style == null ? it.color : ink(it.color));
         g.drawString(it.text, ix, iy);
+        if (it.style != null && (it.style.underline || it.style.strike)) {
+          int fh = font(style, zoom).getHeight();
+          int ly = iy + (it.style.underline ? fh - 2 : fh / 2);
+          g.drawLine(ix, ly, ix + Math.round(it.width * scale), ly);
+        }
       }
     }
   }
