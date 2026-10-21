@@ -2412,6 +2412,47 @@ public final class LayoutEngine {
      * offsets or alignments, taking no room in the flow; the text after it wraps around it.
      */
     void floatingTable(Table t, int index, String[] f) {
+      // Wordcraft place_floating_table: the table is never split; one that does not fit below
+      // the text before it moves to the next page with its anchor (once, not from a page top).
+      measuring = true;
+      try {
+        mergedTable(t, index);
+      } finally {
+        measuring = false;
+      }
+      float tableHeight = measured;
+      for (int attempt = 0; ; attempt++) {
+        float[] r = floatingTableRect(t, f, tableHeight);
+        boolean moves;
+        if ("text".equals(f[1])) moves = r[1] + tableHeight > spec.height - spec.bottom + .01f;
+        else {
+          boolean covers = r[1] < y - .01f && r[1] + tableHeight > spec.top + .01f
+              && r[0] < spec.left + spec.contentWidth() && r[0] + r[2] > spec.left;
+          moves = covers && y + tableHeight > spec.height - spec.bottom + .01f;
+        }
+        if (attempt == 0 && moves && y > spec.top + .01f) {
+          newPage();
+          continue;
+        }
+        placeFloatingTable(t, index, f, r[0], r[1], r[2]);
+        return;
+      }
+    }
+
+    /** Set while {@link #mergedTable} only measures a table's height into {@link #measured}. */
+    boolean measuring;
+
+    float measured;
+
+    /** Wrap areas {page, x0, y0, x1, y1} of the floating tables placed so far. */
+    final List<float[]> floatTables = new ArrayList<>();
+
+    /**
+     * Where floating table {@code t} goes: {x, top, width}, moved below the floating tables in its
+     * way unless it may overlap them (w:tblOverlap, Wordcraft clear_of_float_tables); one placed
+     * by an offset in the margin or column keeps its distance from the text's left edge.
+     */
+    float[] floatingTableRect(Table t, String[] f, float h) {
       float total = 0;
       for (float width : tableWidths(t, spec.contentWidth())) total += width;
       PageSpec m = body == null ? spec : body;
@@ -2430,6 +2471,24 @@ public final class LayoutEngine {
       float x = FloatPosition.alignIn(hs, he, TableFormat.floatNumber(f[2]), total, f[4], odd);
       float top = ve == 0 && !f[5].isEmpty() ? vs : FloatPosition.alignIn(vs, ve, TableFormat.floatNumber(f[3]), 0, f[5], odd);
       if (ve == 0 && f[5].isEmpty()) top = y + TableFormat.floatNumber(f[3]);
+      float dl = TableFormat.floatNumber(f[6]), dt = TableFormat.floatNumber(f[7]),
+          dr = TableFormat.floatNumber(f[8]), db = TableFormat.floatNumber(f[9]);
+      boolean keepsTextDistance = f[4].isEmpty() && TableFormat.floatNumber(f[2]) >= 0 && !"page".equals(f[0]);
+      if (!"never".equals(f[10]))
+        return new float[] {x, top, total};
+      for (int guard = 0; guard < 64; guard++) {
+        float below = Float.NaN;
+        for (float[] o : floatTables)
+          if (o[0] == pages.size() && o[1] < x + total + dr && o[3] > x - dl && o[2] < top + h + db && o[4] > top - dt)
+            below = Float.isNaN(below) ? o[4] : Math.max(below, o[4]);
+        if (Float.isNaN(below)) break;
+        top = below + dt;
+        if (keepsTextDistance) x = Math.max(x, hs + dl);
+      }
+      return new float[] {x, top, total};
+    }
+
+    void placeFloatingTable(Table t, int index, String[] f, float x, float top, float total) {
       float before = y;
       int page = pages.size();
       y = Math.max(0, top);
@@ -2445,15 +2504,17 @@ public final class LayoutEngine {
       float dl = TableFormat.floatNumber(f[6]), dt = TableFormat.floatNumber(f[7]),
           dr = TableFormat.floatNumber(f[8]), db = TableFormat.floatNumber(f[9]);
       excl.add(new Excl(pages.size(), x - dl, Math.max(0, top) - dt, total + dl + dr, height + dt + db, 0, false, null));
+      floatTables.add(new float[] {pages.size(), x - dl, Math.max(0, top) - dt, x + total + dr, Math.max(0, top) + height + db});
     }
 
     void table(Table t, int index) {
-      clearWrap();
       String[] floating = t.format.floating();
       if (floating != null) {
+        // Placed from where the next paragraph starts, not below other floats (Wordcraft).
         floatingTable(t, index, floating);
         return;
       }
+      clearWrap();
       // As Wordcraft's below(): a table in the text flow starts below the floats in its way.
       for (boolean moved = true; moved; ) {
         moved = false;
@@ -2838,6 +2899,10 @@ public final class LayoutEngine {
             }
         }
       for (int i = 0; i < heights.length; i++) tops[i + 1] = tops[i] + heights[i];
+      if (measuring) {
+        measured = tops[t.rows()];
+        return;
+      }
       // Turned lines run the cell's whole height: laid out again when the row grew (Wordcraft).
       for (int k = 0; k < cells.size(); k++) {
         var cell = cells.get(k);

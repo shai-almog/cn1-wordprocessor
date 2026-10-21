@@ -376,13 +376,14 @@ public final class TableFormat {
    * The floating placement (w:tblpPr, Wordcraft TableFloat) from the "float" option, null for a
    * table in the text flow: horizontal anchor (column, margin, page), vertical anchor (text,
    * margin, page), x and y offsets in points, horizontal and vertical alignment ("" uses the
-   * offset), then distances from text left, top, right and bottom.
+   * offset), then distances from text left, top, right and bottom, and "never" when it may not overlap
+   * other floating tables (w:tblOverlap).
    */
   public String[] floating() {
     String v = prop("float", "");
     if (v.isEmpty()) return null;
     String[] p = TextUtil.split(v, ',');
-    String[] out = {"column", "text", "0", "0", "", "", "0", "0", "0", "0"};
+    String[] out = {"column", "text", "0", "0", "", "", "0", "0", "0", "0", ""};
     for (int i = 0; i < Math.min(p.length, out.length); i++) out[i] = p[i];
     return out;
   }

@@ -188,6 +188,7 @@ final class TableFormats {
     if (!f[5].isEmpty()) b.append(" w:tblpYSpec=\"").append(Xml.attribute(f[5])).append('"');
     else b.append(" w:tblpY=\"").append(Math.round(TableFormat.floatNumber(f[3]) * 20)).append('"');
     b.append("/>");
+    if ("never".equals(f[10])) b.append("<w:tblOverlap w:val=\"never\"/>");
   }
 
   static void alternativeXml(StringBuilder b, TableFormat format) {
@@ -373,7 +374,10 @@ final class TableFormats {
       base = readCell(props, base, "tblBorders", "tblCellMar", warnings);
       Element bidi = Xml.child(props, "bidiVisual"), look = Xml.child(props, "tblLook");
       Element named = Xml.child(props, "tblStyle"), pos = Xml.child(props, "tblpPr");
-      if (pos != null) f = f.withProp("float", readFloat(pos));
+      if (pos != null) {
+        Element overlap = Xml.child(props, "tblOverlap");
+        f = f.withProp("float", readFloat(pos) + (overlap != null && "never".equals(Xml.attr(overlap, "val", "")) ? ",never" : ""));
+      }
       if (named != null && !Xml.attr(named, "val", "").isEmpty()) f = f.withProp("style", Xml.attr(named, "val", ""));
       if (bidi != null && !"0".equals(Xml.attr(bidi, "val", "1")) && !"false".equals(Xml.attr(bidi, "val", "1")))
         f = f.withProp("rtl", "true");
