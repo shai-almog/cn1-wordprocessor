@@ -20,7 +20,6 @@ Native XML and DOCX keep the properties, named-style and direct values, and trac
 
 ## Limitations
 
-- No separate Show Hidden Text preview mode.
+- No separate Show Hidden Text preview mode: hidden text shows only with formatting marks (Wordcraft also has a hidden-text display preference, `prefs.marks.hidden` in crates/engine/src/session.rs).
 - Effects are not WordArt: no customizable blur/lighting, no OpenType typography features, and complex-script shaping is incomplete.
-- Character borders/enclosures and phonetic guides are not implemented.
 - HTML, Markdown, RTF and AsciiDoc imports do not round-trip these properties reliably.

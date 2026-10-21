@@ -22,7 +22,7 @@ Native storage and DOCX keep formula instructions/results and the materialized t
 
 ## Limitations
 
-- Not supported: nested functions, arithmetic expressions, bookmarks, IF, `\#` number-format switches, per-cell language properties, comma-decimal locales.
+- Not supported: nested functions, arithmetic expressions, bookmarks, IF and `\#` number-format switches (as in Wordcraft, whose `table.formula` in crates/engine/src/cmd/table.rs takes only SUM/AVERAGE/COUNT/MAX/MIN/PRODUCT over a direction); per-cell language properties and comma-decimal locales (Wordcraft formats the result in the cell's language).
 - Empty MIN/MAX return 0; rounding at exact ties and very large-number formatting may differ from Word.
 - No named table styles, style gallery editing, conditional-style inheritance after structural edits or theme-aware recoloring.
 - Nested quick tables are rejected. Text replacement is tracked by Track Changes but the inserted table structure is not (tracked structural edits are a broader gap).

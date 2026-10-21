@@ -17,6 +17,6 @@ Insert Table splits at the caret or replaces the selected text (including select
 ## Limitations
 
 - Per-cell preferred widths and conditional styles are not represented, so imported content-driven tables may autofit differently than in Word.
-- Not implemented: table direction, rotated cell text, asymmetric borders/margins, floating tables, nested tables, full complex-script shaping.
+- Not implemented: rotated cell text, asymmetric borders/margins, floating tables, full complex-script shaping.
 - Text replacement is tracked by Track Changes; the table structure itself is not.
 - Row heights and break controls: see [TABLE-ROWS.md](TABLE-ROWS.md).

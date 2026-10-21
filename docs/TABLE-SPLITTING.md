@@ -14,8 +14,8 @@ Table Properties edits a table title and description, independently or cleared. 
 
 ## Limitations
 
-- Splits are horizontal on the focused cell only: no arbitrary row subdivision or splitting every cell of a selection.
+- Splits are horizontal on the focused cell only: no arbitrary row subdivision or splitting every cell of a selection (as in Wordcraft, whose `Table::split_cell` in crates/doc/src/table.rs splits one cell into columns).
 - A single-column split does not unmerge; use the legacy unmerge in Rows and Columns.
 - Splitting a multi-column span honors equal physical widths, which can differ from Word's old grid lines.
 - Accessibility semantics are exposed but full screen-reader navigation is not verified; some emoji lack glyphs (font fallback is incomplete).
-- Nested tables, text rotation, asymmetric borders, RTL visual table order and advanced table styles are not implemented.
+- Text rotation, asymmetric borders and advanced table styles are not implemented.

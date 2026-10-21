@@ -7,4 +7,4 @@ Inserted rows inherit the focused row's cell appearance and minimum height; a se
 ## Limitations
 
 - Auto-fit modes and sizing are in [TABLE-SIZING.md](TABLE-SIZING.md); row heights in [TABLE-ROWS.md](TABLE-ROWS.md).
-- Arbitrary cell/table splitting, nested tables and advanced border/merge workflows are not implemented.
+- Arbitrary cell/table splitting and advanced border/merge workflows are not implemented.

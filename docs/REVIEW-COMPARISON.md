@@ -18,4 +18,4 @@ Limits: two million characters and 200,000 tokens per story. UTF-16 surrogate pa
 - Headers/footers, page geometry and style definitions stay from the original and are reported as not compared.
 - Formatting inside changed paragraphs is not fully compared.
 - Character level is not grapheme- or language-aware.
-- Combine, moves, structural revisions and full document comparison are not implemented.
+- Moves are not detected (as in Wordcraft, whose compare accepts but does not honour `moves`, crates/engine/src/cmd/tools.rs COMPARE_PARAMS). Combine (Wordcraft's `review.combine`), structural revisions and full document comparison are not implemented.

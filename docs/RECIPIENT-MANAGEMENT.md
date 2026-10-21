@@ -12,6 +12,6 @@ Preview, previous/next, Find Recipient, label recipients, NEXT/NEXTIF and Finish
 
 ## Limitations
 
-- One filter and one sort field only; no compound AND/OR.
+- One filter and one sort field only; no compound AND/OR (Wordcraft has no recipient filtering or sorting at all, crates/engine/src/cmd/mailings.rs).
 - Sorting is text order, not numeric or locale-aware.
 - No persistent recipient links or saved recipient state.
