@@ -69,6 +69,69 @@ public final class ZoteroBridge implements Zotero.Handler {
     }
   }
 
+  /**
+   * Repairs unbalanced range-field marks so every start has its end, as Wordcraft keeps
+   * FieldStart/FieldEnd paired: an end mark with no open start (its start was deleted) is removed,
+   * leaving the citation's text as plain text, and a start whose end was deleted gets an end mark
+   * at the end of its paragraph (or just before the next start in it). {@code caret}, if not null,
+   * is a {block, offset} pair moved with the edits. Returns {@code d} when nothing is unbalanced.
+   */
+  static Document balance(Document d, int[] caret) {
+    // Each fix: {block, offset, 0 = remove the mark there | 1 = insert an end mark there}.
+    final var fixes = new ArrayList<int[]>();
+    final var styles = new ArrayList<TextStyle>();
+    final Object[] open = {null, null, null}; // block, offset, style of the open start
+    for (int i = 0; i < d.blocks.size(); i++) {
+      if (!(d.blocks.get(i) instanceof Paragraph p) || !p.text.hasFields()) continue;
+      final int block = i;
+      p.text.visit(
+          new RichText.Visitor() {
+            public void run(int offset, String text, TextStyle style) {}
+
+            public void field(int offset, InlineField f, TextStyle style) {
+              if (f.rangeEnd()) {
+                if (open[0] == null) {
+                  fixes.add(new int[] {block, offset, 0});
+                  styles.add(null);
+                }
+                open[0] = null;
+              } else if (f.rangeStart()) {
+                if (open[0] != null) {
+                  int b = (Integer) open[0];
+                  int at = b == block ? offset : ((Paragraph) d.blocks.get(b)).text.length();
+                  fixes.add(new int[] {b, at, 1});
+                  styles.add((TextStyle) open[2]);
+                }
+                open[0] = block;
+                open[1] = offset;
+                open[2] = style;
+              }
+            }
+          });
+    }
+    if (open[0] != null) {
+      int b = (Integer) open[0];
+      fixes.add(new int[] {b, ((Paragraph) d.blocks.get(b)).text.length(), 1});
+      styles.add((TextStyle) open[2]);
+    }
+    if (fixes.isEmpty()) return d;
+    Sequence<Block> blocks = d.blocks;
+    for (int k = fixes.size() - 1; k >= 0; k--) {
+      int[] x = fixes.get(k);
+      var p = (Paragraph) blocks.get(x[0]);
+      RichText t =
+          x[2] == 0
+              ? p.text.slice(0, x[1]).concat(p.text.slice(x[1] + 1, p.text.length()))
+              : p.text.replace(x[1], x[1], RichText.field(InlineField.end(), styles.get(k)));
+      blocks = blocks.set(x[0], p.text(t));
+      if (caret != null && caret[0] == x[0]) {
+        if (x[2] == 0 && x[1] < caret[1]) caret[1]--;
+        else if (x[2] == 1 && x[1] <= caret[1]) caret[1]++;
+      }
+    }
+    return d.blocks(blocks, d.nextId);
+  }
+
   static int compare(int b1, int o1, int b2, int o2) {
     return b1 != b2 ? Integer.compare(b1, b2) : Integer.compare(o1, o2);
   }

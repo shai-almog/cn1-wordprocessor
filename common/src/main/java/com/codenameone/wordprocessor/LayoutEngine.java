@@ -980,10 +980,17 @@ public final class LayoutEngine {
 
   private void justify(RawLine line, float available, boolean distributed, RichText source) {
     for (Span span : line.spans)
-      if ("\t".equals(span.text) || InlineField.OBJECT.equals(span.text)) return;
+      if ("\t".equals(span.text)
+          || InlineField.OBJECT.equals(span.text) && !TextNavigation.isMark(source, span.start))
+        return;
     var units = new ArrayList<Span>();
     int lastContent = line.start;
-    for (Span span : line.spans)
+    for (Span span : line.spans) {
+      if (InlineField.OBJECT.equals(span.text)) {
+        // A zero-width range-field mark (citation start/end) stays in place and takes no gap.
+        units.add(new Span(span.text, span.style, span.start, 0, span.width, span.top, span.rawDisplay));
+        continue;
+      }
       for (int i = 0; i < span.text.length(); ) {
         int count =
             Math.min(
@@ -1003,6 +1010,7 @@ public final class LayoutEngine {
         if (!Character.isWhitespace(text.charAt(0))) lastContent = span.start + i + count;
         i += count;
       }
+    }
     int gaps = 0;
     float natural = 0;
     for (Span unit : units) {
@@ -1019,7 +1027,10 @@ public final class LayoutEngine {
       if (unit.end < lastContent
           && Graphemes.isBoundary(source, unit.end)
           && (distributed || " ".equals(unit.text))) w += extra;
-      line.spans.add(new Span(unit.text, unit.style, unit.start, x, w));
+      line.spans.add(
+          InlineField.OBJECT.equals(unit.text)
+              ? new Span(unit.text, unit.style, unit.start, x, w, unit.top, unit.rawDisplay)
+              : new Span(unit.text, unit.style, unit.start, x, w));
       x += w;
     }
     line.width = x;

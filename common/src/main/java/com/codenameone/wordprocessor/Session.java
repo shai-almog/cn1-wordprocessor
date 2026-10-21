@@ -1198,6 +1198,23 @@ public final class Session {
             document = document.comments(ReviewComment.reanchor(before, document, x, selection));
           if (!before.bookmarks.isEmpty())
             document = document.bookmarks(Bookmark.reanchor(before, document, x, selection));
+          boolean marks = false;
+          for (int i = first; !x.collapsed() && !marks && i <= x.endBlock(); i++) {
+            var t = before.paragraph(i).text;
+            if (!t.hasFields()) continue;
+            int from = i == first ? x.start() : 0, to = i == x.endBlock() ? x.end() : t.length();
+            for (int k = from; !marks && k < to; k++) marks = TextNavigation.isMark(t, k);
+          }
+          if (marks) {
+            // Deleting one of a citation's marks repairs the pair rather than leaving it
+            // unbalanced (Wordcraft keeps FieldStart/FieldEnd paired).
+            int[] caret = {selection.block, selection.caret};
+            var balanced = ZoteroBridge.balance(document, caret);
+            if (balanced != document) {
+              document = balanced;
+              selection = new Selection(caret[0], caret[1], caret[1]);
+            }
+          }
         });
   }
 
@@ -1569,6 +1586,8 @@ public final class Session {
     int block = selection.block, at = selection.caret;
     while (true) {
       var p = document.paragraph(block);
+      // Delete takes the character beyond any zero-width field marks, never a mark by itself.
+      at = TextNavigation.skipMarks(p.text, at, true);
       while (at < p.text.length()) {
         var revision = p.text.styleAt(at).revision;
         if (!document.trackChanges || revision == null || revision.inserted()) break;
@@ -1608,6 +1627,7 @@ public final class Session {
       int block = x.block, at = x.caret;
       while (true) {
         var p = document.paragraph(block);
+        at = TextNavigation.skipMarks(p.text, at, false);
         while (at > 0) {
           var revision = p.text.styleAt(at - 1).revision;
           if (revision == null || revision.inserted()) break;
@@ -1632,10 +1652,12 @@ public final class Session {
         return;
       }
     }
-    if (x.caret > 0) {
+    int caret = x.caret > 0 ? TextNavigation.skipMarks(document.paragraph(x.block).text, x.caret, false) : 0;
+    if (caret > 0) {
+      // Backspace takes the character before any zero-width field marks, never a mark by itself.
       var p = document.paragraph(x.block);
-      int start = Graphemes.previous(p.text, x.caret);
-      int end = Graphemes.isBoundary(p.text, x.caret) ? x.caret : Graphemes.next(p.text, x.caret);
+      int start = Graphemes.previous(p.text, caret);
+      int end = Graphemes.isBoundary(p.text, caret) ? caret : Graphemes.next(p.text, caret);
       select(x.block, start, end);
       replace("");
     } else if (x.block > 0 && document.blocks.get(x.block - 1) instanceof Paragraph) {

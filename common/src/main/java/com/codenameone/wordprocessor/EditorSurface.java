@@ -2846,8 +2846,9 @@ public final class EditorSurface extends Container
           int[] target = TextNavigation.word(session.editingDocument(), block, caret, false);
           block = target[0];
           caret = target[1];
-        } else if (caret > 0) {
-          caret = Graphemes.previous(p.text, caret);
+        } else if (TextNavigation.step(p.text, caret, false) != caret) {
+          // Zero-width field marks are crossed with the character beyond them.
+          caret = TextNavigation.step(p.text, caret, false);
         } else if (block > 0
             && session.editingDocument().blocks.get(block - 1) instanceof Paragraph) {
           block--;
@@ -2862,7 +2863,8 @@ public final class EditorSurface extends Container
           int[] target = TextNavigation.word(session.editingDocument(), block, caret, true);
           block = target[0];
           caret = target[1];
-        } else if (caret < p.text.length()) caret = Graphemes.next(p.text, caret);
+        } else if (TextNavigation.step(p.text, caret, true) != caret)
+          caret = TextNavigation.step(p.text, caret, true);
         else if (block + 1 < session.editingDocument().blocks.size()
             && session.editingDocument().blocks.get(block + 1) instanceof Paragraph) {
           block++;

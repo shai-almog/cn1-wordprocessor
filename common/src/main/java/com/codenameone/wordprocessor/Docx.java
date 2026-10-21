@@ -636,6 +636,9 @@ static final char COLUMN_BREAK = '\u000B';
 
   public static void write(Document d, Opened source, OutputStream out, boolean allowLoss)
       throws IOException {
+    // Output always has balanced begin/separate/end: orphan range-field marks are repaired.
+    var balanced = ZoteroBridge.balance(d, null);
+    d = balanced;
     boolean original = source != null && source.document == d;
     var tabs = original ? null : new DocxTabs(d);
     var losses = conversionWarnings(d, source, tabs);

@@ -14,17 +14,26 @@ public final class TextNavigation {
       if (block > 0 && document.blocks.get(block - 1) instanceof Paragraph)
         return new int[] {block - 1, document.paragraph(block - 1).text.length()};
     } else if (forward) {
-      int kind = kind(codePoint(text, offset));
-      while (offset < text.length() && kind(codePoint(text, offset)) == kind)
-        offset += Character.charCount(codePoint(text, offset));
-      while (offset < text.length() && kind(codePoint(text, offset)) == 0)
-        offset += Character.charCount(codePoint(text, offset));
+      // Range-field marks are transparent: a word runs through a citation's start or end mark,
+      // and the caret stops after the spaces, before any mark that follows them.
+      offset = skipMarks(text, offset, true);
+      if (offset < text.length()) {
+        int kind = kind(codePoint(text, offset));
+        while (offset < text.length()
+            && (isMark(text, offset) || kind(codePoint(text, offset)) == kind))
+          offset += Character.charCount(codePoint(text, offset));
+        while (offset < text.length() && !isMark(text, offset)
+            && kind(codePoint(text, offset)) == 0)
+          offset += Character.charCount(codePoint(text, offset));
+      }
     } else {
-      while (offset > 0 && kind(codePoint(text, previous(text, offset))) == 0)
+      while (offset > 0 && (isMark(text, offset - 1)
+          || kind(codePoint(text, previous(text, offset))) == 0))
         offset = previous(text, offset);
       if (offset > 0) {
         int kind = kind(codePoint(text, previous(text, offset)));
-        while (offset > 0 && kind(codePoint(text, previous(text, offset))) == kind)
+        while (offset > 0 && (isMark(text, offset - 1)
+            || kind(codePoint(text, previous(text, offset))) == kind))
           offset = previous(text, offset);
       }
     }
@@ -107,6 +116,35 @@ public final class TextNavigation {
     } while (true);
     session.selectRange(selection.block, selection.caret, target[0], target[1]);
     session.replace("");
+  }
+
+  /**
+   * True if the character at {@code at} is a zero-width range-field mark (a Zotero citation's
+   * start or end), which, as Wordcraft's FieldStart/FieldEnd markers, takes no caret stop.
+   */
+  public static boolean isMark(RichText text, int at) {
+    if (at < 0 || at >= text.length() || text.charAt(at) != '\ufffc' || !text.hasFields())
+      return false;
+    InlineField f = text.fieldAt(at);
+    return f != null && (f.rangeEnd() || f.rangeStart() && !f.showCode);
+  }
+
+  /** {@code offset} moved forward (or back) past any adjacent zero-width marks. */
+  public static int skipMarks(RichText text, int offset, boolean forward) {
+    if (forward) while (offset < text.length() && isMark(text, offset)) offset++;
+    else while (offset > 0 && isMark(text, offset - 1)) offset--;
+    return offset;
+  }
+
+  /**
+   * The caret stop one character after (or before) {@code offset}: marks next to the caret are
+   * crossed together with the character beyond them, so each arrow press moves over one visible
+   * character. Returns {@code offset} unchanged when only marks lie between it and the end.
+   */
+  public static int step(RichText text, int offset, boolean forward) {
+    int at = skipMarks(text, offset, forward);
+    if (forward) return at == text.length() ? offset : Graphemes.next(text, at);
+    return at == 0 ? offset : Graphemes.previous(text, at);
   }
 
   private static int previous(RichText text, int offset) {

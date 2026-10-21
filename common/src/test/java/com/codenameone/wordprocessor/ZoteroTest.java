@@ -377,6 +377,99 @@ public class ZoteroTest {
     assertEquals(null, b.handle("Document_cursorInField", Arrays.<Object>asList(1L)));
   }
 
+  private static Session citation() {
+    var s = new Session(Document.empty());
+    s.replace("See ");
+    s.select(0, 4, 4);
+    s.insertField(new InlineField(Zotero.PREFIX + CODE, "(Doe)", false, false));
+    s.loadDocument(s.document());
+    return s; // "See [start](Doe)[end]": marks at 4 and 10
+  }
+
+  @Test
+  public void caretAndDeletionCrossMarksInOneStep() {
+    var s = citation();
+    var t = s.document().paragraph(0).text;
+    assertTrue(TextNavigation.isMark(t, 4) && TextNavigation.isMark(t, 10));
+    assertEquals(6, TextNavigation.step(t, 4, true));
+    assertEquals(3, TextNavigation.step(t, 5, false));
+    assertEquals(9, TextNavigation.step(t, 11, false));
+    assertEquals(10, TextNavigation.step(t, 10, true)); // only a mark is left
+    assertEquals(9, TextNavigation.word(s.document(), 0, 11, false)[1]); // ")" past the end mark
+    s.select(0, 5, 5);
+    s.deleteBackward(); // the space before the start mark, not the mark
+    t = s.document().paragraph(0).text;
+    assertEquals("See(Doe)", t.plainText().replace(InlineField.OBJECT, ""));
+    assertTrue(t.fieldAt(3).rangeStart());
+    s.select(0, 3, 3);
+    s.deleteForward(); // the "(" after the start mark
+    t = s.document().paragraph(0).text;
+    assertTrue(t.fieldAt(3).rangeStart() && t.fieldAt(8).rangeEnd());
+    assertEquals(9, t.length());
+  }
+
+  @Test
+  public void deletingOneMarkKeepsFieldsBalanced() throws Exception {
+    var s = citation();
+    s.select(0, 10, 11);
+    s.replace(""); // the end mark alone: the citation gets an end at its paragraph's end
+    var t = s.document().paragraph(0).text;
+    assertTrue(t.fieldAt(4).rangeStart() && t.fieldAt(t.length() - 1).rangeEnd());
+    s.select(0, 3, 5);
+    s.replace(""); // the start mark: its end goes too, the text stays as plain text
+    t = s.document().paragraph(0).text;
+    assertFalse(t.hasFields());
+    assertEquals("See(Doe)", t.plainText());
+    // DOCX export repairs an orphan made directly in the model.
+    var style = s.document().paragraph(0).text.styleAt(0);
+    var orphan = RichText.of("A ", style)
+        .concat(RichText.field(new InlineField(Zotero.PREFIX + CODE, "", false, false).start(), style))
+        .concat(RichText.of("(X)", style));
+    var d = s.document();
+    d = d.blocks(d.blocks.set(0, d.paragraph(0).text(orphan)), d.nextId);
+    var out = new ByteArrayOutputStream();
+    Docx.write(d, out);
+    String xml = documentXml(out.toByteArray());
+    assertEquals(count(xml, "fldCharType=\"begin\""), count(xml, "fldCharType=\"end\""));
+    assertEquals(1, count(xml, "fldCharType=\"separate\""));
+  }
+
+  private static String documentXml(byte[] zip) throws IOException {
+    try (var in = new java.util.zip.ZipInputStream(new ByteArrayInputStream(zip))) {
+      for (var e = in.getNextEntry(); e != null; e = in.getNextEntry())
+        if (e.getName().equals("word/document.xml")) return new String(in.readAllBytes(), "UTF-8");
+    }
+    throw new IOException("no document.xml");
+  }
+
+  private static int count(String s, String what) {
+    int n = 0;
+    for (int at = s.indexOf(what); at >= 0; at = s.indexOf(what, at + 1)) n++;
+    return n;
+  }
+
+  @Test
+  public void justifiedLineWithACitationIsJustified() {
+    var s = new Session(Document.empty());
+    var words = new StringBuilder();
+    for (int i = 0; i < 40; i++) words.append("word").append(i).append(' ');
+    s.replace(words.toString());
+    s.select(0, 10, 10);
+    s.insertField(new InlineField(Zotero.PREFIX + CODE, "(Doe)", false, false));
+    s.loadDocument(s.document());
+    var engine = new LayoutEngine(new PdfMetrics());
+    var left = engine.layout(s.document(), 0).pages.get(0).allLines().get(0);
+    s.select(0, 0, 0);
+    s.paragraph("align", "both");
+    var both = new LayoutEngine(new PdfMetrics()).layout(s.document(), 0).pages.get(0).allLines().get(0);
+    assertTrue(right(both) > right(left) + 1);
+  }
+
+  private static float right(LayoutEngine.Line line) {
+    var last = line.spans.get(line.spans.size() - 1);
+    return last.x + last.width;
+  }
+
   @Test
   public void bibliographyIsOneDocxParagraphPerEntry() throws Exception {
     var s = new Session(Document.empty());
