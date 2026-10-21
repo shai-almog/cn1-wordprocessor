@@ -239,6 +239,7 @@ public final class Docx {
     if (Xml.mayContain(root, "footnoteReference") || Xml.mayContain(root, "endnoteReference"))
       document = Notes.normalize(document);
     // Range fields spanning paragraphs: drop end marks no start opened, close unclosed starts.
+    document = TextBoxes.resolveLinks(document);
     document = ZoteroBridge.balance(document, null);
 
     return new Opened(document, warnings, parts);
@@ -802,6 +803,8 @@ static final char COLUMN_BREAK = '\u000B';
     final var parts = new LinkedHashMap<String, byte[]>();
     if (source != null) parts.putAll(source.parts);
     if (!original) {
+      // Linked text box chains as wps:txbx ids and wps:linkedTxbx, as Wordcraft writes them.
+      d = TextBoxes.tagLinks(d);
       var lists = new DocxLists(d);
       var links = new DocxLinks(parts);
       links.notes = new DocxNotes(d);

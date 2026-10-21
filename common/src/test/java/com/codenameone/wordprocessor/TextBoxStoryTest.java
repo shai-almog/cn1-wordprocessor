@@ -349,6 +349,59 @@ public class TextBoxStoryTest {
     assertEquals(java.util.Arrays.asList("i5", "i6"), TextBoxes.chains(s.document()).get(0));
   }
 
+  @Test
+  public void linkedBoxesRoundTripAsWordLinksTheirTextBoxes() throws Exception {
+    var story = new Sequence<Block>().append(new Paragraph("p40", RichText.of("Flows on")));
+    var a = Picture.drawing("i5", Drawing.of("textBox").with("linkNext", "i6").story(story), 120, 60, "", "left");
+    var b = Picture.drawing("i6", Drawing.of("textBox").with("linkNext", "i7"), 120, 60, "", "left");
+    var c = Picture.drawing("i7", Drawing.of("textBox"), 120, 60, "", "left");
+    var d = new Document(new Sequence<Block>().append(a).append(new Paragraph("p1", RichText.of("Body"))).append(b).append(c),
+        PageSpec.A4, "T", 60);
+    var out = new java.io.ByteArrayOutputStream();
+    Docx.write(d, out);
+    String xml = entry(out.toByteArray(), "word/document.xml");
+    assertTrue(xml.contains("<wps:txbx id=\"1\">"));
+    assertTrue(xml.contains("<wps:linkedTxbx id=\"1\" seq=\"1\"/>") && xml.contains("<wps:linkedTxbx id=\"1\" seq=\"2\"/>"));
+    var back = Docx.read(new java.io.ByteArrayInputStream(out.toByteArray())).document;
+    var chains = TextBoxes.chains(back);
+    assertEquals(1, chains.size());
+    assertEquals(3, chains.get(0).size());
+    assertEquals("Flows on", Drawing.plainText(TextBoxes.story(back, chains.get(0).get(0))));
+    assertTrue(TextBoxes.find(back, chains.get(0).get(0)).drawing.get("txbxId", "").isEmpty());
+  }
+
+  @Test
+  public void hostileWordLinksReadWithoutChainsRunningWild() throws Exception {
+    String head = wsp("<wps:txbx id=\"7\"><w:txbxContent><w:p><w:r><w:t>Text</w:t></w:r></w:p></w:txbxContent></wps:txbx><wps:bodyPr/>");
+    String body = head + wsp("<wps:linkedTxbx id=\"7\" seq=\"1\"/><wps:bodyPr/>") + wsp("<wps:linkedTxbx id=\"7\" seq=\"1\"/><wps:bodyPr/>")
+        + wsp("<wps:linkedTxbx id=\"9\" seq=\"1\"/><wps:bodyPr/>") + wsp("<wps:linkedTxbx id=\"7\" seq=\"-3\"/><wps:bodyPr/>");
+    String xml = "<?xml version=\"1.0\"?><pkg:package xmlns:pkg=\"http://schemas.microsoft.com/office/2006/xmlPackage\">"
+        + "<pkg:part pkg:name=\"/word/document.xml\"><pkg:xmlData><w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\""
+        + " xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\""
+        + " xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\""
+        + " xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><w:body>" + body
+        + "</w:body></w:document></pkg:xmlData></pkg:part></pkg:package>";
+    var d = Docx.read(new java.io.ByteArrayInputStream(xml.getBytes("UTF-8"))).document;
+    var boxes = new java.util.ArrayList<String>();
+    for (Block blk : d.blocks) if (blk instanceof Picture p && p.drawing != null) boxes.add(p.id());
+    assertEquals(5, boxes.size());
+    assertEquals(java.util.Collections.singletonList(java.util.Arrays.asList(boxes.get(0), boxes.get(1))), TextBoxes.chains(d));
+  }
+
+  static String wsp(String inner) {
+    return "<w:p><w:r><w:drawing><wp:inline><wp:extent cx=\"1828800\" cy=\"914400\"/><wp:docPr id=\"1\" name=\"Box\"/><a:graphic>"
+        + "<a:graphicData uri=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:wsp><wps:cNvSpPr txBox=\"1\"/>"
+        + "<wps:spPr><a:prstGeom prst=\"rect\"/></wps:spPr>" + inner + "</wps:wsp></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>";
+  }
+
+  static String entry(byte[] zip, String name) throws Exception {
+    try (var in = new java.util.zip.ZipInputStream(new java.io.ByteArrayInputStream(zip))) {
+      for (var e = in.getNextEntry(); e != null; e = in.getNextEntry())
+        if (e.getName().equals(name)) return new String(in.readAllBytes(), "UTF-8");
+    }
+    throw new AssertionError(name);
+  }
+
   static Document groupWithMemberText() throws Exception {
     String member = "<wps:wsp><wps:cNvSpPr txBox=\"1\"/><wps:spPr><a:xfrm><a:off x=\"914400\" y=\"0\"/>"
         + "<a:ext cx=\"914400\" cy=\"914400\"/></a:xfrm><a:prstGeom prst=\"rect\"/></wps:spPr><wps:txbx><w:txbxContent>"

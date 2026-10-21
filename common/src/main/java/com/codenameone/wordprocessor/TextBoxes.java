@@ -109,6 +109,68 @@ public final class TextBoxes {
     return out;
   }
 
+  /**
+   * Tags each chain for DOCX output as Wordcraft's writer numbers them: chain n (from 1) gets
+   * "txbxId" n, its first box "txbxSeq" 0 (written as wps:txbx id) and each linked box its place
+   * (written as wps:linkedTxbx). The first box takes the whole story (older per-box text joined).
+   */
+  static Document tagLinks(Document d) {
+    var chains = chains(d);
+    if (chains.isEmpty()) return d;
+    var tags = new java.util.HashMap<String, String[]>();
+    for (int n = 0; n < chains.size(); n++) {
+      var c = chains.get(n);
+      var whole = story(d, c.get(0));
+      if (whole != null) d = setStory(d, c.get(0), whole);
+      for (int seq = 0; seq < c.size(); seq++) tags.put(c.get(seq), new String[] {String.valueOf(n + 1), String.valueOf(seq)});
+    }
+    return map(d, p -> {
+      var t = p.drawing == null ? null : tags.get(p.id());
+      return t == null ? p : p.drawing(p.drawing.with("txbxId", t[0]).with("txbxSeq", t[1]));
+    });
+  }
+
+  /**
+   * Links the boxes a DOCX file chains (as Wordcraft's link_text_boxes): each "txbxId"'s boxes
+   * in "txbxSeq" order after the box holding the text (seq 0). A repeated seq, a chain without
+   * its first box or more than {@link #MAX_LINKED} boxes: the extra boxes stay apart. The tags
+   * are dropped.
+   */
+  static Document resolveLinks(Document d) {
+    var found = new ArrayList<String[]>();
+    map(d, p -> {
+      if (p.drawing != null && !p.drawing.get("txbxId", "").isEmpty())
+        found.add(new String[] {p.drawing.get("txbxId", ""), p.drawing.get("txbxSeq", "0"), p.id()});
+      return p;
+    });
+    if (found.isEmpty()) return d;
+    found.sort((a, b) -> {
+      long x = Long.parseLong(a[0]), y = Long.parseLong(b[0]);
+      return x != y ? Long.compare(x, y) : Long.compare(Long.parseLong(a[1]), Long.parseLong(b[1]));
+    });
+    var next = new java.util.HashMap<String, String>();
+    for (int i = 0; i < found.size();) {
+      int j = i;
+      while (j < found.size() && found.get(j)[0].equals(found.get(i)[0])) j++;
+      if ("0".equals(found.get(i)[1])) {
+        String prev = found.get(i)[2], seq = "0";
+        int count = 1;
+        for (int k = i + 1; k < j && count < MAX_LINKED; k++) {
+          if (found.get(k)[1].equals(seq)) continue;
+          seq = found.get(k)[1];
+          next.put(prev, found.get(k)[2]);
+          prev = found.get(k)[2];
+          count++;
+        }
+      }
+      i = j;
+    }
+    return map(d, p -> {
+      if (p.drawing == null || p.drawing.get("txbxId", "").isEmpty()) return p;
+      return p.drawing(p.drawing.with("txbxId", "").with("txbxSeq", "").with("linkNext", next.get(p.id())));
+    });
+  }
+
   /** The box whose story box {@code id} shows: its chain's first box, or itself. */
   public static String head(Document d, String id) {
     for (List<String> c : chains(d)) if (c.contains(id)) return c.get(0);

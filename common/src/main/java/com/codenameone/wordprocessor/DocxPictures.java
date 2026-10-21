@@ -98,6 +98,7 @@ final class DocxPictures {
         if (drawing == null && extent0 != null) drawing = object(container, extent0, warnings);
         drawing = story(container, drawing);
         drawing = memberStories(container, drawing, order);
+        drawing = DocxDrawings.links(container, drawing);
         if (drawing != null && !"inline".equals(wrap[0]) && !"equation".equals(drawing.kind))
           drawing = drawing.with("wrap", wrap[0]).with("wrapPolygon", wrap[1]).with("position", wrap[3]);
         if (drawing != null && extent0 != null) {

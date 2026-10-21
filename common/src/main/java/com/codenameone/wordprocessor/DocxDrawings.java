@@ -220,13 +220,20 @@ final class DocxDrawings {
     line(b, d.color("line", box ? 0 : 0x2f528f), d.num("lineWidth", 1), 255);
     b.append("</wps:spPr>");
     var text = d.get("text", "");
-    if (d.story != null && parts != null && parts.storyWriter != null) {
+    // Linked boxes as Wordcraft writes them: a box continuing a chain's story names the chain
+    // and its place (wps:linkedTxbx); the chain's first box carries the story with its id.
+    String chain = d.get("txbxId", ""), seq = d.get("txbxSeq", "0");
+    String txbx = chain.isEmpty() ? "<wps:txbx>" : "<wps:txbx id=\"" + chain + "\">";
+    if (!chain.isEmpty() && !"0".equals(seq)) {
+      b.append("<wps:linkedTxbx id=\"").append(chain).append("\" seq=\"").append(seq).append("\"/>");
+    } else if (d.story != null && parts != null && parts.storyWriter != null) {
       // The text box's own block story: paragraphs, runs, tables and comment ranges.
-      b.append("<wps:txbx><w:txbxContent>").append(parts.storyWriter.apply(d.story))
+      b.append(txbx).append("<w:txbxContent>").append(parts.storyWriter.apply(d.story))
           .append("</w:txbxContent></wps:txbx>");
-    } else if (!text.isEmpty()) {
-      b.append("<wps:txbx><w:txbxContent>");
-      for (String para : DrawingOps.split(text, '\n')) {
+    } else if (!text.isEmpty() || !chain.isEmpty()) {
+      b.append(txbx).append("<w:txbxContent>");
+      if (text.isEmpty()) b.append("<w:p/>");
+      for (String para : text.isEmpty() ? java.util.Collections.<String>emptyList() : DrawingOps.split(text, '\n')) {
         var align = d.get("align", box ? "left" : "center");
         b.append("<w:p><w:pPr><w:jc w:val=\"").append("right".equals(align) ? "right" : "center".equals(align) ? "center" : "left")
             .append("\"/></w:pPr><w:r><w:rPr>");
@@ -582,6 +589,32 @@ final class DocxDrawings {
     if ("t".equals(Xml.local(e))) out.append(Xml.text(e));
     else if ("tab".equals(Xml.local(e))) out.append('\t');
     else for (Element c : Xml.children(e, null)) collectText(c, out);
+  }
+
+  /**
+   * The chain tags of a shape's text (Wordcraft's txbx_links): wps:txbx/@id with seq 0 for the
+   * box holding the text, wps:linkedTxbx id and seq for a box continuing it. Links read from the
+   * drawing encoding name ids of the writing session and are dropped; Docx links the tagged
+   * boxes once the document is read (TextBoxes.resolveLinks).
+   */
+  static Drawing links(Element container, Drawing d) {
+    if (d == null || (!"textBox".equals(d.kind) && !"shape".equals(d.kind))) return d;
+    d = d.with("linkNext", "").with("txbxId", "").with("txbxSeq", "");
+    Element data = DocxPictures.descendant(container, "graphicData");
+    Element wsp = data == null ? null : Xml.child(data, "wsp");
+    if (wsp == null) return d;
+    Element tx = Xml.child(wsp, "txbx"), linked = Xml.child(wsp, "linkedTxbx");
+    long id = count(tx != null ? Xml.attr(tx, "id", "") : linked != null ? Xml.attr(linked, "id", "") : "");
+    long seq = tx != null ? 0 : linked != null ? count(Xml.attr(linked, "seq", "")) : -1;
+    if (id < 0 || seq < 0 || (tx == null && seq == 0)) return d;
+    return d.with("txbxId", String.valueOf(id)).with("txbxSeq", String.valueOf(seq));
+  }
+
+  private static long count(String v) {
+    v = v.trim();
+    if (v.isEmpty() || v.length() > 9) return -1;
+    for (int i = 0; i < v.length(); i++) if (v.charAt(i) < '0' || v.charAt(i) > '9') return -1;
+    return Long.parseLong(v);
   }
 
   /** An Office Math zone as an equation drawing. */
