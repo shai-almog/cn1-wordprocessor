@@ -83,7 +83,7 @@ The note model currently uses continuous decimal footnotes and lower-Roman endno
 
 Note settings now preserve sparse section overrides and document defaults in native XML, DOCX `settings.xml` and section `footnotePr`/`endnotePr` properties. Supported formats are decimal, lower/upper Roman, lower/upper repeated letters, decimal with a leading zero, numeric ordinal, hexadecimal, Chicago symbols, numbers in dashes and no number. Starts are 1–32767; numbering can continue or restart per section, with page restarts for footnotes. Footnotes can sit at the page bottom or below text; endnotes can end each section or the document. Physical printed pages determine page-restarted labels, including when the phone view reflows. Layout reports a warning if page-dependent numbering cannot settle within eight passes.
 
-Roman rendering currently falls back to decimal above 3999; repeated-letter and Chicago labels are capped at 40 glyphs. Unsupported regional/textual numbering formats still produce DOCX conversion warnings. Direct in-page editing, tables/pictures in note stories, note-story comments/bookmarks, custom continuation separators and broader complex-table/continuous-section fidelity remain incomplete. Document labels stored before pagination use document order; the layout and `references.notes` command expose page-resolved labels. Plain-text/HTML exports do not yet resolve page-dependent labels with print pagination.
+Roman rendering currently falls back to decimal above 3999; repeated-letter and Chicago labels are capped at 40 glyphs. CJK numbering formats are drawn as Wordcraft's cjk_numbers; Hebrew, Arabic, Hindi, Thai, Russian and Vietnamese are kept and drawn as decimal (as in Wordcraft). Direct in-page editing, tables/pictures in note stories, note-story comments/bookmarks, custom continuation separators and broader complex-table/continuous-section fidelity remain incomplete. Document labels stored before pagination use document order; the layout and `references.notes` command expose page-resolved labels. Plain-text/HTML exports do not yet resolve page-dependent labels with print pagination.
 
 
 ### Index fields
@@ -177,9 +177,13 @@ Shapes, text boxes, WordArt, charts, SmartArt, display equations, ink/canvases, 
 - PDF draws vector paths with base-font text. Partial transparency is blended against white, and characters outside WinAnsi print as "?".
 - HTML exports inline SVG.
 - Text wrapping is block-granular:
-  - Square/tight wrap narrows whole paragraphs that start beside a left- or right-aligned object.
-  - Behind/in-front objects take no space.
+  - Square/tight/through wrap narrows whole paragraphs that start beside a left- or right-aligned object; with a
+    `wp:wrapPolygon` the cut is the outline's horizontal extent at the paragraph's first line.
+  - Behind/in-front objects take no space (`behindDoc` picks behind).
   - There is no free positioning or per-line contour wrapping.
+- Groups (`wpg:wgp`) flatten their members through nested `chOff`/`chExt` spaces as Wordcraft's group_members;
+  freeforms (`a:custGeom`) flatten cubic/quadratic Beziers into 16 steps, `fill="none"` paths stay open and
+  `arcTo` is skipped (as in Wordcraft). Pictures inside groups and group rotation are dropped.
 
 ## Content controls (2026-10-17)
 
@@ -227,13 +231,15 @@ GrpXstAtnOwners authors, initials and SttbfAtnBkmk ranges), bookmarks (SttbfBkmk
 insertions and deletions (sprmCFRMarkIns/Del with SttbfRMark authors and DTTM dates) and main-text floating
 objects (PlcSpaMom FSPA anchors joined with the OfficeArt drawing: BLIP-store pictures, embedded or at the
 FBSE foDelay offset, preset shapes with solid fill/line colours, and text boxes with their PlcftxbxTxt text;
-page/margin/column/paragraph offsets and none/square/top-and-bottom/behind wrapping). The editor model then
-treats floating DOCX drawings as it does for .docx (a separate paragraph plus a conversion warning). Not yet:
-encrypted or Word 6/95 files (rejected), floating objects in headers, grouped shapes, freeforms and other
-non-preset geometry (dropped), tight/through wrap (written as square), shape rotation, line widths and
-gradients, paragraph-mark and formatting revisions, comment and bookmark boundaries inside table-row end
-marks, per-cell borders/shading, and list-style formatting carried by styles. Wordcraft models only one table
-level and drops comments and revision marks.
+page/margin/column/paragraph offsets and none/square/top-and-bottom/behind/tight/through wrapping), the same
+for header stories (PlcSpaHdr anchors with the header drawing), and OfficeArt groups (SpgrContainer with its
+FSPGR space and members' ChildAnchor rectangles, nested groups) written as `wpg:wgp`. The editor model then
+treats floating DOCX drawings as it does for .docx (a separate paragraph keeping its wrap kind). Not yet:
+encrypted or Word 6/95 files (rejected), header floats in the editor (the header model keeps paragraphs
+only), pictures inside groups, shape rotation, line widths and gradients, paragraph-mark revisions, comment
+and bookmark boundaries inside table-row end marks, per-cell borders/shading, and list-style formatting
+carried by styles. As in Wordcraft: freeforms (no path read) and formatting revisions are not imported.
+Wordcraft drops comments and revision marks.
 
 ## OpenDocument Text (.odt)
 
