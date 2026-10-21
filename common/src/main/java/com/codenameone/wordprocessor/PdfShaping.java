@@ -176,7 +176,9 @@ final class PdfShaping {
   /** Arabic joining type: 'D' dual, 'R' right, 'C' join-causing, 'T' transparent, 0 none. */
   static char joining(int cp) {
     if (mark(cp) && cp != 0x200d) return 'T';
-    if (cp == 0x0640 || cp == 0x200d || cp == 0x07fa) return 'C';
+    if (cp == 0x0640 || cp == 0x200d || cp == 0x07fa || cp == 0x180a) return 'C';
+    char other = joiningUse(cp);
+    if (other != 0) return other;
     if (cp >= 0x0621 && cp <= 0x064a) {
       int n = forms(cp);
       return n == 4 ? 'D' : n == 2 ? 'R' : (char) 0;
@@ -265,6 +267,25 @@ final class PdfShaping {
    */
   static List<OpenType.Glyph> shapeRun(PdfFonts.TrueType font, OpenType ot, String text,
       int from, int to, boolean rtl, boolean kerning) throws java.io.IOException {
+    return shapeRun(font, ot, text, from, to, rtl, kerning, 0);
+  }
+
+  /** As above at {@code ptem} points (0 when unknown), which only AAT 'trak' tracking uses. */
+  static List<OpenType.Glyph> shapeRun(PdfFonts.TrueType font, OpenType ot, String text,
+      int from, int to, boolean rtl, boolean kerning, float ptem) throws java.io.IOException {
+    return shapeRun(font, ot, text, from, to, rtl, kerning, ptem, 0);
+  }
+
+  /**
+   * HarfBuzz's HB_BUFFER_FLAG_DO_NOT_INSERT_DOTTED_CIRCLE: broken clusters keep no dotted-circle
+   * base.
+   */
+  static final int NO_DOTTED_CIRCLE = 1;
+
+  /** As above with buffer {@code flags} ({@link #NO_DOTTED_CIRCLE}). */
+  static List<OpenType.Glyph> shapeRun(PdfFonts.TrueType font, OpenType ot, String text,
+      int from, int to, boolean rtl, boolean kerning, float ptem, int flags)
+      throws java.io.IOException {
     var buffer = new ArrayList<OpenType.Glyph>();
     String script = null;
     for (int i = from; i < to; ) {
@@ -285,6 +306,8 @@ final class PdfShaping {
     }
     String[] scripts;
     int block = indicBlock(script);
+    if (AatShaper.applies(font, ot, gsubScripts(script, block)))
+      return aat(font, ot, buffer, rtl, kerning, ptem);
     // Scripts of the Universal Shaping Engine use it when the font has their GSUB script, as
     // HarfBuzz; otherwise they take the default shaper.
     boolean use = script != null && block < 0 && isUse(script) && ot.hasScript(true, script);
@@ -318,9 +341,16 @@ final class PdfShaping {
     } else if (use) {
       scripts = new String[] {script};
       UseShaper.setup(buffer, RPHF, new int[] {ISOL, INIT, MEDI, FINA});
+      if (UseShaper.arabicJoining(script)) {
+        // As harfrust: these scripts take Arabic joining masks instead of syllable topography.
+        for (var g : buffer) g.mask &= ~(ISOL | INIT | MEDI | FINA);
+        arabicMasks(buffer, false);
+      }
     } else scripts = new String[] {"latn"};
     int all = -1;
     if (use) {
+      // The features before reordering stay within a syllable (F_PER_SYLLABLE), as HarfBuzz.
+      ot.perSyllable = true;
       gsub(ot, scripts, buffer, new String[] {"locl", "ccmp", "nukt", "akhn"}, all);
       for (var g : buffer) g.flags &= ~OpenType.SUBSTITUTED;
       gsub(ot, scripts, buffer, new String[] {"rphf"}, RPHF);
@@ -330,7 +360,8 @@ final class PdfShaping {
       UseShaper.recordPref(buffer);
       gsub(ot, scripts, buffer, new String[] {"rkrf", "abvf", "blwf", "half", "pstf", "vatu",
           "cjct"}, all);
-      UseShaper.reorder(buffer, font.glyph(0x25cc));
+      ot.perSyllable = false;
+      UseShaper.reorder(buffer, (flags & NO_DOTTED_CIRCLE) != 0 ? 0 : font.glyph(0x25cc));
       ot.apply(true, scripts, buffer, new String[] {"isol", "init", "medi", "fina"},
           new int[] {ISOL, INIT, MEDI, FINA});
       gsub(ot, scripts, buffer, new String[] {"abvs", "blws", "haln", "pres", "psts", "rlig",
@@ -411,6 +442,45 @@ final class PdfShaping {
     return buffer;
   }
 
+  /** The GSUB script tags HarfBuzz looks for when deciding between GSUB and 'morx'. */
+  private static String[] gsubScripts(String script, int block) {
+    if (block >= 0) return new String[] {INDIC[2 * block + 1], INDIC[2 * block]};
+    if ("mymr".equals(script)) return new String[] {"mym2", "mymr"};
+    return new String[] {script == null ? "latn" : script};
+  }
+
+  /**
+   * HarfBuzz's AAT path: 'morx' instead of GSUB and the script shaper, 'kerx' (else the 'kern'
+   * table) instead of GPOS, marks keeping their advances.
+   */
+  private static List<OpenType.Glyph> aat(PdfFonts.TrueType font, OpenType ot,
+      List<OpenType.Glyph> buffer, boolean rtl, boolean kerning, float ptem)
+      throws java.io.IOException {
+    var aat = new AatShaper(font);
+    aat.morx(buffer, rtl);
+    for (int i = 0; i < buffer.size(); i++) {
+      var g = buffer.get(i);
+      if ((g.cp == 0x200c || g.cp == 0x200d) && buffer.size() > 1) {
+        var keep = buffer.get(i > 0 ? i - 1 : i + 1);
+        keep.start = Math.min(keep.start, g.start);
+        keep.end = Math.max(keep.end, g.end);
+        buffer.remove(i--);
+        continue;
+      }
+      g.adv = font.advance(g.id);
+    }
+    clusters(buffer);
+    if (rtl) reverse(buffer, ot);
+    if (kerning) {
+      if (aat.hasKerx()) aat.kerx(buffer);
+      else
+        for (int i = 0; i + 1 < buffer.size(); i++)
+          buffer.get(i).adv += font.kern(buffer.get(i).id, buffer.get(i + 1).id);
+    }
+    aat.track(buffer, ptem);
+    return buffer;
+  }
+
   private static void gsub(OpenType ot, String[] scripts, List<OpenType.Glyph> buffer,
       String[] features, int mask) {
     int[] masks = new int[features.length];
@@ -418,16 +488,56 @@ final class PdfShaping {
     ot.apply(true, scripts, buffer, features, masks);
   }
 
+  /**
+   * Unicode joining types (D dual, R right, L left, T transparent) of the Arabic-joining USE
+   * scripts: Mongolian, N'Ko, Phags-pa, Adlam and Hanifi Rohingya; 0 when non-joining or other.
+   */
+  private static char joiningUse(int cp) {
+    if (cp >= 0x1800 && cp <= 0x18af) {
+      if (cp >= 0x180b && cp <= 0x180d || cp == 0x180f || cp == 0x1885 || cp == 0x1886
+          || cp == 0x18a9) return 'T';
+      return cp == 0x1807 || cp >= 0x1820 && cp <= 0x1878 || cp >= 0x1887 && cp <= 0x18a8
+          || cp == 0x18aa ? 'D' : 0;
+    }
+    if (cp >= 0x07c0 && cp <= 0x07ff) {
+      if (cp >= 0x07eb && cp <= 0x07f3 || cp == 0x07fd) return 'T';
+      return cp >= 0x07ca && cp <= 0x07ea ? 'D' : 0;
+    }
+    if (cp >= 0xa840 && cp <= 0xa873) return cp == 0xa872 ? 'L' : cp == 0xa873 ? 0 : 'D';
+    if (cp >= 0x1e900 && cp <= 0x1e95f) {
+      if (cp >= 0x1e944 && cp <= 0x1e94b) return 'T';
+      return cp <= 0x1e943 ? 'D' : 0;
+    }
+    if (cp >= 0x10d00 && cp <= 0x10d3f) {
+      if (cp >= 0x10d24 && cp <= 0x10d27) return 'T';
+      return cp == 0x10d00 ? 'L' : cp == 0x10d22 ? 'R' : cp <= 0x10d23 ? 'D' : 0;
+    }
+    return 0;
+  }
+
   /** Masks each Arabic letter with the joining form its neighbours call for. */
   private static void arabicMasks(List<OpenType.Glyph> buffer) {
+    arabicMasks(buffer, true);
+  }
+
+  /**
+   * Joining-form masks; {@code isolateNonJoining} also gives non-joining characters the isol mask
+   * (HarfBuzz gives them none, which the USE path follows). Mongolian free variation selectors
+   * take their base's form, as HarfBuzz.
+   */
+  private static void arabicMasks(List<OpenType.Glyph> buffer, boolean isolateNonJoining) {
     for (int i = 0; i < buffer.size(); i++) {
-      char t = joining(buffer.get(i).cp);
-      if (t != 'D' && t != 'R') {
-        if (t != 'T') buffer.get(i).mask |= ISOL;
+      var g = buffer.get(i);
+      char t = joining(g.cp);
+      if (t != 'D' && t != 'R' && t != 'L') {
+        if (t != 'T' && isolateNonJoining) g.mask |= ISOL;
+        if (i > 0 && (g.cp >= 0x180b && g.cp <= 0x180d || g.cp == 0x180f))
+          g.mask |= buffer.get(i - 1).mask & (ISOL | INIT | MEDI | FINA);
         continue;
       }
-      boolean prev = joinsTo(buffer, i, -1), next = t == 'D' && joinsTo(buffer, i, 1);
-      buffer.get(i).mask |= prev && next ? MEDI : prev ? FINA : next ? INIT : ISOL;
+      boolean prev = t != 'L' && joinsTo(buffer, i, -1);
+      boolean next = t != 'R' && joinsTo(buffer, i, 1);
+      g.mask |= prev && next ? MEDI : prev ? FINA : next ? INIT : ISOL;
     }
   }
 
@@ -436,7 +546,7 @@ final class PdfShaping {
     for (int j = i + step; j >= 0 && j < buffer.size(); j += step) {
       char t = joining(buffer.get(j).cp);
       if (t == 'T') continue;
-      return t == 'D' || t == 'C' || step > 0 && t == 'R';
+      return t == 'D' || t == 'C' || (step > 0 ? t == 'R' : t == 'L');
     }
     return false;
   }

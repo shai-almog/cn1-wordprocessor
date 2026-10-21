@@ -38,8 +38,15 @@ final class UseShaper {
     "shrd", 0x11180, 0x111df, "khoj", 0x11200, 0x1124f, "gran", 0x11300, 0x1137f,
     "newa", 0x11400, 0x1147f, "tirh", 0x11480, 0x114df, "sidd", 0x11580, 0x115ff,
     "modi", 0x11600, 0x1165f, "takr", 0x11680, 0x116cf, "ahom", 0x11700, 0x1174f,
-    "dogr", 0x11800, 0x1184f, "kawi", 0x11f00, 0x11f5f
+    "dogr", 0x11800, 0x1184f, "kawi", 0x11f00, 0x11f5f, "mong", 0x1800, 0x18af,
+    "nko ", 0x07c0, 0x07ff, "adlm", 0x1e900, 0x1e95f, "rohg", 0x10d00, 0x10d3f
   };
+
+  /** USE scripts HarfBuzz gives Arabic-style joining (has_arabic_joining) with joining data here. */
+  static boolean arabicJoining(String script) {
+    return "mong".equals(script) || "nko ".equals(script) || "phag".equals(script)
+        || "adlm".equals(script) || "rohg".equals(script);
+  }
 
   /** The OpenType tag of the USE script of a code point, or null. */
   static String script(int cp) {

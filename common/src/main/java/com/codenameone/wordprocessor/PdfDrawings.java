@@ -16,10 +16,42 @@ final class PdfDrawings {
     paint(c, pic, pageHeight, null, null);
   }
 
+  /**
+   * Measures drawing text (equation runs, labels) with the faces {@link #paint} shows it in: the
+   * base style's family with the run's size, bold and italic, through the embedded fonts and their
+   * fallbacks (the math fallback face for operators and math alphanumerics), so each glyph fits
+   * the box the equation layout gives it. A face that cannot measure falls back to the base-font
+   * widths, as painting falls back to base-font text.
+   */
+  static LayoutEngine.Metrics metrics(PdfFonts fonts, TextStyle base) {
+    var plain = new PdfMetrics();
+    return new LayoutEngine.Metrics() {
+      public float width(String text, TextStyle style) {
+        var shown = (base == null ? TextStyle.DEFAULT : base)
+            .with("bold", style.bold ? "true" : "false")
+            .with("italic", style.italic ? "true" : "false");
+        try {
+          return fonts.width(shown, text, style.size);
+        } catch (IOException | RuntimeException unusable) {
+          return plain.width(text, style);
+        }
+      }
+
+      public float height(TextStyle style) {
+        return plain.height(style);
+      }
+
+      public float ascent(TextStyle style) {
+        return plain.ascent(style);
+      }
+    };
+  }
+
   /** Paints with {@code fonts} (null for the base-font path), text styled from {@code base}. */
   static void paint(StringBuilder c, LayoutEngine.PlacedPicture pic, float pageHeight,
       PdfFonts fonts, TextStyle base) {
-    DrawingOps.Ops ops = DrawingOps.build(pic.picture().drawing, pic.width(), pic.height());
+    DrawingOps.Ops ops = DrawingOps.build(pic.picture().drawing, pic.width(), pic.height(),
+        fonts == null ? null : metrics(fonts, base));
     float ox = pic.x(), oy = pageHeight - pic.y();
     c.append("q 1 j 1 J\n");
     for (DrawingOps.Path p : ops.paths) {

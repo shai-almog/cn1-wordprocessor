@@ -8,7 +8,8 @@ import java.util.*;
  * and GPOS lookup types 1, 2, 4, 5, 6, 7, 8 and 9, with lookup flags (ignore base / ligature /
  * marks, mark attachment type, mark filtering sets) from GDEF. Features are applied by mask, so a
  * shaper can enable a feature for some glyphs only (Arabic joining forms, Indic half forms).
- * Not covered: GSUB alternate (3) and reverse chaining (8) lookups, variable fonts and the 'morx' / AAT tables.
+ * Not covered: GSUB alternate (3) and reverse chaining (8) lookups and variable fonts; faces
+ * shaped with 'morx' go through {@link AatShaper} instead.
  */
 final class OpenType {
   /** One glyph of the shaping buffer; positions are in font units. */
@@ -35,6 +36,11 @@ final class OpenType {
   static final int SUBSTITUTED = 1, LIGATED = 2, BASE = 4;
 
   private final PdfFonts.TrueType font;
+  /**
+   * Whether GSUB context matching stops at syllable boundaries (HarfBuzz's F_PER_SYLLABLE): a
+   * glyph of another syllable (non-zero {@link Glyph#syllable}) fails the match.
+   */
+  boolean perSyllable;
   /** Whether the buffer being positioned is a right-to-left run in visual order. */
   boolean rtl;
   private final int gsub, gpos, gdef;
@@ -204,7 +210,10 @@ final class OpenType {
   private int nextIndex(int lookup, int flag, List<Glyph> buffer, int i, int step)
       throws IOException {
     for (int j = i + step; j >= 0 && j < buffer.size(); j += step)
-      if (!skip(lookup, flag, buffer.get(j))) return j;
+      if (!skip(lookup, flag, buffer.get(j))) {
+        int syllable = buffer.get(i).syllable;
+        return perSyllable && syllable != 0 && buffer.get(j).syllable != syllable ? -1 : j;
+      }
     return -1;
   }
 

@@ -213,8 +213,10 @@ public class PdfScriptsTest {
     assertEquals("e81 ecd eb2", cps(shape(lao, "\u0e81\u0eb3")));
     var thai = new File(SUPPLEMENTAL + "Silom.ttf");
     if (thai.exists()) {
+      // Silom's GSUB lists only 'latn', so as HarfBuzz its 'morx' decomposes Sara Am
+      // (hb-shape 14.2.1: nikhahit and sara aa around the tone mark).
       var font = new PdfFonts.TrueType(installed("Silom.ttf"));
-      assertEquals("e01 e4d e48 e32", cps(shape(font, "\u0e01\u0e48\u0e33")));
+      assertEquals("29|98|103|78", ids(font, 0x0e01, 0x0e48, 0x0e33));
     }
   }
 
@@ -424,5 +426,92 @@ public class PdfScriptsTest {
     assertEquals("849|803|856", ids(b, 0x0d4e, 0x0d15, 0x0d46));
     assertEquals("849|888|856", ids(b, 0x0d4e, 0x0d15, 0x0d4d, 0x0d15, 0x0d46));
     assertEquals(9, PdfShaping.indic(0x0d4e));
+  }
+
+  /** hb-shape style "id+advance" (with "@dx,dy" when offset) of a kerned run. */
+  private static String hb(PdfFonts.TrueType font, String text) throws IOException {
+    var out = new StringBuilder();
+    for (var g : PdfShaping.shapeRun(font, new OpenType(font), text, 0, text.length(), false,
+        true)) {
+      out.append(out.length() > 0 ? "|" : "").append(g.id);
+      if (g.dx != 0 || g.dy != 0) out.append('@').append(g.dx).append(',').append(g.dy);
+      out.append('+').append(g.adv);
+    }
+    return out.toString();
+  }
+
+  private static PdfFonts.TrueType system(String path) throws IOException {
+    var f = new File(path);
+    Assume.assumeTrue(f.exists());
+    try (var in = new FileInputStream(f)) {
+      return new PdfFonts.TrueType(FontSubset.face(in.readAllBytes(), 0));
+    }
+  }
+
+  @Test
+  public void aatMorxAndKerxMatchHarfBuzz() throws Exception {
+    // hb-shape 14.2.1 --no-clusters with the macOS faces (face 0): these fonts have 'morx' but no
+    // GSUB for their script, so HarfBuzz shapes with morx and positions with kerx / kern.
+    var tibetan = system(SUPPLEMENTAL + "Kailasa.ttc");
+    assertEquals("768+1319|130+0", hb(tibetan, "\u0f40\u0f90\u0f72"));
+    assertEquals("350+1319", hb(tibetan, "\u0f66\u0f92\u0fb2\u0f74"));
+    assertEquals("102+1343|350+1319|102+1343|118+1343",
+        hb(tibetan, "\u0f56\u0f66\u0f92\u0fb2\u0f74\u0f56\u0f66"));
+    var malayalam = system(SUPPLEMENTAL + "Malayalam MN.ttc");
+    assertEquals("274+2639", hb(malayalam, "\u0d15\u0d4d\u0d15"));
+    assertEquals("177+1244|132@-15,0+1805|170+997", hb(malayalam, "\u0d15\u0d4a"));
+    assertEquals("400+1344", hb(malayalam, "\u0d30\u0d4d\u200d"));
+    assertEquals("167+2340|183+0|251+428|147@-15,0+1869|172+496",
+        hb(malayalam, "\u0d38\u0d4d\u0d24\u0d4d\u0d30\u0d40"));
+    var sangam = system(SUPPLEMENTAL + "Malayalam Sangam MN.ttc");
+    assertEquals("273+2422", hb(sangam, "\u0d15\u0d4d\u0d15"));
+    assertEquals("176+1140|131@-15,0+1797|169+892", hb(sangam, "\u0d15\u0d4a"));
+    var thai = system(SUPPLEMENTAL + "Silom.ttf");
+    assertEquals("29+473|103+0|78+461", hb(thai, "\u0e01\u0e33"));
+    assertEquals("55+535|17+0|23+0|53+533", hb(thai, "\u0e1b\u0e31\u0e48\u0e19"));
+    // Sinhala Sangam MN / Sinhala MN list 'sinh' in GSUB, so HarfBuzz keeps GSUB there; their
+    // license forbids embedding, so they are not loaded here.
+  }
+
+  private static String visual(PdfFonts.TrueType font, String text, boolean rtl, int flags)
+      throws IOException {
+    var out = new StringBuilder();
+    for (var g : PdfShaping.shapeRun(font, new OpenType(font), text, 0, text.length(), rtl, false,
+        0, flags)) out.append(out.length() > 0 ? "|" : "").append(g.id);
+    return out.toString();
+  }
+
+  @Test
+  public void useArabicJoiningScriptsMatchHarfBuzz() throws Exception {
+    // hb-shape 14.2.1 with the installed Noto faces: Mongolian, N'Ko, Adlam and Phags-pa take
+    // Arabic joining forms inside the Universal Shaping Engine (visual order for RTL scripts).
+    var mongolian = new PdfFonts.TrueType(installed("NotoSansMongolian-Regular.ttf"));
+    assertEquals("121|32|1299|32|129",
+        visual(mongolian, "\u182e\u1823\u1829\u182d\u1823\u182f", false, 0));
+    assertEquals("9|1465|12", visual(mongolian, "\u1820\u180b\u1820", false, 0));
+    var nko = new PdfFonts.TrueType(installed("NotoSansNKo-Regular.ttf"));
+    // hb-shape gives 51|67|129|3|82|128|93; this shaper's visual order keeps a mark (51, the
+    // gbasi tone) after its base.
+    assertEquals("67|51|129|3|82|128|93",
+        visual(nko, "\u07d2\u07de\u07cf \u07de\u07ca\u07eb", true, 0));
+    var adlam = new PdfFonts.TrueType(installed("NotoSansAdlam-Regular.ttf"));
+    assertEquals("259|143|255|180|3", visual(adlam,
+        new String(Character.toChars(0x1e900)) + new String(Character.toChars(0x1e923))
+            + new String(Character.toChars(0x1e924)) + new String(Character.toChars(0x1e922))
+            + new String(Character.toChars(0x1e925)), true, 0));
+    var phags = new PdfFonts.TrueType(installed("NotoSansPhagsPa-Regular.ttf"));
+    assertEquals("53|179|186", visual(phags, "\ua840\ua841\ua842", false, 0));
+  }
+
+  @Test
+  public void useDottedCircleCanBeTurnedOff() throws Exception {
+    // HB_BUFFER_FLAG_DO_NOT_INSERT_DOTTED_CIRCLE: the broken Lepcha cluster keeps no base.
+    var lepcha = new PdfFonts.TrueType(installed("NotoSansLepcha-Regular.ttf"));
+    String text = "\u1c00\u1c24\u1c2d\u1c26";
+    assertEquals("49|128|127|106", visual(lepcha, text, false, 0));
+    var off = PdfShaping.shapeRun(lepcha, new OpenType(lepcha), text, 0, text.length(), false,
+        false, 0, PdfShaping.NO_DOTTED_CIRCLE);
+    assertEquals(3, off.size());
+    for (var g : off) assertNotEquals(0x25cc, g.cp);
   }
 }

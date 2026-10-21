@@ -142,7 +142,7 @@ final class PdfFonts {
     for (Object[] run : runs(chain, text)) {
       var face = (Face) run[0];
       out.add(new Object[] {face, PdfShaping.shapeRun(face.font, face.layout(), text,
-          (Integer) run[1], (Integer) run[2], rtl, kerning)});
+          (Integer) run[1], (Integer) run[2], rtl, kerning, style.size)});
     }
     if (rtl) Collections.reverse(out);
     return out;

@@ -171,6 +171,7 @@ public class InlineEquationTest {
     }, java.util.Collections.singletonList(dir));
     try {
       equationPdf();
+      equationBoxesFitEmbeddedWidths();
     } finally {
       SystemFonts.configure(null, null);
     }
@@ -185,5 +186,25 @@ public class InlineEquationTest {
     assertFalse(pdf.contains("(?+"));
     assertEquals(SystemFonts.MATH[0], SystemFonts.preferred(0x1d400)[0]);
     assertTrue(SystemFonts.math(0x2264));
+  }
+
+  /** Laid out with the embedded faces' advances, no equation run overlaps the next one. */
+  private void equationBoxesFitEmbeddedWidths() throws Exception {
+    var fonts = new PdfFonts(
+        BundledFonts.provider(path -> InlineEquationTest.class.getResourceAsStream(path)));
+    var drawing = Drawing.of("equation").with("text", "\ud835\udc00+\u03b1\u2264\u03b2\u2211x")
+        .with("fontSize", "24").with("justify", "left");
+    var ops = DrawingOps.build(drawing, 400, 80, PdfDrawings.metrics(fonts, TextStyle.DEFAULT));
+    var texts = new java.util.ArrayList<>(ops.texts);
+    texts.sort((a, b) -> Float.compare(a.x(), b.x()));
+    assertTrue(texts.size() > 1);
+    for (int i = 0; i + 1 < texts.size(); i++) {
+      var t = texts.get(i);
+      var style = TextStyle.DEFAULT.with("bold", t.bold() ? "true" : "false")
+          .with("italic", t.italic() ? "true" : "false");
+      float w = fonts.width(style, t.text(), t.size());
+      if (Math.abs(texts.get(i + 1).y() - t.y()) < .5f)
+        assertTrue(t.text() + " overflows", t.x() + w <= texts.get(i + 1).x() + .5f);
+    }
   }
 }
