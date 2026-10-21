@@ -68,8 +68,21 @@ public final class LayoutEngine {
     }
   }
 
+  static final int[] NO_PATH = new int[0];
+
   public static final class Line {
     public final int block, row, column, start, end, page;
+
+    /**
+     * For text of a table nested in cell (row, column) of {@code block}: the nested cell's path
+     * inside that cell, as block, row, column triples (Session.cellPath without the first triple).
+     */
+    public int[] path = NO_PATH;
+
+    Line at(int[] value) {
+      path = value;
+      return this;
+    }
     public final String paragraphId, marker;
     public final float x, y, width, height;
 
@@ -127,6 +140,14 @@ public final class LayoutEngine {
 
   public static final class Box {
     public final int block, row, column, page;
+
+    /** The nested cell's path inside cell (row, column), as in {@link Line#path}. */
+    public int[] path = NO_PATH;
+
+    Box at(int[] value) {
+      path = value;
+      return this;
+    }
     public final float x, y, width, height;
     public final TableFormat.Cell format;
 
@@ -214,7 +235,7 @@ public final class LayoutEngine {
       raw.barTabs = line.barTabs;
       out.add(
           new Line(line.block, line.row, line.column, line.paragraphId, line.page, line.x,
-              line.y + dy, raw, line.marker, line.clipHeight));
+              line.y + dy, raw, line.marker, line.clipHeight).at(line.path));
     }
     return out;
   }
@@ -222,7 +243,9 @@ public final class LayoutEngine {
   private static List<Box> shiftBoxes(List<Box> boxes, float dy) {
     var out = new ArrayList<Box>();
     for (Box b : boxes)
-      out.add(new Box(b.block, b.row, b.column, b.page, b.x, b.y + dy, b.width, b.height, b.format));
+      out.add(
+          new Box(b.block, b.row, b.column, b.page, b.x, b.y + dy, b.width, b.height, b.format)
+              .at(b.path));
     return out;
   }
 
@@ -1797,17 +1820,39 @@ public final class LayoutEngine {
       mergedTable(t, index);
     }
 
+    /** A cell box of a nested table, relative to the outermost cell's content origin. */
+    final class InnerBox {
+      final int[] path;
+      final float x, y, width, height;
+      final TableFormat.Cell format;
+
+      InnerBox(int[] path, float x, float y, float width, float height, TableFormat.Cell format) {
+        this.path = path;
+        this.x = x;
+        this.y = y;
+        this.width = width;
+        this.height = height;
+        this.format = format;
+      }
+    }
+
     final class CellLayout {
       final Table.Merge span;
       final List<RawLine> lines = new ArrayList<>();
       final List<Paragraph> paragraphs = new ArrayList<>();
       final List<String> ids = new ArrayList<String>(), markers = new ArrayList<String>();
       final List<Float> xs = new ArrayList<Float>(), ys = new ArrayList<Float>();
+      final List<int[]> paths = new ArrayList<int[]>();
+      final List<InnerBox> inner = new ArrayList<InnerBox>();
       final TableFormat.Cell format;
       final float left, width;
       float height, shift;
 
       CellLayout(Table t, int row, int col, float[] edges) {
+        this(t, row, col, edges, NO_PATH);
+      }
+
+      CellLayout(Table t, int row, int col, float[] edges, int[] prefix) {
         span = t.span(row, col);
         format = t.format.cell(row, col);
         // A right-to-left table (bidiVisual) mirrors column positions within the table.
@@ -1819,7 +1864,13 @@ public final class LayoutEngine {
         height = format.verticalPadding;
         float width = Math.max(1, this.width - 2 * format.horizontalPadding);
         var numbers = new ListNumbers();
-        for (Paragraph p : t.cell(row, col)) {
+        var content = t.blocks(row, col);
+        for (int k = 0; k < content.size(); k++) {
+          if (content.get(k) instanceof Table nested) {
+            nestedTable(nested, k, prefix, width);
+            continue;
+          }
+          var p = (Paragraph) content.get(k);
           var marker = numbers.next(p);
           height += p.before;
           for (RawLine line : LayoutEngine.this.lines(p, width)) {
@@ -1833,6 +1884,7 @@ public final class LayoutEngine {
             paragraphs.add(p);
             ids.add(p.id);
             markers.add(marker);
+            paths.add(prefix);
             marker = "";
             xs.add(x);
             ys.add(height);
@@ -1841,6 +1893,68 @@ public final class LayoutEngine {
           height += p.after;
         }
         height += format.verticalPadding;
+      }
+
+      /**
+       * Lays out a table nested in this cell as a unit (Wordcraft nests the same table layout in
+       * cells): its rows sit between the surrounding cell paragraphs and move with this cell.
+       */
+      private void nestedTable(Table n, int k, int[] prefix, float available) {
+        float[] edges = new float[n.columns() + 1];
+        var widths = tableWidths(n, available);
+        float total = 0;
+        for (float w : widths) total += w;
+        edges[0] = format.horizontalPadding + n.format.sizing.offset(available, total);
+        for (int c = 0; c < n.columns(); c++) edges[c + 1] = edges[c] + widths[c];
+        float[] heights = new float[n.rows()], tops = new float[n.rows() + 1];
+        for (int r = 0; r < heights.length; r++) heights[r] = Math.max(8, n.format.minHeight(r));
+        var subs = new ArrayList<CellLayout>();
+        for (int r = 0; r < n.rows(); r++)
+          for (int c = 0; c < n.columns(); c++) {
+            if (n.covered(r, c)) continue;
+            int[] path = Arrays.copyOf(prefix, prefix.length + 3);
+            path[prefix.length] = k;
+            path[prefix.length + 1] = r;
+            path[prefix.length + 2] = c;
+            var sub = new CellLayout(n, r, c, edges, path);
+            subs.add(sub);
+            if (sub.span.rows == 1 && !"exact".equals(n.format.row(r).rule))
+              heights[r] = Math.max(heights[r], sub.height);
+          }
+        for (CellLayout sub : subs)
+          if (sub.span.rows > 1) {
+            float spanned = 0;
+            int last = sub.span.row + sub.span.rows - 1;
+            for (int i = sub.span.row; i <= last; i++) spanned += heights[i];
+            heights[last] += Math.max(0, sub.height - spanned);
+          }
+        for (int i = 0; i < heights.length; i++) tops[i + 1] = tops[i] + heights[i];
+        for (CellLayout sub : subs) {
+          float top = height + tops[sub.span.row];
+          float cellHeight = tops[sub.span.row + sub.span.rows] - tops[sub.span.row];
+          float extra = Math.max(0, cellHeight - sub.height);
+          float shift =
+              "center".equals(sub.format.vertical)
+                  ? extra / 2
+                  : "bottom".equals(sub.format.vertical) ? extra : 0;
+          int[] own = Arrays.copyOf(prefix, prefix.length + 3);
+          own[prefix.length] = k;
+          own[prefix.length + 1] = sub.span.row;
+          own[prefix.length + 2] = sub.span.column;
+          inner.add(new InnerBox(own, sub.left, top, sub.width, cellHeight, sub.format));
+          for (InnerBox b : sub.inner)
+            inner.add(new InnerBox(b.path, sub.left + b.x, top + shift + b.y, b.width, b.height, b.format));
+          for (int i = 0; i < sub.lines.size(); i++) {
+            lines.add(sub.lines.get(i));
+            paragraphs.add(sub.paragraphs.get(i));
+            ids.add(sub.ids.get(i));
+            markers.add(sub.markers.get(i));
+            paths.add(sub.paths.get(i));
+            xs.add(sub.left + sub.xs.get(i));
+            ys.add(top + shift + sub.ys.get(i));
+          }
+        }
+        height += tops[n.rows()];
       }
     }
 
@@ -2019,6 +2133,23 @@ public final class LayoutEngine {
                   cell.width,
                   visibleBottom - visibleTop,
                   cell.format));
+        for (InnerBox b : cell.inner) {
+          float boxTop = top + cell.shift + b.y;
+          float shownTop = Math.max(first, boxTop), shownBottom = Math.min(end, boxTop + b.height);
+          if (shownBottom > shownTop)
+            boxes.add(
+                new Box(
+                        index,
+                        cell.span.row,
+                        cell.span.column,
+                        pages.size(),
+                        spec.left + cell.left + b.x,
+                        y + shownTop - first,
+                        b.width,
+                        shownBottom - shownTop,
+                        b.format)
+                    .at(b.path));
+        }
         for (int i = 0; i < cell.lines.size(); i++) {
           float lineY = top + cell.shift + cell.ys.get(i);
           if (lineY >= first - .01f && lineY < end - .01f && lineY < bottom - .01f)
@@ -2033,7 +2164,8 @@ public final class LayoutEngine {
                     y + lineY - first,
                     cell.lines.get(i),
                     cell.markers.get(i),
-                    Math.max(0, Math.min(bottom, end) - lineY)));
+                    Math.max(0, Math.min(bottom, end) - lineY))
+                .at(cell.paths.get(i)));
         }
       }
     }

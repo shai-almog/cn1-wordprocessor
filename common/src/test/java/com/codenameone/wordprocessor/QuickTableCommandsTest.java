@@ -110,13 +110,10 @@ public class QuickTableCommandsTest {
     assertEquals("keep me", s.selectedText());
     commands.execute(s, "table.quick");
     before = s.document();
-    try {
-      commands.execute(s, "table.quick");
-      fail();
-    } catch (IllegalArgumentException expected) {
-    }
-    assertSame(before, s.document());
-    assertTrue(s.inCell());
+    // Wordcraft nests a quick table in the caret cell.
+    commands.execute(s, "table.quick");
+    assertNotSame(before, s.document());
+    assertEquals(2, s.cellDepth());
   }
 
   @Test

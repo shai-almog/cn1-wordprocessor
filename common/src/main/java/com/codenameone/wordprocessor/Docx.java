@@ -209,10 +209,10 @@ public final class Docx {
       DocxStyles styles,
       DocxLinks links,
       DocxComments comments) {
-    var rows = new ArrayList<List<Sequence<Paragraph>>>();
+    var rows = new ArrayList<List<Sequence<Block>>>();
     var spans = new ArrayList<int[]>();
     for (Element row : Xml.children(table, "tr")) {
-      var cells = new ArrayList<Sequence<Paragraph>>();
+      var cells = new ArrayList<Sequence<Block>>();
       for (Element cell : Xml.children(row, "tc")) {
         Element props = Xml.child(cell, "tcPr"),
             grid = props == null ? null : Xml.child(props, "gridSpan"),
@@ -225,11 +225,18 @@ public final class Docx {
           throw new IllegalArgumentException("Table size limit exceeded");
         boolean continuation =
             vertical != null && !"restart".equals(Xml.attr(vertical, "val", "continue"));
-        var cellParagraphs = new ArrayList<Paragraph>();
-        for (Element p : Xml.children(cell, "p"))
-          cellParagraphs.add(paragraph(p, id, warnings, lists, styles, links, comments));
-        if (cellParagraphs.isEmpty()) cellParagraphs.add(new Paragraph("p" + id[0]++, new RichText()));
-        var content = Sequence.of(cellParagraphs);
+        // Cells hold paragraphs and nested tables (w:tc/w:tbl), as Word and Wordcraft do.
+        var cellBlocks = new ArrayList<Block>();
+        for (Element p : Xml.children(cell, null))
+          if ("p".equals(Xml.local(p)))
+            cellBlocks.add(paragraph(p, id, warnings, lists, styles, links, comments));
+          else if ("tbl".equals(Xml.local(p))) {
+            var nested = readTable(p, id, warnings, lists, styles, links, comments);
+            if (nested != null) cellBlocks.add(nested);
+          }
+        if (cellBlocks.isEmpty() || !(cellBlocks.get(cellBlocks.size() - 1) instanceof Paragraph))
+          cellBlocks.add(new Paragraph("p" + id[0]++, new RichText()));
+        var content = Sequence.<Block>of(cellBlocks);
         if (continuation) {
           int[] found = null;
           for (int[] old : spans)
@@ -237,14 +244,14 @@ public final class Docx {
           if (found == null) warnings.add("Unmatched vertical table merge requires conversion");
           else {
             found[2]++;
-            if (!Table.cellText(content).isEmpty())
+            if (!Table.blockText(content).isEmpty())
               warnings.add("Content in a vertical merge continuation requires conversion");
           }
         } else if (width > 1 || vertical != null)
           spans.add(new int[] {rows.size(), column, 1, width});
         cells.add(content);
         for (int i = 1; i < width; i++)
-          cells.add(new Sequence<Paragraph>().append(new Paragraph("p" + id[0]++, new RichText())));
+          cells.add(new Sequence<Block>().append(new Paragraph("p" + id[0]++, new RichText())));
         if (props != null)
           for (Element prop : Xml.children(props, null)) {
             String name = Xml.local(prop);
@@ -257,22 +264,24 @@ public final class Docx {
                 && !"vAlign".equals(name)) warnings.add("Table cell property: " + name);
           }
         for (Element child : Xml.children(cell, null))
-          if (!"p".equals(Xml.local(child)) && !"tcPr".equals(Xml.local(child)))
-            warnings.add("Nested table content needs conversion");
+          if (!"p".equals(Xml.local(child))
+              && !"tcPr".equals(Xml.local(child))
+              && !"tbl".equals(Xml.local(child)))
+            warnings.add("Cell content needs conversion: " + Xml.local(child));
       }
       if (!cells.isEmpty()) rows.add(cells);
     }
     if (rows.isEmpty()) return null;
     int columns = 0;
-    for (List<Sequence<Paragraph>> row : rows) columns = Math.max(columns, row.size());
-    for (List<Sequence<Paragraph>> row : rows)
+    for (List<Sequence<Block>> row : rows) columns = Math.max(columns, row.size());
+    for (List<Sequence<Block>> row : rows)
       while (row.size() < columns)
-        row.add(new Sequence<Paragraph>().append(new Paragraph("p" + id[0]++, new RichText())));
+        row.add(new Sequence<Block>().append(new Paragraph("p" + id[0]++, new RichText())));
     var merges = new ArrayList<Table.Merge>();
     for (int[] span : spans)
       if (span[2] > 1 || span[3] > 1)
         merges.add(new Table.Merge(span[0], span[1], span[2], span[3]));
-    return TableFormats.readDocx(table, new Table("t" + id[0]++, rows, merges), warnings);
+    return TableFormats.readDocx(table, Table.of("t" + id[0]++, rows, merges), warnings);
   }
 
   /** Placeholder for w:br type="column" while runs are read; never stored in a document. */
@@ -862,44 +871,8 @@ static final char COLUMN_BREAK = '\u000B';
           writeBodyParagraph(b, paragraph, d, lists, tabs, links, comments, written);
         else writeParagraph(b, paragraph, lists, tabs, links, comments, sectionXml, prefix, suffix);
       } else if (block instanceof Picture picture) pictures.write(b, picture);
-      else if (block instanceof Table t) {
-        b.append("<w:tbl><w:tblPr>");
-        TableFormats.sizingXml(b, t.format);
-        float tableWidth = t.format.preferredWidth(sectionPage.contentWidth());
-        TableFormats.alternativeXml(b, t.format);
-        b.append("</w:tblPr><w:tblGrid>");
-        for (int c = 0; c < t.columns(); c++)
-          b.append("<w:gridCol w:w=\"")
-              .append(Math.round(20 * tableWidth * t.format.columnFraction(c)))
-              .append("\"/>");
-        b.append("</w:tblGrid>");
-        for (int r = 0; r < t.rows(); r++) {
-          b.append("<w:tr>");
-          TableFormats.rowXml(b, t.format, r);
-          for (int c = 0; c < t.columns(); c++) {
-            var span = t.span(r, c);
-            if (span.column != c) continue;
-            b.append("<w:tc><w:tcPr>");
-            float cellWidth = 0;
-            for (int column = c; column < c + span.columns; column++)
-              cellWidth += tableWidth * t.format.columnFraction(column);
-            TableFormats.cellXml(b, t.format.cell(span.row, span.column), cellWidth);
-            var flow = t.format.direction(span.row, span.column);
-            if (!"lrTb".equals(flow)) b.append("<w:textDirection w:val=\"").append(flow).append("\"/>");
-            if (span.columns > 1)
-              b.append("<w:gridSpan w:val=\"").append(span.columns).append("\"/>");
-            if (span.rows > 1)
-              b.append(r == span.row ? "<w:vMerge w:val=\"restart\"/>" : "<w:vMerge/>");
-            b.append("</w:tcPr>");
-            if (span.row == r)
-              for (Paragraph p : t.cell(r, c)) writeParagraph(b, p, lists, tabs, links, comments);
-            else b.append("<w:p/>");
-            b.append("</w:tc>");
-          }
-          b.append("</w:tr>");
-        }
-        b.append("</w:tbl>");
-      }
+      else if (block instanceof Table t)
+        writeTable(b, t, sectionPage.contentWidth(), lists, tabs, links, comments);
       if (contents != null && blockIndex == contents[1] - 1) {
         b.append("</w:sdtContent></w:sdt>");
         contents = ++rangeIndex < contentsRanges.size() ? contentsRanges.get(rangeIndex) : null;
@@ -1126,6 +1099,56 @@ static final char COLUMN_BREAK = '\u000B';
     return new Section(
         page, furniture, start, pageStart, NoteFormats.read(e, warnings), columns, decor);
   }
+
+  private static void writeTable(
+      StringBuilder b,
+      Table t,
+      float available,
+      DocxLists lists,
+      DocxTabs tabs,
+      DocxLinks links,
+      DocxComments comments) {
+      b.append("<w:tbl><w:tblPr>");
+      TableFormats.sizingXml(b, t.format);
+      float tableWidth = t.format.preferredWidth(available);
+      TableFormats.alternativeXml(b, t.format);
+      b.append("</w:tblPr><w:tblGrid>");
+      for (int c = 0; c < t.columns(); c++)
+        b.append("<w:gridCol w:w=\"")
+            .append(Math.round(20 * tableWidth * t.format.columnFraction(c)))
+            .append("\"/>");
+      b.append("</w:tblGrid>");
+      for (int r = 0; r < t.rows(); r++) {
+        b.append("<w:tr>");
+        TableFormats.rowXml(b, t.format, r);
+        for (int c = 0; c < t.columns(); c++) {
+          var span = t.span(r, c);
+          if (span.column != c) continue;
+          b.append("<w:tc><w:tcPr>");
+          float cellWidth = 0;
+          for (int column = c; column < c + span.columns; column++)
+            cellWidth += tableWidth * t.format.columnFraction(column);
+          TableFormats.cellXml(b, t.format.cell(span.row, span.column), cellWidth);
+          var flow = t.format.direction(span.row, span.column);
+          if (!"lrTb".equals(flow)) b.append("<w:textDirection w:val=\"").append(flow).append("\"/>");
+          if (span.columns > 1)
+            b.append("<w:gridSpan w:val=\"").append(span.columns).append("\"/>");
+          if (span.rows > 1)
+            b.append(r == span.row ? "<w:vMerge w:val=\"restart\"/>" : "<w:vMerge/>");
+          b.append("</w:tcPr>");
+          // Nested tables are written inside the cell as Word stores them (w:tc/w:tbl).
+          if (span.row == r)
+            for (Block inner : t.blocks(r, c))
+              if (inner instanceof Paragraph p) writeParagraph(b, p, lists, tabs, links, comments);
+              else if (inner instanceof Table nested)
+                writeTable(b, nested, cellWidth, lists, tabs, links, comments);
+          else b.append("<w:p/>");
+          b.append("</w:tc>");
+        }
+        b.append("</w:tr>");
+      }
+      b.append("</w:tbl>");
+      }
 
   static void writeParagraph(
       final StringBuilder b,

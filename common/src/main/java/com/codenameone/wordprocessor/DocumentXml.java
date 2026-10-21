@@ -74,30 +74,8 @@ public final class DocumentXml {
     b.append("</styles>");
     for (Block block : d.blocks) {
       if (block instanceof Paragraph paragraph) paragraph(b, paragraph);
-      else if (block instanceof Table t) {
-        b.append("<table id=\"").append(Xml.escape(t.id())).append("\">");
-        for (int r = 0; r < t.rows(); r++) {
-          b.append("<row>");
-          for (int c = 0; c < t.columns(); c++) {
-            b.append("<cell>");
-            for (Paragraph para : t.cell(r, c)) paragraph(b, para);
-            b.append("</cell>");
-          }
-          b.append("</row>");
-        }
-        for (Table.Merge m : t.merges)
-          b.append("<merge row=\"")
-              .append(m.row)
-              .append("\" column=\"")
-              .append(m.column)
-              .append("\" rows=\"")
-              .append(m.rows)
-              .append("\" columns=\"")
-              .append(m.columns)
-              .append("\"/>");
-        TableFormats.nativeXml(b, t.format);
-        b.append("</table>");
-      } else if (block instanceof Picture picture) {
+      else if (block instanceof Table t) table(b, t);
+      else if (block instanceof Picture picture) {
         b.append("<picture id=\"")
             .append(Xml.escape(picture.id()))
             .append("\" width=\"")
@@ -430,31 +408,7 @@ public final class DocumentXml {
       for (Element c : Xml.children(e, null)) {
         if ("p".equals(Xml.local(c))) blocks = blocks.append(readParagraph(c, ids));
         else if ("table".equals(Xml.local(c))) {
-          var rows = new ArrayList<List<Sequence<Paragraph>>>();
-          for (Element row : Xml.children(c, "row")) {
-            var cells = new ArrayList<Sequence<Paragraph>>();
-            for (Element cell : Xml.children(row, "cell")) {
-              var paras = new Sequence<Paragraph>();
-              for (Element p : Xml.children(cell, "p")) paras = paras.append(readParagraph(p, ids));
-              cells.add(paras);
-            }
-            rows.add(cells);
-          }
-          var merges = new ArrayList<Table.Merge>();
-          for (Element m : Xml.children(c, "merge"))
-            merges.add(
-                new Table.Merge(
-                    Integer.parseInt(Xml.attr(m, "row", "-1")),
-                        Integer.parseInt(Xml.attr(m, "column", "-1")),
-                    Integer.parseInt(Xml.attr(m, "rows", "1")),
-                        Integer.parseInt(Xml.attr(m, "columns", "1"))));
-          blocks =
-              blocks.append(
-                  new Table(
-                      id(c, ids),
-                      rows,
-                      merges,
-                      TableFormats.nativeRead(c, rows.size(), rows.get(0).size())));
+          blocks = blocks.append(readTable(c, ids));
         } else if ("picture".equals(Xml.local(c))) {
           blocks =
               blocks.append(
@@ -599,6 +553,59 @@ public final class DocumentXml {
 
   private static boolean flag(Element e, String k) {
     return "true".equals(Xml.attr(e, k, "false"));
+  }
+
+  /** A table; a cell holds paragraphs and nested tables in order (as Wordcraft's cells). */
+  private static void table(StringBuilder b, Table t) {
+    b.append("<table id=\"").append(Xml.escape(t.id())).append("\">");
+    for (int r = 0; r < t.rows(); r++) {
+      b.append("<row>");
+      for (int c = 0; c < t.columns(); c++) {
+        b.append("<cell>");
+        for (Block inner : t.blocks(r, c))
+          if (inner instanceof Paragraph para) paragraph(b, para);
+          else if (inner instanceof Table nested) table(b, nested);
+        b.append("</cell>");
+      }
+      b.append("</row>");
+    }
+    for (Table.Merge m : t.merges)
+      b.append("<merge row=\"")
+          .append(m.row)
+          .append("\" column=\"")
+          .append(m.column)
+          .append("\" rows=\"")
+          .append(m.rows)
+          .append("\" columns=\"")
+          .append(m.columns)
+          .append("\"/>");
+    TableFormats.nativeXml(b, t.format);
+    b.append("</table>");
+  }
+
+  private static Table readTable(Element c, Set<String> ids) throws IOException {
+    var rows = new ArrayList<List<Sequence<Block>>>();
+    for (Element row : Xml.children(c, "row")) {
+      var cells = new ArrayList<Sequence<Block>>();
+      for (Element cell : Xml.children(row, "cell")) {
+        var content = new Sequence<Block>();
+        for (Element p : Xml.children(cell, null))
+          if ("p".equals(Xml.local(p))) content = content.append(readParagraph(p, ids));
+          else if ("table".equals(Xml.local(p))) content = content.append(readTable(p, ids));
+        cells.add(content);
+      }
+      rows.add(cells);
+    }
+    var merges = new ArrayList<Table.Merge>();
+    for (Element m : Xml.children(c, "merge"))
+      merges.add(
+          new Table.Merge(
+              Integer.parseInt(Xml.attr(m, "row", "-1")),
+              Integer.parseInt(Xml.attr(m, "column", "-1")),
+              Integer.parseInt(Xml.attr(m, "rows", "1")),
+              Integer.parseInt(Xml.attr(m, "columns", "1"))));
+    return Table.of(
+        id(c, ids), rows, merges, TableFormats.nativeRead(c, rows.size(), rows.get(0).size()));
   }
 
   private static Paragraph readParagraph(Element e, Set<String> ids) throws IOException {

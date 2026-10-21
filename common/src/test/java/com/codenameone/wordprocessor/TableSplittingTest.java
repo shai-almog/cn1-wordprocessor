@@ -155,7 +155,7 @@ public class TableSplittingTest {
     assertEquals(2, s.selection().block);
     assertFalse(s.inCell());
     for (int r = 0; r < 4; r++)
-      for (int c = 0; c < 3; c++) assertSame(old.cell(r, c), (r < 2 ? head : tail).cell(r % 2, c));
+      for (int c = 0; c < 3; c++) assertSame(old.blocks(r, c), (r < 2 ? head : tail).blocks(r % 2, c));
     unique(s.document());
     var after = s.document();
     s.undo();

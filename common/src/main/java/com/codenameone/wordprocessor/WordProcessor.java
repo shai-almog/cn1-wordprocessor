@@ -1858,7 +1858,6 @@ public class WordProcessor {
   }
 
   private void quickTables() {
-    if (session.inCell()) throw new IllegalArgumentException("Nested tables are not supported yet");
     var template = new ComboBox<String>("Tabular list", "Matrix", "Calendar");
     template.setAccessibilityText("Table template");
     String[] kinds = {"tabular", "matrix", "calendar"};

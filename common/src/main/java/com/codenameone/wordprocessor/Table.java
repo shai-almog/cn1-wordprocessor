@@ -2,10 +2,15 @@ package com.codenameone.wordprocessor;
 
 import java.util.*;
 
-/** Immutable rectangular table; cells contain paragraph sequences. */
+/**
+ * Immutable rectangular table. Cells contain block sequences: paragraphs and nested tables, as
+ * Wordcraft's cells do (its paths nest three indexes per table level). {@link #cell} is the
+ * paragraph view kept for paragraph-only callers; {@link #blocks} is the full content.
+ */
 public final class Table implements Block {
   private final String id;
-  private final List<List<Sequence<Paragraph>>> cells;
+  private final List<List<Sequence<Block>>> cells;
+  private final Sequence<Paragraph>[][] paragraphView;
 
   public static final class Merge {
     public final int row, column, rows, columns;
@@ -47,6 +52,39 @@ public final class Table implements Block {
 
   public Table(
       String id, List<List<Sequence<Paragraph>>> cells, List<Merge> merges, TableFormat format) {
+    this(id, merges, format, widen(cells));
+  }
+
+  public static Table of(String id, List<List<Sequence<Block>>> cells, List<Merge> merges) {
+    return of(
+        id, cells, merges, new TableFormat(cells.size(), cells.isEmpty() ? 0 : cells.get(0).size()));
+  }
+
+  /** A table whose cells hold blocks (paragraphs and nested tables). */
+  public static Table of(
+      String id, List<List<Sequence<Block>>> cells, List<Merge> merges, TableFormat format) {
+    return new Table(id, merges, format, cells);
+  }
+
+  private static List<List<Sequence<Block>>> widen(List<List<Sequence<Paragraph>>> cells) {
+    var out = new ArrayList<List<Sequence<Block>>>();
+    for (List<Sequence<Paragraph>> row : cells) {
+      var copy = new ArrayList<Sequence<Block>>();
+      for (Sequence<Paragraph> cell : row) copy.add(cell == null ? null : widen(cell));
+      out.add(copy);
+    }
+    return out;
+  }
+
+  static Sequence<Block> widen(Sequence<Paragraph> cell) {
+    var out = new Sequence<Block>();
+    for (Paragraph p : cell) out = out.append(p);
+    return out;
+  }
+
+  @SuppressWarnings("unchecked")
+  private Table(
+      String id, List<Merge> merges, TableFormat format, List<List<Sequence<Block>>> cells) {
     if (id == null || cells.isEmpty() || cells.get(0).isEmpty())
       throw new IllegalArgumentException("Empty table");
     if (format == null || format.rows() != cells.size() || format.columns() != cells.get(0).size())
@@ -54,16 +92,20 @@ public final class Table implements Block {
     this.format = format;
     this.id = id;
     int cols = cells.get(0).size();
-    var c = new ArrayList<List<Sequence<Paragraph>>>();
-    for (List<Sequence<Paragraph>> row : cells) {
+    var c = new ArrayList<List<Sequence<Block>>>();
+    for (List<Sequence<Block>> row : cells) {
       if (row.size() != cols) throw new IllegalArgumentException("Ragged table");
-      var copy = new ArrayList<Sequence<Paragraph>>();
-      for (Sequence<Paragraph> cell : row) {
+      var copy = new ArrayList<Sequence<Block>>();
+      for (Sequence<Block> cell : row) {
         if (cell == null || cell.size() == 0) throw new IllegalArgumentException("Empty cell");
+        // Like Word and Wordcraft, a cell ends with a paragraph (the cell mark's paragraph).
+        if (!(cell.get(cell.size() - 1) instanceof Paragraph))
+          throw new IllegalArgumentException("A cell must end with a paragraph");
         copy.add(cell);
       }
       c.add(Collections.unmodifiableList(copy));
     }
+    paragraphView = new Sequence[cells.size()][cols];
     this.cells = Collections.unmodifiableList(c);
     var spans = new ArrayList<Merge>();
     for (Merge m : merges) {
@@ -84,14 +126,14 @@ public final class Table implements Block {
   }
 
   public Table crop(CellSelection range) {
-    var picked = new ArrayList<List<Sequence<Paragraph>>>();
+    var picked = new ArrayList<List<Sequence<Block>>>();
     var f =
         new TableFormat(
             range.lastRow - range.firstRow + 1, range.lastColumn - range.firstColumn + 1);
     for (int r = range.firstRow; r <= range.lastRow; r++) {
-      var row = new ArrayList<Sequence<Paragraph>>();
+      var row = new ArrayList<Sequence<Block>>();
       for (int c = range.firstColumn; c <= range.lastColumn; c++) {
-        row.add(cell(r, c));
+        row.add(blocks(r, c));
         f = f.cell(r - range.firstRow, c - range.firstColumn, format.cell(r, c));
       }
       f = f.row(r - range.firstRow, format.row(r));
@@ -123,7 +165,7 @@ public final class Table implements Block {
                 size.align,
                 size.indent,
                 size.fixed));
-    return new Table(id, picked, spans, f.altText(format.title, format.description));
+    return new Table(id, spans, f.altText(format.title, format.description), picked);
   }
 
   public Table format(TableFormat value) {
@@ -131,7 +173,7 @@ public final class Table implements Block {
       if (m.row < value.headerRows && m.row + m.rows > value.headerRows)
         throw new IllegalArgumentException(
             "A merged cell cannot cross the repeated header boundary");
-    return new Table(id, cells, merges, value);
+    return new Table(id, merges, value, cells);
   }
 
   public String id() {
@@ -146,35 +188,74 @@ public final class Table implements Block {
     return cells.get(0).size();
   }
 
+  /** The cell's paragraphs, skipping nested tables (see {@link #blocks}). */
   public Sequence<Paragraph> cell(int r, int c) {
+    var view = paragraphView[r][c];
+    if (view == null) {
+      view = new Sequence<Paragraph>();
+      for (Block b : cells.get(r).get(c)) if (b instanceof Paragraph) view = view.append((Paragraph) b);
+      paragraphView[r][c] = view;
+    }
+    return view;
+  }
+
+  /** The cell's content: paragraphs and nested tables in order. */
+  public Sequence<Block> blocks(int r, int c) {
     return cells.get(r).get(c);
   }
 
+  /** True when any cell (at any depth) holds a table. */
+  public boolean nested() {
+    for (List<Sequence<Block>> row : cells)
+      for (Sequence<Block> cell : row) for (Block b : cell) if (b instanceof Table) return true;
+    return false;
+  }
+
+  /**
+   * Replaces the cell's paragraphs. Nested tables stay in place: the i-th new paragraph takes the
+   * i-th old paragraph's slot, so paragraph-mapping callers (fields, merge, notes) keep them.
+   */
   public Table setCell(int r, int c, Sequence<Paragraph> value) {
+    var old = cells.get(r).get(c);
+    if (old.size() == cell(r, c).size()) return setBlocks(r, c, widen(value));
+    // positional replacement below keeps nested tables between the paragraphs
+    var out = new Sequence<Block>();
+    int i = 0;
+    for (Block b : old)
+      if (b instanceof Table) out = out.append(b);
+      else if (i < value.size()) out = out.append(value.get(i++));
+    for (; i < value.size(); i++) out = out.append(value.get(i));
+    if (!(out.get(out.size() - 1) instanceof Paragraph)) out = widen(value);
+    return setBlocks(r, c, out);
+  }
+
+  public Table setBlocks(int r, int c, Sequence<Block> value) {
     if (covered(r, c)) throw new IllegalArgumentException("Edit the owning merged cell");
-    var copy = new ArrayList<List<Sequence<Paragraph>>>(cells);
-    var row = new ArrayList<Sequence<Paragraph>>(copy.get(r));
+    var copy = new ArrayList<List<Sequence<Block>>>(cells);
+    var row = new ArrayList<Sequence<Block>>(copy.get(r));
     row.set(c, value);
     copy.set(r, row);
-    return new Table(id, copy, merges, format);
+    return new Table(id, merges, format, copy);
   }
 
   public Table insertRow(int at, List<Sequence<Paragraph>> row) {
     if (at < 0 || at > rows() || row.size() != columns())
       throw new IllegalArgumentException("Invalid row insertion");
-    var copy = new ArrayList<List<Sequence<Paragraph>>>(cells);
-    copy.add(at, row);
-    return new Table(id, copy, changedSpans(true, at, true), format.change(true, at, true));
+    var copy = new ArrayList<List<Sequence<Block>>>(cells);
+    var added = new ArrayList<Sequence<Block>>();
+    for (Sequence<Paragraph> cell : row) added.add(widen(cell));
+    copy.add(at, added);
+    return new Table(id, changedSpans(true, at, true), format.change(true, at, true), copy);
   }
 
   public Table deleteRow(int at) {
     if (rows() == 1)
       throw new IllegalArgumentException("A table must keep at least one row; use Delete table");
-    var copy = new ArrayList<List<Sequence<Paragraph>>>(cells);
+    var copy = new ArrayList<List<Sequence<Block>>>(cells);
     for (Merge m : merges)
       if (m.row == at && m.rows > 1) {
-        var next = new ArrayList<Sequence<Paragraph>>(copy.get(at + 1));
-        next.set(m.column, cell(m.row, m.column));
+        var next = new ArrayList<Sequence<Block>>(copy.get(at + 1));
+        next.set(m.column, blocks(m.row, m.column));
         copy.set(at + 1, next);
       }
     copy.remove(at);
@@ -182,30 +263,30 @@ public final class Table implements Block {
     for (Merge m : merges)
       if (m.row == at && m.rows > 1)
         nextFormat = nextFormat.cell(at, m.column, format.cell(m.row, m.column));
-    return new Table(id, copy, changedSpans(true, at, false), nextFormat);
+    return new Table(id, changedSpans(true, at, false), nextFormat, copy);
   }
 
   public Table insertColumn(int at, List<Sequence<Paragraph>> column) {
     if (at < 0 || at > columns() || column.size() != rows())
       throw new IllegalArgumentException("Invalid column insertion");
-    var copy = new ArrayList<List<Sequence<Paragraph>>>();
+    var copy = new ArrayList<List<Sequence<Block>>>();
     for (int r = 0; r < rows(); r++) {
-      var row = new ArrayList<Sequence<Paragraph>>(cells.get(r));
-      row.add(at, column.get(r));
+      var row = new ArrayList<Sequence<Block>>(cells.get(r));
+      row.add(at, widen(column.get(r)));
       copy.add(row);
     }
-    return new Table(id, copy, changedSpans(false, at, true), format.change(false, at, true));
+    return new Table(id, changedSpans(false, at, true), format.change(false, at, true), copy);
   }
 
   public Table deleteColumn(int at) {
     if (columns() == 1)
       throw new IllegalArgumentException("A table must keep at least one column; use Delete table");
-    var copy = new ArrayList<List<Sequence<Paragraph>>>();
-    for (List<Sequence<Paragraph>> original : cells) {
-      var row = new ArrayList<Sequence<Paragraph>>(original);
+    var copy = new ArrayList<List<Sequence<Block>>>();
+    for (List<Sequence<Block>> original : cells) {
+      var row = new ArrayList<Sequence<Block>>(original);
       for (Merge m : merges)
         if (m.row == copy.size() && m.column == at && m.columns > 1)
-          row.set(at + 1, cell(m.row, m.column));
+          row.set(at + 1, blocks(m.row, m.column));
       row.remove(at);
       copy.add(row);
     }
@@ -213,7 +294,7 @@ public final class Table implements Block {
     for (Merge m : merges)
       if (m.column == at && m.columns > 1)
         nextFormat = nextFormat.cell(m.row, at, format.cell(m.row, m.column));
-    return new Table(id, copy, changedSpans(false, at, false), nextFormat);
+    return new Table(id, changedSpans(false, at, false), nextFormat, copy);
   }
 
   public Table sorted(
@@ -222,12 +303,12 @@ public final class Table implements Block {
       throw new IllegalArgumentException("Split merged cells before sorting a table");
     if (column < 0 || column >= columns())
       throw new IllegalArgumentException("Invalid sort column");
-    var copy = new ArrayList<List<Sequence<Paragraph>>>(cells);
+    var copy = new ArrayList<List<Sequence<Block>>>(cells);
     Collections.sort(
         copy.subList(header ? 1 : 0, copy.size()),
-        new Comparator<List<Sequence<Paragraph>>>() {
-          public int compare(List<Sequence<Paragraph>> a, List<Sequence<Paragraph>> b) {
-            String x = cellText(a.get(column)), y = cellText(b.get(column));
+        new Comparator<List<Sequence<Block>>>() {
+          public int compare(List<Sequence<Block>> a, List<Sequence<Block>> b) {
+            String x = blockText(a.get(column)), y = blockText(b.get(column));
             int c =
                 numeric
                     ? Double.compare(Double.parseDouble(x.trim()), Double.parseDouble(y.trim()))
@@ -237,7 +318,7 @@ public final class Table implements Block {
         });
     int[] order = new int[rows()];
     for (int r = 0; r < rows(); r++) order[r] = cells.indexOf(copy.get(r));
-    return new Table(id, copy, merges, format.reorder(order));
+    return new Table(id, merges, format.reorder(order), copy);
   }
 
   public Merge span(int row, int column) {
@@ -291,30 +372,66 @@ public final class Table implements Block {
         throw new IllegalArgumentException(
             "Merge must include each existing merged cell completely");
     }
-    var copy = new ArrayList<List<Sequence<Paragraph>>>();
-    for (List<Sequence<Paragraph>> original : cells)
-      copy.add(new ArrayList<Sequence<Paragraph>>(original));
-    var content = new Sequence<Paragraph>();
+    var copy = new ArrayList<List<Sequence<Block>>>();
+    for (List<Sequence<Block>> original : cells) copy.add(new ArrayList<Sequence<Block>>(original));
+    var content = new Sequence<Block>();
     for (int y = row; y < row + rowCount; y++)
       for (int x = column; x < column + columnCount; x++) {
-        if (!covered(y, x)) for (Paragraph p : cell(y, x)) content = content.append(p);
+        if (!covered(y, x)) for (Block b : blocks(y, x)) content = content.append(b);
         if (y != row || x != column)
           copy.get(y)
               .set(
                   x,
-                  new Sequence<Paragraph>()
-                      .append(new Paragraph("p" + nextId[0]++, new RichText())));
+                  new Sequence<Block>().append(new Paragraph("p" + nextId[0]++, new RichText())));
       }
     copy.get(row).set(column, content);
     spans.add(area);
-    return new Table(id, copy, spans, format);
+    return new Table(id, spans, format, copy);
   }
 
   public Table split(int row, int column) {
     var selected = span(row, column);
     var spans = new ArrayList<Merge>();
     for (Merge m : merges) if (m != selected) spans.add(m);
-    return new Table(id, cells, spans, format);
+    return new Table(id, spans, format, cells);
+  }
+
+  /** A copy with fresh table and paragraph ids at every nesting level (for paste). */
+  public Table renumbered(long[] id) {
+    var out = new ArrayList<List<Sequence<Block>>>();
+    for (int r = 0; r < rows(); r++) {
+      var row = new ArrayList<Sequence<Block>>();
+      for (int c = 0; c < columns(); c++) {
+        var cell = new Sequence<Block>();
+        for (Block b : blocks(r, c))
+          cell =
+              cell.append(
+                  b instanceof Table inner
+                      ? inner.renumbered(id)
+                      : ((Paragraph) b).copy("p" + id[0]++, ((Paragraph) b).text));
+        row.add(cell);
+      }
+      out.add(row);
+    }
+    return new Table("t" + id[0]++, merges, format, out);
+  }
+
+  /** Cell text with nested tables flattened in reading order. */
+  public static String blockText(Sequence<Block> cell) {
+    var b = new StringBuilder();
+    for (Block block : cell) {
+      if (b.length() > 0) b.append('\n');
+      if (block instanceof Paragraph) b.append(((Paragraph) block).text);
+      else if (block instanceof Table) {
+        var t = (Table) block;
+        for (int r = 0; r < t.rows(); r++)
+          for (int c = 0; c < t.columns(); c++) {
+            if (r + c > 0) b.append('\n');
+            b.append(blockText(t.blocks(r, c)));
+          }
+      }
+    }
+    return b.toString();
   }
 
   public static String cellText(Sequence<Paragraph> cell) {

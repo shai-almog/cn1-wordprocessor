@@ -81,13 +81,10 @@ public class TableInsertionCommandsTest {
     assertEquals("Keep", s.selectedText());
     s.insertTable(1, 1);
     before = s.document();
-    try {
-      s.insertTable(1, 1);
-      fail();
-    } catch (IllegalArgumentException expected) {
-    }
-    assertSame(before, s.document());
-    assertTrue(s.inCell());
+    // Wordcraft inserts a table nested in the caret cell.
+    s.insertTable(1, 1);
+    assertNotSame(before, s.document());
+    assertEquals(2, s.cellDepth());
   }
 
   @Test

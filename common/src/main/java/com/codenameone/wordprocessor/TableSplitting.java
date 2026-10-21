@@ -102,16 +102,16 @@ final class TableSplitting {
   static Table rows(Table table, int first, int end, String id) {
     if (first < 0 || first >= end || end > table.rows())
       throw new IllegalArgumentException("Invalid table split");
-    var cells = new ArrayList<List<Sequence<Paragraph>>>();
+    var cells = new ArrayList<List<Sequence<Block>>>();
     TableFormat.Cell[][] appearance = new TableFormat.Cell[end - first][table.columns()];
     float[] weights = new float[table.columns()];
     TableFormat.Row[] heights = new TableFormat.Row[end - first];
     for (int c = 0; c < table.columns(); c++) weights[c] = table.format.column(c);
     for (int r = first; r < end; r++) {
-      var line = new ArrayList<Sequence<Paragraph>>();
+      var line = new ArrayList<Sequence<Block>>();
       heights[r - first] = table.format.row(r);
       for (int c = 0; c < table.columns(); c++) {
-        line.add(table.cell(r, c));
+        line.add(table.blocks(r, c));
         var owner = table.span(r, c);
         appearance[r - first][c] =
             r == first && owner.row < first && c == owner.column
@@ -126,7 +126,7 @@ final class TableSplitting {
       if (top < bottom)
         spans.add(new Table.Merge(top - first, span.column, bottom - top, span.columns));
     }
-    return new Table(
+    return Table.of(
         id,
         cells,
         spans,

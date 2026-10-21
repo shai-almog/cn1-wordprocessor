@@ -24,6 +24,19 @@ public final class Session {
     /** Set when the story is this footnote/endnote's (block then holds its reference). */
     String note;
 
+    /**
+     * The enclosing cell when this cell belongs to a table nested in another cell. Its root is
+     * then that outer cell's story, so block/row/column are relative to that story (Wordcraft's
+     * paths nest three indexes per table level the same way).
+     */
+    CellContext parent;
+
+    CellContext top() {
+      var c = this;
+      while (c.parent != null) c = c.parent;
+      return c;
+    }
+
     CellContext(
         Document root, Document initial, Selection selection, int block, int row, int column) {
       this.root = root;
@@ -42,6 +55,41 @@ public final class Session {
 
   public boolean inCell() {
     return cell != null && cell.note == null;
+  }
+
+  /** Table nesting depth of the cell being edited: 0 in the body, 1 in a body table's cell. */
+  public int cellDepth() {
+    int depth = 0;
+    for (var c = cell; c != null && c.note == null; c = c.parent) depth++;
+    return depth;
+  }
+
+  /** The edited cell's path from the body: block, row, column triples, outermost first. */
+  public int[] cellPath() {
+    int depth = inCell() ? cellDepth() : 0;
+    int[] out = new int[3 * depth];
+    var c = cell;
+    for (int i = depth - 1; i >= 0; i--, c = c.parent) {
+      out[3 * i] = c.block;
+      out[3 * i + 1] = c.row;
+      out[3 * i + 2] = c.column;
+    }
+    return out;
+  }
+
+  /** Enters the cell at {@code path} (see {@link #cellPath}) starting from the body. */
+  public void enterCellPath(int[] path) {
+    if (java.util.Arrays.equals(path, cellPath())) return;
+    leaveCell();
+    for (int i = 0; i + 2 < path.length; i += 3) {
+      if (i > 0) enterNestedCell(path[i], path[i + 1], path[i + 2]);
+      else enterCell(path[i], path[i + 1], path[i + 2]);
+    }
+  }
+
+  /** The body block holding the edited cell's outermost table, or -1 outside cells. */
+  public int rootCellBlock() {
+    return inCell() ? cell.top().block : -1;
   }
 
   public int cellBlock() {
@@ -99,13 +147,31 @@ public final class Session {
     finishComposition();
     cells = null;
     if (cell != null && cell.block == block && cell.row == row && cell.column == column) return;
-    leaveCell();
+    // A sibling cell of a nested table is entered from the same enclosing cell story.
+    if (inCell() && cell.parent != null) leaveCellLevel();
+    else leaveCell();
+    openCell(block, row, column);
+  }
+
+  /** Enters a cell of table {@code block} in the story being edited (body or cell). */
+  public void enterNestedCell(int block, int row, int column) {
+    if (!inCell()) {
+      enterCell(block, row, column);
+      return;
+    }
+    if (transactionDepth == 0) breakTypingGroup();
+    finishComposition();
+    cells = null;
+    openCell(block, row, column);
+  }
+
+  private void openCell(int block, int row, int column) {
+    var outer = inCell() ? cell : null;
     var table = (Table) document.blocks.get(block);
     var owner = table.span(row, column);
     row = owner.row;
     column = owner.column;
-    var paragraphs = new Sequence<Block>();
-    for (Paragraph p : table.cell(row, column)) paragraphs = paragraphs.append(p);
+    var paragraphs = table.blocks(row, column);
     var view =
         new Document(paragraphs, document.page, document.title, document.nextId)
             .styles(document.styles)
@@ -116,6 +182,7 @@ public final class Session {
         comments.add(c);
     view = view.comments(comments);
     cell = new CellContext(document, view, selection, block, row, column);
+    cell.parent = outer;
     document = view;
     selection = new Selection(0, 0, 0);
     insertionStyle = null;
@@ -128,10 +195,31 @@ public final class Session {
     if (transactionDepth == 0) breakTypingGroup();
     finishComposition();
     var root = document();
-    var outer = cell.outerSelection;
+    var outer = cell.top().outerSelection;
     cell = null;
     document = root;
     selection = outer;
+    insertionStyle = null;
+    integratedSource = null;
+  }
+
+  /**
+   * Leaves the edited cell for the story holding its table: the body, or for a nested table the
+   * enclosing cell. {@link #leaveCell} returns to the body.
+   */
+  public void leaveCellLevel() {
+    if (cell == null || cell.parent == null) {
+      leaveCell();
+      return;
+    }
+    cells = null;
+    if (transactionDepth == 0) breakTypingGroup();
+    finishComposition();
+    var outer = integrate(cell, document);
+    var selectionBefore = cell.outerSelection;
+    cell = cell.parent;
+    document = outer;
+    selection = selectionBefore;
     insertionStyle = null;
     integratedSource = null;
   }
@@ -177,8 +265,9 @@ public final class Session {
   }
 
   private void selectWholeCell() {
-    int last = document.blocks.size() - 1;
-    selectRange(0, 0, last, document.paragraph(last).text.length());
+    int last = document.blocks.size() - 1, first = 0;
+    while (!(document.blocks.get(first) instanceof Paragraph)) first++;
+    selectRange(first, 0, last, document.paragraph(last).text.length());
   }
 
   private void editCells(final Edit edit, final boolean keepSelection) {
@@ -399,38 +488,42 @@ public final class Session {
 
   public Document document() {
     if (cell == null) return document;
-    if (document == cell.initial) return cell.root;
     if (integratedSource != document) {
-      var paragraphs = new Sequence<Paragraph>();
-      for (Block block : document.blocks) {
-        if (!(block instanceof Paragraph))
-          throw new IllegalStateException("Nested tables are not supported");
-        paragraphs = paragraphs.append((Paragraph) block);
-      }
-      if (cell.note != null) {
-        final var story = paragraphs;
-        final String id = cell.note;
-        integratedDocument =
-            Notes.map(cell.root, n -> n.id.equals(id) ? n.paragraphs(story) : n);
-        integratedDocument = integratedDocument.blocks(integratedDocument.blocks, document.nextId);
-      } else {
-        var table = (Table) cell.root.blocks.get(cell.block);
-        integratedDocument =
-            cell.root.blocks(
-                cell.root.blocks.set(cell.block, table.setCell(cell.row, cell.column, paragraphs)),
-                document.nextId);
-      }
-      if (document.comments != cell.initial.comments) {
-        var prior = new HashSet<String>();
-        for (ReviewComment c : cell.initial.comments) prior.add(c.id);
-        var comments = new ArrayList<ReviewComment>();
-        for (ReviewComment c : cell.root.comments) if (!prior.contains(c.id)) comments.add(c);
-        comments.addAll(document.comments);
-        integratedDocument = integratedDocument.comments(comments);
-      }
+      var d = document;
+      for (var c = cell; c != null; c = c.parent) d = integrate(c, d);
+      integratedDocument = d;
       integratedSource = document;
     }
     return integratedDocument;
+  }
+
+  /** The story enclosing {@code c} with {@code story} (c's edited content) written back. */
+  private static Document integrate(CellContext c, Document story) {
+    if (story == c.initial) return c.root;
+    Document out;
+    if (c.note != null) {
+      var paragraphs = new Sequence<Paragraph>();
+      for (Block block : story.blocks) paragraphs = paragraphs.append((Paragraph) block);
+      final var notes = paragraphs;
+      final String id = c.note;
+      out = Notes.map(c.root, n -> n.id.equals(id) ? n.paragraphs(notes) : n);
+      out = out.blocks(out.blocks, story.nextId);
+    } else {
+      var table = (Table) c.root.blocks.get(c.block);
+      out =
+          c.root.blocks(
+              c.root.blocks.set(c.block, table.setBlocks(c.row, c.column, story.blocks)),
+              story.nextId);
+    }
+    if (story.comments != c.initial.comments) {
+      var prior = new HashSet<String>();
+      for (ReviewComment rc : c.initial.comments) prior.add(rc.id);
+      var comments = new ArrayList<ReviewComment>();
+      for (ReviewComment rc : c.root.comments) if (!prior.contains(rc.id)) comments.add(rc);
+      comments.addAll(story.comments);
+      out = out.comments(comments);
+    }
+    return out;
   }
 
   public Selection selection() {
@@ -549,13 +642,13 @@ public final class Session {
     transactionDepth++;
     try {
       edit.apply(this);
-      int noteCell = cellBlock(), noteRow = cellRow(), noteColumn = cellColumn();
+      int[] notePath = cellPath();
       var noteCells = cells;
       var noteSelection = selection;
       var noteStyle = insertionStyle;
-      if (noteCell >= 0) leaveCell();
+      if (notePath.length > 0) leaveCell();
       document = Notes.normalize(document);
-      if (noteCell >= 0) enterCell(noteCell, noteRow, noteColumn);
+      if (notePath.length > 0) enterCellPath(notePath);
       selection = noteSelection;
       cells = noteCells;
       insertionStyle = noteStyle;
@@ -891,6 +984,22 @@ public final class Session {
     revision++;
   }
 
+  /** Replaces the story being edited (the body, or the edited cell's blocks) in one undo step. */
+  public void replaceStory(final Document d) {
+    if (!inCell()) {
+      replaceDocument(d);
+      return;
+    }
+    transact(
+        s -> {
+          cells = null;
+          document = d;
+          int first = 0;
+          while (!(document.blocks.get(first) instanceof Paragraph)) first++;
+          selection = new Selection(first, 0, 0);
+        });
+  }
+
   public void replaceDocument(final Document d) {
     transact(
         s -> {
@@ -906,7 +1015,9 @@ public final class Session {
   public void documentProperties(final DocumentProperties value) {
     transact(
         s -> {
-          int block = cellBlock(), row = cellRow(), column = cellColumn();
+          int[] path = cellPath();
+          int block = path.length > 0 ? path[0] : -1;
+          int row = path.length > 0 ? path[1] : 0, column = path.length > 0 ? path[2] : 0;
           var selected = selection;
           if (block >= 0) leaveCell();
           document = document.properties(value);
@@ -1103,7 +1214,7 @@ public final class Session {
     if (current >= 0) target = (current + (previous ? -1 : 1) + body.size()) % body.size();
     else {
       target = previous ? body.size() - 1 : 0;
-      int block = cell != null ? cell.block : selection.block;
+      int block = cell != null ? cell.top().block : selection.block;
       for (int i = 0; i < body.size(); i++) {
         var change = body.get(i);
         if (!previous
@@ -1753,7 +1864,7 @@ public final class Session {
   }
 
   public Section.Range activeSection() {
-    return document().sectionAt(cell != null ? cell.block : selection.block);
+    return document().sectionAt(cell != null ? cell.top().block : selection.block);
   }
 
   /** Change selected sections, or defaults and matching overrides, in one undo transaction. */
@@ -1761,8 +1872,8 @@ public final class Session {
       final String kind, final NoteOptions.Properties change, final boolean whole) {
     document().notes.with(kind, change); // Validate before opening a transaction.
     if (change.isEmpty()) return;
-    final int first = cell != null ? cell.block : selection.startBlock();
-    final int last = cell != null ? cell.block : selection.endBlock();
+    final int first = cell != null ? cell.top().block : selection.startBlock();
+    final int last = cell != null ? cell.top().block : selection.endBlock();
     transact(
         s -> {
           int cb = cellBlock(), cr = cellRow(), cc = cellColumn();
@@ -1792,7 +1903,7 @@ public final class Session {
   }
 
   public void section(final Section value) {
-    int block = cell != null ? cell.block : selection.block;
+    int block = cell != null ? cell.top().block : selection.block;
     leaveCell();
     transact(s -> document = document.section(block, value));
   }
@@ -1858,7 +1969,7 @@ public final class Session {
   }
 
   public void furniture(final PageFurniture value) {
-    final int block = cell != null ? cell.block : selection.block;
+    final int block = cell != null ? cell.top().block : selection.block;
     leaveCell();
     transact(
         s -> {
@@ -1990,7 +2101,7 @@ public final class Session {
         || chapter > 9
         || !Arrays.asList("-", ".", ":", "\u2014", "\u2013").contains(separator))
       throw new IllegalArgumentException("Invalid caption numbering options");
-    final int target = cell != null ? cell.block : selection.block;
+    final int target = cell != null ? cell.top().block : selection.block;
     leaveCell();
     transact(
         s -> {
@@ -2287,7 +2398,6 @@ public final class Session {
 
   /** Inserts a template at the text selection, preserving the prefix and suffix paragraphs. */
   public void insertQuickTable(final String kind) {
-    if (inCell()) throw new IllegalArgumentException("Nested tables are not supported yet");
     // Validate before deleting selected text or creating an undo entry.
     TableTemplates.create(kind, 1);
     transact(
@@ -2300,12 +2410,11 @@ public final class Session {
                   document.blocks.insert(at, table),
                   document.nextId + 1 + table.rows() * table.columns());
           selection = new Selection(at + 1, 0, 0);
-          enterCell(at, 0, 0);
+          enterNestedCell(at, 0, 0);
         });
   }
 
   public void insertTable(final int rows, final int columns) {
-    if (inCell()) throw new IllegalArgumentException("Nested tables are not supported yet");
     if (rows < 1 || rows > 100 || columns < 1 || columns > 30)
       throw new IllegalArgumentException("Table size outside 1..100 by 1..30");
     transact(
@@ -2327,13 +2436,13 @@ public final class Session {
                 document.blocks.insert(i, new Table(tid, cells));
             document = document.blocks(blocks, id);
             selection = new Selection(i + 1, 0, 0);
-            enterCell(i, 0, 0);
+            enterNestedCell(i, 0, 0);
           }
         });
   }
 
   public void setCell(final int block, final int row, final int column, final String text) {
-    leaveCell();
+    leaveCellLevel();
     transact(
         s -> {
           var t = (Table) document.blocks.get(block);
@@ -2358,7 +2467,7 @@ public final class Session {
           int cellBlock = cellBlock(), row = cellRow(), column = cellColumn();
           var selectedCells = cells;
           var selected = selection;
-          leaveCell();
+          leaveCellLevel();
           var table = (Table) document.blocks.get(block);
           document =
               document.blocks(document.blocks.set(block, table.format(format)), document.nextId);
@@ -2373,7 +2482,7 @@ public final class Session {
   public void tableStructure(final int block, final String action, final int index) {
     transact(
         s -> {
-          leaveCell();
+          leaveCellLevel();
           Table table = (Table) document.blocks.get(block), next = table;
           long id = document.nextId;
           if ("insertRow".equals(action) || "insertColumn".equals(action)) {
@@ -2399,7 +2508,7 @@ public final class Session {
       final int block, final int row, final int column, final int rows, final int columns) {
     transact(
         s -> {
-          leaveCell();
+          leaveCellLevel();
           var t = (Table) document.blocks.get(block);
           long[] id = {document.nextId};
           var merged = t.merge(row, column, rows, columns, id);
@@ -2410,7 +2519,7 @@ public final class Session {
   public void splitCell(final int block, final int row, final int column) {
     transact(
         s -> {
-          leaveCell();
+          leaveCellLevel();
           var t = (Table) document.blocks.get(block);
           document =
               document.blocks(document.blocks.set(block, t.split(row, column)), document.nextId);
@@ -2421,7 +2530,7 @@ public final class Session {
   public void splitCell(final int block, final int row, final int column, final int columns) {
     transact(
         s -> {
-          leaveCell();
+          leaveCellLevel();
           var table = (Table) document.blocks.get(block);
           var owner = table.span(row, column);
           long[] id = {document.nextId};
@@ -2435,7 +2544,7 @@ public final class Session {
   public void splitTable(final int block, final int row) {
     transact(
         s -> {
-          leaveCell();
+          leaveCellLevel();
           var table = (Table) document.blocks.get(block);
           if (row <= 0 || row >= table.rows())
             throw new IllegalArgumentException("Split Table requires a row after the first row");
@@ -2463,7 +2572,7 @@ public final class Session {
       final boolean numeric) {
     transact(
         s -> {
-          leaveCell();
+          leaveCellLevel();
           var t = (Table) document.blocks.get(block);
           document =
               document.blocks(
@@ -2475,7 +2584,7 @@ public final class Session {
   public void tableToText(final int block, final String separator) {
     transact(
         s -> {
-          leaveCell();
+          leaveCellLevel();
           var t = (Table) document.blocks.get(block);
           var blocks = document.blocks.remove(block);
           long id = document.nextId;
@@ -2499,7 +2608,7 @@ public final class Session {
   public void deleteTable(final int block) {
     transact(
         s -> {
-          leaveCell();
+          leaveCellLevel();
           if (!(document.blocks.get(block) instanceof Table))
             throw new IllegalArgumentException("Select a table");
           var blocks = document.blocks.remove(block);
@@ -2691,8 +2800,8 @@ public final class Session {
       throw new IllegalArgumentException("Section breaks belong in the document body");
     if (inCell())
       for (Block b : fragment.blocks)
-        if (!(b instanceof Paragraph))
-          throw new IllegalArgumentException("Nested tables are not supported yet");
+        if (!(b instanceof Paragraph) && !(b instanceof Table))
+          throw new IllegalArgumentException("Pictures cannot be pasted into cells");
     transact(
         s -> {
           var original = document;
@@ -2726,18 +2835,9 @@ public final class Session {
                 pastedSections.put(copy.id, section.furniture(furniture));
               }
             } else if (source instanceof Table table) {
-              var cells = new ArrayList<List<Sequence<Paragraph>>>();
-              for (int r = 0; r < table.rows(); r++) {
-                var row = new ArrayList<Sequence<Paragraph>>();
-                for (int c = 0; c < table.columns(); c++) {
-                  var cell = new Sequence<Paragraph>();
-                  for (Paragraph p : table.cell(r, c))
-                    cell = cell.append(p.copy("p" + id++, p.text));
-                  row.add(cell);
-                }
-                cells.add(row);
-              }
-              inserted.add(new Table("t" + id++, cells, table.merges, table.format));
+              long[] ids = {id};
+              inserted.add(table.renumbered(ids));
+              id = ids[0];
             } else if (source instanceof Picture picture) inserted.add(picture.copy("i" + id++));
           }
           if (inserted.get(0) instanceof Paragraph) {

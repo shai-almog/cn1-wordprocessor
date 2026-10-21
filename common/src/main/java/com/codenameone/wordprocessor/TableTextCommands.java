@@ -13,8 +13,8 @@ final class TableTextCommands implements Commands.Extension {
           char sep =
               "comma".equals(kind) ? ',' : "semicolon".equals(kind) ? ';' : "tab".equals(kind) ? '\t' : 0;
           if (sep == 0) throw new IllegalArgumentException("Separator must be tab, comma or semicolon");
-          if (s.inCell()) throw new IllegalArgumentException("Nested tables are not supported yet");
-          var d = s.document();
+          // In a cell this converts the cell's paragraphs into a nested table, as Wordcraft does.
+          var d = s.editingDocument();
           var x = s.selection();
           int from = x.startBlock(), to = x.endBlock();
           for (int i = from; i <= to; i++)
@@ -49,8 +49,8 @@ final class TableTextCommands implements Commands.Extension {
           // A table cannot end the document; keep a paragraph after it.
           if (from + 1 >= blocks.size() || !(blocks.get(from + 1) instanceof Paragraph))
             blocks = blocks.insert(from + 1, new Paragraph("p" + id++, new RichText()));
-          s.replaceDocument(d.blocks(blocks, id));
-          s.enterCell(from, 0, 0);
+          s.replaceStory(d.blocks(blocks, id));
+          s.enterNestedCell(from, 0, 0);
           return Json.object("rows", rows.size(), "columns", columns);
         });
     c.edit("table.deleteCells", "shift:string",
