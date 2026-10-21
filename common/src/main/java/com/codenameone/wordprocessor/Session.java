@@ -15,6 +15,8 @@ public final class Session {
   boolean mathLatex;
   private CellContext cell;
   private CellSelection cells;
+  /** A selection running across stories (body into or across tables), or null. */
+  private MixedRange span;
   private Document integratedSource, integratedDocument;
 
   private static final class CellContext {
@@ -118,6 +120,7 @@ public final class Session {
     if (transactionDepth == 0) breakTypingGroup();
     finishComposition();
     cells = null;
+    span = null;
     if (cell != null && id.equals(cell.note)) return;
     leaveCell();
     Notes.Reference ref = null;
@@ -146,6 +149,7 @@ public final class Session {
     if (transactionDepth == 0) breakTypingGroup();
     finishComposition();
     cells = null;
+    span = null;
     if (cell != null && cell.block == block && cell.row == row && cell.column == column) return;
     // A sibling cell of a nested table is entered from the same enclosing cell story.
     if (inCell() && cell.parent != null) leaveCellLevel();
@@ -162,6 +166,7 @@ public final class Session {
     if (transactionDepth == 0) breakTypingGroup();
     finishComposition();
     cells = null;
+    span = null;
     openCell(block, row, column);
   }
 
@@ -191,6 +196,7 @@ public final class Session {
 
   public void leaveCell() {
     cells = null;
+    span = null;
     if (cell == null) return;
     if (transactionDepth == 0) breakTypingGroup();
     finishComposition();
@@ -213,6 +219,7 @@ public final class Session {
       return;
     }
     cells = null;
+    span = null;
     if (transactionDepth == 0) breakTypingGroup();
     finishComposition();
     var outer = integrate(cell, document);
@@ -313,7 +320,9 @@ public final class Session {
   }
 
   private State state() {
-    return new State(document, selection, insertionStyle, cell, mergeData, cells);
+    var out = new State(document, selection, insertionStyle, cell, mergeData, cells);
+    out.span = span;
+    return out;
   }
 
   private void restore(State value) {
@@ -323,6 +332,7 @@ public final class Session {
     insertionStyle = value.style;
     cell = value.cell;
     cells = value.cells;
+    span = value.span;
     integratedSource = null;
   }
 
@@ -461,6 +471,7 @@ public final class Session {
 
     final MergeData merge;
     final CellSelection cells;
+    MixedRange span;
 
     State(
         Document d,
@@ -536,6 +547,81 @@ public final class Session {
     return selection;
   }
 
+  /** The selection running from one story into another (body and cells), or null. */
+  public MixedRange mixedSelection() {
+    return span;
+  }
+
+  /**
+   * Selects from a position in one story to a position in another, in document order as
+   * Wordcraft's selections cross containers. The session edits the focus story with a caret at
+   * the focus; copy, cut, delete and formatting then apply to the whole range. Positions in one
+   * story make an ordinary selection there.
+   */
+  public void selectAcross(
+      int[] anchorPath, int anchorBlock, int anchor, int[] focusPath, int block, int caret) {
+    if (noteStory() != null) leaveCell();
+    var body = document();
+    var from = MixedRange.story(body, anchorPath);
+    var to = MixedRange.story(body, focusPath);
+    if (!(from.get(anchorBlock) instanceof Paragraph a) || !(to.get(block) instanceof Paragraph b))
+      throw new IllegalArgumentException("Select paragraphs");
+    a.text.slice(anchor, anchor);
+    b.text.slice(caret, caret);
+    enterCellPath(focusPath);
+    if (java.util.Arrays.equals(anchorPath, focusPath)) {
+      selectRange(anchorBlock, anchor, block, caret);
+      return;
+    }
+    select(block, caret, caret);
+    span =
+        new MixedRange(
+            new MixedRange.Pos(anchorPath, anchorBlock, anchor),
+            new MixedRange.Pos(focusPath, block, caret));
+  }
+
+  /** The blocks of the story at a cell path of the body (see {@link #cellPath}). */
+  public Sequence<Block> storyAt(int[] path) {
+    return MixedRange.story(document(), path);
+  }
+
+  private interface BodyEdit {
+    Document apply(Document body, Revision change);
+  }
+
+  /** Applies an edit to the whole body as one undo step, keeping the cross-story selection. */
+  private void acrossStories(final BodyEdit edit, final String revisionKind) {
+    final var range = span;
+    final int[] path = cellPath();
+    final var caret = selection;
+    transact(
+        s -> {
+          leaveCell();
+          Revision change =
+              revisionKind != null && document.trackChanges && trackFormatting
+                  ? newRevision(revisionKind)
+                  : null;
+          document = edit.apply(document, change);
+          enterCellPath(path);
+          selection = caret;
+          span = range;
+        });
+  }
+
+  private void replaceAcross(final String value) {
+    final var range = span;
+    transact(
+        s -> {
+          leaveCell();
+          Revision deletion = document.trackChanges ? newRevision("delete") : null;
+          document = range.delete(document, deletion);
+          var a = range.start();
+          enterCellPath(a.path);
+          select(a.block, a.offset, a.offset);
+          if (!value.isEmpty()) replace(value);
+        });
+  }
+
   public long revision() {
     return revision;
   }
@@ -549,6 +635,7 @@ public final class Session {
     first.text.slice(anchor, anchor);
     last.text.slice(caret, caret);
     cells = null;
+    span = null;
     var next = new Selection(anchorBlock, anchor, block, caret);
     if (!sameSelection(selection, next)) {
       breakTypingGroup();
@@ -570,6 +657,7 @@ public final class Session {
   }
 
   public String selectedText() {
+    if (span != null) return span.text(document());
     if (cells != null) {
       var table = (Table) document().blocks.get(cells.block);
       var text = new StringBuilder();
@@ -650,6 +738,7 @@ public final class Session {
       edit.apply(this);
       int[] notePath = cellPath();
       var noteCells = cells;
+      var noteSpan = span;
       var noteSelection = selection;
       var noteStyle = insertionStyle;
       if (notePath.length > 0) leaveCell();
@@ -657,6 +746,7 @@ public final class Session {
       if (notePath.length > 0) enterCellPath(notePath);
       selection = noteSelection;
       cells = noteCells;
+      span = noteSpan;
       insertionStyle = noteStyle;
       reanchorComments(before.doc);
       enforceProtection(before.doc);
@@ -976,6 +1066,7 @@ public final class Session {
     if (d == null) throw new NullPointerException("document");
     composition = null;
     cells = null;
+    span = null;
     cell = null;
     integratedSource = null;
     insertionStyle = null;
@@ -999,6 +1090,7 @@ public final class Session {
     transact(
         s -> {
           cells = null;
+    span = null;
           document = d;
           int first = 0;
           while (!(document.blocks.get(first) instanceof Paragraph)) first++;
@@ -1011,6 +1103,7 @@ public final class Session {
         s -> {
           cell = null;
           cells = null;
+    span = null;
           integratedSource = null;
           document = d;
           selectFirst();
@@ -1322,6 +1415,10 @@ public final class Session {
 
   public void replace(final String value) {
     if (value == null) throw new NullPointerException();
+    if (span != null) {
+      replaceAcross(value);
+      return;
+    }
     if (cells != null) {
       replaceCells(value);
       return;
@@ -1537,6 +1634,16 @@ public final class Session {
   }
 
   public void format(final String key, final String value) {
+    if (span != null) {
+      final var range = span;
+      acrossStories(
+          (body, change) ->
+              range.map(
+                  body,
+                  (p, a, b) -> a >= b ? p : p.text(p.text.format(a, b, key, value, change))),
+          "format");
+      return;
+    }
     if (cells != null) {
       editCells(x -> x.format(key, value), true);
       return;
@@ -1731,6 +1838,11 @@ public final class Session {
   }
 
   public void mapParagraphs(final ParagraphMap f) {
+    if (span != null) {
+      final var range = span;
+      acrossStories((body, change) -> range.mapParagraphs(body, f::map), null);
+      return;
+    }
     transact(
         s -> {
           Sequence<Block> blocks = document.blocks;
@@ -1741,6 +1853,14 @@ public final class Session {
   }
 
   public void paragraph(final String key, final String value) {
+    if (span != null) {
+      final var range = span;
+      acrossStories(
+          (body, change) ->
+              range.mapParagraphs(body, p -> p.with(key, value).trackedProperties(p, change)),
+          "format");
+      return;
+    }
     if (cells != null) {
       editCells(x -> x.paragraph(key, value), true);
       return;
@@ -1764,6 +1884,10 @@ public final class Session {
   }
 
   public void deleteForward() {
+    if (span != null) {
+      replace("");
+      return;
+    }
     if (cells != null) {
       replaceCells("");
       return;
@@ -1803,6 +1927,10 @@ public final class Session {
   }
 
   public void deleteBackward() {
+    if (span != null) {
+      replace("");
+      return;
+    }
     if (cells != null) {
       replaceCells("");
       return;
@@ -2627,6 +2755,7 @@ public final class Session {
 
   /** A rich clipboard fragment. Blocks remain immutable; paste allocates fresh IDs. */
   public Document copySelection() {
+    if (span != null) return span.copy(document());
     if (cells != null) {
       var table = (Table) document().blocks.get(cells.block);
       return new Document(
@@ -2782,6 +2911,14 @@ public final class Session {
 
   public void paste(final Document fragment) {
     if (fragment == null) return;
+    if (span != null) {
+      transact(
+          s -> {
+            replace("");
+            paste(fragment);
+          });
+      return;
+    }
     if (inCell() && fragment.blocks.size() == 1 && fragment.blocks.get(0) instanceof Table) {
       pasteCells((Table) fragment.blocks.get(0));
       return;
@@ -2886,6 +3023,14 @@ public final class Session {
    * Interactive Enter: continue lists, exit empty list items, and follow headings with body text.
    */
   public void enterParagraph() {
+    if (span != null) {
+      transact(
+          s -> {
+            replace("");
+            enterParagraph();
+          });
+      return;
+    }
     if (cells != null) {
       replaceCells("\n");
       return;

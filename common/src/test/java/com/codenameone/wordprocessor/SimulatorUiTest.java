@@ -391,6 +391,72 @@ public class SimulatorUiTest {
   }
 
   @Test
+  public void dragAndShiftArrowsSelectFromBodyIntoTable() throws Exception {
+    final int[] from = new int[2], to = new int[2];
+    edt(() -> ((Form) field(app, "form")).show());
+    for (int i = 0; i < 100 && Display.getInstance().getCurrent() != field(app, "form"); i++)
+      Thread.sleep(50);
+    edt(
+        () -> {
+          load("Body");
+          var s = session();
+          s.select(0, 4, 4);
+          s.insertTable(1, 2);
+          s.replace("cell");
+          Form form = (Form) field(app, "form");
+          form.revalidate();
+          editor().resetScroll();
+          editor().refresh();
+          s.select(0, 2, 2);
+          int[] r = editor().getCaretRect();
+          to[0] = r[0] + 1;
+          to[1] = r[1] + Math.max(1, r[3] / 2);
+          s.leaveCell();
+          s.select(0, 1, 1);
+          editor().refresh();
+          r = editor().getCaretRect();
+          from[0] = r[0] + 1;
+          from[1] = r[1] + Math.max(1, r[3] / 2);
+        });
+    edt(
+        () -> {
+          var editor = editor();
+          editor.pointerPressed(from[0], from[1]);
+          editor.pointerDragged((from[0] + to[0]) / 2, (from[1] + to[1]) / 2);
+          editor.pointerDragged(to[0], to[1]);
+          editor.pointerReleased(to[0], to[1]);
+          assertNotNull("drag into the table selects across stories", session().mixedSelection());
+          assertEquals("ody\nce", session().selectedText());
+          // Painting the cross-story highlight must not fail.
+          var image = com.codename1.ui.Image.createImage(editor.getWidth(), editor.getHeight());
+          editor.paintComponent(image.getGraphics(), false);
+          final int shift = TextInputClient.MOD_SHIFT;
+          key(TextInputClient.KEY_RIGHT, shift);
+          assertEquals("ody\ncel", session().selectedText());
+          key(TextInputClient.KEY_RIGHT, 0);
+          assertNull(session().mixedSelection());
+          // Shift+Right at the end of the body paragraph crosses into the first cell.
+          session().leaveCell();
+          session().select(0, 4, 4);
+          key(TextInputClient.KEY_RIGHT, shift);
+          key(TextInputClient.KEY_RIGHT, shift);
+          assertEquals("\nc", session().selectedText());
+          key(TextInputClient.KEY_LEFT, shift);
+          key(TextInputClient.KEY_LEFT, shift);
+          assertNull(session().mixedSelection());
+          assertFalse(session().inCell());
+          key(TextInputClient.KEY_RIGHT, shift);
+          key(TextInputClient.KEY_RIGHT, shift);
+          key(TextInputClient.KEY_DELETE, 0);
+          assertEquals("ell", ((Table) session().document().blocks.get(1)).cell(0, 0).get(0).text.toString());
+          session().undo();
+          assertEquals("cell", ((Table) session().document().blocks.get(1)).cell(0, 0).get(0).text.toString());
+        });
+    // Let the click counter lapse so later tests' first click is a single click.
+    Thread.sleep(450);
+  }
+
+  @Test
   public void clickEntersNestedTableCellAndDrawsItsCaret() throws Exception {
     final int[] point = new int[2];
     final int[][] path = new int[1][];

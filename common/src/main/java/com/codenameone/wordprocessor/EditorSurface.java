@@ -644,6 +644,78 @@ public final class EditorSurface extends Container
     dragRow = n == 0 ? -1 : path[n - 2];
     dragColumn = n == 0 ? -1 : path[n - 1];
     dragPrefix = n == 0 ? path : java.util.Arrays.copyOf(path, n - 3);
+    dragPath = path;
+  }
+
+  private MixedRange acrossFor;
+  private Document acrossDocument;
+  private Map<String, int[]> acrossLines;
+
+  /** The selected part {from, to} of a line inside a cross-story selection, or null. */
+  private int[] acrossRange(LayoutEngine.Line line) {
+    var range = session.mixedSelection();
+    var body = session.document();
+    if (range != acrossFor || body != acrossDocument) {
+      acrossFor = range;
+      acrossDocument = body;
+      acrossLines = new HashMap<>();
+      for (MixedRange.Covered c : range.covered(body))
+        acrossLines.put(java.util.Arrays.toString(c.path) + c.paragraph.id, new int[] {c.from, c.to});
+    }
+    return acrossLines.get(java.util.Arrays.toString(linePath(line)) + line.paragraphId);
+  }
+
+  /** The pressed line's story (Session.cellPath) where a drag across stories is anchored. */
+  private int[] dragPath;
+
+  /** The line's paragraph index in its story (body or cell), or -1. */
+  private int storyBlock(LayoutEngine.Line line) {
+    if (session.noteStory() != null) return -1;
+    try {
+      var story = session.storyAt(linePath(line));
+      for (int i = 0; i < story.size(); i++)
+        if (story.get(i) instanceof Paragraph p && p.id.equals(line.paragraphId)) return i;
+    } catch (RuntimeException e) {
+      // a line of another story (header, note) has no body path
+    }
+    return -1;
+  }
+
+  /**
+   * Extends a drag into another story (from body text into a table, or out of a cell), as
+   * Wordcraft's selection runs across containers in document order.
+   */
+  private boolean dragAcross(LayoutEngine.Line line, int x) {
+    if (dragPath == null || dragBlock < 0 || session.noteStory() != null) return false;
+    int[] path = linePath(line);
+    boolean other = !java.util.Arrays.equals(path, dragPath);
+    if (!other && session.mixedSelection() == null) return false;
+    int block = storyBlock(line);
+    if (block < 0) return false;
+    session.selectAcross(dragPath, dragBlock, dragAnchor, path, block, offsetAt(line, x));
+    return true;
+  }
+
+  /**
+   * Moves the caret (or with Shift the focus) to the neighbouring paragraph in document order
+   * across a story boundary: into, out of or past a table.
+   */
+  private boolean crossStory(boolean forward, boolean extend) {
+    if (session.noteStory() != null || session.cellSelection() != null) return false;
+    var x = session.selection();
+    int[] here = session.cellPath();
+    var to = MixedRange.adjacent(session.document(), here, x.block, forward);
+    if (to == null) return false;
+    var across = session.mixedSelection();
+    int offset = forward ? 0 : ((Paragraph) session.storyAt(to.path).get(to.block)).text.length();
+    if (!extend) {
+      session.enterCellPath(to.path);
+      session.select(to.block, offset, offset);
+    } else if (across != null)
+      session.selectAcross(
+          across.anchor.path, across.anchor.block, across.anchor.offset, to.path, to.block, offset);
+    else session.selectAcross(here, x.anchorBlock, x.anchor, to.path, to.block, offset);
+    return true;
   }
 
   /** The line's cell in the dragged table as {row, column}, or null outside it. */
@@ -1623,6 +1695,12 @@ public final class EditorSurface extends Container
           g.setColor(0xc5e9e6);
           fillRange(g, line, a, b, lx, ly, scale);
         }
+        int[] across = exporting || session.mixedSelection() == null ? null : acrossRange(line);
+        if (across != null && across[1] > line.start && across[0] < line.end
+            || across != null && across[0] == across[1] && line.start == line.end) {
+          g.setColor(0xc5e9e6);
+          fillRange(g, line, Math.max(across[0], line.start), Math.min(across[1], line.end), lx, ly, scale);
+        }
         // Object lines (pictures, charts, equations) have no paragraph to proof.
         if (!exporting && textLine(line) && AppOptions.flag("checkSpelling")) {
           // Proofing marks: red wavy for spelling, blue for grammar.
@@ -2249,6 +2327,12 @@ public final class EditorSurface extends Container
       changed.run();
       return;
     }
+    if (line != null && dragAcross(line, x)) {
+      rememberLine(line);
+      refresh();
+      changed.run();
+      return;
+    }
     if (line != null && dragBlock >= 0 && editingBlock(line) >= 0) {
       session.selectRange(dragBlock, dragAnchor, editingBlock(line), offsetAt(line, x));
       rememberLine(line);
@@ -2805,6 +2889,8 @@ public final class EditorSurface extends Container
   }
 
   private boolean moveCellSelection(int command, boolean extend) {
+    // A selection anchored outside the cell keeps running through text in document order.
+    if (session.mixedSelection() != null) return false;
     if (!session.inCell()
         || (command != KEY_LEFT
             && command != KEY_RIGHT
@@ -2875,6 +2961,7 @@ public final class EditorSurface extends Container
     if (readOnly() && (command == KEY_BACKSPACE || command == KEY_DELETE || command == KEY_TAB))
       return;
     if (moveCellSelection(command, extend)) return;
+    final var across = session.mixedSelection();
     // Resolve navigation keys the way Codename One's editors do (EditKeys), then express the
     // move in the logical commands below; left/right are already spatial-to-logical here.
     var move = EditKeys.move(command, modifiers, p.format.rtl);
@@ -2937,6 +3024,10 @@ public final class EditorSurface extends Container
         } else commitText("\t");
         return;
       case KEY_LEFT:
+        if (across != null && !extend) {
+          collapseAcross(across.start());
+          return;
+        }
         if (!extend && !x.collapsed()) {
           block = x.startBlock();
           caret = x.start();
@@ -2951,9 +3042,16 @@ public final class EditorSurface extends Container
             && session.editingDocument().blocks.get(block - 1) instanceof Paragraph) {
           block--;
           caret = session.editingDocument().paragraph(block).text.length();
+        } else if (crossStory(false, extend)) {
+          afterCross();
+          return;
         }
         break;
       case KEY_RIGHT:
+        if (across != null && !extend) {
+          collapseAcross(across.end());
+          return;
+        }
         if (!extend && !x.collapsed()) {
           block = x.endBlock();
           caret = x.end();
@@ -2967,6 +3065,9 @@ public final class EditorSurface extends Container
             && session.editingDocument().blocks.get(block + 1) instanceof Paragraph) {
           block++;
           caret = 0;
+        } else if (crossStory(true, extend)) {
+          afterCross();
+          return;
         }
         break;
       case KEY_HOME:
@@ -3007,6 +3108,12 @@ public final class EditorSurface extends Container
                     current,
                     command == KEY_DOWN || command == KEY_PAGE_DOWN,
                     command == KEY_PAGE_UP || command == KEY_PAGE_DOWN);
+            if (targetLine == current
+                && (command == KEY_UP || command == KEY_DOWN)
+                && crossStory(command == KEY_DOWN, extend)) {
+              afterCross();
+              return;
+            }
             block = editingBlock(targetLine);
             caret =
                 offsetAt(
@@ -3041,11 +3148,28 @@ public final class EditorSurface extends Container
       default:
         return;
     }
-    session.selectRange(extend ? x.anchorBlock : block, extend ? x.anchor : caret, block, caret);
+    if (extend && across != null)
+      session.selectAcross(
+          across.anchor.path, across.anchor.block, across.anchor.offset, session.cellPath(), block, caret);
+    else
+      session.selectRange(extend ? x.anchorBlock : block, extend ? x.anchor : caret, block, caret);
     rememberLine(targetLine);
     if (vertical) verticalSelection = session.selection();
     refresh();
     ensureCaretVisible();
+  }
+
+  private void collapseAcross(MixedRange.Pos at) {
+    session.enterCellPath(at.path);
+    session.select(at.block, at.offset, at.offset);
+    afterCross();
+  }
+
+  private void afterCross() {
+    rememberLine(null);
+    refresh();
+    ensureCaretVisible();
+    changed.run();
   }
 
   @Override
