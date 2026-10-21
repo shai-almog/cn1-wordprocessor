@@ -140,8 +140,8 @@ public final class Docx {
     var sections = new LinkedHashMap<String, Section>();
     for (Map.Entry<String, Element> sectionEntry : sectionElements.entrySet())
       sections.put(
-          sectionEntry.getKey(), readSection(parts, sectionEntry.getValue(), id, warnings, styles));
-    Section last = readSection(parts, Xml.child(body, "sectPr"), id, warnings, styles);
+          sectionEntry.getKey(), readSection(parts, sectionEntry.getValue(), id, warnings, styles, comments));
+    Section last = readSection(parts, Xml.child(body, "sectPr"), id, warnings, styles, comments);
     Element background = Xml.child(root, "background");
     if (background != null) {
       String fill = Xml.attr(background, "color", "auto");
@@ -745,7 +745,10 @@ static final char COLUMN_BREAK = '\u000B';
       links.packageParts(parts);
       pictures.packageParts();
       writeStyles(d, parts, lists, tabs, links);
-      for (DocxFurniture part : furniture) part.packageParts(parts, lists, tabs);
+      for (DocxFurniture part : furniture) {
+        part.comments = comments;
+        part.packageParts(parts, lists, tabs);
+      }
       links.notes.packageParts(parts, lists, tabs);
       BibliographyFormats.write(parts, d.bibliography);
       DocxProperties.write(parts, d.properties);
@@ -1008,7 +1011,8 @@ static final char COLUMN_BREAK = '\u000B';
   }
 
   private static Section readSection(
-      Map<String, byte[]> parts, Element e, long[] id, Set<String> warnings, DocxStyles styles)
+      Map<String, byte[]> parts, Element e, long[] id, Set<String> warnings, DocxStyles styles,
+      DocxComments comments)
       throws IOException {
     var page = PageSpec.A4;
     var start = "nextPage";
@@ -1108,7 +1112,8 @@ static final char COLUMN_BREAK = '\u000B';
             id,
             warnings,
             DocxLists.read(parts.get("word/numbering.xml"), warnings),
-            styles);
+            styles,
+            comments);
     var decor = PageDecor.NONE;
     Element pageBorders = e == null ? null : Xml.child(e, "pgBorders");
     if (pageBorders != null) {

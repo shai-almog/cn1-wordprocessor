@@ -174,6 +174,11 @@ public final class ReviewComment {
     return b.toString();
   }
 
+  /** This comment over another range, keeping its replies, date, initials and rich body. */
+  public ReviewComment range(String first, int from, String last, int to) {
+    return new ReviewComment(id, author, text, first, from, last, to, resolved, replies, date, initials, body);
+  }
+
   /** This comment with the author's initials. */
   public ReviewComment initials(String value) {
     return new ReviewComment(id, author, text, startId, start, endId, end, resolved, replies, date, value, body);
@@ -242,15 +247,31 @@ public final class ReviewComment {
     public final Paragraph value;
     /** The note whose story holds the paragraph, or null. */
     public final Note note;
+    /**
+     * The header/footer story holding the paragraph ("section:key"), or null: as Wordcraft's
+     * CommentStart/CommentEnd marks in any story, a range may sit in a header or footer
+     * (block indexes that story's blocks; row/column a cell of a table in it).
+     */
+    public final String furniture;
+    /** The blocks of {@link #furniture}'s story. */
+    final Sequence<Block> furnitureBlocks;
     private Anchor(int block, int row, int column, int paragraph, Paragraph value) {
       this(block, row, column, paragraph, value, null);
     }
     private Anchor(int block, int row, int column, int paragraph, Paragraph value, Note note) {
+      this(block, row, column, paragraph, value, note, null, null);
+    }
+    private Anchor(int block, int row, int column, int paragraph, Paragraph value, Note note,
+        String furniture, Sequence<Block> furnitureBlocks) {
       this.block = block; this.row = row; this.column = column;
       this.paragraph = paragraph; this.value = value; this.note = note;
+      this.furniture = furniture; this.furnitureBlocks = furnitureBlocks;
     }
     public boolean sameStory(Anchor other) {
       if (other == null) return false;
+      if (furniture != null || other.furniture != null)
+        return furniture != null && furniture.equals(other.furniture)
+            && (row < 0 ? other.row < 0 : block == other.block && row == other.row && column == other.column);
       if (note != null || other.note != null)
         return note != null && other.note != null && note.id.equals(other.note.id);
       return row < 0 ? other.row < 0
@@ -263,6 +284,8 @@ public final class ReviewComment {
      */
     public boolean sameFlow(Anchor other) {
       if (other == null) return false;
+      if (furniture != null || other.furniture != null)
+        return furniture != null && furniture.equals(other.furniture);
       if (note != null || other.note != null) return sameStory(other);
       return true;
     }
@@ -277,6 +300,15 @@ public final class ReviewComment {
       var paragraphs = new Sequence<Block>();
       if (note != null) {
         for (Paragraph p : note.paragraphs) paragraphs = paragraphs.append(p);
+        return new Document(paragraphs, root.page, root.title, root.nextId);
+      }
+      if (furniture != null) {
+        if (row < 0) {
+          for (Block b : furnitureBlocks) if (b instanceof Paragraph) paragraphs = paragraphs.append(b);
+          return new Document(paragraphs, root.page, root.title, root.nextId);
+        }
+        for (Paragraph p : ((Table) furnitureBlocks.get(block)).cell(row, column))
+          paragraphs = paragraphs.append(p);
         return new Document(paragraphs, root.page, root.title, root.nextId);
       }
       if (row < 0) return root;
@@ -298,6 +330,57 @@ public final class ReviewComment {
   }
 
   private static Anchor scan(Document document, String id, java.util.Map<String, Anchor> result) {
+    var found = scanBody(document, id, result);
+    if (found != null) return found;
+    // Header and footer stories: the document's own and each section's.
+    var seen = new java.util.HashSet<PageFurniture>();
+    int section = 0;
+    var all = new java.util.ArrayList<PageFurniture>();
+    all.add(document.furniture);
+    for (Section s : document.sections.values()) all.add(s.furniture);
+    for (PageFurniture f : all) {
+      section++;
+      if (f == null || !seen.add(f)) continue;
+      for (java.util.Map.Entry<String, Sequence<Block>> e : f.stories.entrySet()) {
+        found = scanFurniture(section + ":" + e.getKey(), e.getValue(), id, result);
+        if (found != null) return found;
+      }
+    }
+    return null;
+  }
+
+  private static Anchor scanFurniture(
+      String key, Sequence<Block> blocks, String id, java.util.Map<String, Anchor> result) {
+    int paragraphs = 0;
+    for (int b = 0; b < blocks.size(); b++) {
+      var block = blocks.get(b);
+      if (block instanceof Paragraph p) {
+        if (result != null || p.id.equals(id)) {
+          var value = new Anchor(b, -1, -1, paragraphs, p, null, key, blocks);
+          if (result == null) return value;
+          result.put(p.id, value);
+        }
+        paragraphs++;
+      } else if (block instanceof Table table) {
+        for (int row = 0; row < table.rows(); row++)
+          for (int column = 0; column < table.columns(); column++) {
+            if (table.covered(row, column)) continue;
+            int index = 0;
+            for (Paragraph p : table.cell(row, column)) {
+              if (result != null || p.id.equals(id)) {
+                var value = new Anchor(b, row, column, index, p, null, key, blocks);
+                if (result == null) return value;
+                result.put(p.id, value);
+              }
+              index++;
+            }
+          }
+      }
+    }
+    return null;
+  }
+
+  private static Anchor scanBody(Document document, String id, java.util.Map<String, Anchor> result) {
     for (int b = 0; b < document.blocks.size(); b++) {
       var block = document.blocks.get(b);
       if (block instanceof Paragraph paragraph) {
@@ -418,9 +501,8 @@ public final class ReviewComment {
   }
 
   private static ReviewComment relocated(ReviewComment comment, Document document, int[] range) {
-    return new ReviewComment(comment.id, comment.author, comment.text,
-        document.blocks.get(range[0]).id(), range[1], document.blocks.get(range[2]).id(),
-        range[3], comment.resolved, comment.replies, comment.date);
+    return comment.range(
+        document.blocks.get(range[0]).id(), range[1], document.blocks.get(range[2]).id(), range[3]);
   }
 
   private static java.util.List<ReviewComment> move(
@@ -429,6 +511,15 @@ public final class ReviewComment {
     for (ReviewComment c : before.comments) {
       Anchor first = locate(before, c.startId), last = locate(before, c.endId);
       if (first == null || last == null) continue;
+      if (first.furniture != null) {
+        // A header/footer range is edited with its own story; body edits leave it alone.
+        Anchor a = locate(after, c.startId), z = locate(after, c.endId);
+        if (a == null || z == null) continue;
+        int start = Math.min(c.start, a.value.text.length()), end = Math.min(c.end, z.value.text.length());
+        if (validRange(after, c.startId, start, c.endId, end))
+          result.add(start == c.start && end == c.end ? c : c.range(c.startId, start, c.endId, end));
+        continue;
+      }
       if (first.note != null || !first.sameStory(last)) {
         ReviewComment moved = moveAcross(after, mapping, c, first, last);
         if (moved != null) result.add(moved);
@@ -469,6 +560,6 @@ public final class ReviewComment {
     start = Math.min(start, a.value.text.length());
     end = Math.min(end, z.value.text.length());
     if (!validRange(after, startId, start, endId, end)) return null;
-    return new ReviewComment(c.id, c.author, c.text, startId, start, endId, end, c.resolved, c.replies, c.date);
+    return c.range(startId, start, endId, end);
   }
 }

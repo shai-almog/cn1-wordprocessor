@@ -981,7 +981,9 @@ public final class Session {
   }
 
   private static int[] commentPosition(ReviewComment.Anchor anchor, int offset) {
-    return new int[] {anchor.block, anchor.row, anchor.column, anchor.paragraph, offset};
+    // Header/footer ranges follow the body in comment order.
+    int block = anchor.furniture != null ? Integer.MAX_VALUE : anchor.block;
+    return new int[] {block, anchor.row, anchor.column, anchor.paragraph, offset};
   }
 
   private static int compareCommentPosition(int[] a, int[] b) {
@@ -997,6 +999,8 @@ public final class Session {
         ReviewComment.Anchor last = ReviewComment.locate(document, c.endId);
         if (first == null || !first.sameFlow(last))
           throw new IllegalStateException("Comment anchor is no longer available");
+        // A header/footer range has no body caret: the comment is shown, its story unchanged.
+        if (first.furniture != null) return;
         if (!first.sameStory(last)) {
           // Across cells of one table: select those cells; else the caret at the start.
           if (first.row >= 0 && last.row >= 0 && first.block == last.block)

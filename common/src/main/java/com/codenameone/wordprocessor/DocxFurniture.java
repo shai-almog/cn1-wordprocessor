@@ -17,6 +17,13 @@ final class DocxFurniture {
   private final Map<String, String> ids = new LinkedHashMap<String, String>(),
       paths = new LinkedHashMap<String, String>();
 
+  /** The main part's comment writer: header/footer comment ranges are written with it. */
+  DocxComments comments;
+
+  private DocxComments marks() {
+    return comments != null ? comments : new DocxComments(Document.empty());
+  }
+
   DocxFurniture(Document doc, Map<String, byte[]> parts) throws IOException {
     this(doc, parts, "");
   }
@@ -69,6 +76,22 @@ final class DocxFurniture {
       DocxLists.Read lists,
       DocxStyles styles)
       throws IOException {
+    return read(parts, section, id, warnings, lists, styles, null);
+  }
+
+  /**
+   * As {@link #read}, recording comment ranges in header/footer stories in {@code body}, the
+   * main part's comment reader (Wordcraft reads w:commentRangeStart/End in every story).
+   */
+  static PageFurniture read(
+      Map<String, byte[]> parts,
+      Element section,
+      long[] id,
+      Set<String> warnings,
+      DocxLists.Read lists,
+      DocxStyles styles,
+      DocxComments body)
+      throws IOException {
     if (section == null) return PageFurniture.EMPTY;
     var targets = new HashMap<String, String>();
     if (parts.containsKey(REL))
@@ -111,7 +134,10 @@ final class DocxFurniture {
               + ".rels";
       var links = new DocxLinks(parts, relPath);
       var pictures = new DocxPictures(parts, relPath);
-      var comments = new DocxComments(Collections.<String, byte[]>emptyMap());
+      var comments = body != null ? body : new DocxComments(Collections.<String, byte[]>emptyMap());
+      // The main part's marker flag does not cover header parts (as for note parts).
+      boolean wasMarkers = comments.markers, wasSupported = comments.bookmarks.supported;
+      comments.markers = true;
       comments.bookmarks.supported = false;
       for (Element child : Xml.children(Xml.parse(data), null)) {
         String name = Xml.local(child);
@@ -133,6 +159,8 @@ final class DocxFurniture {
           if (table != null) blocks.add(table);
         } else if (!"sectPr".equals(name)) warnings.add("Header/footer content: " + name);
       }
+      comments.markers = wasMarkers;
+      comments.bookmarks.supported = wasSupported;
       var paragraphs = Sequence.<Block>of(blocks);
       stories.put(key, paragraphs);
     }
@@ -191,10 +219,10 @@ final class DocxFurniture {
       var story = document.furniture.blocks(key);
       for (Block block : story)
         if (block instanceof Paragraph para)
-          Docx.writeParagraph(b, para, lists, tabs, links, new DocxComments(Document.empty()));
+          Docx.writeParagraph(b, para, lists, tabs, links, marks());
         else if (block instanceof Table t)
           Docx.writeTable(
-              b, t, document.page.contentWidth(), lists, tabs, links, new DocxComments(Document.empty()), pictures);
+              b, t, document.page.contentWidth(), lists, tabs, links, marks(), pictures);
         else if (block instanceof Picture picture) pictures.write(b, picture);
       // A story must end with a paragraph (ECMA-376 17.10.1), as table cells must.
       if (story.size() == 0 || !(story.get(story.size() - 1) instanceof Paragraph))
