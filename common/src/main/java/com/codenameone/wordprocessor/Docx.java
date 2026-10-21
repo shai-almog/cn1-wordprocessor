@@ -72,7 +72,7 @@ public final class Docx {
     pictures.present = Xml.mayContain(root, "drawing") || Xml.mayContain(root, "oMath")
         || Xml.mayContain(root, "oMathPara");
     long[] id = {1};
-    links.notes = new DocxNotes(parts, id, warnings, styles);
+    links.notes = new DocxNotes(parts, id, warnings, styles, comments);
     var blocks = new ArrayList<Block>();
     var sectionElements = new LinkedHashMap<String, Element>();
     Paragraph dropLetter = null;
@@ -652,6 +652,7 @@ static final char COLUMN_BREAK = '\u000B';
       links.notes = new DocxNotes(d);
       links.styles = d.styles;
       var comments = new DocxComments(d);
+      links.notes.comments = comments;
       var pictures = new DocxPictures(parts);
       var furniture = new ArrayList<DocxFurniture>();
       boolean even = false;

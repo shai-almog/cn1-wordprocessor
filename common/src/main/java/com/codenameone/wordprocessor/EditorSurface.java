@@ -1556,16 +1556,22 @@ public final class EditorSurface extends Container
           ReviewComment.Anchor first = commentAnchors.get(comment.startId),
               last = commentAnchors.get(comment.endId),
               current = commentAnchors.get(line.paragraphId);
+          // A range runs through the body stream (body text and table cells in reading order)
+          // or within one note story.
           if (first == null
-              || !first.sameStory(last)
-              || !first.sameStory(current)
-              || current.paragraph < first.paragraph
-              || current.paragraph > last.paragraph) continue;
+              || current == null
+              || !first.sameFlow(last)
+              || !first.sameFlow(current)
+              || order(current, first) < 0
+              || order(current, last) > 0) continue;
+          // A note's first displayed line starts with its label and a space.
+          int shift =
+              current.note != null && current.paragraph == 0 ? current.note.label.length() + 1 : 0;
           int a =
-              current.paragraph == first.paragraph
-                  ? Math.max(line.start, comment.start)
+              current == first
+                  ? Math.max(line.start, comment.start + shift)
                   : line.start;
-          int b = current.paragraph == last.paragraph ? Math.min(line.end, comment.end) : line.end;
+          int b = current == last ? Math.min(line.end, comment.end + shift) : line.end;
           if (b > a) {
             g.setColor(0xffedaa);
             fillRange(g, line, a, b, lx, ly, scale);
@@ -1856,7 +1862,14 @@ public final class EditorSurface extends Container
     return best;
   }
 
+  private static int order(ReviewComment.Anchor a, ReviewComment.Anchor b) {
+    return a.sameStory(b) ? Integer.compare(a.paragraph, b.paragraph) : a.compareTo(b);
+  }
+
   private int editingBlock(LayoutEngine.Line line) {
+    // A note story being edited is not drawn as the editing story (its first line carries the
+    // note label), so body lines are not mistaken for it.
+    if (session.noteStory() != null) return -1;
     if (!session.inCell()) return line.row < 0 ? line.block : -1;
     if (line.block != session.cellBlock()
         || line.row != session.cellRow()

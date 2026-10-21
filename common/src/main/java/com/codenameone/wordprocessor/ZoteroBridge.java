@@ -58,7 +58,7 @@ public final class ZoteroBridge implements Zotero.Handler {
       session = new Session(new Document(paragraphs, d.page, d.title, d.nextId).styles(d.styles));
       noteId = f.note;
     } else if (f.table >= 0) root.enterCell(f.table, f.row, f.column);
-    else if (root.inCell()) root.leaveCell();
+    else if (root.inCell() || root.noteStory() != null) root.leaveCell();
   }
 
   /** Writes a focused note's edited paragraphs back (one undo step) and returns to the root. */
@@ -147,6 +147,57 @@ public final class ZoteroBridge implements Zotero.Handler {
    * is a {block, offset} pair moved with the edits. Returns {@code d} when nothing is unbalanced.
    */
   static Document balance(Document d, int[] caret) {
+    return everyStory(balanceStory(d, caret), x -> balanceStory(x, null));
+  }
+
+  /**
+   * Applies {@code f} to the body's own paragraphs, then to each table cell's and each note's
+   * paragraphs as their own stories (Wordcraft keeps a field's marks within one story), threading
+   * the paragraph id counter. Returns {@code d} when nothing changed.
+   */
+  static Document everyStory(Document d, java.util.function.UnaryOperator<Document> f) {
+    final long[] next = {d.nextId};
+    Sequence<Block> blocks = d.blocks;
+    for (int i = 0; i < blocks.size(); i++) {
+      if (!(blocks.get(i) instanceof Table t)) continue;
+      Table u = t;
+      for (int r = 0; r < t.rows(); r++)
+        for (int c = 0; c < t.columns(); c++) {
+          if (t.covered(r, c)) continue;
+          var cell = t.cell(r, c);
+          var mapped = story(d, cell, next, f);
+          if (mapped != cell) u = u.setCell(r, c, mapped);
+        }
+      if (u != t) blocks = blocks.set(i, u);
+    }
+    Document out = blocks == d.blocks ? d : d.blocks(blocks, next[0]);
+    out =
+        Notes.map(
+            out,
+            n -> {
+              var mapped = story(d, n.paragraphs, next, f);
+              return mapped == n.paragraphs ? n : n.paragraphs(mapped);
+            });
+    return out == d ? d : out.blocks(out.blocks, Math.max(out.nextId, next[0]));
+  }
+
+  private static Sequence<Paragraph> story(
+      Document d, Sequence<Paragraph> paragraphs, long[] next, java.util.function.UnaryOperator<Document> f) {
+    boolean fields = false;
+    for (Paragraph p : paragraphs) fields |= p.text.hasFields();
+    if (!fields) return paragraphs;
+    var blocks = new Sequence<Block>();
+    for (Paragraph p : paragraphs) blocks = blocks.append(p);
+    var sub = new Document(blocks, d.page, d.title, next[0]).styles(d.styles);
+    var r = f.apply(sub);
+    if (r == sub) return paragraphs;
+    next[0] = Math.max(next[0], r.nextId);
+    var out = new Sequence<Paragraph>();
+    for (Block b : r.blocks) out = out.append((Paragraph) b);
+    return out;
+  }
+
+  private static Document balanceStory(Document d, int[] caret) {
     // Each fix: {block, offset, 0 = remove the mark there | 1 = insert an end mark there}.
     final var fixes = new ArrayList<int[]>();
     final var styles = new ArrayList<TextStyle>();
@@ -317,6 +368,10 @@ public final class ZoteroBridge implements Zotero.Handler {
    * result become paragraphs. Returns {@code d} itself when there is nothing to convert.
    */
   public static Document expand(Document d) {
+    return everyStory(expandStory(d), ZoteroBridge::expandStory);
+  }
+
+  private static Document expandStory(Document d) {
     Sequence<Block> blocks = d.blocks;
     long next = d.nextId;
     boolean changed = false;
@@ -651,8 +706,10 @@ public final class ZoteroBridge implements Zotero.Handler {
         var list = sync();
         for (int k = 0; k < list.size(); k++) {
           Located f = list.get(k);
-          // Only fields in the story the caret is in: the body or the current cell.
-          if (f.note != null || f.table != root.cellBlock() || f.row != root.cellRow() || f.column != root.cellColumn()) continue;
+          // Only fields in the story the caret is in: the body, the current cell or note.
+          String story = root.noteStory();
+          if (story != null ? !story.equals(f.note)
+              : f.note != null || f.table != root.cellBlock() || f.row != root.cellRow() || f.column != root.cellColumn()) continue;
           // The caret at the start mark or anywhere in the field's text, or a selection that
           // overlaps the field, as Wordcraft's cursor_in_field.
           boolean in = sel.collapsed()
@@ -739,9 +796,11 @@ public final class ZoteroBridge implements Zotero.Handler {
       case "Field_select": {
         Located f = global(index(arg(a, 1)));
         if (f.note != null) {
-          // A note's text is edited in its own pane: select its reference mark.
+          // As Wordcraft's select_field: the selection moves into the note's story, over the
+          // citation's marks and text.
           commit();
-          root.selectNote(f.note);
+          root.enterNote(f.note);
+          root.selectRange(f.block, f.offset, f.endBlock, f.endOffset + (f.hasEnd || f.atomic() ? 1 : 0));
           return null;
         }
         session.selectRange(f.block, f.offset, f.endBlock, f.endOffset + (f.hasEnd || f.atomic() ? 1 : 0));
@@ -821,10 +880,14 @@ public final class ZoteroBridge implements Zotero.Handler {
   }
 
   private void ensureBibliographyStyle() {
-    if (root.document().styles.containsKey(BIB_STYLE)) return;
-    ParagraphStyle normal = root.document().styles.get("Normal");
-    if (normal == null) normal = ParagraphStyle.defaults().get("Normal");
-    root.defineStyle(new ParagraphStyle(BIB_STYLE, BIB_STYLE, normal.paragraph, normal.text));
+    if (!root.document().styles.containsKey(BIB_STYLE)) {
+      ParagraphStyle normal = root.document().styles.get("Normal");
+      if (normal == null) normal = ParagraphStyle.defaults().get("Normal");
+      root.defineStyle(new ParagraphStyle(BIB_STYLE, BIB_STYLE, normal.paragraph, normal.text));
+    }
+    // A note's story was copied with the styles of the moment it was focused.
+    if (session != root && !session.document().styles.containsKey(BIB_STYLE))
+      session.defineStyle(root.document().styles.get(BIB_STYLE));
   }
 
   private static float twips(long v) {

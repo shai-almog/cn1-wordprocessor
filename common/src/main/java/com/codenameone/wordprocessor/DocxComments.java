@@ -107,6 +107,14 @@ final class DocxComments {
       for (Element c : Xml.children(e, null)) scan(c, paragraph, offset);
   }
 
+  /** Moves the offsets recorded in a paragraph after text before them was dropped. */
+  void shift(String paragraph, int delta) {
+    for (Map.Entry<String, String> e : startIds.entrySet())
+      if (paragraph.equals(e.getValue())) starts.put(e.getKey(), Math.max(0, starts.get(e.getKey()) + delta));
+    for (Map.Entry<String, String> e : endIds.entrySet())
+      if (paragraph.equals(e.getValue())) ends.put(e.getKey(), Math.max(0, ends.get(e.getKey()) + delta));
+  }
+
   List<ReviewComment> read(Document d, Set<String> warnings) {
     var result = new ArrayList<ReviewComment>();
 

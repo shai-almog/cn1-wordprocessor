@@ -21,6 +21,8 @@ public final class Session {
     final Document root, initial;
     final Selection outerSelection;
     final int block, row, column;
+    /** Set when the story is this footnote/endnote's (block then holds its reference). */
+    String note;
 
     CellContext(
         Document root, Document initial, Selection selection, int block, int row, int column) {
@@ -39,19 +41,57 @@ public final class Session {
   }
 
   public boolean inCell() {
-    return cell != null;
+    return cell != null && cell.note == null;
   }
 
   public int cellBlock() {
-    return cell == null ? -1 : cell.block;
+    return inCell() ? cell.block : -1;
   }
 
   public int cellRow() {
-    return cell == null ? -1 : cell.row;
+    return inCell() ? cell.row : -1;
   }
 
   public int cellColumn() {
-    return cell == null ? -1 : cell.column;
+    return inCell() ? cell.column : -1;
+  }
+
+  /** The footnote/endnote whose story text commands edit, or null. */
+  public String noteStory() {
+    return cell == null ? null : cell.note;
+  }
+
+  /**
+   * Edits a footnote or endnote story in place, as Wordcraft's selection can be in a note part:
+   * text commands, comments and fields then work on the note's paragraphs. {@link #leaveCell}
+   * returns to the outer story.
+   */
+  public void enterNote(String id) {
+    if (transactionDepth == 0) breakTypingGroup();
+    finishComposition();
+    cells = null;
+    if (cell != null && id.equals(cell.note)) return;
+    leaveCell();
+    Notes.Reference ref = null;
+    for (Notes.Reference r : Notes.references(document)) if (r.note.id.equals(id)) ref = r;
+    if (ref == null) throw new IllegalArgumentException("Unknown note");
+    var paragraphs = new Sequence<Block>();
+    for (Paragraph p : ref.note.paragraphs) paragraphs = paragraphs.append(p);
+    var view =
+        new Document(paragraphs, document.page, document.title, document.nextId)
+            .styles(document.styles)
+            .trackChanges(document.trackChanges);
+    var comments = new ArrayList<ReviewComment>();
+    for (ReviewComment c : document.comments)
+      if (ReviewComment.block(view, c.startId) >= 0 && ReviewComment.block(view, c.endId) >= 0)
+        comments.add(c);
+    view = view.comments(comments);
+    cell = new CellContext(document, view, selection, ref.block, -1, -1);
+    cell.note = id;
+    document = view;
+    selection = new Selection(0, 0, 0);
+    insertionStyle = null;
+    integratedSource = null;
   }
 
   public void enterCell(int block, int row, int column) {
@@ -98,7 +138,7 @@ public final class Session {
 
   /** Tab traverses owning cells; tabbing beyond the final cell adds a row. */
   public void nextCell(boolean backwards) {
-    if (cell == null) return;
+    if (!inCell()) return;
     int block = cell.block, row = cell.row, column = cell.column;
     var table = (Table) document().blocks.get(block);
     int index = row * table.columns() + column;
@@ -367,11 +407,19 @@ public final class Session {
           throw new IllegalStateException("Nested tables are not supported");
         paragraphs = paragraphs.append((Paragraph) block);
       }
-      var table = (Table) cell.root.blocks.get(cell.block);
-      integratedDocument =
-          cell.root.blocks(
-              cell.root.blocks.set(cell.block, table.setCell(cell.row, cell.column, paragraphs)),
-              document.nextId);
+      if (cell.note != null) {
+        final var story = paragraphs;
+        final String id = cell.note;
+        integratedDocument =
+            Notes.map(cell.root, n -> n.id.equals(id) ? n.paragraphs(story) : n);
+        integratedDocument = integratedDocument.blocks(integratedDocument.blocks, document.nextId);
+      } else {
+        var table = (Table) cell.root.blocks.get(cell.block);
+        integratedDocument =
+            cell.root.blocks(
+                cell.root.blocks.set(cell.block, table.setCell(cell.row, cell.column, paragraphs)),
+                document.nextId);
+      }
       if (document.comments != cell.initial.comments) {
         var prior = new HashSet<String>();
         for (ReviewComment c : cell.initial.comments) prior.add(c.id);
@@ -624,19 +672,32 @@ public final class Session {
       throw new IllegalArgumentException("Enter an author and comment");
     transact(
         s -> {
+          String startId, endId;
+          int start, end;
+          if (cells != null) {
+            // Whole cells selected: one range from the first cell's start to the last cell's
+            // end, in reading order, as Wordcraft anchors a comment across cells.
+            var range = cells;
+            leaveCell();
+            var table = (Table) document.blocks.get(range.block);
+            var a = table.span(range.firstRow, range.firstColumn);
+            var z = table.span(range.lastRow, range.lastColumn);
+            var first = table.cell(a.row, a.column);
+            var last = table.cell(z.row, z.column);
+            startId = first.get(0).id;
+            start = 0;
+            endId = last.get(last.size() - 1).id;
+            end = last.get(last.size() - 1).text.length();
+          } else {
+            var x = selection;
+            startId = document.paragraph(x.startBlock()).id;
+            start = x.start();
+            endId = document.paragraph(x.endBlock()).id;
+            end = x.end();
+          }
           var comments = new ArrayList<ReviewComment>(document.comments);
           var id = "c" + document.nextId;
-          var x = selection;
-          comments.add(
-              new ReviewComment(
-                  id,
-                  author,
-                  text,
-                  document.paragraph(x.startBlock()).id,
-                  x.start(),
-                  document.paragraph(x.endBlock()).id,
-                  x.end(),
-                  false));
+          comments.add(new ReviewComment(id, author, text, startId, start, endId, end, false));
           document = document.blocks(document.blocks, document.nextId + 1).comments(comments);
         });
   }
@@ -742,9 +803,20 @@ public final class Session {
       if (c.id.equals(id)) {
         ReviewComment.Anchor first = ReviewComment.locate(document, c.startId);
         ReviewComment.Anchor last = ReviewComment.locate(document, c.endId);
-        if (first == null || !first.sameStory(last))
+        if (first == null || !first.sameFlow(last))
           throw new IllegalStateException("Comment anchor is no longer available");
-        if (first.row >= 0) enterCell(first.block, first.row, first.column);
+        if (!first.sameStory(last)) {
+          // Across cells of one table: select those cells; else the caret at the start.
+          if (first.row >= 0 && last.row >= 0 && first.block == last.block)
+            selectCells(first.block, first.row, first.column, last.row, last.column);
+          else {
+            if (first.row >= 0) enterCell(first.block, first.row, first.column);
+            select(first.paragraph, c.start, c.start);
+          }
+          return;
+        }
+        if (first.note != null) enterNote(first.note.id);
+        else if (first.row >= 0) enterCell(first.block, first.row, first.column);
         selectRange(first.paragraph, c.start, last.paragraph, c.end);
         return;
       }
@@ -1031,7 +1103,7 @@ public final class Session {
     if (current >= 0) target = (current + (previous ? -1 : 1) + body.size()) % body.size();
     else {
       target = previous ? body.size() - 1 : 0;
-      int block = inCell() ? cell.block : selection.block;
+      int block = cell != null ? cell.block : selection.block;
       for (int i = 0; i < body.size(); i++) {
         var change = body.get(i);
         if (!previous
@@ -1681,7 +1753,7 @@ public final class Session {
   }
 
   public Section.Range activeSection() {
-    return document().sectionAt(inCell() ? cell.block : selection.block);
+    return document().sectionAt(cell != null ? cell.block : selection.block);
   }
 
   /** Change selected sections, or defaults and matching overrides, in one undo transaction. */
@@ -1689,8 +1761,8 @@ public final class Session {
       final String kind, final NoteOptions.Properties change, final boolean whole) {
     document().notes.with(kind, change); // Validate before opening a transaction.
     if (change.isEmpty()) return;
-    final int first = inCell() ? cell.block : selection.startBlock();
-    final int last = inCell() ? cell.block : selection.endBlock();
+    final int first = cell != null ? cell.block : selection.startBlock();
+    final int last = cell != null ? cell.block : selection.endBlock();
     transact(
         s -> {
           int cb = cellBlock(), cr = cellRow(), cc = cellColumn();
@@ -1720,7 +1792,7 @@ public final class Session {
   }
 
   public void section(final Section value) {
-    int block = inCell() ? cell.block : selection.block;
+    int block = cell != null ? cell.block : selection.block;
     leaveCell();
     transact(s -> document = document.section(block, value));
   }
@@ -1786,7 +1858,7 @@ public final class Session {
   }
 
   public void furniture(final PageFurniture value) {
-    final int block = inCell() ? cell.block : selection.block;
+    final int block = cell != null ? cell.block : selection.block;
     leaveCell();
     transact(
         s -> {
@@ -1918,7 +1990,7 @@ public final class Session {
         || chapter > 9
         || !Arrays.asList("-", ".", ":", "\u2014", "\u2013").contains(separator))
       throw new IllegalArgumentException("Invalid caption numbering options");
-    final int target = inCell() ? cell.block : selection.block;
+    final int target = cell != null ? cell.block : selection.block;
     leaveCell();
     transact(
         s -> {

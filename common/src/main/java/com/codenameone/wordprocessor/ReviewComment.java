@@ -90,21 +90,53 @@ public final class ReviewComment {
     return new ReviewComment(id, author, text, startId, start, endId, end, resolved, next);
   }
 
-  /** A paragraph in the body or one owning table cell. Paragraph IDs survive row moves. */
+  /**
+   * A paragraph in the body, one owning table cell, or a footnote/endnote story ({@link #note}
+   * set; block/row/column then locate the note's reference). Paragraph IDs survive row moves.
+   */
   public static final class Anchor {
     public final int block, row, column, paragraph;
     public final Paragraph value;
+    /** The note whose story holds the paragraph, or null. */
+    public final Note note;
     private Anchor(int block, int row, int column, int paragraph, Paragraph value) {
+      this(block, row, column, paragraph, value, null);
+    }
+    private Anchor(int block, int row, int column, int paragraph, Paragraph value, Note note) {
       this.block = block; this.row = row; this.column = column;
-      this.paragraph = paragraph; this.value = value;
+      this.paragraph = paragraph; this.value = value; this.note = note;
     }
     public boolean sameStory(Anchor other) {
-      return other != null && (row < 0 ? other.row < 0
-          : block == other.block && row == other.row && column == other.column);
+      if (other == null) return false;
+      if (note != null || other.note != null)
+        return note != null && other.note != null && note.id.equals(other.note.id);
+      return row < 0 ? other.row < 0
+          : block == other.block && row == other.row && column == other.column;
+    }
+    /**
+     * Whether a range from this paragraph to other can exist: the same note story, or both in
+     * the body stream (top-level paragraphs and table cells, as Wordcraft's body story holds
+     * cells, so a range may run from the body into or across a table's cells).
+     */
+    public boolean sameFlow(Anchor other) {
+      if (other == null) return false;
+      if (note != null || other.note != null) return sameStory(other);
+      return true;
+    }
+    /** Document order within one flow: block, then row, cell and paragraph. */
+    public int compareTo(Anchor o) {
+      if (block != o.block) return block < o.block ? -1 : 1;
+      if (row != o.row) return row < o.row ? -1 : 1;
+      if (column != o.column) return column < o.column ? -1 : 1;
+      return Integer.compare(paragraph, o.paragraph);
     }
     Document story(Document root) {
-      if (row < 0) return root;
       var paragraphs = new Sequence<Block>();
+      if (note != null) {
+        for (Paragraph p : note.paragraphs) paragraphs = paragraphs.append(p);
+        return new Document(paragraphs, root.page, root.title, root.nextId);
+      }
+      if (row < 0) return root;
       for (Paragraph p : ((Table) root.blocks.get(block)).cell(row, column))
         paragraphs = paragraphs.append(p);
       return new Document(paragraphs, root.page, root.title, root.nextId);
@@ -125,10 +157,14 @@ public final class ReviewComment {
   private static Anchor scan(Document document, String id, java.util.Map<String, Anchor> result) {
     for (int b = 0; b < document.blocks.size(); b++) {
       var block = document.blocks.get(b);
-      if (block instanceof Paragraph paragraph && (result != null || block.id().equals(id))) {
-        var value = new Anchor(b, -1, -1, b, paragraph);
-        if (result == null) return value;
-        result.put(block.id(), value);
+      if (block instanceof Paragraph paragraph) {
+        if (result != null || block.id().equals(id)) {
+          var value = new Anchor(b, -1, -1, b, paragraph);
+          if (result == null) return value;
+          result.put(block.id(), value);
+        }
+        var inNote = notes(paragraph, b, -1, -1, id, result);
+        if (inNote != null) return inNote;
       }
       if (block instanceof Table table) {
         for (int row = 0; row < table.rows(); row++)
@@ -141,6 +177,8 @@ public final class ReviewComment {
                 if (result == null) return value;
                 result.put(p.id, value);
               }
+              var inNote = notes(p, b, row, column, id, result);
+              if (inNote != null) return inNote;
               index++;
             }
           }
@@ -149,12 +187,36 @@ public final class ReviewComment {
     return null;
   }
 
-  /** Ranges may span paragraphs within the body or within a single table cell. */
+  private static Anchor notes(
+      Paragraph host, int b, int row, int column, String id, java.util.Map<String, Anchor> result) {
+    if (!host.text.hasNotes()) return null;
+    final Anchor[] found = {null};
+    host.text.mapNotes(
+        (offset, note) -> {
+          int index = 0;
+          for (Paragraph p : note.paragraphs) {
+            if (found[0] == null && (result != null || p.id.equals(id))) {
+              var value = new Anchor(b, row, column, index, p, note);
+              if (result == null) found[0] = value;
+              else result.put(p.id, value);
+            }
+            index++;
+          }
+          return note;
+        });
+    return found[0];
+  }
+
+  /**
+   * Ranges may span paragraphs of the body stream (from body text into or across table cells,
+   * as Wordcraft's body story orders cells) or of one footnote/endnote story.
+   */
   public static boolean validRange(Document document, String first, int start, String last, int end) {
     Anchor a = locate(document, first), z = locate(document, last);
-    return a != null && a.sameStory(z) && start >= 0 && end >= 0
-        && a.paragraph <= z.paragraph && start <= a.value.text.length()
-        && end <= z.value.text.length() && (a.paragraph != z.paragraph || start <= end);
+    if (a == null || !a.sameFlow(z) || start < 0 || end < 0) return false;
+    int order = a.sameStory(z) ? Integer.compare(a.paragraph, z.paragraph) : a.compareTo(z);
+    return order <= 0 && start <= a.value.text.length()
+        && end <= z.value.text.length() && (order != 0 || start <= end);
   }
 
   public static int block(Document d, String id) {
@@ -222,7 +284,12 @@ public final class ReviewComment {
       Document before, Document after, RangeMapping mapping) {
     var result = new java.util.ArrayList<ReviewComment>();
     for (ReviewComment c : before.comments) {
-      if (block(before, c.startId) < 0) {
+      Anchor first = locate(before, c.startId), last = locate(before, c.endId);
+      if (first == null || last == null) continue;
+      if (first.note != null || !first.sameStory(last)) {
+        ReviewComment moved = moveAcross(after, mapping, c, first, last);
+        if (moved != null) result.add(moved);
+      } else if (first.row >= 0) {
         ReviewComment moved = moveCell(before, after, c);
         if (moved != null) result.add(moved);
       } else {
@@ -231,5 +298,34 @@ public final class ReviewComment {
       }
     }
     return result;
+  }
+
+  /**
+   * A note-story range, or one spanning stories of the body stream (body text and cells): its
+   * top-level endpoints follow the edit; endpoints in cells or notes (edited in their own
+   * story view) keep their paragraph and are clamped to it. Dropped when a paragraph is gone.
+   */
+  private static ReviewComment moveAcross(
+      Document after, RangeMapping mapping, ReviewComment c, Anchor first, Anchor last) {
+    String startId = c.startId, endId = c.endId;
+    int start = c.start, end = c.end;
+    if (first.note == null && first.row < 0) {
+      int[] at = mapping.move(c.startId, c.start, c.startId, c.start, false);
+      if (at == null) return null;
+      startId = after.blocks.get(at[0]).id();
+      start = at[1];
+    }
+    if (last.note == null && last.row < 0) {
+      int[] at = mapping.move(c.endId, c.end, c.endId, c.end, false);
+      if (at == null) return null;
+      endId = after.blocks.get(at[0]).id();
+      end = at[1];
+    }
+    Anchor a = locate(after, startId), z = locate(after, endId);
+    if (a == null || z == null) return null;
+    start = Math.min(start, a.value.text.length());
+    end = Math.min(end, z.value.text.length());
+    if (!validRange(after, startId, start, endId, end)) return null;
+    return new ReviewComment(c.id, c.author, c.text, startId, start, endId, end, c.resolved, c.replies);
   }
 }

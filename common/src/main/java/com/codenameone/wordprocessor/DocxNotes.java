@@ -11,13 +11,26 @@ final class DocxNotes {
   private final Map<String, Integer> ids = new LinkedHashMap<>();
   private final List<Note> notes;
 
+  private DocxComments commentsOrEmpty() {
+    return comments != null ? comments : new DocxComments(Document.empty());
+  }
+
   DocxNotes(Document document) {
     notes = Notes.all(document);
     for (Note note : notes) if (!ids.containsKey(note.id)) ids.put(note.id, ids.size() + 1);
   }
 
+  /** The package's comments: ranges inside note stories are read and written with them. */
+  DocxComments comments;
+
   DocxNotes(Map<String, byte[]> parts, long[] next, Set<String> warnings, DocxStyles styles)
       throws IOException {
+    this(parts, next, warnings, styles, null);
+  }
+
+  DocxNotes(Map<String, byte[]> parts, long[] next, Set<String> warnings, DocxStyles styles,
+      DocxComments comments) throws IOException {
+    this.comments = comments;
     notes = Collections.emptyList();
     for (String kind : new String[] {"footnote", "endnote"}) {
       var bytes = parts.get("word/" + kind + "s.xml");
@@ -30,12 +43,18 @@ final class DocxNotes {
         var paragraphs = new Sequence<Paragraph>();
         for (Element child : Xml.children(entry, null)) {
           if (!"p".equals(Xml.local(child))) { warnings.add("Note content: " + Xml.local(child)); continue; }
-          Paragraph p = Docx.paragraph(child, next, warnings, lists, styles, links,
-              new DocxComments(Collections.<String, byte[]>emptyMap()));
+          DocxComments marks = comments;
+          boolean scanned = marks != null && marks.markers;
+          if (marks == null) marks = new DocxComments(Collections.<String, byte[]>emptyMap());
+          else marks.markers = true; // the main part's flag does not cover note parts
+          Paragraph p = Docx.paragraph(child, next, warnings, lists, styles, links, marks);
+          if (comments != null) comments.markers = scanned;
           // The automatic note mark is a separate object in the package, not part of the story text.
           if (paragraphs.size() == 0 && hasMarker(child, kind + "Ref") && p.text.length() > 0
-              && (p.text.charAt(0) == ' ' || p.text.charAt(0) == '\t'))
+              && (p.text.charAt(0) == ' ' || p.text.charAt(0) == '\t')) {
             p = p.text(p.text.slice(1, p.text.length()));
+            if (comments != null) comments.shift(p.id, -1);
+          }
           paragraphs = paragraphs.append(p);
         }
         if (paragraphs.size() == 0) paragraphs = paragraphs.append(new Paragraph("p" + next[0]++, new RichText()));
@@ -95,7 +114,7 @@ final class DocxNotes {
           if (first) {
             // Write the paragraph normally, then inject the reference mark after its properties.
             var paragraph = new StringBuilder();
-            Docx.writeParagraph(paragraph, p, lists, tabs, links, new DocxComments(Document.empty()));
+            Docx.writeParagraph(paragraph, p, lists, tabs, links, commentsOrEmpty());
             var xml = paragraph.toString();
             int at = xml.indexOf("</w:pPr>"); at = at < 0 ? xml.indexOf('>') + 1 : at + 8;
             String marker = note.mark.isEmpty() ? "<w:" + kind + "Ref/>" : "<w:t>" + Xml.escape(note.mark) + "</w:t>";
@@ -104,7 +123,7 @@ final class DocxNotes {
             out.append(marker).append("</w:r><w:r>");
             Docx.writeRunProperties(out, p.text.styleAt(0).clean().with("link", "").with("script", "baseline"));
             out.append("<w:t xml:space=\"preserve\"> </w:t></w:r>").append(xml.substring(at));
-          } else Docx.writeParagraph(out, p, lists, tabs, links, new DocxComments(Document.empty()));
+          } else Docx.writeParagraph(out, p, lists, tabs, links, commentsOrEmpty());
           first = false;
         }
         out.append("</w:").append(kind).append(">");
