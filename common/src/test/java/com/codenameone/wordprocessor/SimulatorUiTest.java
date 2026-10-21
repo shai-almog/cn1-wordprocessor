@@ -677,6 +677,53 @@ public class SimulatorUiTest {
   }
 
   @Test
+  public void readAloudOpensFloatingPlayerUntilStop() throws Exception {
+    Speech.install(
+        new Speech.Engine() {
+          public boolean speechSupported() { return true; }
+          public void speak(String text, float rate) {}
+          public void stop() {}
+          public boolean dictationSupported() { return false; }
+          public void dictate(java.util.function.Consumer<String> result) { result.accept(null); }
+        });
+    try {
+      edt(
+          () -> {
+            var session = session();
+            session.replaceDocument(Document.empty());
+            session.replace("One sentence. Two sentence.");
+            session.select(0, 0, 0);
+            editor().refresh();
+            Method read = WordProcessor.class.getDeclaredMethod("readAloud", String.class);
+            read.setAccessible(true);
+            read.invoke(app, "start");
+            // Wordcraft's floating player: transport, status, speed with a 1x reset, skip citations.
+            var player = (Container) field(app, "readAloudPlayer");
+            assertNotNull("player open", player);
+            assertNotNull("player floats over the form", player.getParent());
+            for (String n : new String[] {"Player Previous sentence", "Player Pause", "Player Next sentence",
+                "Player Stop", "Player status", "Player speed", "Normal speed", "Player skip citations", "Close player"})
+              assertNotNull(n, named(player, n));
+            assertEquals("Sentence 1 / 2", ((com.codename1.ui.Label) named(player, "Player status")).getText());
+            read.invoke(app, "playPause");
+            assertEquals("Paused", ((com.codename1.ui.Label) named(player, "Player status")).getText());
+            org.junit.Assert.assertSame(player, field(app, "readAloudPlayer"));
+            ((com.codename1.ui.Button) named(player, "Player Stop")).released();
+            assertNull("stop closes the player", field(app, "readAloudPlayer"));
+            // The ribbon controls remain.
+            assertNotNull(field(app, "readAloudStatus"));
+          });
+    } finally {
+      edt(() -> {
+        Method read = WordProcessor.class.getDeclaredMethod("readAloud", String.class);
+        read.setAccessible(true);
+        read.invoke(app, "stop");
+      });
+      Speech.install(null);
+    }
+  }
+
+  @Test
   public void insertRibbonOffersSmartArt() throws Exception {
     edt(
         () -> {

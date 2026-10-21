@@ -4938,6 +4938,10 @@ public class WordProcessor {
 
   private com.codename1.ui.util.UITimer readAloudTimer;
   private final Label readAloudStatus = named(new Label("Stopped"), "Read Aloud status");
+  /** Wordcraft's floating Read Aloud player; open from Start until Stop (or its close box). */
+  private com.codename1.components.InteractionDialog readAloudPlayer;
+  private final Label playerStatus = named(new Label("Stopped"), "Player status");
+  private Button playerPlayPause;
 
   private static <T extends Component> T named(T c, String name) {
     c.setName(name);
@@ -4966,9 +4970,12 @@ public class WordProcessor {
           Json.object("action", action, "rate", Speech.rate(), "skipCitations", Speech.skipCitations()));
     } catch (RuntimeException e) {
       readAloudStatus.setText("Stopped");
+      closeReadAloudPlayer();
       return;
     }
     readAloudStatus.setText(readAloudState(r));
+    if ("stop".equals(action)) closeReadAloudPlayer();
+    else if ("start".equals(action) || readAloudPlayer != null) showReadAloudPlayer(r);
     editor.revealSelection();
     edited(false);
     if (!Boolean.TRUE.equals(r.get("reading")) || Boolean.TRUE.equals(r.get("paused"))) return;
@@ -4978,6 +4985,73 @@ public class WordProcessor {
     readAloudTimer =
         com.codename1.ui.util.UITimer.timer(
             (int) Speech.duration(text, readAloudRate), false, form, () -> readAloud("next"));
+  }
+
+  /**
+   * The floating player, as Wordcraft's read_aloud window: previous / play-pause / next / stop with
+   * the status, the speed with a "1x" reset, and "Skip citations & bibliography"; its close box
+   * stops reading. It floats over the top right of the page and leaves the editor usable.
+   */
+  private void showReadAloudPlayer(Map<?, ?> r) {
+    playerStatus.setText(readAloudState(r));
+    boolean playing = Boolean.TRUE.equals(r.get("reading")) && !Boolean.TRUE.equals(r.get("paused"));
+    if (readAloudPlayer != null) {
+      if (playerPlayPause != null) {
+        OfficeTheme.icon(playerPlayPause, playing ? FontImage.MATERIAL_PAUSE : FontImage.MATERIAL_PLAY_ARROW, 18, OfficeTheme.INK);
+        playerPlayPause.setAccessibilityText(playing ? "Pause" : "Play");
+      }
+      readAloudPlayer.revalidate();
+      return;
+    }
+    var dialog = new com.codename1.components.InteractionDialog("Read Aloud");
+    dialog.setName("Read Aloud player");
+    dialog.setLayout(BoxLayout.y());
+    dialog.setAnimateShow(false);
+    playerPlayPause = playerButton(playing ? "Pause" : "Play", playing ? FontImage.MATERIAL_PAUSE : FontImage.MATERIAL_PLAY_ARROW, "playPause");
+    var controls = FlowLayout.encloseIn(
+        playerButton("Previous sentence", FontImage.MATERIAL_SKIP_PREVIOUS, "previous"), playerPlayPause,
+        playerButton("Next sentence", FontImage.MATERIAL_SKIP_NEXT, "next"),
+        playerButton("Stop", FontImage.MATERIAL_STOP, "stop"), detached(playerStatus));
+    var speed = readingSpeed();
+    speed.setName("Player speed");
+    @SuppressWarnings("unchecked")
+    ComboBox<String> combo = (ComboBox<String>) speed;
+    var normal = button("1x", () -> {
+      Speech.rate(1f);
+      for (int i = 0; i < Speech.RATES.length; i++) if (Math.abs(Speech.RATES[i] - 1f) < .01f) combo.setSelectedIndex(i);
+    });
+    normal.setName("Normal speed");
+    var skip = skipCitationsBox();
+    skip.setName("Player skip citations");
+    ((CheckBox) skip).setText("Skip citations & bibliography");
+    var close = button("", () -> readAloud("stop"));
+    close.setName("Close player");
+    close.setAccessibilityText("Close");
+    OfficeTheme.icon(close, FontImage.MATERIAL_CLOSE, 16, OfficeTheme.INK);
+    dialog.add(BorderLayout.east(close)).add(controls)
+        .add(BoxLayout.encloseX(new Label("Speed"), speed, normal)).add(skip);
+    readAloudPlayer = dialog;
+    var size = dialog.getPreferredSize();
+    int w = Math.max(form.getWidth(), size.getWidth() + OfficeTheme.px(32));
+    int h = Math.max(form.getHeight(), size.getHeight() + OfficeTheme.px(200));
+    int top = OfficeTheme.px(160), left = Math.max(0, w - size.getWidth() - OfficeTheme.px(24));
+    dialog.show(top, Math.max(0, h - top - size.getHeight()), left, Math.max(0, w - left - size.getWidth()));
+  }
+
+  private Button playerButton(String name, char icon, String action) {
+    var b = button("", () -> readAloud(action));
+    b.setName("Player " + name);
+    b.setAccessibilityText(name);
+    OfficeTheme.icon(b, icon, 18, OfficeTheme.INK);
+    return b;
+  }
+
+  private void closeReadAloudPlayer() {
+    if (readAloudPlayer == null) return;
+    var d = readAloudPlayer;
+    readAloudPlayer = null;
+    playerPlayPause = null;
+    d.dispose();
   }
 
   /** The player's status line, as Wordcraft's: "Sentence i / n", Paused, Finished or Stopped. */
