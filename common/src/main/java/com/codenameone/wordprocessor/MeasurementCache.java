@@ -58,6 +58,9 @@ final class MeasurementCache implements LayoutEngine.Metrics {
   }
 
   public float width(String text, TextStyle style) {
+    // Left-out text (hidden, or a body deletion in balloons) is never cached: the same style
+    // takes room in a header or note story while it takes none in the body.
+    if (CharacterMetrics.leftOut(style)) return 0;
     // Do not pin large pastes or whole paragraphs in a measurement cache.
     if (text.length() > 256) return CharacterMetrics.width(delegate, text, style);
     var v = values(style);
@@ -131,6 +134,7 @@ final class MeasurementCache implements LayoutEngine.Metrics {
 
   /** Width of one ASCII character c (whose string is text), cached per style. */
   float ascii(char c, String text, TextStyle style) {
+    if (CharacterMetrics.leftOut(style)) return 0;
     var v = values(style);
     if (v.ascii == null) {
       v.ascii = new float[128];

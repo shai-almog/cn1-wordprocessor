@@ -797,7 +797,26 @@ public final class LayoutEngine {
 
   private boolean hides(TextStyle s) {
     return s.characters.hidden && !showHidden
-        || hideDeleted && s.revision != null && !s.revision.inserted();
+        || hideDeleted && bodyStory && s.revision != null && !s.revision.inserted();
+  }
+
+  /**
+   * Whether the story being laid out is the body. Wordcraft's hides_deleted takes deletions out
+   * only for StoryRef::Body: headers, footers, notes and text boxes keep them inline.
+   */
+  private boolean bodyStory = true;
+
+  /** Enters a non-body story; returns the previous state for {@link #leaveStory}. */
+  private boolean enterStory() {
+    boolean was = bodyStory;
+    bodyStory = false;
+    CharacterMetrics.hideDeleted = false;
+    return was;
+  }
+
+  private void leaveStory(boolean was) {
+    bodyStory = was;
+    CharacterMetrics.hideDeleted = hideDeleted && was;
   }
 
   private int measured;
@@ -965,7 +984,7 @@ public final class LayoutEngine {
     var c = nextCache.get(p);
     if (c == null) c = cache.get(p);
     Content content = null;
-    if (c == null && !p.text.hasObjects() && p.format.tabs.isEmpty()) {
+    if (c == null && !p.text.hasObjects() && p.format.tabs.isEmpty() && (bodyStory || !hideDeleted)) {
       content = new Content(p, p.text.toString());
       c = nextByContent.get(content);
       if (c == null) c = byContent.get(content);
@@ -1551,6 +1570,7 @@ public final class LayoutEngine {
 
   private Result layoutOnce(Document doc, long revision) {
     CharacterMetrics.showHidden = showHidden;
+    bodyStory = true;
     CharacterMetrics.hideDeleted = hideDeleted;
     nextCache = new HashMap<>();
     nextByContent = new HashMap<>();
@@ -1917,6 +1937,15 @@ public final class LayoutEngine {
 
   /** A text box story laid out {@code width} points wide, as a header story is. */
   private StoryLayout boxStory(Document doc, Sequence<Block> blocks, int page, float width) {
+    boolean was = enterStory();
+    try {
+      return boxStoryLaid(doc, blocks, page, width);
+    } finally {
+      leaveStory(was);
+    }
+  }
+
+  private StoryLayout boxStoryLaid(Document doc, Sequence<Block> blocks, int page, float width) {
     var out = new StoryLayout();
     float w = Math.max(72, width);
     var region = new PageSpec(w, 100000, 0, w - width, 0, 0);
@@ -2005,6 +2034,15 @@ public final class LayoutEngine {
   }
 
   private StoryLayout story(Document doc, Sequence<Block> blocks, int page, float available) {
+    boolean was = enterStory();
+    try {
+      return storyLaid(doc, blocks, page, available);
+    } finally {
+      leaveStory(was);
+    }
+  }
+
+  private StoryLayout storyLaid(Document doc, Sequence<Block> blocks, int page, float available) {
     var out = new StoryLayout();
     var spec = doc.page;
     // The story is laid out as one box like Wordcraft's layout_box: its floats wrap the text that
@@ -2182,6 +2220,15 @@ public final class LayoutEngine {
     }
 
     List<NoteLine> noteLines(Note note) {
+      boolean was = enterStory();
+      try {
+        return noteLinesLaid(note);
+      } finally {
+        leaveStory(was);
+      }
+    }
+
+    List<NoteLine> noteLinesLaid(Note note) {
       var result = new ArrayList<NoteLine>();
       var numbers = new ListNumbers();
       int index = -1;
@@ -3711,6 +3758,16 @@ public final class LayoutEngine {
       if (notes.isEmpty()) return;
       while (!pendingNotes.isEmpty()) newPage();
       if (y > spec.top) y += 12;
+      boolean was = enterStory();
+      try {
+        endnoteParts(notes);
+      } finally {
+        leaveStory(was);
+      }
+      notes.clear();
+    }
+
+    private void endnoteParts(List<Note> notes) {
       for (Note note : notes) {
         int index = -1;
         for (Block block : note.displayedBlocks()) {

@@ -135,6 +135,28 @@ public class BalloonsTest {
   }
 
   @Test
+  public void revisionsModeKeepsHeaderDeletionsInline() {
+    // Wordcraft's hides_deleted: only StoryRef::Body loses its deletions in balloon mode.
+    var s = new Session(Document.empty());
+    s.replace("keep gone stay");
+    s.trackChanges(true);
+    s.select(0, 5, 10);
+    s.deleteBackward();
+    var body = (Paragraph) s.document().blocks.get(0);
+    var d =
+        s.document()
+            .furniture(
+                PageFurniture.EMPTY.story(
+                    "header", new Sequence<Paragraph>().append(new Paragraph("hd", body.text))));
+    var engine = new LayoutEngine(METRICS);
+    engine.setHideDeleted(true);
+    var page = engine.layout(d, 0).pages.get(0);
+    float full = METRICS.width("keep gone stay", TextStyle.DEFAULT);
+    assertEquals(full, page.header.get(0).width, .5f);
+    assertEquals(full - METRICS.width("gone ", TextStyle.DEFAULT), page.lines.get(0).width, .5f);
+  }
+
+  @Test
   public void pdfLinkRectanglesScaleWithThePage() throws Exception {
     var s = new Session(Document.empty());
     s.replace("alpha beta");
