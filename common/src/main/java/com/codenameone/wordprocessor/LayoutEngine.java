@@ -391,6 +391,26 @@ public final class LayoutEngine {
   }
 
   private final MeasurementCache metrics;
+  private final Map<String, Equation.Box> mathBoxes = new HashMap<>();
+
+  /**
+   * The built-up box of the inline equation field at {@code at}, or null when none is there. An
+   * inline equation is one unbreakable object on the text line: its width is the box width and
+   * its baseline sits on the line's baseline (as in Wordcraft, it never wraps internally).
+   */
+  Equation.Box inlineMath(Paragraph p, int at, TextStyle s) {
+    var f = p.text.fieldAt(at);
+    if (!Equation.inline(f) || f.showCode) return null;
+    String key = s.size + "\u0001" + Equation.inlineText(f);
+    var box = mathBoxes.get(key);
+    if (box == null) {
+      if (mathBoxes.size() > 512) mathBoxes.clear();
+      box = Equation.layout(Equation.fromLinear(Equation.inlineText(f)), s.size, metrics);
+      mathBoxes.put(key, box);
+    }
+    return box;
+  }
+
   private Map<Paragraph, Cached> cache = new HashMap<>();
   private Map<Paragraph, Cached> nextCache;
   // Same lines keyed by content: a reopened or reverted document has new paragraph objects
@@ -693,6 +713,11 @@ public final class LayoutEngine {
                 : "\t".equals(chunk)
                     ? tabWidth(p, text, a, pos, start == 0 ? p.format.firstIndent : 0)
                     : metrics.width(display, s);
+        var math = obj[a] ? inlineMath(p, a, s) : null;
+        if (math != null) {
+          display = "";
+          if (!s.characters.hidden) w = math.width;
+        }
         if (hyphenated && b == end) {
           display += "-";
           w += metrics.width("-", s);
@@ -736,6 +761,15 @@ public final class LayoutEngine {
               Math.max(
                   baseline,
                   metrics.ascent(span.style.renderedStyle()) + span.style.baselineShift());
+      // Inline equations rise above and hang below the text by their box's ascent and descent.
+      float mathDescent = 0;
+      for (Span span : line.spans)
+        if (!span.style.characters.hidden && InlineField.OBJECT.equals(span.text)) {
+          var math = inlineMath(p, span.start, span.style);
+          if (math == null) continue;
+          baseline = Math.max(baseline, math.ascent);
+          mathDescent = Math.max(mathDescent, math.descent);
+        }
       for (int i = 0; i < line.spans.size(); i++) {
         var span = line.spans.get(i);
         float top = baseline - metrics.ascent(span.glyphStyle) - span.style.baselineShift();
@@ -743,6 +777,7 @@ public final class LayoutEngine {
         if (!span.style.characters.hidden)
           line.height = Math.max(line.height, (top + metrics.height(span.glyphStyle)));
       }
+      line.height = Math.max(line.height, baseline + mathDescent);
       line.markerOffset = baseline - metrics.ascent(TextStyle.DEFAULT);
       line.baseline = baseline;
       float natural = line.height;
@@ -857,6 +892,12 @@ public final class LayoutEngine {
       var style = st[at];
       int next = at + 1;
       while (next < end && !obj[at] && !obj[next] && style.equals(st[next])) next++;
+      var math = obj[at] ? inlineMath(p, at, style) : null;
+      if (math != null) {
+        width += math.width;
+        at = next;
+        continue;
+      }
       width += metrics.width(p.text.displayAt(at, text.substring(at, next)), style);
       at = next;
     }

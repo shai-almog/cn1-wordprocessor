@@ -171,6 +171,11 @@ public final class Latex {
             }
 
             public void field(int offset, InlineField f, TextStyle s) {
+              if (Equation.inline(f)) {
+                amsmath = true;
+                b.append('$').append(Equation.latex(Equation.fromLinear(Equation.inlineText(f)))).append('$');
+                return;
+              }
               String[] parts = TextUtil.split(f.instruction.trim(), ' ');
               String name = parts.length > 1 ? parts[1] : "";
               if (("REF".equals(parts[0]) || "PAGEREF".equals(parts[0])) && Bookmark.validName(name)) {
@@ -779,15 +784,24 @@ public final class Latex {
     }
 
     void mathText(String body, boolean display) {
-      String linear = linear(body);
-      if (display) {
+      // As in Wordcraft: $...$ and \(...\) become inline equations; $$...$$, \[...\] and the
+      // equation environments become display (block) equations.
+      String linear = linear(body).trim();
+      if (linear.isEmpty()) return;
+      if (display && !sink.body) {
+        // Table cells and notes hold paragraphs only: a centered paragraph with the equation.
         flush();
         String align = sink.align;
         sink.align = "center";
-        sink.add(linear, style.with("italic", "true"));
+        sink.object(RichText.field(Equation.inline(linear), style));
         flush();
         sink.align = align;
-      } else sink.add(linear, style.with("italic", "true"));
+      } else if (display) {
+        flush();
+        var d = Drawing.of("equation").with("text", linear).with("display", "true");
+        sink.blocks.add(Picture.drawing("i" + next++, d, 468,
+            Math.max(36, Equation.height(Equation.fromLinear(linear), 12)), "", "center"));
+      } else sink.object(RichText.field(Equation.inline(linear), style));
     }
 
     void verbatim(String env) {

@@ -111,7 +111,7 @@ final class DocxPictures {
       }
       return;
     }
-    if ("oMathPara".equals(Xml.local(e)) || "oMath".equals(Xml.local(e))) {
+    if ("oMathPara".equals(Xml.local(e))) {
       Drawing math = DocxDrawings.math(e);
       result.add(Picture.drawing("i" + id[0]++, math, 468, Math.max(36, Equation.height(Equation.of(math), 12)), "", "left"));
       return;

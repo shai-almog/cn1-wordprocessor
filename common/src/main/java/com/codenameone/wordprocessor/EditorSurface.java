@@ -1492,6 +1492,12 @@ public final class EditorSurface extends Container
           }
           g.setColor(ink(span.style.color));
           drawCharacters(g, span, f, scale, sx, sy);
+          if (InlineField.OBJECT.equals(span.text) && span.displayText.isEmpty() && textLine(line)) {
+            var field = lineParagraph(line).text.fieldAt(span.start);
+            if (Equation.inline(field))
+              paintDrawing(g, Equation.placed(field, span.glyphStyle, line.block, 0, 0, 0, span.width),
+                  sx, sy + f.getAscent(), scale);
+          }
           if (span.style.hasUnderline()) {
             var path = new GeneralPath();
             TextDecorations.underline(

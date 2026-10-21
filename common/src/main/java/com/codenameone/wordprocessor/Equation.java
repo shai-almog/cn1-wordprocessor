@@ -1278,4 +1278,69 @@ public final class Equation {
     Box b = layout(n, size, new PdfMetrics());
     return Math.max(30, (float) Math.ceil(b.ascent + b.descent + size * .6f));
   }
+
+  // ============================================================================ inline equations
+
+  /**
+   * Field instruction prefix of an inline equation ({@code m:oMath} inside a paragraph). The field
+   * is one object character in the text, so the caret steps over it as one unit and selection,
+   * copy, paste and undo treat it like any other field; display equations ({@code m:oMathPara})
+   * stay block drawings.
+   */
+  public static final String INLINE = "OMATH ";
+
+  /** An inline equation field holding {@code linear}. */
+  public static InlineField inline(String linear) {
+    String text = linear == null || linear.trim().isEmpty() ? "\u2b1a" : linear.trim();
+    return new InlineField(INLINE + text, text, false, false);
+  }
+
+  /** True for an inline equation field. */
+  public static boolean inline(InlineField f) {
+    return f != null && f.instruction.startsWith(INLINE);
+  }
+
+  /** The linear text an inline equation field holds. */
+  public static String inlineText(InlineField f) {
+    return f.instruction.substring(INLINE.length());
+  }
+
+  /** The drawing an inline equation paints with, sized to {@code style}. */
+  public static Drawing inlineDrawing(InlineField f, TextStyle style) {
+    return Drawing.of("equation").with("text", inlineText(f)).with("justify", "left")
+        .with("fontSize", String.valueOf(style == null ? 12 : style.size)).with("display", "false").with("inline", "true");
+  }
+
+  /** The inline equation at {@code at} placed with its origin on the baseline at (x, baseline). */
+  static LayoutEngine.PlacedPicture placed(InlineField f, TextStyle style, int block, int page,
+      float x, float baseline, float width) {
+    return new LayoutEngine.PlacedPicture(Picture.drawing("math", inlineDrawing(f, style), Math.max(1, width), 1, "", "left"),
+        block, page, x, baseline, Math.max(1, width), 1);
+  }
+
+  /** Insert &gt; Equation's ready-made equations, as in Wordcraft: id, description, linear text. */
+  public static final String[][] BUILT_INS = {
+    {"pythagoras", "Sides of a right triangle", "a^2+b^2=c^2"},
+    {"area", "Circle area from its radius", "A=\u03c0r^2"},
+    {"quadratic", "Roots of ax\u00b2+bx+c", "x=(\u2212b\u00b1\u221a(b^2\u22124ac))/2a"},
+    {"binomial", "Binomial expansion of (x+a)\u207f", "(x+a)^n=\u2211_(k=0)^n\u2592\u3016(n\u00a6k) x^k a^(n\u2212k)\u3017"},
+    {"expansion", "Power series of (1+x)\u207f", "(1+x)^n=1+nx/1!+(n(n\u22121)x^2)/2!+\u22ef"},
+    {"euler", "Euler's identity", "e^(i\u03c0)+1=0"},
+    {"derivative", "Derivative as a limit", "f'(x)=lim\u252c(h\u21920)\u2061\u3016(f(x+h)\u2212f(x))/h\u3017"},
+    {"taylor", "Exponential series", "e^x=1+x/1!+x^2/2!+x^3/3!+\u22ef,  \u2212\u221e<x<\u221e"},
+    {"gaussian", "Integral of e^(\u2212x\u00b2)", "\u222b_(\u2212\u221e)^\u221e\u2592e^(\u2212x^2) dx=\u221a\u03c0"},
+    {"fourier", "Sine and cosine series of f(x)",
+      "f(x)=a_0+\u2211_(n=1)^\u221e\u2592\u3016(a_n cos\u2061\u3016n\u03c0x/L\u3017+b_n sin\u2061\u3016n\u03c0x/L\u3017)\u3017"},
+    {"trig1", "Sum or difference of sines",
+      "sin\u2061\u03b1\u00b1sin\u2061\u03b2=2 sin\u2061\u30161/2(\u03b1\u00b1\u03b2)\u3017 cos\u2061\u30161/2(\u03b1\u2213\u03b2)\u3017"},
+    {"trig2", "Sum of cosines", "cos\u2061\u03b1+cos\u2061\u03b2=2 cos\u2061\u30161/2(\u03b1+\u03b2)\u3017 cos\u2061\u30161/2(\u03b1\u2212\u03b2)\u3017"},
+    {"normal", "Normal probability density", "f(x)=1/(\u03c3\u221a(2\u03c0)) e^(\u2212(x\u2212\u03bc)^2/(2\u03c3^2))"},
+    {"bayes", "Bayes' rule", "P(A|B)=(P(B|A)P(A))/P(B)"},
+  };
+
+  /** The linear text of built-in equation {@code id}, or null. */
+  public static String builtIn(String id) {
+    for (String[] b : BUILT_INS) if (b[0].equals(id)) return b[2];
+    return null;
+  }
 }

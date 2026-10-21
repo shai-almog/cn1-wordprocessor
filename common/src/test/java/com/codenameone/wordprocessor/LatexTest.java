@@ -238,6 +238,8 @@ public class LatexTest {
     var b = new StringBuilder();
     for (Block block : d.blocks)
       if (block instanceof Paragraph p) b.append(p.text.plainText()).append('\n');
+      else if (block instanceof Picture pic && pic.drawing != null)
+        b.append(pic.drawing.get("text", "")).append('\n');
       else if (block instanceof Table t)
         for (int r = 0; r < t.rows(); r++)
           for (int c = 0; c < t.columns(); c++)

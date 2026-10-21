@@ -497,6 +497,12 @@ public final class PdfExporter {
               .append(literal(line.marker))
               .append(") Tj ET\n");
         for (LayoutEngine.Span span : line.spans) {
+          if (span.displayText.isEmpty() && InlineField.OBJECT.equals(span.text)) {
+            var math = inlineMath(layout.document, line, span.start);
+            if (math != null)
+              PdfDrawings.paint(content, Equation.placed(math, span.glyphStyle, line.block, 0, line.x + span.x,
+                  line.y + span.top + span.glyphStyle.renderedSize(), span.width), spec.height);
+          }
           if (span.displayText.isEmpty()) continue;
           var s = span.glyphStyle;
           float x = line.x + span.x, y = spec.height - line.y - span.top - s.renderedSize();
@@ -726,6 +732,19 @@ public final class PdfExporter {
     if (c < 32 || c == 127 || c >= 128 && c < 160 && special.charAt(c - 128) == 0)
       throw new IOException("Unsupported PDF control character");
     return c;
+  }
+
+  /** The inline equation field a line's object character at {@code at} holds, or null. */
+  static InlineField inlineMath(Document d, LayoutEngine.Line line, int at) {
+    if (d == null || line.block < 0 || line.block >= d.blocks.size()) return null;
+    Block b = d.blocks.get(line.block);
+    Paragraph p = null;
+    if (line.row < 0 && b instanceof Paragraph q) p = q;
+    else if (line.row >= 0 && b instanceof Table t)
+      for (Paragraph q : t.cell(line.row, line.column)) if (q.id.equals(line.paragraphId)) p = q;
+    if (p == null || at < 0 || at >= p.text.length()) return null;
+    var f = p.text.fieldAt(at);
+    return Equation.inline(f) ? f : null;
   }
 
   private static String literal(String s) throws IOException {

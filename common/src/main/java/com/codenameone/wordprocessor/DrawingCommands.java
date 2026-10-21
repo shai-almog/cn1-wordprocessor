@@ -276,10 +276,26 @@ final class DrawingCommands implements Commands.Extension {
         });
 
     // ---------------------------------------------------------------- equations
-    c.edit("insert.equation", "text?:string,display?:boolean",
-        "Insert an equation in linear format (\\\\alpha, x^2, (a)/(b) ...)", (s, a) -> {
-          var d = Drawing.of("equation").with("text", Commands.str(a, "text", ""));
-          boolean display = !a.containsKey("display") || (Boolean) a.get("display");
+    c.edit("insert.equation", "text?:string,builtin?:string,display?:boolean",
+        "Insert an equation in linear format (\\\\alpha, x^2, (a)/(b) ...) or a built-in one"
+            + " (pythagoras, area, quadratic, binomial, expansion, euler, derivative, taylor, gaussian,"
+            + " fourier, trig1, trig2, normal, bayes). On an empty line it is a display equation,"
+            + " in text an inline one", (s, a) -> {
+          String text = Commands.str(a, "text", "");
+          if (a.containsKey("builtin")) {
+            text = Equation.builtIn(Commands.str(a, "builtin"));
+            if (text == null) throw new IllegalArgumentException("Unknown built-in equation");
+          }
+          var d = Drawing.of("equation").with("text", text);
+          var sel = s.selection();
+          boolean emptyLine = sel.block != sel.anchorBlock
+              || !(s.document().blocks.get(sel.block) instanceof Paragraph para)
+              || para.text.toString().trim().length() == sel.end() - sel.start();
+          boolean display = a.containsKey("display") ? (Boolean) a.get("display") : emptyLine;
+          if (!display && s.document().blocks.get(sel.block) instanceof Paragraph) {
+            s.insertField(Equation.inline(text));
+            return Json.object("inline", true);
+          }
           float width = display ? s.activeSection().resolved.page.contentWidth() : 160;
           float height = Equation.height(Equation.fromLinear(d.get("text", "")), d.num("fontSize", 12));
           return insert(s, d.with("display", String.valueOf(display)), width, height, "Equation");

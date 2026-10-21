@@ -781,7 +781,8 @@ public final class DrawingOps {
     Equation.Box box = Equation.layout(Equation.of(d), size, metrics);
     float x = "left".equals(justify) ? 0 : "right".equals(justify) ? right - box.width : (right - box.width) / 2;
     x = Math.max(0, x);
-    float base = (h - box.ascent - box.descent) / 2 + box.ascent;
+    // An inline equation is placed with its origin on the text baseline.
+    float base = d.flag("inline") ? 0 : (h - box.ascent - box.descent) / 2 + box.ascent;
     boolean upright = d.flag("normalText");
     for (Equation.Glyph g : box.glyphs)
       ops.texts.add(new Text(g.text(), x + g.x(), base + g.y() - g.size(), g.width() + 1, g.size(), color, false,

@@ -103,6 +103,13 @@ final class DocxFields {
       revision = before;
       return;
     }
+    if ("oMathPara".equals(kind)) return;
+    if ("oMath".equals(kind)) {
+      // m:oMath among the runs is an inline equation; m:oMathPara stays a display (block) equation.
+      String linear = Equation.linear(Equation.fromOmml(node));
+      append(RichText.field(Equation.inline(linear), TextStyle.DEFAULT));
+      return;
+    }
     if ("fldSimple".equals(kind)) {
       RichText result = read(node, reader, links, warnings);
       String instruction = Xml.attr(node, "instr", "");
@@ -217,6 +224,11 @@ final class DocxFields {
   }
 
   static void write(StringBuilder b, InlineField field, TextStyle style, DocxLinks links) {
+    if (Equation.inline(field)) {
+      // An inline equation is m:oMath directly in the paragraph (no m:oMathPara).
+      b.append(Equation.omml(Equation.fromLinear(Equation.inlineText(field))));
+      return;
+    }
     if (ContentControl.is(field) && style.revision == null) {
       DocxControls.write(b, field, style, links);
       return;

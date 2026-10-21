@@ -151,7 +151,7 @@ final class WordAliasCommands implements Commands.Extension {
           var b = s.document().blocks.get(block);
           if (!equation(b)) {
             int from = block;
-            c.execute(s, "insert.equation", Json.object("text", ""));
+            c.execute(s, "insert.equation", Json.object("text", "", "display", true));
             block = -1;
             for (int i = from; i < s.document().blocks.size() && block < 0; i++)
               if (equation(s.document().blocks.get(i))) block = i;
