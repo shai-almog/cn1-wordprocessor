@@ -3329,16 +3329,6 @@ public final class LayoutEngine {
           own[prefix.length + 1] = sub.span.row;
           own[prefix.length + 2] = sub.span.column;
           inner.add(new InnerBox(own, sub.left, top, sub.width, cellHeight, sub.format));
-          for (InnerBox b : sub.inner)
-            inner.add(new InnerBox(b.path, sub.left + b.x, top + shift + b.y, b.width, b.height, b.format));
-          for (int i = 0; i < sub.pics.size(); i++) {
-            float[] r = sub.picBoxes.get(i);
-            pics.add(sub.pics.get(i));
-            picIndex.add(sub.picIndex.get(i));
-            picPaths.add(sub.picPaths.get(i));
-            picBoxes.add(
-                new float[] {sub.left + r[0], top + shift + r[1], r[2], r[3], sub.left + r[4], top + shift + r[5], r[6]});
-          }
           // A turned nested cell's frame origin in this cell (as turnOrigin for a table's cell).
           float[] origin = null;
           if (sub.turn != 0) {
@@ -3352,6 +3342,38 @@ public final class LayoutEngine {
               sub.turn == 2 ? sub.left + pad + off : sub.left + pad + cw - off,
               sub.turn == 2 ? top + vpad + sub.bandT + sub.len : top + vpad + sub.bandT
             };
+          }
+          float spad = sub.format.horizontalPadding, svpad = sub.format.verticalPadding;
+          // A turned nested cell turns what it holds with its text, as Wordcraft's TurnedCell
+          // (nested tables' cells and pictures), about its frame origin in this cell.
+          for (InnerBox b : sub.inner) {
+            if (origin == null) {
+              inner.add(new InnerBox(b.path, sub.left + b.x, top + shift + b.y, b.width, b.height, b.format));
+              continue;
+            }
+            float[] q = turnRect(sub.turn, origin, b.x - spad, b.y - svpad, b.width, b.height);
+            inner.add(new InnerBox(b.path, q[0], q[1], q[2], q[3], b.format));
+          }
+          for (int i = 0; i < sub.pics.size(); i++) {
+            float[] r = sub.picBoxes.get(i);
+            var pic = sub.pics.get(i);
+            picIndex.add(sub.picIndex.get(i));
+            picPaths.add(sub.picPaths.get(i));
+            if (origin == null) {
+              pics.add(pic);
+              picBoxes.add(
+                  new float[] {sub.left + r[0], top + shift + r[1], r[2], r[3], sub.left + r[4], top + shift + r[5], r[6]});
+              continue;
+            }
+            // Its own size, centred on its turned place and turned a quarter (as a table cell's).
+            float[] q = turnRect(sub.turn, origin, r[0] - spad, r[1] - svpad, r[2], r[3]);
+            float cx = q[0] + q[2] / 2, cy = q[1] + q[3] / 2;
+            if (pic.look != null) {
+              int deg = ((pic.look.rotation + (sub.turn == 1 ? 90 : 270)) % 360 + 360) % 360;
+              pic = pic.look(pic.look.rotate(deg, pic.look.flipH, pic.look.flipV));
+            }
+            pics.add(pic);
+            picBoxes.add(new float[] {cx - r[2] / 2, cy - r[3] / 2, r[2], r[3], q[0], q[1], r[6]});
           }
           for (int i = 0; i < sub.lines.size(); i++) {
             lines.add(sub.lines.get(i));

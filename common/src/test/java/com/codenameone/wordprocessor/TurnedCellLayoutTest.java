@@ -116,6 +116,10 @@ public class TurnedCellLayoutTest {
 
   /** A 1x1 table whose cell (direction {@code outer}) holds a 1x1 table (direction {@code inner}). */
   private static Document nested(String outer, String inner) {
+    return nested(outer, inner, false);
+  }
+
+  private static Document nested(String outer, String inner, boolean picture) {
     var s = new Session(Document.empty());
     s.insertTable(1, 1);
     var d = s.document();
@@ -130,7 +134,9 @@ public class TurnedCellLayoutTest {
     int k = 0;
     for (int i = 0; i < t.blocks(0, 0).size(); i++) if (t.blocks(0, 0).get(i) instanceof Table) k = i;
     var n = (Table) t.blocks(0, 0).get(k);
-    n = n.setBlocks(0, 0, new Sequence<Block>().append(new Paragraph("np", RichText.of("inner words"))));
+    var content = new Sequence<Block>();
+    if (picture) content = content.append(new Picture("np1", OdtTest.PNG, 40, 20, "", "left"));
+    n = n.setBlocks(0, 0, content.append(new Paragraph("np", RichText.of("inner words"))));
     n = n.format(n.format.direction(0, 0, inner));
     t = t.setBlocks(0, 0, t.blocks(0, 0).set(k, n));
     t = t.format(t.format.direction(0, 0, outer));
@@ -163,5 +169,25 @@ public class TurnedCellLayoutTest {
     assertEquals(2, innerLine(turned).turn);
     // A horizontal nested cell in a turned cell turns with it.
     assertEquals(1, innerLine(engine().layout(nested("tbRl", "lrTb"), 0)).turn);
+  }
+
+  /** As Wordcraft's TurnedCell: a picture in a nested turned cell turns with that cell. */
+  @Test
+  public void picturesTurnWithTheirNestedTurnedCell() {
+    var r = engine().layout(nested("lrTb", "btLr", true), 0);
+    LayoutEngine.PlacedPicture placed = null;
+    for (LayoutEngine.PlacedPicture p : r.pages.get(0).pictures) if ("np1".equals(p.picture().id())) placed = p;
+    assertNotNull(placed);
+    assertEquals(270, placed.picture().look.rotation);
+    LayoutEngine.Box outer = null;
+    for (LayoutEngine.Box b : r.pages.get(0).boxes) if (b.path.length == 0) outer = b;
+    assertNotNull(outer);
+    float cx = placed.x() + placed.width() / 2, cy = placed.y() + placed.height() / 2;
+    // Turned a quarter, the 40x20 picture is 20 wide and 40 tall, inside the outer cell.
+    assertTrue(cx - 10 >= outer.x - .01f && cx + 10 <= outer.x + outer.width + .01f);
+    assertTrue(cy - 20 >= outer.y - .01f && cy + 20 <= outer.y + outer.height + .01f);
+    // Bottom-to-top content stacks rightward from the left: the picture is left of the text.
+    float[] b = innerLine(r).pageBounds();
+    assertTrue(cx < b[0]);
   }
 }
