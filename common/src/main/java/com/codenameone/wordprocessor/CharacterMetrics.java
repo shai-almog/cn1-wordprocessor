@@ -16,6 +16,17 @@ public final class CharacterMetrics {
    */
   static volatile boolean hideDeleted;
 
+  /**
+   * The style to measure and spell a laid-out span's text with when painting it. Deletions are left
+   * out only of the body story (Wordcraft's hides_deleted), so a header, footer, note or text box
+   * span keeps its deleted text and width; painting runs after layout with the body's switch still
+   * on, so a deleted span the layout gave room is measured without its deletion.
+   */
+  static TextStyle painted(LayoutEngine.Span span) {
+    var style = span.style;
+    return span.width > 0 && style.revision != null && !style.revision.inserted() ? style.revision(null) : style;
+  }
+
   /** Whether text in {@code style} is left out of the layout: hidden, or a deletion in balloons. */
   static boolean leftOut(TextStyle style) {
     return style.characters.hidden && !showHidden

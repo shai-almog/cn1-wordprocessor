@@ -2107,6 +2107,7 @@ public final class EditorSurface extends Container
         textEffects.draw(g, paintText(span, f, scale), 0, 0, f, span.style, scale);
       } else {
         String value = "\t".equals(span.text) ? paintText(span, f, scale) : span.rawDisplay;
+        var measured = CharacterMetrics.painted(span);
         RichText source = RichText.of(value, span.style);
         float advance = 0;
         for (int at = 0; at < value.length(); ) {
@@ -2114,10 +2115,10 @@ public final class EditorSurface extends Container
           var raw = value.substring(at, end);
           var glyph = font(span.style.glyphStyle(raw), zoom);
           g.setFont(glyph);
-          float w = CharacterMetrics.width(fontMetrics, raw, span.style);
+          float w = CharacterMetrics.width(fontMetrics, raw, measured);
           textEffects.draw(
               g,
-              span.style.displayText(raw),
+              measured.displayText(raw),
               Math.round((span.rtl ? span.width - advance - w : advance) * scale / stretch),
               f.getAscent() - glyph.getAscent(),
               glyph,
@@ -2144,7 +2145,7 @@ public final class EditorSurface extends Container
             ? s.width
             : "\t".equals(s.text)
                 ? (offset > s.start ? s.width : 0)
-                : prefixWidth(s.text.substring(0, Math.max(0, offset - s.start)), s.style);
+                : prefixWidth(s.text.substring(0, Math.max(0, offset - s.start)), CharacterMetrics.painted(s));
     return s.rtl ? s.x + s.width - into : s.x + into;
   }
 

@@ -175,6 +175,42 @@ public class BalloonsTest {
   }
 
   @Test
+  public void headerDeletionsWithSpacingAndSmallCapsPaintAsLaidOut() {
+    // The per-character painting path (character spacing, small caps) runs after layout with the
+    // body's deletions-in-balloons switch on; a header deletion keeps its text and width there too.
+    var s = new Session(Document.empty());
+    s.replace("keep gone stay");
+    s.select(0, 0, 14);
+    s.format("smallCaps", "true");
+    s.format("characterSpacing", "1.5");
+    s.trackChanges(true);
+    s.select(0, 5, 10);
+    s.deleteBackward();
+    var body = (Paragraph) s.document().blocks.get(0);
+    var d =
+        s.document()
+            .furniture(
+                PageFurniture.EMPTY.story(
+                    "header", new Sequence<Paragraph>().append(new Paragraph("hd", body.text))));
+    var engine = new LayoutEngine(METRICS);
+    engine.setHideDeleted(true);
+    var page = engine.layout(d, 0).pages.get(0);
+    LayoutEngine.Span deleted = null;
+    for (LayoutEngine.Span span : page.header.get(0).spans)
+      if (span.style.revision != null && !span.style.revision.inserted()) deleted = span;
+    assertNotNull(deleted);
+    assertTrue(deleted.width > 0);
+    assertTrue(CharacterMetrics.hideDeleted);
+    var painted = CharacterMetrics.painted(deleted);
+    assertEquals(deleted.width, CharacterMetrics.width(METRICS, deleted.rawDisplay, painted), .5f);
+    assertEquals(deleted.rawDisplay.toUpperCase(), painted.displayText(deleted.rawDisplay));
+    // A body deletion the layout took out stays out when painted.
+    for (LayoutEngine.Span span : page.lines.get(0).spans)
+      if (span.style.revision != null && !span.style.revision.inserted())
+        assertEquals(0, CharacterMetrics.width(METRICS, span.rawDisplay, CharacterMetrics.painted(span)), .01f);
+  }
+
+  @Test
   public void pdfLinkRectanglesScaleWithThePage() throws Exception {
     var s = new Session(Document.empty());
     s.replace("alpha beta");
