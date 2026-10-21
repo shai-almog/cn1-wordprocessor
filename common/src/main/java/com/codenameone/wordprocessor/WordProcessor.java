@@ -3717,6 +3717,44 @@ public class WordProcessor {
     }
   }
 
+  /**
+   * A rich comment or reply body with its runs shown (bold, italic, underline, strike, color)
+   * instead of flattened to plain text; each word is a label so the paragraph wraps.
+   */
+  static com.codename1.ui.Component richComment(java.util.List<Paragraph> body) {
+    var out = new Container(BoxLayout.y());
+    for (Paragraph p : body) {
+      var line = new Container(new FlowLayout());
+      p.text.visit(
+          (offset, text, style) -> {
+            int at = 0;
+            while (at < text.length()) {
+              int space = text.indexOf(' ', at);
+              int end = space < 0 ? text.length() : space + 1;
+              var word = new Label(text.substring(at, end));
+              var st = word.getAllStyles();
+              st.setPadding(0, 0, 0, 0);
+              st.setMargin(0, 0, 0, 0);
+              int bits =
+                  (style.bold ? com.codename1.ui.Font.STYLE_BOLD : 0)
+                      | (style.italic ? com.codename1.ui.Font.STYLE_ITALIC : 0);
+              if (bits != 0)
+                st.setFont(
+                    com.codename1.ui.Font.createSystemFont(
+                        com.codename1.ui.Font.FACE_SYSTEM, bits, com.codename1.ui.Font.SIZE_MEDIUM));
+              if (style.underline) st.setUnderline(true);
+              if (style.strike) st.setStrikeThru(true);
+              if (style.color != TextStyle.DEFAULT.color) st.setFgColor(style.color);
+              line.add(word);
+              at = end;
+            }
+          });
+      if (line.getComponentCount() == 0) line.add(new Label(" "));
+      out.add(line);
+    }
+    return out;
+  }
+
   private void comments() {
     editor.stopInput();
     var dialog = officeDialog("Comments");
@@ -3733,7 +3771,7 @@ public class WordProcessor {
       String when = ReviewComment.displayDate(c.date);
       row.add(new Label(c.author + (when.isEmpty() ? "" : " \u00b7 " + when)
           + (c.resolved ? " \u00b7 Resolved" : "")));
-      row.add(new SpanLabelCompat(c.text));
+      row.add(c.body.isEmpty() ? new SpanLabelCompat(c.text) : richComment(c.body));
       for (int replyIndex = 0; replyIndex < c.replies.size(); replyIndex++) {
         final int index = replyIndex;
         var reply = c.replies.get(index);
@@ -3742,7 +3780,8 @@ public class WordProcessor {
         Container replyView =
             BoxLayout.encloseY(
                 new Label(reply.author + (reply.date.isEmpty() ? "" : " \u00b7 " + ReviewComment.displayDate(reply.date))),
-                new SpanLabelCompat(reply.text), editReply);
+                reply.body.isEmpty() ? new SpanLabelCompat(reply.text) : richComment(reply.body),
+                editReply);
         OfficeTheme.space(replyView, 4, 4, 16, 0);
         row.add(replyView);
       }

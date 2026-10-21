@@ -50,6 +50,8 @@ final class DocxComments {
 
   /** Each w:comment's paragraphs, read as the comment's rich body once the styles are known. */
   private final Map<String, java.util.List<Element>> bodies = new HashMap<>();
+  /** The w:comment id of each reply, keyed "commentId#replyIndex", for its rich body. */
+  private final Map<String, String> replyIds = new HashMap<>();
 
   interface ParagraphReader {
     Paragraph read(Element p, long[] ids) throws IOException;
@@ -72,6 +74,23 @@ final class DocxComments {
           // An empty comment keeps its plain (empty) text.
         }
       }
+      // Replies are comments with their own story in Wordcraft: their runs are kept too.
+      var replies = new java.util.ArrayList<ReviewComment.Reply>(c.replies);
+      boolean rich = false;
+      for (int k = 0; k < replies.size(); k++) {
+        var source = bodies.get(replyIds.get(c.id + "#" + k));
+        if (source == null || source.isEmpty()) continue;
+        var body = new java.util.ArrayList<Paragraph>();
+        long[] ids = {1};
+        for (Element p : source) body.add(reader.read(p, ids));
+        try {
+          replies.set(k, replies.get(k).body(body));
+          rich = true;
+        } catch (IllegalArgumentException empty) {
+          // A blank reply body keeps its plain text.
+        }
+      }
+      if (rich) c = c.replies(replies);
       out.add(c);
     }
     return out;
@@ -192,6 +211,7 @@ final class DocxComments {
           var root = result.get(i);
           var next = root.reply(definition[0], definition[1], definition[2]).resolved(root.resolved);
           next.replies.get(next.replies.size() - 1).initials = definition[3];
+          replyIds.put(next.id + "#" + (next.replies.size() - 1), reply.getKey());
           result.set(i, next);
           found = true;
           break;
@@ -296,21 +316,13 @@ final class DocxComments {
     for (int i = 0; i < comments.size(); i++) {
       var c = comments.get(i);
       if (c.body.isEmpty()) writeComment(b, i, c.author, c.initials, c.text, c.date);
-      else {
-        open(b, i, c.author, c.initials, c.date);
-        var empty = new DocxComments(Document.empty());
-        for (int p = 0; p < c.body.size(); p++) {
-          var paragraph = new StringBuilder();
-          Docx.writeParagraph(paragraph, c.body.get(p), lists, tabs, links, empty);
-          // The last paragraph carries the w14:paraId that commentsExtended threads point to.
-          if (p == c.body.size() - 1 && paragraph.toString().startsWith("<w:p"))
-            paragraph.insert(4, " w14:paraId=\"" + commentParagraph(i) + "\"");
-          b.append(paragraph);
-        }
-        b.append("</w:comment>");
+      else writeRich(b, i, c.author, c.initials, c.date, c.body, lists, tabs, links);
+      for (ReviewComment.Reply reply : c.replies) {
+        if (reply.body.isEmpty())
+          writeComment(b, replyId, reply.author, reply.initials, reply.text, reply.date);
+        else writeRich(b, replyId, reply.author, reply.initials, reply.date, reply.body, lists, tabs, links);
+        replyId++;
       }
-      for (ReviewComment.Reply reply : c.replies)
-        writeComment(b, replyId++, reply.author, reply.initials, reply.text, reply.date);
     }
     parts.put("word/comments.xml", b.append("</w:comments>").toString().getBytes("UTF-8"));
     part(
@@ -351,6 +363,21 @@ final class DocxComments {
     if (!date.isEmpty()) b.append("\" w:date=\"").append(Xml.escape(date));
     if (!initials.isEmpty()) b.append("\" w:initials=\"").append(Xml.escape(initials));
     b.append("\">");
+  }
+
+  private static void writeRich(StringBuilder b, int id, String author, String initials, String date,
+      java.util.List<Paragraph> body, DocxLists lists, DocxTabs tabs, DocxLinks links) {
+    open(b, id, author, initials, date);
+    var empty = new DocxComments(Document.empty());
+    for (int p = 0; p < body.size(); p++) {
+      var paragraph = new StringBuilder();
+      Docx.writeParagraph(paragraph, body.get(p), lists, tabs, links, empty);
+      // The last paragraph carries the w14:paraId that commentsExtended threads point to.
+      if (p == body.size() - 1 && paragraph.toString().startsWith("<w:p"))
+        paragraph.insert(4, " w14:paraId=\"" + commentParagraph(id) + "\"");
+      b.append(paragraph);
+    }
+    b.append("</w:comment>");
   }
 
   private static void writeComment(

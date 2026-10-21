@@ -122,7 +122,7 @@ public final class DocumentXml {
             .append(reply.date.isEmpty() ? "" : "\" date=\"" + Xml.escape(reply.date))
             .append(reply.initials.isEmpty() ? "" : "\" initials=\"" + Xml.escape(reply.initials))
             .append("\">")
-            .append(Xml.escape(reply.text))
+            .append(reply.body.isEmpty() ? Xml.escape(reply.text) : richReply(reply))
             .append("</reply>");
       b.append("</comment>");
     }
@@ -273,11 +273,29 @@ public final class DocumentXml {
     return out;
   }
 
-  private static List<ReviewComment.Reply> readReplies(Element comment) {
+  /** A rich reply: its plain text and its body paragraphs, as a comment's. */
+  private static String richReply(ReviewComment.Reply reply) {
+    var b = new StringBuilder("<text>").append(Xml.escape(reply.text)).append("</text><body>");
+    for (Paragraph bp : reply.body) paragraph(b, bp);
+    return b.append("</body>").toString();
+  }
+
+  private static List<ReviewComment.Reply> readReplies(Element comment) throws IOException {
     var replies = new ArrayList<ReviewComment.Reply>();
-    for (Element r : Xml.children(comment, "reply"))
-      replies.add(new ReviewComment.Reply(Xml.attr(r, "author", "Author"), Xml.text(r), Xml.attr(r, "date", ""))
-          .initials(Xml.attr(r, "initials", "")));
+    for (Element r : Xml.children(comment, "reply")) {
+      Element text = Xml.child(r, "text");
+      var reply = new ReviewComment.Reply(Xml.attr(r, "author", "Author"), Xml.text(text == null ? r : text),
+          Xml.attr(r, "date", "")).initials(Xml.attr(r, "initials", ""));
+      var body = commentBody(r);
+      if (!body.isEmpty()) {
+        try {
+          reply = reply.body(body);
+        } catch (IllegalArgumentException blank) {
+          // A blank body keeps the plain text.
+        }
+      }
+      replies.add(reply);
+    }
     return replies;
   }
 

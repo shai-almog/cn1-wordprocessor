@@ -23,12 +23,31 @@ public final class ReviewComment {
     public final String date;
     /** w:initials of the reply author, "" when unknown. */
     public String initials = "";
+    /**
+     * A rich (formatted) reply body, empty for plain text: Wordcraft keeps a reply as a comment
+     * with its own story, so its runs survive as the root comment's do.
+     */
+    public java.util.List<Paragraph> body = java.util.Collections.emptyList();
 
     /** This reply with the author's initials. */
     public Reply initials(String value) {
       var r = new Reply(author, text, date);
       r.initials = value == null ? "" : value;
+      r.body = body;
       return r;
+    }
+
+    /** This reply with a rich body; its plain text becomes {@link #text}. */
+    public Reply body(java.util.List<Paragraph> paragraphs) {
+      var r = new Reply(author, plain(paragraphs), date);
+      r.initials = initials;
+      r.body = java.util.Collections.unmodifiableList(new java.util.ArrayList<Paragraph>(paragraphs));
+      return r;
+    }
+
+    /** The reply's paragraphs: its rich body, else one plain paragraph per line. */
+    public java.util.List<Paragraph> paragraphs() {
+      return body.isEmpty() ? plainParagraphs("reply", text) : body;
     }
 
     public Reply(String author, String text) {
@@ -186,23 +205,69 @@ public final class ReviewComment {
 
   /** This comment with a rich body; its plain text becomes {@link #text}. */
   public ReviewComment body(java.util.List<Paragraph> paragraphs) {
+    return new ReviewComment(id, author, plain(paragraphs), startId, start, endId, end, resolved, replies, date,
+        initials, paragraphs);
+  }
+
+  /** This comment with its replies replaced (rich reply bodies kept). */
+  public ReviewComment replies(java.util.List<Reply> value) {
+    return new ReviewComment(id, author, text, startId, start, endId, end, resolved, value, date, initials, body);
+  }
+
+  static String plain(java.util.List<Paragraph> paragraphs) {
     var plain = new StringBuilder();
     for (int i = 0; i < paragraphs.size(); i++) {
       if (i > 0) plain.append('\n');
       plain.append(paragraphs.get(i).text.plainText());
     }
     if (plain.toString().trim().isEmpty()) throw new IllegalArgumentException("Enter comment text");
-    return new ReviewComment(id, author, plain.toString(), startId, start, endId, end, resolved, replies, date,
-        initials, paragraphs);
+    return plain.toString();
+  }
+
+  static java.util.List<Paragraph> plainParagraphs(String prefix, String text) {
+    var out = new java.util.ArrayList<Paragraph>();
+    String[] lines = TextUtil.split(text, '\n');
+    for (int i = 0; i < lines.length; i++) out.add(new Paragraph(prefix + "-p" + i, RichText.of(lines[i])));
+    return out;
+  }
+
+  /**
+   * A rich body retyped as {@code value}: unchanged paragraphs keep their runs and a changed one
+   * keeps the runs around the edit (the typed text takes the formatting where it was typed).
+   * Wordcraft's comment editor rewrites the comment story only when the text changed (and then
+   * as plain paragraphs); here the runs outside the edit are kept so a rich body is not flattened.
+   */
+  static java.util.List<Paragraph> retyped(java.util.List<Paragraph> body, String value) {
+    String[] lines = TextUtil.split(value, '\n');
+    var out = new java.util.ArrayList<Paragraph>();
+    for (int i = 0; i < lines.length; i++) {
+      String line = lines[i];
+      if (i >= body.size()) {
+        var last = body.get(body.size() - 1);
+        var style = last.text.length() == 0 ? TextStyle.DEFAULT : last.text.styleAt(last.text.length() - 1);
+        out.add(last.copy(last.id + "-" + i, RichText.of(line, style)));
+        continue;
+      }
+      var p = body.get(i);
+      String old = p.text.plainText();
+      if (old.equals(line)) {
+        out.add(p);
+        continue;
+      }
+      int a = 0, n = Math.min(old.length(), line.length());
+      while (a < n && old.charAt(a) == line.charAt(a)) a++;
+      int z = 0;
+      while (z < n - a && old.charAt(old.length() - 1 - z) == line.charAt(line.length() - 1 - z)) z++;
+      var style = p.text.length() == 0 ? TextStyle.DEFAULT : p.text.styleAt(Math.min(p.text.length() - 1, Math.max(0, a - 1)));
+      out.add(p.text(p.text.replace(a, old.length() - z, RichText.of(line.substring(a, line.length() - z), style))));
+    }
+    return out;
   }
 
   /** The comment's paragraphs: its rich body, else one plain paragraph per line of text. */
   public java.util.List<Paragraph> paragraphs() {
     if (!body.isEmpty()) return body;
-    var out = new java.util.ArrayList<Paragraph>();
-    String[] lines = TextUtil.split(text, '\n');
-    for (int i = 0; i < lines.length; i++) out.add(new Paragraph(id + "-p" + i, RichText.of(lines[i])));
-    return out;
+    return plainParagraphs(id, text);
   }
 
   public ReviewComment reply(String author, String text) {
@@ -229,12 +294,18 @@ public final class ReviewComment {
       throw new IllegalArgumentException("Enter comment text");
     if (replyIndex < -1 || replyIndex >= replies.size())
       throw new IllegalArgumentException("Unknown reply");
-    if (replyIndex == -1)
-      // Plain-text editing replaces the rich body (as retyping a Wordcraft comment part).
+    if (replyIndex == -1) {
+      if (value.equals(text)) return this;
+      // Retyping keeps the runs of a rich body around the edit.
+      if (!body.isEmpty()) return body(retyped(body, value));
       return new ReviewComment(id, author, value, startId, start, endId, end, resolved, replies, date, initials, null);
+    }
+    var old = replies.get(replyIndex);
+    if (value.equals(old.text)) return this;
     var next = new java.util.ArrayList<Reply>(replies);
-    next.set(replyIndex, new Reply(replies.get(replyIndex).author, value, replies.get(replyIndex).date)
-        .initials(replies.get(replyIndex).initials));
+    next.set(replyIndex, old.body.isEmpty()
+        ? new Reply(old.author, value, old.date).initials(old.initials)
+        : old.body(retyped(old.body, value)));
     return new ReviewComment(id, author, text, startId, start, endId, end, resolved, next, date, initials, body);
   }
 

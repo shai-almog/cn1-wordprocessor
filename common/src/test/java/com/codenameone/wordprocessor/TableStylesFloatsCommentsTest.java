@@ -147,7 +147,10 @@ public class TableStylesFloatsCommentsTest {
     assertEquals("AL", nat.initials);
     assertTrue(nat.body.get(0).text.styleAt(0).bold);
     assertEquals("B", nat.replies.get(0).initials);
-    assertTrue(nat.edited(-1, "retyped").body.isEmpty());
+    // Retyping keeps the body rich (the typed text takes the formatting where it is typed).
+    var retyped = nat.edited(-1, "retyped");
+    assertEquals("retyped", retyped.text);
+    assertEquals(1, retyped.body.size());
   }
 
   @Test
