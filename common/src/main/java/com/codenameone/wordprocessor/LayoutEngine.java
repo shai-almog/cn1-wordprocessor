@@ -1591,13 +1591,16 @@ public final class LayoutEngine {
         b.beginSection(section, range.resolved, bodies[section]);
         for (int index = range.first; index <= range.last; index++) {
           var block = doc.blocks.get(index);
-          if (block instanceof Paragraph paragraph)
+          if (block instanceof Paragraph paragraph) {
+            b.tableNext = index < range.last && doc.blocks.get(index + 1) instanceof Table;
             b.paragraph(
                 paragraph,
                 index,
                 index < range.last && doc.blocks.get(index + 1) instanceof Paragraph
                     ? (Paragraph) doc.blocks.get(index + 1)
                     : null);
+            b.tableNext = false;
+          }
           else if (block instanceof Table table) b.table(table, index);
           else if (block instanceof Picture picture) b.picture(picture, index);
         }
@@ -2441,6 +2444,9 @@ public final class LayoutEngine {
           && (y > spec.top || !footnotes.isEmpty() || column + 1 < columns.count)) nextColumn();
     }
 
+    /** Whether the body block after the paragraph being placed is a table. */
+    boolean tableNext;
+
     void paragraph(Paragraph p, int index, Paragraph following) {
       var marker = numbering.next(p);
       float indent = p.indent + (p.list.isEmpty() ? 0 : 18 * (p.listLevel + 1));
@@ -2501,6 +2507,11 @@ public final class LayoutEngine {
         float group = p.before + p.after + following.before;
         for (RawLine line : ls) group += line.height;
         for (int i = 0; i < Math.min(2, next.size()); i++) group += next.get(i).height;
+        if (group <= pageHeight) room(group);
+      } else if (p.keepNext && tableNext) {
+        // Kept with a table: Wordcraft's next_first_line counts 24pt for it.
+        float group = p.before + p.after + 24;
+        for (RawLine line : ls) group += line.height;
         if (group <= pageHeight) room(group);
       }
       if (p.format.keepLines) {
@@ -3449,9 +3460,15 @@ public final class LayoutEngine {
             available = spec.height - spec.bottom - y - noteHeight;
           }
           float end = Math.min(last, first + available);
+          // A row that cannot split is placed whole once it fits (or on a fresh page), as
+          // Wordcraft's place_table; its footnotes follow it (reserveNotes moves it on with
+          // them when they do not fit below it).
+          boolean whole = keepTogether && (last - first <= available + .01f || y <= spec.top + .01f);
+          if (whole) end = last;
           // End this fragment after the first line containing a new note. This makes
           // space reservation atomic with its anchor, including vertically merged cells.
           for (CellLayout cell : group)
+            if (!whole)
             for (int i = 0; i < cell.lines.size(); i++) {
               var line = cell.lines.get(i);
               float top = tops[cell.span.row] + cell.shift + (cell.turn != 0 ? 0 : cell.ys.get(i));
@@ -3473,7 +3490,7 @@ public final class LayoutEngine {
           do {
             changed = false;
             for (CellLayout cell : group)
-              for (int i = 0; i < cell.lines.size() && cell.turn == 0; i++) {
+              for (int i = 0; i < cell.lines.size() && cell.turn == 0 && !whole; i++) {
                 float top = tops[cell.span.row] + cell.shift + cell.ys.get(i),
                     bottom = top + cell.lines.get(i).height;
                 if (top > first + .01f

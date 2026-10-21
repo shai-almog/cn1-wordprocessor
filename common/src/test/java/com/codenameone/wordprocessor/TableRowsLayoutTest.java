@@ -138,4 +138,96 @@ public class TableRowsLayoutTest {
     s.formatTable(1, f.row(1, new TableFormat.Row(18, "atLeast", true)));
     assertTrue(layout(s).pages.get(0).boxes.get(0).height > 36);
   }
+
+  private static int pageOf(LayoutEngine.Result r, String paragraphId) {
+    for (int p = 0; p < r.pages.size(); p++)
+      for (LayoutEngine.Line l : r.pages.get(p).lines) if (paragraphId.equals(l.paragraphId)) return p;
+    return -1;
+  }
+
+  private static int tablePage(LayoutEngine.Result r) {
+    for (int p = 0; p < r.pages.size(); p++)
+      for (LayoutEngine.Line l : r.pages.get(p).lines) if (l.row >= 0) return p;
+    return -1;
+  }
+
+  /** Fillers, then paragraph "kept" (keep with next when {@code keep}), then a table. */
+  private LayoutEngine.Result keptBeforeTable(int fillers, boolean keep) {
+    var s = new Session(Document.empty());
+    s.insertTable(1, 1);
+    s.setCell(1, 0, 0, "cell");
+    var d = s.document();
+    var blocks = new Sequence<Block>();
+    for (int i = 0; i < fillers; i++) blocks = blocks.append(new Paragraph("f" + i, RichText.of("filler")));
+    var kept = new Paragraph("kept", RichText.of("kept"));
+    blocks = blocks.append(keep ? kept.with("keepNext", "true") : kept);
+    for (Block b : d.blocks) if (b instanceof Table) blocks = blocks.append(b);
+    blocks = blocks.append(new Paragraph("after", RichText.of("")));
+    return engine.layout(d.blocks(blocks, d.nextId).page(new PageSpec(240, 180, 20, 20, 20, 20)), 0);
+  }
+
+  @Test
+  public void keepWithNextBeforeATableNeedsRoomForItsStart() {
+    // Wordcraft's next_first_line: a paragraph kept with a table needs 24pt below it.
+    boolean moved = false;
+    for (int n = 1; n < 20 && !moved; n++) {
+      var free = keptBeforeTable(n, false);
+      if (pageOf(free, "kept") != 0 || tablePage(free) != 1) continue;
+      var kept = keptBeforeTable(n, true);
+      assertEquals(1, tablePage(kept));
+      moved = pageOf(kept, "kept") == 1;
+    }
+    assertTrue(moved);
+  }
+
+  @Test
+  public void keepWithNextInCellsDoesNotChainRows() {
+    // Shared with Wordcraft: cell paragraphs' keep-with-next is not applied across rows.
+    var s = fixture();
+    var plain = layout(s);
+    var t = table(s);
+    var cell = t.cell(0, 0);
+    var kept = new Sequence<Paragraph>();
+    for (Paragraph p : cell) kept = kept.append(p.with("keepNext", "true"));
+    s.formatTable(1, t.format);
+    var d = s.document();
+    var chained = d.blocks(d.blocks.set(1, t.setCell(0, 0, kept)), d.nextId);
+    var r = engine.layout(chained.page(new PageSpec(240, 180, 20, 20, 20, 20)), 0);
+    assertEquals(plain.pages.size(), r.pages.size());
+    for (int p = 0; p < r.pages.size(); p++) assertEquals(plain.pages.get(p).lines.size(), r.pages.get(p).lines.size());
+  }
+
+  @Test
+  public void unsplittableRowWithAFootnoteMovesWholeWithItsNote() {
+    unsplittable("a\nb\nc\nd", 4, true);
+    // A row filling its page stays whole; its note continues on the next page (Wordcraft).
+    unsplittable("a\nb\nc\nd\ne\nf", 6, false);
+  }
+
+  private void unsplittable(String text, int lines, boolean noteWithRow) {
+    var s = new Session(Document.empty());
+    s.replace("intro");
+    s.insertTable(1, 1);
+    int at = 0;
+    for (int i = 0; i < s.document().blocks.size(); i++) if (s.document().blocks.get(i) instanceof Table) at = i;
+    s.setCell(at, 0, 0, text);
+    s.enterCell(at, 0, 0);
+    s.insertNote("footnote", "note text", "");
+    s.leaveCell();
+    var t = (Table) s.document().blocks.get(at);
+    s.formatTable(at, t.format.row(0, new TableFormat.Row(0, "auto", false)));
+    var d = s.document();
+    var blocks = new Sequence<Block>();
+    for (int i = 0; i < 8; i++) blocks = blocks.append(new Paragraph("f" + i, RichText.of("filler")));
+    for (Block b : d.blocks) blocks = blocks.append(b);
+    var r = engine.layout(d.blocks(blocks, d.nextId).page(new PageSpec(240, 180, 20, 20, 20, 20)), 0);
+    int rowPage = tablePage(r);
+    assertTrue(rowPage > 0);
+    int rowLines = 0;
+    for (LayoutEngine.Line l : r.pages.get(rowPage).lines) if (l.row == 0) rowLines++;
+    assertEquals(lines, rowLines);
+    assertEquals(noteWithRow, !r.pages.get(rowPage).notes.isEmpty());
+    if (!noteWithRow) assertFalse(r.pages.get(rowPage + 1).notes.isEmpty());
+    for (int p = 0; p < rowPage; p++) assertTrue(r.pages.get(p).notes.isEmpty());
+  }
 }
