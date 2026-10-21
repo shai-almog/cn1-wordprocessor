@@ -95,27 +95,6 @@ public final class Balloons {
     return author == null || author.trim().isEmpty() ? "Author" : author;
   }
 
-  /** Greedy word wrap of {@code text} into lines no wider than {@code width}. */
-  static List<String> wrap(String text, float width, TextStyle style, LayoutEngine.Metrics m) {
-    var out = new ArrayList<String>();
-    for (String para : TextUtil.split(text, '\n')) {
-      var line = new StringBuilder();
-      for (String word : TextUtil.split(para, ' ')) {
-        String tryLine = line.length() == 0 ? word : line + " " + word;
-        if (line.length() > 0 && m.width(tryLine, style) > width) {
-          out.add(line.toString());
-          line.setLength(0);
-          line.append(word);
-        } else {
-          line.setLength(0);
-          line.append(tryLine);
-        }
-      }
-      out.add(line.toString());
-    }
-    return out;
-  }
-
   /**
    * Lays out a comment's paragraphs in {@code width} from (x, y) with each run's own formatting,
    * as Wordcraft lays out the comment's part in the card with its full paragraph engine
@@ -173,7 +152,6 @@ public final class Balloons {
     float inner = MARKUP_AREA - 2 * SIDE - STRIPE - 2 * PAD;
     var head = TextStyle.DEFAULT.with("size", String.valueOf(SIZE)).with("bold", "true");
     var body = TextStyle.DEFAULT.with("size", String.valueOf(SIZE));
-    float lh = m.height(body);
     int count = 0;
     for (ReviewComment c : d.comments) {
       if (c.resolved || count >= MAX_BALLOONS) continue;
@@ -222,10 +200,9 @@ public final class Balloons {
             float x = STRIPE + PAD, y = PAD;
             items.add(new Item(name(who.author), x, y, inner, SIZE, true, color));
             y += m.height(head) + 2;
-            for (String text : wrap(label, inner, body, m)) {
-              items.add(new Item(text, x, y, inner, SIZE, false, 0x242424));
-              y += lh;
-            }
+            // Laid out with the full paragraph engine, as the comment cards are.
+            y = rich(items, java.util.Collections.singletonList(new Paragraph("balloon", RichText.of(label, body))),
+                x, y, inner, body, m, d, engine);
             float[] foot = line.toPage(line.x + span.x, line.y + line.height);
             pages.get(p).add(new Card(who.id, p, foot[0], foot[1], items, y + PAD, color));
             break;

@@ -211,6 +211,39 @@ public class BalloonsTest {
   }
 
   @Test
+  public void deletedAndFormattedCardsUseTheParagraphEngine() {
+    var s = new Session(Document.empty());
+    String gone = "alpha beta gamma delta epsilon zeta eta theta iota kappa lambda mu nu xi omicron pi rho sigma tau";
+    s.replace("keep " + gone + " stay");
+    s.trackChanges(true);
+    s.select(0, 5, 5 + gone.length());
+    s.deleteBackward();
+    var d = s.document();
+    var engine = new LayoutEngine(METRICS);
+    engine.setHideDeleted(true);
+    var r = engine.layout(d, 0);
+    Balloons.Card card = null;
+    for (Balloons.Card c : Balloons.layout(d, r, METRICS, "revisions").get(0)) card = c;
+    assertNotNull(card);
+    // The label is laid out by LayoutEngine.frameLines at the card width: several lines, each
+    // item carrying its run style, matching a direct frame layout of the same paragraph.
+    var text = new StringBuilder();
+    java.util.Set<Float> rows = new java.util.TreeSet<Float>();
+    for (Balloons.Item it : card.items)
+      if (it.style != null) {
+        text.append(it.text);
+        rows.add(it.y);
+      }
+    assertTrue(rows.size() > 1);
+    assertTrue(text.toString(), text.toString().replace(" ", "").startsWith("Deleted:alphabeta"));
+    float inner = Balloons.MARKUP_AREA - 2 * Balloons.SIDE - Balloons.STRIPE - 2 * Balloons.PAD;
+    var body = TextStyle.DEFAULT.with("size", String.valueOf(Balloons.SIZE));
+    var lines = new LayoutEngine(METRICS).frameLines(d,
+        new Sequence<Block>().append(new Paragraph("x", RichText.of("Deleted: " + gone + " ", body))), inner, null);
+    assertEquals(lines.size(), rows.size());
+  }
+
+  @Test
   public void pdfLinkRectanglesScaleWithThePage() throws Exception {
     var s = new Session(Document.empty());
     s.replace("alpha beta");
