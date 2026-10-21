@@ -137,11 +137,19 @@ public class NoteTableCellsTest {
     var t = (Table) s.document().blocks.get(index);
     float pad = t.format.cell(0, 0).verticalPadding;
     assertTrue(pad > 0);
-    s.formatTable(index, t.format.minHeight(0, 30));
+    var c = t.format.cell(0, 0);
+    float border = c.side(TableFormat.Cell.TOP) ? c.borderWidth : 0;
+    assertTrue(border > 0);
+    s.formatTable(index, t.format.minHeight(0, 30).minHeight(1, 30));
     var page = engine().layout(s.document(), 0).pages.get(0);
-    float height = -1;
-    for (LayoutEngine.Box b : page.boxes) if (b.row == 0) height = b.height;
-    assertEquals(30 + 2 * pad, height, .01f);
+    float height = -1, last = -1;
+    for (LayoutEngine.Box b : page.boxes) {
+      if (b.row == 0) height = b.height;
+      if (b.row == 1) last = b.height;
+    }
+    // Wordcraft's insets: the margins and the top border (the last row's bottom border too).
+    assertEquals(30 + 2 * pad + border, height, .01f);
+    assertEquals(30 + 2 * pad + 2 * border, last, .01f);
   }
 
   @Test

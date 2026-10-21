@@ -2990,6 +2990,13 @@ public final class LayoutEngine {
 
       float len, across;
 
+      /**
+       * The cell's top border width, and its bottom one in the table's last row: Word keeps the
+       * text clear of them, the width sitting on top of the cell margin (Wordcraft's band_t and
+       * band_b, at most 12pt), so they add to the cell's height and an at-least row's.
+       */
+      float bandT, bandB;
+
       CellLayout(Table t, int row, int col, float[] edges) {
         this(t, row, col, edges, NO_PATH, -1);
       }
@@ -3007,6 +3014,11 @@ public final class LayoutEngine {
                 ? edges[0] + edges[t.columns()] - edges[col + span.columns]
                 : edges[col];
         this.width = edges[col + span.columns] - edges[col];
+        bandT = format.side(TableFormat.Cell.TOP) ? Math.min(12, format.borderWidth) : 0;
+        bandB =
+            span.row + span.rows >= t.rows() && format.side(TableFormat.Cell.BOTTOM)
+                ? Math.min(12, format.borderWidth)
+                : 0;
         height = format.verticalPadding;
         float width = Math.max(1, this.width - 2 * format.horizontalPadding);
         // Nested cells turn too (their own direction, as Wordcraft lays every cell out alike).
@@ -3021,7 +3033,7 @@ public final class LayoutEngine {
             width = clamp(t.format.minHeight(row) - 2 * format.verticalPadding, 4, TURNED_LIMIT);
           else width = clamp(naturalLength(t.blocks(row, col)), 4, TURNED_MAX);
           len = width;
-        }
+        } else height += bandT;
         var numbers = new ListNumbers();
         var content = t.blocks(row, col);
         for (int k = 0; k < content.size(); k++) {
@@ -3081,9 +3093,9 @@ public final class LayoutEngine {
         for (float[] r : picBoxes) height = Math.max(height, r[1] + r[3]);
         if (turn != 0) {
           across = height - format.verticalPadding;
-          height = len + format.verticalPadding;
+          height = len + format.verticalPadding + bandT;
         }
-        height += format.verticalPadding;
+        height += format.verticalPadding + bandB;
       }
 
       /** The line length turned text needs so that nothing wraps (Wordcraft's natural_length). */
@@ -3280,7 +3292,7 @@ public final class LayoutEngine {
                     : "bottom".equals(sub.format.vertical) ? Math.max(0, cw - sub.across) : 0;
             origin = new float[] {
               sub.turn == 2 ? sub.left + pad + off : sub.left + pad + cw - off,
-              sub.turn == 2 ? top + vpad + sub.len : top + vpad
+              sub.turn == 2 ? top + vpad + sub.bandT + sub.len : top + vpad + sub.bandT
             };
           }
           for (int i = 0; i < sub.lines.size(); i++) {
@@ -3333,7 +3345,7 @@ public final class LayoutEngine {
         int r = cell.span.row;
         float min = t.format.minHeight(r);
         if (min > 0 && !"exact".equals(t.format.row(r).rule))
-          heights[r] = Math.max(heights[r], min + 2 * cell.format.verticalPadding);
+          heights[r] = Math.max(heights[r], min + 2 * cell.format.verticalPadding + cell.bandT + cell.bandB);
       }
     }
 
@@ -3674,7 +3686,7 @@ public final class LayoutEngine {
       float cellX = spec.left + cell.left, cellY = y + top - first;
       return new float[] {
         cell.turn == 2 ? cellX + pad + off : cellX + pad + cw - off,
-        cell.turn == 2 ? cellY + vpad + cell.len : cellY + vpad
+        cell.turn == 2 ? cellY + vpad + cell.bandT + cell.len : cellY + vpad + cell.bandT
       };
     }
 
