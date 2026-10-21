@@ -1240,8 +1240,12 @@ public final class EditorSurface extends Container
     } else setZoom((getWidth() - 48) / (layout().maxWidth * pointsToPixels()));
   }
 
+  private boolean layoutHidden;
+
   public LayoutEngine.Result layout() {
-    if (laidOut != session.document() || reflow && layoutViewport != getWidth()) {
+    if (laidOut != session.document() || reflow && layoutViewport != getWidth() || layoutHidden != isShowHidden()) {
+      layoutHidden = isShowHidden();
+      engine.setShowHidden(layoutHidden);
       layout =
           reflow
               ? engine.reflow(
@@ -1259,12 +1263,19 @@ public final class EditorSurface extends Container
   public LayoutEngine.Result printLayout() {
     Document printed = OfficeCommands.printable(session.document());
     // Print what Print Markup selects, never a display-only view (outline, Hide Ink, reflow).
-    if (!reflow && printed == session.document() && shown() == printed) return layout();
+    if (!reflow && printed == session.document() && shown() == printed && !isShowHidden()) return layout();
+    // Hidden text takes no room on paper; the screen layout is redone with it shown.
+    engine.setShowHidden(false);
+    laidOut = null;
     return engine.layout(printed, session.revision());
   }
 
   /** Paginate generated reference content with the same fonts as this editor. */
   public LayoutEngine.Result printLayout(Document document) {
+    if (isShowHidden()) {
+      engine.setShowHidden(false);
+      laidOut = null;
+    }
     return engine.layout(document, session.revision());
   }
 

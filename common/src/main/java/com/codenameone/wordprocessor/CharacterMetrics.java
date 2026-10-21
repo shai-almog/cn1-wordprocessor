@@ -4,8 +4,14 @@ package com.codenameone.wordprocessor;
 public final class CharacterMetrics {
   private CharacterMetrics() {}
 
+  /**
+   * Whether hidden text is measured (shown hidden text takes its width, as in Wordcraft). Set by
+   * the layout engine for the layout it is computing.
+   */
+  static volatile boolean showHidden;
+
   public static float width(LayoutEngine.Metrics metrics, String text, TextStyle style) {
-    if (style.characters.hidden || text.isEmpty()) return 0;
+    if (style.characters.hidden && !showHidden || text.isEmpty()) return 0;
     if (!style.characters.smallCaps && style.characters.spacing == 0)
       return metrics.width(style.displayText(text), style.renderedStyle())
           * style.characters.scale

@@ -17,6 +17,7 @@ Insert Table splits at the caret or replaces the selected text (including select
 ## Limitations
 
 - Per-cell preferred widths and conditional styles are not represented, so imported content-driven tables may autofit differently than in Word.
-- Not implemented: rotated cell text, asymmetric borders/margins, floating tables, full complex-script shaping.
+- Floating tables (`w:tblpPr`, the table "float" option) round-trip through DOCX and native and are placed by their anchors (column/margin/page, text/margin/page), offsets or alignments, taking no room in the flow with following text wrapping around them plus their distances from text. A floating table that does not fit on its page splits like a flow table, and overlap avoidance between floating tables (`w:tblOverlap`) is not implemented.
+- Not implemented: rotated cell text drawing (btLr/tbRl round-trips but is drawn horizontally), asymmetric borders/margins, full complex-script shaping.
 - Text replacement is tracked by Track Changes; the table structure itself is not.
 - Row heights and break controls: see [TABLE-ROWS.md](TABLE-ROWS.md).

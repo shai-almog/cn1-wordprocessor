@@ -56,6 +56,13 @@ final class DocxStyles {
     }
   }
 
+  /** The w:docDefaults run language as the document "lang" setting (Wordcraft doc_lang). */
+  DocumentProperties withDefaultLang(DocumentProperties p) {
+    Element lang = runDefaults == null ? null : Xml.child(runDefaults, "lang");
+    String value = lang == null ? "" : Xml.attr(lang, "val", "");
+    return value.isEmpty() || !p.setting("lang", "").isEmpty() ? p : p.withSetting("lang", value);
+  }
+
   Map<String, String> paragraphNames() {
     var names = new LinkedHashMap<String, String>();
     for (Map.Entry<String, Element> entry : definitions.entrySet())

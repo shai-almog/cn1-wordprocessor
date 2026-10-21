@@ -79,13 +79,21 @@ final class CatalogCommands implements Commands.Extension {
             throw new IllegalArgumentException("Unknown enclosure: " + shape);
           return format(s, "enclose", shape);
         });
-    c.edit("review.language", "lang:string",
-        "Set the proofing language tag of the selection (e.g. en-US; empty inherits)", (s, a) -> {
-          String lang = Commands.str(a, "lang");
+    c.edit("review.language", "lang:string,default?:boolean",
+        "Set the proofing language tag of the selection (e.g. en-US; empty inherits); default also"
+            + " makes it the document default language (w:docDefaults) used by untagged text and table formulas",
+        (s, a) -> {
+          String lang = Commands.str(a, "lang").replace('_', '-');
           for (int i = 0; i < lang.length(); i++) {
             char ch = lang.charAt(i);
             if (!(ch == '-' || (ch < 128 && Unicode.letterOrDigit(ch))))
               throw new IllegalArgumentException("Invalid language tag");
+          }
+          if (Commands.flag(a, "default", false)) {
+            if (lang.isEmpty()) throw new IllegalArgumentException("Invalid language tag");
+            int dash = lang.indexOf('-');
+            if (dash > 0) lang = lang.substring(0, dash).toLowerCase() + lang.substring(dash).toUpperCase();
+            s.documentProperties(s.document().properties.withSetting("lang", lang));
           }
           return format(s, "lang", lang);
         });

@@ -41,6 +41,11 @@ final class TableStyleCommands implements Commands.Extension {
           }
           var f = t.format.withProp("look", b.length() == 0 ? "none" : b.toString());
           var style = f.prop("style", "");
+          var def = style.isEmpty() || spec(s.document(), style, true) != null ? null : TableStyles.resolve(s.document(), style);
+          if (def != null) {
+            s.replaceBlock(s.cellBlock(), TableStyles.apply(def, t.format(f), false));
+            return lookMap(f);
+          }
           if (!style.isEmpty()) f = apply(spec(s.document(), style), f);
           s.formatTable(s.cellBlock(), f);
           return lookMap(f);
@@ -172,6 +177,14 @@ final class TableStyleCommands implements Commands.Extension {
 
   static void applyStyle(Session s, String style) {
     Table t = table(s);
+    if (spec(s.document(), style, true) == null) {
+      // A named style with conditional formatting (Wordcraft's table styles, or one read from DOCX).
+      var def = TableStyles.resolve(s.document(), style);
+      if (def == null)
+        throw new IllegalArgumentException("Unknown table style: " + style + "; choose " + Arrays.toString(names(s.document())));
+      s.replaceBlock(s.cellBlock(), TableStyles.apply(def, t, false));
+      return;
+    }
     String[] spec = spec(s.document(), style);
     s.formatTable(s.cellBlock(), apply(spec, t.format.withProp("style", spec[0])));
   }
@@ -251,6 +264,7 @@ final class TableStyleCommands implements Commands.Extension {
   static String[] names(Document d) {
     var out = new ArrayList<String>();
     for (String[] b : BUILT_IN) out.add(b[0]);
+    for (String id : TableStyles.ids(d)) if (!out.contains(id)) out.add(id);
     if (d != null)
       for (String k : d.properties.settings().keySet())
         if (k.startsWith(PREFIX)) {

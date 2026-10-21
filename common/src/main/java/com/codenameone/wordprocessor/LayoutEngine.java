@@ -545,6 +545,21 @@ public final class LayoutEngine {
   }
   /** Automatic hyphenation ("hyphenation" document setting) and its capitalized-word option. */
   private boolean hyphenate, hyphenateCaps = true;
+  /** Shown hidden text (Display > Hidden text or formatting marks) is laid out with its width, as Wordcraft lays it out unless it is hidden. */
+  private boolean showHidden;
+
+  public void setShowHidden(boolean value) {
+    if (value == showHidden) return;
+    showHidden = value;
+    metrics.clear();
+    cache = new HashMap<>();
+    byContent = new HashMap<>();
+  }
+
+  private boolean hides(TextStyle s) {
+    return s.characters.hidden && !showHidden;
+  }
+
   private int measured;
 
   public LayoutEngine(Metrics m) {
@@ -774,11 +789,11 @@ public final class LayoutEngine {
             count == 1 && text.charAt(end) < 128
                 ? ASCII[text.charAt(end)]
                 : text.substring(end, end + count);
-        if ("\n".equals(ch) && !st[end].characters.hidden) {
+        if ("\n".equals(ch) && !hides(st[end])) {
           break;
         }
         float w =
-            st[end].characters.hidden
+            hides(st[end])
                 ? 0
                 : "\t".equals(ch)
                     ? tabWidth(p, text, end, x, start == 0 ? p.format.firstIndent : 0)
@@ -845,7 +860,7 @@ public final class LayoutEngine {
         var chunk = text.substring(a, b);
         var display = p.text.displayAt(a, chunk);
         float w =
-            s.characters.hidden
+            hides(s)
                 ? 0
                 : "\t".equals(chunk)
                     ? tabWidth(p, text, a, pos, start == 0 ? p.format.firstIndent : 0)
@@ -853,7 +868,7 @@ public final class LayoutEngine {
         var math = obj[a] ? inlineMath(p, a, s) : null;
         if (math != null) {
           display = "";
-          if (!s.characters.hidden) w = math.width;
+          if (!hides(s)) w = math.width;
         }
         if (hyphenated && b == end) {
           display += "-";
@@ -863,7 +878,7 @@ public final class LayoutEngine {
           var stop = nextTab(p, pos + (start == 0 ? p.format.firstIndent : 0));
           display = stop == null ? "" : leader(stop.glyph(), s, w);
         }
-        var pieces = obj[a] && math == null && !s.characters.hidden ? fieldPieces(p, a) : null;
+        var pieces = obj[a] && math == null && !hides(s) ? fieldPieces(p, a) : null;
         if (pieces == null) line.spans.add(new Span(chunk, s, a, pos, w, 0, display));
         else {
           // A field whose result carries formatted runs (a Zotero citation's italics, small caps,
@@ -880,7 +895,7 @@ public final class LayoutEngine {
           }
         }
         pos += w;
-        if (!s.characters.hidden) line.height = Math.max(line.height, metrics.height(s));
+        if (!hides(s)) line.height = Math.max(line.height, metrics.height(s));
         a = b;
       }
       line.width = pos;
@@ -911,7 +926,7 @@ public final class LayoutEngine {
         }
       float baseline = metrics.ascent(TextStyle.DEFAULT);
       for (Span span : line.spans)
-        if (!span.style.characters.hidden)
+        if (!hides(span.style))
           baseline =
               Math.max(
                   baseline,
@@ -919,7 +934,7 @@ public final class LayoutEngine {
       // Inline equations rise above and hang below the text by their box's ascent and descent.
       float mathDescent = 0;
       for (Span span : line.spans)
-        if (!span.style.characters.hidden && InlineField.OBJECT.equals(span.text)) {
+        if (!hides(span.style) && InlineField.OBJECT.equals(span.text)) {
           var math = inlineMath(p, span.start, span.style);
           if (math == null) continue;
           baseline = Math.max(baseline, math.ascent);
@@ -929,7 +944,7 @@ public final class LayoutEngine {
         var span = line.spans.get(i);
         float top = baseline - metrics.ascent(span.glyphStyle) - span.style.baselineShift();
         line.spans.set(i, span.top(top));
-        if (!span.style.characters.hidden)
+        if (!hides(span.style))
           line.height = Math.max(line.height, (top + metrics.height(span.glyphStyle)));
       }
       line.height = Math.max(line.height, baseline + mathDescent);
@@ -992,7 +1007,7 @@ public final class LayoutEngine {
     if (overflow >= text.length() || !Unicode.letter(text.charAt(overflow))) return -1;
     for (int i = ws; i < we; i++) {
       if (!Unicode.letter(text.charAt(i)) && text.charAt(i) != '\'') return -1;
-      if (p.text.objectAt(i) || p.text.styleAt(i).characters.hidden) return -1;
+      if (p.text.objectAt(i) || hides(p.text.styleAt(i))) return -1;
     }
     var word = text.substring(ws, we);
     if (!hyphenateCaps && Character.isUpperCase(word.charAt(0))) return -1;
@@ -1235,6 +1250,7 @@ public final class LayoutEngine {
   }
 
   private Result layoutOnce(Document doc, long revision) {
+    CharacterMetrics.showHidden = showHidden;
     nextCache = new HashMap<>();
     nextByContent = new HashMap<>();
     measured = 0;
@@ -2186,8 +2202,56 @@ public final class LayoutEngine {
       y += height + 6;
     }
 
+    /** Extra x of the table being laid out (a floating table's position). */
+    float tableShift;
+
+    /**
+     * A floating table (w:tblpPr) as Wordcraft's float_table_rect: placed by its anchors and
+     * offsets or alignments, taking no room in the flow; the text after it wraps around it.
+     */
+    void floatingTable(Table t, int index, String[] f) {
+      float total = 0;
+      for (float width : tableWidths(t, spec.contentWidth())) total += width;
+      PageSpec m = body == null ? spec : body;
+      boolean odd = pages.size() % 2 == 0;
+      float hs, he, vs, ve;
+      switch (f[0]) {
+        case "page": hs = 0; he = m.width; break;
+        case "margin": hs = m.left; he = m.contentWidth(); break;
+        default: hs = spec.left; he = spec.contentWidth();
+      }
+      switch (f[1]) {
+        case "page": vs = 0; ve = m.height; break;
+        case "margin": vs = m.top; ve = m.height - m.top - m.bottom; break;
+        default: vs = y; ve = 0;
+      }
+      float x = FloatPosition.alignIn(hs, he, TableFormat.floatNumber(f[2]), total, f[4], odd);
+      float top = ve == 0 && !f[5].isEmpty() ? vs : FloatPosition.alignIn(vs, ve, TableFormat.floatNumber(f[3]), 0, f[5], odd);
+      if (ve == 0 && f[5].isEmpty()) top = y + TableFormat.floatNumber(f[3]);
+      float before = y;
+      int page = pages.size();
+      y = Math.max(0, top);
+      tableShift = x - spec.left - t.format.sizing.offset(spec.contentWidth(), total);
+      try {
+        mergedTable(t, index);
+      } finally {
+        tableShift = 0;
+      }
+      if (pages.size() != page) return; // split across pages: it stays where it ended
+      float height = y - Math.max(0, top);
+      y = before;
+      float dl = TableFormat.floatNumber(f[6]), dt = TableFormat.floatNumber(f[7]),
+          dr = TableFormat.floatNumber(f[8]), db = TableFormat.floatNumber(f[9]);
+      excl.add(new Excl(pages.size(), x - dl, Math.max(0, top) - dt, total + dl + dr, height + dt + db, 0, false, null));
+    }
+
     void table(Table t, int index) {
       clearWrap();
+      String[] floating = t.format.floating();
+      if (floating != null) {
+        floatingTable(t, index, floating);
+        return;
+      }
       // As Wordcraft's below(): a table in the text flow starts below the floats in its way.
       for (boolean moved = true; moved; ) {
         moved = false;
@@ -2500,7 +2564,7 @@ public final class LayoutEngine {
       var widths = tableWidths(t, spec.contentWidth());
       float totalWidth = 0;
       for (float width : widths) totalWidth += width;
-      edges[0] = t.format.sizing.offset(spec.contentWidth(), totalWidth);
+      edges[0] = t.format.sizing.offset(spec.contentWidth(), totalWidth) + tableShift;
       for (int c = 0; c < t.columns(); c++) edges[c + 1] = edges[c] + widths[c];
       var cells = new ArrayList<CellLayout>();
       float[] heights = new float[t.rows()], tops = new float[t.rows() + 1];

@@ -138,6 +138,49 @@ final class TableFormats {
         + ("center".equals(size.align) ? "auto" : "0");
   }
 
+  /** w:tblpPr as the "float" option (Wordcraft read/props.rs table_float). */
+  static String readFloat(Element e) {
+    String h = Xml.attr(e, "horzAnchor", "text"), v = Xml.attr(e, "vertAnchor", "text");
+    String[] measures = {"tblpX", "tblpY", "", "", "leftFromText", "topFromText", "rightFromText", "bottomFromText"};
+    String[] out = new String[10];
+    out[0] = "page".equals(h) || "margin".equals(h) ? h : "column";
+    out[1] = "page".equals(v) || "margin".equals(v) ? v : "text";
+    out[4] = Xml.attr(e, "tblpXSpec", "");
+    out[5] = Xml.attr(e, "tblpYSpec", "");
+    for (int i = 0; i < measures.length; i++) {
+      if (measures[i].isEmpty()) continue;
+      float pt = 0;
+      try {
+        pt = Integer.parseInt(Xml.attr(e, measures[i], "0")) / 20f;
+      } catch (NumberFormatException ignored) {
+      }
+      pt = Math.max(i >= 4 ? 0 : -1584, Math.min(1584, pt));
+      out[i + 2] = pt == (int) pt ? String.valueOf((int) pt) : String.valueOf(pt);
+    }
+    var joined = new StringBuilder(out[0]);
+    for (int i = 1; i < out.length; i++) joined.append(',').append(out[i]);
+    return joined.toString();
+  }
+
+  /** The "float" option as w:tblpPr (it follows w:tblStyle in w:tblPr). */
+  static void floatXml(StringBuilder b, TableFormat format) {
+    if (!format.prop("style", "").isEmpty())
+      b.append("<w:tblStyle w:val=\"").append(Xml.attribute(format.prop("style", ""))).append("\"/>");
+    String[] f = format.floating();
+    if (f == null) return;
+    b.append("<w:tblpPr w:leftFromText=\"").append(Math.round(TableFormat.floatNumber(f[6]) * 20))
+        .append("\" w:rightFromText=\"").append(Math.round(TableFormat.floatNumber(f[8]) * 20))
+        .append("\" w:topFromText=\"").append(Math.round(TableFormat.floatNumber(f[7]) * 20))
+        .append("\" w:bottomFromText=\"").append(Math.round(TableFormat.floatNumber(f[9]) * 20))
+        .append("\" w:vertAnchor=\"").append("page".equals(f[1]) || "margin".equals(f[1]) ? f[1] : "text")
+        .append("\" w:horzAnchor=\"").append("page".equals(f[0]) || "margin".equals(f[0]) ? f[0] : "text").append('"');
+    if (!f[4].isEmpty()) b.append(" w:tblpXSpec=\"").append(Xml.attribute(f[4])).append('"');
+    else b.append(" w:tblpX=\"").append(Math.round(TableFormat.floatNumber(f[2]) * 20)).append('"');
+    if (!f[5].isEmpty()) b.append(" w:tblpYSpec=\"").append(Xml.attribute(f[5])).append('"');
+    else b.append(" w:tblpY=\"").append(Math.round(TableFormat.floatNumber(f[3]) * 20)).append('"');
+    b.append("/>");
+  }
+
   static void alternativeXml(StringBuilder b, TableFormat format) {
     if (format.props().containsKey("look")) {
       var look = "," + format.prop("look", "") + ",";
@@ -233,6 +276,9 @@ final class TableFormats {
               description == null ? "" : Xml.attr(description, "val", ""));
       base = readCell(props, base, "tblBorders", "tblCellMar", warnings);
       Element bidi = Xml.child(props, "bidiVisual"), look = Xml.child(props, "tblLook");
+      Element named = Xml.child(props, "tblStyle"), pos = Xml.child(props, "tblpPr");
+      if (pos != null) f = f.withProp("float", readFloat(pos));
+      if (named != null && !Xml.attr(named, "val", "").isEmpty()) f = f.withProp("style", Xml.attr(named, "val", ""));
       if (bidi != null && !"0".equals(Xml.attr(bidi, "val", "1")) && !"false".equals(Xml.attr(bidi, "val", "1")))
         f = f.withProp("rtl", "true");
       if (look != null) {
@@ -268,7 +314,9 @@ final class TableFormats {
             && !"tblDescription".equals(name)
             && !"tblLook".equals(name)
             && !"bidiVisual".equals(name)
-            && !"tblStyle".equals(name))
+            && !"tblStyle".equals(name)
+            && !"tblpPr".equals(name)
+            && !"tblOverlap".equals(name))
           warnings.add("Table property requires conversion: " + name);
       }
       Element width = Xml.child(props, "tblW");

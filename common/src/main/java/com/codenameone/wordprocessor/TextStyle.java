@@ -161,7 +161,8 @@ public final class TextStyle {
 
   /** Case effects preserve source text and selection offsets. */
   public String displayText(String text) {
-    return characters.hidden
+    // Shown hidden text (Display > Hidden text) is laid out and drawn, as in Wordcraft.
+    return characters.hidden && !CharacterMetrics.showHidden
         ? ""
         : characters.allCaps || characters.smallCaps ? text.toUpperCase(CASE_LOCALE) : text;
   }

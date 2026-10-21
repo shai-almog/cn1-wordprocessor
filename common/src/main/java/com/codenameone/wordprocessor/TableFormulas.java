@@ -7,17 +7,23 @@ public final class TableFormulas {
   private TableFormulas() {}
 
   public static String calculate(Table table, int row, int column, String instruction) {
+    return calculate(table, row, column, instruction, "");
+  }
+
+  /** Evaluates with untagged cells read and written in the document default language. */
+  public static String calculate(
+      Table table, int row, int column, String instruction, String defaultLang) {
     if (row < 0 || row >= table.rows() || column < 0 || column >= table.columns())
       throw new IllegalArgumentException("Formula cell is outside the table");
     var owner = table.span(row, column);
-    return new Evaluation(table).formula(owner.row, owner.column, instruction);
+    return new Evaluation(table, defaultLang).formula(owner.row, owner.column, instruction);
   }
 
   public static Session.FieldResolver resolver(Document document) {
     final var paragraphs = new HashMap<String, Location>();
     for (Block block : document.blocks)
       if (block instanceof Table table) {
-        var evaluation = new Evaluation(table);
+        var evaluation = new Evaluation(table, defaultLang(document));
         for (int r = 0; r < table.rows(); r++)
           for (int c = 0; c < table.columns(); c++) {
             if (table.covered(r, c)) continue;
@@ -34,6 +40,11 @@ public final class TableFormulas {
         return field.result("!" + error.getMessage());
       }
     };
+  }
+
+  /** The document default language: the "lang" setting (DOCX w:docDefaults run language). */
+  static String defaultLang(Document d) {
+    return d.properties.setting("lang", "");
   }
 
   private static final class Location {
@@ -84,8 +95,12 @@ public final class TableFormulas {
     final Map<Integer, String> langs = new HashMap<>();
     final Set<Integer> active = new HashSet<>();
 
-    Evaluation(Table value) {
+    /** The document default language (Wordcraft default_lang) for cells that name none. */
+    final String defaultLang;
+
+    Evaluation(Table value, String fallback) {
       table = value;
+      defaultLang = fallback == null ? "" : fallback;
     }
 
     String formula(int row, int column, String instruction) {
@@ -150,6 +165,7 @@ public final class TableFormulas {
             out = lang;
             break;
           }
+      if (out.isEmpty()) out = defaultLang;
       return format(value, out);
     }
 
@@ -226,7 +242,7 @@ public final class TableFormulas {
         }
         String lang = cellLang(table, row, col);
         langs.put(key, lang);
-        Double result = number(text.toString(), lang);
+        Double result = number(text.toString(), lang.isEmpty() ? defaultLang : lang);
         numbers.put(key, result);
         return result;
       } finally {

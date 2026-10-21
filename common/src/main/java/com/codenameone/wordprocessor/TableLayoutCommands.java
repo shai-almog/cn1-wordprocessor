@@ -102,7 +102,8 @@ public final class TableLayoutCommands implements Commands.Extension {
           Table table = table(s);
           String instruction =
               Commands.str(a, "formula", "=SUM(ABOVE)");
-          String result = TableFormulas.calculate(table, s.cellRow(), s.cellColumn(), instruction);
+          String result = TableFormulas.calculate(table, s.cellRow(), s.cellColumn(), instruction,
+              TableFormulas.defaultLang(s.document()));
           if (s.cellSelection() != null)
             throw new IllegalArgumentException(
                 "Place the caret in one cell before inserting a formula");

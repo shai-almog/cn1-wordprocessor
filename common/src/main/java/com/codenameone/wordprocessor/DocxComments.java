@@ -32,7 +32,9 @@ final class DocxComments {
         byParagraph.put(Xml.attr(p, "paraId", ""), Xml.attr(c, "id", ""));
       }
       definitions.put(
-          Xml.attr(c, "id", ""), new String[] {Xml.attr(c, "author", "Author"), text.toString(), Xml.attr(c, "date", "")});
+          Xml.attr(c, "id", ""), new String[] {Xml.attr(c, "author", "Author"), text.toString(), Xml.attr(c, "date", ""),
+              Xml.attr(c, "initials", "")});
+      bodies.put(Xml.attr(c, "id", ""), Xml.children(c, "p"));
     }
     bytes = parts.get("word/commentsExtended.xml");
     if (bytes != null)
@@ -44,6 +46,35 @@ final class DocxComments {
         if (id != null && parent != null && !Xml.attr(e, "paraIdParent", "").isEmpty())
           parents.put(id, parent);
       }
+  }
+
+  /** Each w:comment's paragraphs, read as the comment's rich body once the styles are known. */
+  private final Map<String, java.util.List<Element>> bodies = new HashMap<>();
+
+  interface ParagraphReader {
+    Paragraph read(Element p, long[] ids) throws IOException;
+  }
+
+  /** The comments with their rich bodies (Wordcraft's comment part) and initials from w:comment. */
+  java.util.List<ReviewComment> richBodies(java.util.List<ReviewComment> read, ParagraphReader reader)
+      throws IOException {
+    var out = new java.util.ArrayList<ReviewComment>();
+    for (ReviewComment c : read) {
+      String id = c.id.startsWith("comment") ? c.id.substring(7) : c.id;
+      var paragraphs = bodies.get(id);
+      if (paragraphs != null && !paragraphs.isEmpty()) {
+        var body = new java.util.ArrayList<Paragraph>();
+        long[] ids = {1};
+        for (Element p : paragraphs) body.add(reader.read(p, ids));
+        try {
+          c = c.body(body);
+        } catch (IllegalArgumentException empty) {
+          // An empty comment keeps its plain (empty) text.
+        }
+      }
+      out.add(c);
+    }
+    return out;
   }
 
   DocxComments(Document d) {
@@ -139,7 +170,7 @@ final class DocxComments {
               end,
               resolved.contains(id),
               java.util.Collections.<ReviewComment.Reply>emptyList(),
-              e.getValue()[2]));
+              e.getValue()[2]).initials(e.getValue()[3]));
     }
     for (Map.Entry<String, String> reply : parents.entrySet()) {
       var parent = reply.getValue();
@@ -159,7 +190,9 @@ final class DocxComments {
       for (int i = 0; i < result.size(); i++)
         if (result.get(i).id.equals("comment" + parent)) {
           var root = result.get(i);
-          result.set(i, root.reply(definition[0], definition[1], definition[2]).resolved(root.resolved));
+          var next = root.reply(definition[0], definition[1], definition[2]).resolved(root.resolved);
+          next.replies.get(next.replies.size() - 1).initials = definition[3];
+          result.set(i, next);
           found = true;
           break;
         }
@@ -249,7 +282,8 @@ final class DocxComments {
     }
   }
 
-  void packageParts(Map<String, byte[]> parts) throws IOException {
+  void packageParts(Map<String, byte[]> parts, DocxLists lists, DocxTabs tabs, DocxLinks links)
+      throws IOException {
     if (comments.isEmpty() && !parts.containsKey("word/comments.xml")) return;
     var b =
         new StringBuilder(
@@ -261,9 +295,22 @@ final class DocxComments {
     int replyId = comments.size();
     for (int i = 0; i < comments.size(); i++) {
       var c = comments.get(i);
-      writeComment(b, i, c.author, c.text, c.date);
+      if (c.body.isEmpty()) writeComment(b, i, c.author, c.initials, c.text, c.date);
+      else {
+        open(b, i, c.author, c.initials, c.date);
+        var empty = new DocxComments(Document.empty());
+        for (int p = 0; p < c.body.size(); p++) {
+          var paragraph = new StringBuilder();
+          Docx.writeParagraph(paragraph, c.body.get(p), lists, tabs, links, empty);
+          // The last paragraph carries the w14:paraId that commentsExtended threads point to.
+          if (p == c.body.size() - 1 && paragraph.toString().startsWith("<w:p"))
+            paragraph.insert(4, " w14:paraId=\"" + commentParagraph(i) + "\"");
+          b.append(paragraph);
+        }
+        b.append("</w:comment>");
+      }
       for (ReviewComment.Reply reply : c.replies)
-        writeComment(b, replyId++, reply.author, reply.text, reply.date);
+        writeComment(b, replyId++, reply.author, reply.initials, reply.text, reply.date);
     }
     parts.put("word/comments.xml", b.append("</w:comments>").toString().getBytes("UTF-8"));
     part(
@@ -296,13 +343,19 @@ final class DocxComments {
         "application/vnd.openxmlformats-officedocument.wordprocessingml.commentsExtended+xml");
   }
 
-  private static void writeComment(StringBuilder b, int id, String author, String text, String date) {
+  private static void open(StringBuilder b, int id, String author, String initials, String date) {
     b.append("<w:comment w:id=\"")
         .append(id)
         .append("\" w:author=\"")
         .append(Xml.escape(author));
     if (!date.isEmpty()) b.append("\" w:date=\"").append(Xml.escape(date));
+    if (!initials.isEmpty()) b.append("\" w:initials=\"").append(Xml.escape(initials));
     b.append("\">");
+  }
+
+  private static void writeComment(
+      StringBuilder b, int id, String author, String initials, String text, String date) {
+    open(b, id, author, initials, date);
     String[] paragraphs = TextUtil.split(text, '\n');
     for (int line = 0; line < paragraphs.length; line++) {
       b.append("<w:p");

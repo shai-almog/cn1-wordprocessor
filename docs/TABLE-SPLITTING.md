@@ -18,4 +18,4 @@ Table Properties edits a table title and description, independently or cleared. 
 - A single-column split does not unmerge; use the legacy unmerge in Rows and Columns.
 - Splitting a multi-column span honors equal physical widths, which can differ from Word's old grid lines.
 - Accessibility semantics are exposed but full screen-reader navigation is not verified; some emoji lack glyphs (font fallback is incomplete).
-- Text rotation, asymmetric borders and advanced table styles are not implemented.
+- Text rotation drawing and asymmetric borders are not implemented; named table styles are materialized into cell formatting (see TABLE-DATA.md).

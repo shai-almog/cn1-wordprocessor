@@ -107,13 +107,20 @@ public final class DocumentXml {
           .append("\" resolved=\"")
           .append(c.resolved);
       if (!c.date.isEmpty()) b.append("\" date=\"").append(Xml.escape(c.date));
+      if (!c.initials.isEmpty()) b.append("\" initials=\"").append(Xml.escape(c.initials));
       b.append("\"><text>")
           .append(Xml.escape(c.text))
           .append("</text>");
+      if (!c.body.isEmpty()) {
+        b.append("<body>");
+        for (Paragraph bp : c.body) paragraph(b, bp);
+        b.append("</body>");
+      }
       for (ReviewComment.Reply reply : c.replies)
         b.append("<reply author=\"")
             .append(Xml.escape(reply.author))
             .append(reply.date.isEmpty() ? "" : "\" date=\"" + Xml.escape(reply.date))
+            .append(reply.initials.isEmpty() ? "" : "\" initials=\"" + Xml.escape(reply.initials))
             .append("\">")
             .append(Xml.escape(reply.text))
             .append("</reply>");
@@ -255,10 +262,22 @@ public final class DocumentXml {
         stories, flag(e, "first"), flag(e, "even"), f(e, "header"), f(e, "footer"));
   }
 
+  /** A comment's rich body paragraphs (own ID space, apart from the document's). */
+  private static List<Paragraph> commentBody(Element comment) throws IOException {
+    var out = new ArrayList<Paragraph>();
+    Element body = Xml.child(comment, "body");
+    if (body != null) {
+      var ids = new java.util.HashSet<String>();
+      for (Element p : Xml.children(body, "p")) out.add(readParagraph(p, ids));
+    }
+    return out;
+  }
+
   private static List<ReviewComment.Reply> readReplies(Element comment) {
     var replies = new ArrayList<ReviewComment.Reply>();
     for (Element r : Xml.children(comment, "reply"))
-      replies.add(new ReviewComment.Reply(Xml.attr(r, "author", "Author"), Xml.text(r), Xml.attr(r, "date", "")));
+      replies.add(new ReviewComment.Reply(Xml.attr(r, "author", "Author"), Xml.text(r), Xml.attr(r, "date", ""))
+          .initials(Xml.attr(r, "initials", "")));
     return replies;
   }
 
@@ -465,7 +484,9 @@ public final class DocumentXml {
                   Integer.parseInt(Xml.attr(c, "end", "0")),
                   flag(c, "resolved"),
                   readReplies(c),
-                  Xml.attr(c, "date", "")));
+                  Xml.attr(c, "date", ""),
+                  Xml.attr(c, "initials", ""),
+                  commentBody(c)));
         else if ("furniture".equals(Xml.local(c))) {
           furniture = readFurniture(c, ids);
         } else if ("sections".equals(Xml.local(c))

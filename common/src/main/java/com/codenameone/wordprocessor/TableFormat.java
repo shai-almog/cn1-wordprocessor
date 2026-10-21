@@ -120,7 +120,7 @@ public final class TableFormat {
 
   public static final java.util.List<String> LOOK =
       java.util.Arrays.asList("headerRow", "firstColumn", "lastRow", "lastColumn", "bandedRows", "bandedColumns");
-  public static final java.util.List<String> PROPS = java.util.Arrays.asList("style", "look", "rtl", "directions");
+  public static final java.util.List<String> PROPS = java.util.Arrays.asList("style", "look", "rtl", "directions", "float");
 
   public TableFormat(int rows, int columns) {
     if (rows < 1 || rows > 1000 || columns < 1 || columns > 100)
@@ -320,6 +320,31 @@ public final class TableFormat {
 
   public java.util.Map<String, String> props() {
     return java.util.Collections.unmodifiableMap(props);
+  }
+
+  /**
+   * The floating placement (w:tblpPr, Wordcraft TableFloat) from the "float" option, null for a
+   * table in the text flow: horizontal anchor (column, margin, page), vertical anchor (text,
+   * margin, page), x and y offsets in points, horizontal and vertical alignment ("" uses the
+   * offset), then distances from text left, top, right and bottom.
+   */
+  public String[] floating() {
+    String v = prop("float", "");
+    if (v.isEmpty()) return null;
+    String[] p = TextUtil.split(v, ',');
+    String[] out = {"column", "text", "0", "0", "", "", "0", "0", "0", "0"};
+    for (int i = 0; i < Math.min(p.length, out.length); i++) out[i] = p[i];
+    return out;
+  }
+
+  /** A float option number, 0 when malformed; clamped as Wordcraft clamps tblpPr measures. */
+  public static float floatNumber(String v) {
+    try {
+      float f = Float.parseFloat(v);
+      return Float.isNaN(f) ? 0 : Math.max(-1584, Math.min(1584, f));
+    } catch (NumberFormatException e) {
+      return 0;
+    }
   }
 
   /** Sets or clears (empty) a table option from {@link #PROPS}. */

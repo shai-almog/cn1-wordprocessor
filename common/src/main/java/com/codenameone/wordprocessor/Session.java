@@ -888,7 +888,8 @@ public final class Session {
           var id = "c" + document.nextId;
           comments.add(
               new ReviewComment(id, author, text, startId, start, endId, end, false,
-                  java.util.Collections.<ReviewComment.Reply>emptyList(), ReviewComment.now()));
+                  java.util.Collections.<ReviewComment.Reply>emptyList(), ReviewComment.now())
+                  .initials(ReviewComment.initialsOf(author)));
           document = document.blocks(document.blocks, document.nextId + 1).comments(comments);
         });
   }
@@ -2628,6 +2629,23 @@ public final class Session {
                         : p.copy("p" + id++, RichText.of(lines[i], p.text.styleAt(0))));
           var next = t.setCell(row, column, paragraphs);
           document = document.blocks(document.blocks.set(block, next), id);
+        });
+  }
+
+  /** Replaces a top-level table (same rows, columns and paragraph IDs), keeping the cell caret. */
+  public void replaceBlock(final int block, final Table value) {
+    transact(
+        s -> {
+          int cellBlock = cellBlock(), row = cellRow(), column = cellColumn();
+          var selectedCells = cells;
+          var selected = selection;
+          leaveCellLevel();
+          document = document.blocks(document.blocks.set(block, value), document.nextId);
+          if (cellBlock == block) {
+            enterCell(block, row, column);
+            selection = selected;
+            cells = selectedCells;
+          }
         });
   }
 

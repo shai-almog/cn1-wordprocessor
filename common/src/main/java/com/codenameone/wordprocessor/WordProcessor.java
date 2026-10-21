@@ -1851,6 +1851,34 @@ public class WordProcessor {
     }
   }
 
+  /** Table Design gallery: a named table style and its style options (w:tblLook) for this table. */
+  private void tableStylesDialog() {
+    if (session.cellBlock() < 0) {
+      status.setText("Put the caret in a table");
+      return;
+    }
+    var names = TableStyleCommands.names(session.document());
+    var styles = new ComboBox<String>(names);
+    var table = (Table) session.document().blocks.get(session.cellBlock());
+    String current = table.format.prop("style", "");
+    for (int i = 0; i < names.length; i++) if (names[i].equals(current)) styles.setSelectedIndex(i);
+    String look = "," + table.format.prop("look", TableStyleCommands.DEFAULT_LOOK) + ",";
+    String[] keys = {"headerRow", "firstColumn", "lastRow", "lastColumn", "bandedRows", "bandedColumns"};
+    String[] labels = {"Header Row", "First Column", "Total Row", "Last Column", "Banded Rows", "Banded Columns"};
+    var boxes = new CheckBox[keys.length];
+    var options = new Container(new GridLayout(3, 2));
+    for (int i = 0; i < keys.length; i++) {
+      boxes[i] = new CheckBox(labels[i]);
+      boxes[i].setSelected(look.contains("," + keys[i] + ","));
+      options.add(boxes[i]);
+    }
+    if (!showDialog("Table Styles", BoxLayout.encloseY(styles, options), "Apply", "Cancel")) return;
+    var a = new java.util.LinkedHashMap<String, Object>();
+    for (int i = 0; i < keys.length; i++) a.put(keys[i], boxes[i].isSelected());
+    run("table.look", a);
+    run("table.style", Json.object("style", names[styles.getSelectedIndex()]));
+  }
+
   private void quickTables() {
     var template = new ComboBox<String>("Tabular list", "Matrix", "Calendar");
     template.setAccessibilityText("Table template");
@@ -5249,6 +5277,7 @@ public class WordProcessor {
         .separator()
         .item("Table…", menuAction("Table", this::insertTable))
         .item("Quick Tables…", menuAction("Quick Tables", this::quickTables))
+        .item("Table Styles…", menuAction("Table Styles", this::tableStylesDialog))
         .item("Picture…", menuAction("Picture", this::insertPicture))
         .item("Chart…", menuAction("Chart", cmd("insert.chart")))
         .item("Edit Chart Data…", menuAction("Edit Chart Data", this::chartDataDialog))

@@ -157,6 +157,8 @@ public final class Docx {
     var document =
         new Document(Sequence.of(blocks), last.page, "Imported document", id[0]).sections(sections, last);
     document = document.comments(comments.read(document, warnings));
+    document = document.comments(comments.richBodies(document.comments, (e, ids) -> paragraph(e, ids, warnings,
+        lists, styles, links, new DocxComments(Collections.<String, byte[]>emptyMap()), false)));
     document = document.bookmarks(comments.bookmarks.read(document, warnings));
     Element settings =
         parts.containsKey("word/settings.xml") ? Xml.parse(parts.get("word/settings.xml")) : null;
@@ -164,7 +166,9 @@ public final class Docx {
         document
             .notes(NoteFormats.read(settings, warnings))
             .bibliography(BibliographyFormats.read(parts, warnings))
-            .properties(DocxProperties.read(parts, settings, warnings));
+            .properties(TableStyles.store(styles.withDefaultLang(DocxProperties.read(parts, settings, warnings)),
+                TableStyles.readDocx(parts.containsKey("word/styles.xml") ? Xml.parse(parts.get("word/styles.xml")) : null)));
+    document = TableStyles.applyAll(document);
     Element tracking = settings == null ? null : Xml.child(settings, "trackRevisions");
     document =
         RevisionFormats.reserveIds(document.trackChanges(tracking != null && enabled(tracking)));
@@ -730,9 +734,10 @@ static final char COLUMN_BREAK = '\u000B';
                   Target="word/document.xml"/></Relationships>""")
                 .getBytes("UTF-8"));
       }
+      // Rich comment bodies use the document's lists, tabs and links, so they are written first.
+      comments.packageParts(parts, lists, tabs, links);
       lists.packageParts(parts);
       links.packageParts(parts);
-      comments.packageParts(parts);
       pictures.packageParts();
       writeStyles(d, parts, lists, tabs, links);
       for (DocxFurniture part : furniture) part.packageParts(parts, lists, tabs);
@@ -750,6 +755,11 @@ static final char COLUMN_BREAK = '\u000B';
     var styles = links.styles;
     links.styles = null;
     var xml = new StringBuilder("<w:styles xmlns:w=\"").append(W).append("\">");
+    String docLang = d.properties.setting("lang", "");
+    if (!docLang.isEmpty())
+      xml.append("<w:docDefaults><w:rPrDefault><w:rPr><w:lang w:val=\"").append(Xml.escape(docLang))
+          .append("\"/></w:rPr></w:rPrDefault></w:docDefaults>");
+    TableStyles.writeDocx(xml, d);
     var comments = new DocxComments(Document.empty());
     for (ParagraphStyle style : d.styles.values()) {
       var paragraph = new StringBuilder();
@@ -1174,6 +1184,7 @@ static final char COLUMN_BREAK = '\u000B';
       DocxComments comments,
       DocxPictures pictures) {
       b.append("<w:tbl><w:tblPr>");
+      TableFormats.floatXml(b, t.format);
       TableFormats.sizingXml(b, t.format);
       float tableWidth = t.format.preferredWidth(available);
       TableFormats.alternativeXml(b, t.format);

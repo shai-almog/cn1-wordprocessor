@@ -8,11 +8,28 @@ public final class ReviewComment {
   public final java.util.List<Reply> replies;
   /** When the comment was written, ISO 8601 (Wordcraft Comment.date, w:date); "" when unknown. */
   public final String date;
+  /** The author's initials (Wordcraft Comment.initials, w:initials); "" when unknown. */
+  public final String initials;
+  /**
+   * The rich comment text (Wordcraft keeps each comment's text as its own document part): its
+   * paragraphs with run formatting. Empty for a plain-text comment; {@link #text} is always the
+   * plain text, one line per paragraph.
+   */
+  public final java.util.List<Paragraph> body;
 
   public static final class Reply {
     public final String author, text;
     /** ISO 8601 or "". */
     public final String date;
+    /** w:initials of the reply author, "" when unknown. */
+    public String initials = "";
+
+    /** This reply with the author's initials. */
+    public Reply initials(String value) {
+      var r = new Reply(author, text, date);
+      r.initials = value == null ? "" : value;
+      return r;
+    }
 
     public Reply(String author, String text) {
       this(author, text, "");
@@ -93,6 +110,27 @@ public final class ReviewComment {
       boolean resolved,
       java.util.List<Reply> replies,
       String date) {
+    this(id, author, text, startId, start, endId, end, resolved, replies, date, "",
+        java.util.Collections.<Paragraph>emptyList());
+  }
+
+  public ReviewComment(
+      String id,
+      String author,
+      String text,
+      String startId,
+      int start,
+      String endId,
+      int end,
+      boolean resolved,
+      java.util.List<Reply> replies,
+      String date,
+      String initials,
+      java.util.List<Paragraph> body) {
+    this.initials = initials == null ? "" : initials;
+    this.body = body == null || body.isEmpty()
+        ? java.util.Collections.<Paragraph>emptyList()
+        : java.util.Collections.unmodifiableList(new java.util.ArrayList<Paragraph>(body));
     this.date = date == null ? "" : date;
     this.replies = java.util.Collections.unmodifiableList(new java.util.ArrayList<Reply>(replies));
     if (id == null
@@ -113,22 +151,71 @@ public final class ReviewComment {
   }
 
   public ReviewComment resolved(boolean value) {
-    return new ReviewComment(id, author, text, startId, start, endId, end, value, replies, date);
+    return new ReviewComment(id, author, text, startId, start, endId, end, value, replies, date, initials, body);
+  }
+
+  /**
+   * Initials written for a new comment (Wordcraft Session::user_initials): the Initials option,
+   * else the first letter of each word of the author's name.
+   */
+  public static String initialsOf(String author) {
+    String set = AppOptions.get("userInitials");
+    if (set != null && !set.trim().isEmpty()) return set.trim();
+    var b = new StringBuilder();
+    boolean start = true;
+    for (int i = 0; i < author.length(); i++) {
+      char ch = author.charAt(i);
+      if (ch == ' ' || ch == '\t') start = true;
+      else if (start) {
+        b.append(ch);
+        start = false;
+      }
+    }
+    return b.toString();
+  }
+
+  /** This comment with the author's initials. */
+  public ReviewComment initials(String value) {
+    return new ReviewComment(id, author, text, startId, start, endId, end, resolved, replies, date, value, body);
+  }
+
+  /** This comment with a rich body; its plain text becomes {@link #text}. */
+  public ReviewComment body(java.util.List<Paragraph> paragraphs) {
+    var plain = new StringBuilder();
+    for (int i = 0; i < paragraphs.size(); i++) {
+      if (i > 0) plain.append('\n');
+      plain.append(paragraphs.get(i).text.plainText());
+    }
+    if (plain.toString().trim().isEmpty()) throw new IllegalArgumentException("Enter comment text");
+    return new ReviewComment(id, author, plain.toString(), startId, start, endId, end, resolved, replies, date,
+        initials, paragraphs);
+  }
+
+  /** The comment's paragraphs: its rich body, else one plain paragraph per line of text. */
+  public java.util.List<Paragraph> paragraphs() {
+    if (!body.isEmpty()) return body;
+    var out = new java.util.ArrayList<Paragraph>();
+    String[] lines = TextUtil.split(text, '\n');
+    for (int i = 0; i < lines.length; i++) out.add(new Paragraph(id + "-p" + i, RichText.of(lines[i])));
+    return out;
   }
 
   public ReviewComment reply(String author, String text) {
-    return reply(author, text, now());
+    var next = reply(author, text, now());
+    next.replies.get(next.replies.size() - 1).initials = initialsOf(author);
+    return next;
   }
 
   public ReviewComment reply(String author, String text, String date) {
     var next = new java.util.ArrayList<Reply>(replies);
     next.add(new Reply(author, text, date));
-    return new ReviewComment(id, this.author, this.text, startId, start, endId, end, false, next, this.date);
+    return new ReviewComment(id, this.author, this.text, startId, start, endId, end, false, next, this.date,
+        initials, body);
   }
 
   /** This comment with its date replaced. */
   public ReviewComment dated(String value) {
-    return new ReviewComment(id, author, text, startId, start, endId, end, resolved, replies, value);
+    return new ReviewComment(id, author, text, startId, start, endId, end, resolved, replies, value, initials, body);
   }
 
   /** Replaces thread text or one reply without changing authors, anchors or resolution. */
@@ -138,10 +225,12 @@ public final class ReviewComment {
     if (replyIndex < -1 || replyIndex >= replies.size())
       throw new IllegalArgumentException("Unknown reply");
     if (replyIndex == -1)
-      return new ReviewComment(id, author, value, startId, start, endId, end, resolved, replies, date);
+      // Plain-text editing replaces the rich body (as retyping a Wordcraft comment part).
+      return new ReviewComment(id, author, value, startId, start, endId, end, resolved, replies, date, initials, null);
     var next = new java.util.ArrayList<Reply>(replies);
-    next.set(replyIndex, new Reply(replies.get(replyIndex).author, value, replies.get(replyIndex).date));
-    return new ReviewComment(id, author, text, startId, start, endId, end, resolved, next, date);
+    next.set(replyIndex, new Reply(replies.get(replyIndex).author, value, replies.get(replyIndex).date)
+        .initials(replies.get(replyIndex).initials));
+    return new ReviewComment(id, author, text, startId, start, endId, end, resolved, next, date, initials, body);
   }
 
   /**
