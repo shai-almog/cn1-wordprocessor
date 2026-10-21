@@ -448,7 +448,8 @@ public final class EditorSurface extends Container
     }
     if (session.inCell()) {
       var all = new ArrayList<LayoutEngine.Line>();
-      for (LayoutEngine.Page page : result.pages) all.addAll(page.lines);
+      for (LayoutEngine.Page page : result.pages)
+        all.addAll(session.enclosingNote() != null ? page.allLines() : page.lines);
       return all;
     }
     if (linesLayout != result) {
@@ -2070,7 +2071,7 @@ public final class EditorSurface extends Container
     float distance = Float.MAX_VALUE;
     var p = layout().pages.get(page);
     // An entered note story is hit-tested in the note area too.
-    for (LayoutEngine.Line l : session.noteStory() != null ? p.allLines() : p.lines) {
+    for (LayoutEngine.Line l : session.enclosingNote() != null ? p.allLines() : p.lines) {
       if (session.noteStory() != null && l.row < 0 && l.block < 0 && editingBlock(l) < 0) continue;
       // A turned cell line is hit in its unturned frame.
       float[] f = l.toFrame(x, y);
@@ -2144,7 +2145,11 @@ public final class EditorSurface extends Container
       return -1;
     }
     if (!session.inCell()) return line.row < 0 ? line.block : -1;
-    if (!java.util.Arrays.equals(linePath(line), session.cellPath())) return -1;
+    // A note table's cell is edited from its note's lines only (its path is note-relative).
+    String note = session.enclosingNote();
+    if (note == null ? line.noteCell != null : !note.equals(line.note)) return -1;
+    int[] path = note == null ? linePath(line) : line.noteCell;
+    if (!java.util.Arrays.equals(path, session.cellPath())) return -1;
     var d = session.editingDocument();
     for (int i = 0; i < d.blocks.size(); i++)
       if (d.blocks.get(i) instanceof Paragraph p && p.id.equals(line.paragraphId)) return i;
@@ -2212,7 +2217,29 @@ public final class EditorSurface extends Container
     return false;
   }
 
+  /** Enters the story a pressed line belongs to: a body cell, a note table's cell or the body. */
+  private void enterLine(LayoutEngine.Line line) {
+    if (line.noteCell != null) session.enterNoteCell(line.note, line.noteCell);
+    else if (line.row >= 0) session.enterCellPath(linePath(line));
+    else if (session.noteStory() == null || editingBlock(line) < 0) session.leaveCell();
+  }
+
+  /** Whether footnote-area {@code line} is text of footnote table cell {@code box}. */
+  private static boolean noteCellOf(LayoutEngine.Box box, LayoutEngine.Line line) {
+    int[] c = line.noteCell;
+    if (c == null || box.block != -1 || line.y < box.y - .01f || line.y > box.y + box.height) return false;
+    int n = c.length;
+    if (c[n - 2] != box.row || c[n - 1] != box.column || box.path.length != n - 3) return false;
+    // The box path is the nested cell's path inside the outermost note cell.
+    for (int i = 0; i < box.path.length; i++) if (box.path[i] != c[3 + i]) return false;
+    return true;
+  }
+
   private Paragraph lineParagraph(LayoutEngine.Line line) {
+    if (line.noteCell != null) {
+      int story = editingBlock(line);
+      if (story >= 0) return session.editingDocument().paragraph(story);
+    }
     if (line.row < 0) return session.document().paragraph(line.block);
     var p =
         ((Table) session.document().blocks.get(line.block))
@@ -2230,7 +2257,7 @@ public final class EditorSurface extends Container
     int best = line.start;
     float distance = Float.MAX_VALUE;
     int shift = noteShift(line);
-    int story = session.noteStory() == null ? -1 : editingBlock(line);
+    int story = session.noteStory() == null && line.noteCell == null ? -1 : editingBlock(line);
     var p =
         story >= 0 ? session.editingDocument().paragraph(story) : lineParagraph(line);
     for (int i = Math.max(line.start, shift); i <= line.end; i++) {
@@ -2397,12 +2424,21 @@ public final class EditorSurface extends Container
             line = candidate;
           }
         }
+        // A footnote table's cell: its lines are in the note area (Wordcraft's cell_at finds
+        // cells in note parts too).
+        for (LayoutEngine.Line candidate : layout().pages.get(page).notes) {
+          if (!noteCellOf(box, candidate)) continue;
+          float distance = Math.abs(py - candidate.y - candidate.height / 2);
+          if (distance < best) {
+            best = distance;
+            line = candidate;
+          }
+        }
       }
     }
     if (line == null) return;
     stopInput();
-    if (line.row >= 0) session.enterCellPath(linePath(line));
-    else if (session.noteStory() == null || editingBlock(line) < 0) session.leaveCell();
+    enterLine(line);
     if (clickInlineEquation(line, x, y)) return;
     int block = editingBlock(line), offset = offsetAt(line, x);
     if (block < 0) return;
@@ -2618,8 +2654,7 @@ public final class EditorSurface extends Container
     }
     var line = lineAt(x, y);
     if (line == null) return;
-    if (line.row >= 0) session.enterCellPath(linePath(line));
-    else if (session.noteStory() == null || editingBlock(line) < 0) session.leaveCell();
+    enterLine(line);
     var text = lineParagraph(line).text.toString();
     int offset = Math.min(offsetAt(line, x), text.length());
     int[] word = TextNavigation.wordAt(text, offset);

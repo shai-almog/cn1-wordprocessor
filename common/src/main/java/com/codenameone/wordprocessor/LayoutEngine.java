@@ -85,6 +85,42 @@ public final class LayoutEngine {
     }
 
     /**
+     * For text of a table cell inside a footnote/endnote story: the note's id and the cell's path
+     * within that story (block, row, column triples, as Session.cellPath while the note is
+     * entered), so a click enters that cell as Wordcraft's hit test finds cells in note parts.
+     */
+    public String note;
+
+    public int[] noteCell;
+
+    /** A story line's cell (row, column, then the nested path), or null: see storyCell. */
+    int[] storyCell;
+
+    Line storyCell(Line cell) {
+      if (cell.row < 0) return this;
+      storyCell = new int[2 + cell.path.length];
+      storyCell[0] = cell.row;
+      storyCell[1] = cell.column;
+      System.arraycopy(cell.path, 0, storyCell, 2, cell.path.length);
+      return this;
+    }
+
+    Line inNote(String id, int block) {
+      return id == null || row < 0 ? this : inNoteCell(id, block, storyCell(this));
+    }
+
+    /** Marks this line as text of note {@code id}'s cell that story line {@code cell} is in. */
+    Line inNoteCell(String id, int block, Line cell) {
+      int[] c = cell.storyCell;
+      if (id == null || block < 0 || c == null) return this;
+      note = id;
+      noteCell = new int[1 + c.length];
+      noteCell[0] = block;
+      System.arraycopy(c, 0, noteCell, 1, c.length);
+      return this;
+    }
+
+    /**
      * Turned cell text (Wordcraft's turned cells, w:textDirection): 0 for horizontal, 1 for
      * top-to-bottom (tbRl, "down") and 2 for bottom-to-top (btLr, "up"). A turned line's x and y
      * are in its cell's unturned frame, whose origin is page point (turnX, turnY): frame point
@@ -1652,7 +1688,7 @@ public final class LayoutEngine {
     scratch.finish();
     var laid = scratch.pages.get(0);
     for (Line l : laid.lines)
-      out.lines.add(new Line(-1, -1, -1, l.paragraphId, page, l.x, l.y, raw(l), l.marker));
+      out.lines.add(new Line(-1, -1, -1, l.paragraphId, page, l.x, l.y, raw(l), l.marker).storyCell(l));
     for (Box x : laid.boxes) {
       out.boxes.add(new Box(-1, x.row, x.column, page, x.x, x.y, x.width, x.height, x.format).at(x.path));
       height = Math.max(height, x.y + x.height);
@@ -1736,6 +1772,10 @@ public final class LayoutEngine {
     final ListNumbers numbering = new ListNumbers();
     final List<Note> endnotes = new ArrayList<>();
     final List<Note> sectionEndnotes = new ArrayList<>();
+    /** The endnote whose table (story block endnoteBlock) is being laid out, or null. */
+    String endnote;
+
+    int endnoteBlock;
     NoteOptions noteOptions = NoteOptions.DEFAULT;
     final Set<String> seenNotes = new HashSet<>();
     final LinkedList<NoteLine> pendingNotes = new LinkedList<>();
@@ -1750,6 +1790,8 @@ public final class LayoutEngine {
       final boolean beneath;
       /** A table or picture of the note story, laid out as a header story's blocks are. */
       final StoryLayout story;
+      /** The note story block the table or picture is (story notes only). */
+      int block = -1;
 
       NoteLine(String id, StoryLayout story) {
         beneath = "beneathText".equals(noteOptions.footnote.pos);
@@ -1788,10 +1830,15 @@ public final class LayoutEngine {
     List<NoteLine> noteLines(Note note) {
       var result = new ArrayList<NoteLine>();
       var numbers = new ListNumbers();
+      int index = -1;
       for (Block block : note.displayedBlocks()) {
+        index++;
         if (!(block instanceof Paragraph p)) {
-          if (noteDocument != null)
-            result.add(new NoteLine(note.id, story(noteDocument, new Sequence<Block>().append(block), 0, Float.MAX_VALUE)));
+          if (noteDocument != null) {
+            var line = new NoteLine(note.id, story(noteDocument, new Sequence<Block>().append(block), 0, Float.MAX_VALUE));
+            line.block = index;
+            result.add(line);
+          }
           continue;
         }
         var measured = lines(p, spec.contentWidth());
@@ -1860,7 +1907,9 @@ public final class LayoutEngine {
       for (NoteLine value : footnotes) {
         if (value.story != null) {
           for (Line l : value.story.lines)
-            result.add(new Line(-2, -1, -1, l.paragraphId, pages.size(), l.x, top + l.y, raw(l), l.marker));
+            result.add(
+                new Line(-2, -1, -1, l.paragraphId, pages.size(), l.x, top + l.y, raw(l), l.marker)
+                    .inNoteCell(value.id, value.block, l));
           for (Box x : value.story.boxes)
             boxes.add(new Box(-1, x.row, x.column, pages.size(), x.x, top + x.y, x.width, x.height, x.format).at(x.path));
           for (PlacedPicture x : value.story.pictures)
@@ -2812,7 +2861,7 @@ public final class LayoutEngine {
         var widths = tableWidths(n, available);
         float total = 0;
         for (float w : widths) total += w;
-        edges[0] = format.horizontalPadding + n.format.sizing.offset(available, total);
+        edges[0] = format.horizontalPadding + n.format.sizing.offset(available, total) - legacyShift(n);
         for (int c = 0; c < n.columns(); c++) edges[c + 1] = edges[c] + widths[c];
         float[] heights = new float[n.rows()], tops = new float[n.rows() + 1];
         for (int r = 0; r < heights.length; r++) heights[r] = Math.max(8, n.format.minHeight(r));
@@ -2829,6 +2878,7 @@ public final class LayoutEngine {
             if (sub.span.rows == 1 && !"exact".equals(n.format.row(r).rule))
               heights[r] = Math.max(heights[r], sub.height);
           }
+        atLeastInsets(n, subs, heights);
         for (CellLayout sub : subs)
           if (sub.span.rows > 1) {
             float spanned = 0;
@@ -2874,13 +2924,44 @@ public final class LayoutEngine {
       }
     }
 
+    /**
+     * Word adds the cells' top and bottom margins to an at-least row height, as Wordcraft's
+     * table layout does (a 30pt row with 5pt margins is 40pt tall even when its text needs less).
+     */
+    /**
+     * A start-aligned table of a document in DOCX compatibility mode below 15 stands out by its
+     * first cell's left margin, so that cell's text (not its border) is at the indent, as
+     * Wordcraft's legacy table placement (table.rs start_offset).
+     */
+    float legacyShift(Table t) {
+      if (noteDocument == null || t.rows() == 0 || t.columns() == 0) return 0;
+      String mode = noteDocument.properties.setting(Docx.COMPAT_SETTING, "");
+      if (mode.isEmpty() || "center".equals(t.format.sizing.align) || "right".equals(t.format.sizing.align))
+        return 0;
+      try {
+        if (Integer.parseInt(mode) >= 15) return 0;
+      } catch (RuntimeException ex) {
+        return 0;
+      }
+      return t.format.cell(0, 0).horizontalPadding;
+    }
+
+    void atLeastInsets(Table t, List<CellLayout> cells, float[] heights) {
+      for (CellLayout cell : cells) {
+        int r = cell.span.row;
+        float min = t.format.minHeight(r);
+        if (min > 0 && !"exact".equals(t.format.row(r).rule))
+          heights[r] = Math.max(heights[r], min + 2 * cell.format.verticalPadding);
+      }
+    }
+
     void mergedTable(Table t, int index) {
       numbering.reset();
       float[] edges = new float[t.columns() + 1];
       var widths = tableWidths(t, spec.contentWidth());
       float totalWidth = 0;
       for (float width : widths) totalWidth += width;
-      edges[0] = t.format.sizing.offset(spec.contentWidth(), totalWidth) + tableShift;
+      edges[0] = t.format.sizing.offset(spec.contentWidth(), totalWidth) + tableShift - legacyShift(t);
       for (int c = 0; c < t.columns(); c++) edges[c + 1] = edges[c] + widths[c];
       var cells = new ArrayList<CellLayout>();
       float[] heights = new float[t.rows()], tops = new float[t.rows() + 1];
@@ -2897,6 +2978,7 @@ public final class LayoutEngine {
           if (cell.span.rows == 1 && !"exact".equals(t.format.row(row).rule))
             heights[row] = Math.max(heights[row], cell.height);
         }
+      atLeastInsets(t, cells, heights);
       for (CellLayout cell : cells)
         if (cell.span.rows > 1) {
           float available = 0;
@@ -3167,7 +3249,8 @@ public final class LayoutEngine {
                     cell.lines.get(i),
                     cell.markers.get(i),
                     Math.max(0, Math.min(bottom, end) - lineY))
-                .at(cell.paths.get(i)));
+                .at(cell.paths.get(i))
+                .inNote(index == -2 ? endnote : null, endnoteBlock));
         }
       }
     }
@@ -3191,11 +3274,22 @@ public final class LayoutEngine {
       if (notes.isEmpty()) return;
       while (!pendingNotes.isEmpty()) newPage();
       if (y > spec.top) y += 12;
-      for (Note note : notes)
-        for (Block block : note.displayedBlocks())
+      for (Note note : notes) {
+        int index = -1;
+        for (Block block : note.displayedBlocks()) {
+          index++;
           if (block instanceof Paragraph p) paragraph(p, -2, null);
-          else if (block instanceof Table t) table(t, -2);
-          else if (block instanceof Picture picture) picture(picture, -2);
+          else if (block instanceof Table t) {
+            endnote = note.id;
+            endnoteBlock = index;
+            try {
+              table(t, -2);
+            } finally {
+              endnote = null;
+            }
+          } else if (block instanceof Picture picture) picture(picture, -2);
+        }
+      }
       notes.clear();
     }
 

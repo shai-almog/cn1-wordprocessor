@@ -36,7 +36,8 @@ public class TablePropertiesLayoutTest {
         engine().layout(s.document().page(new PageSpec(240, 300, 20, 20, 20, 20)), 0).pages.get(0);
     assertEquals(50, p.boxes.get(0).width, .01);
     assertEquals(150, p.boxes.get(1).width, .01);
-    assertEquals(100, p.boxes.get(0).height, .01);
+    // An at-least row adds its cells' largest top and bottom margins (7pt), as Wordcraft.
+    assertEquals(114, p.boxes.get(0).height, .01);
     LayoutEngine.Line bottom = null;
     for (LayoutEngine.Line l : p.lines) if (l.block == 1 && l.column == 1) bottom = l;
     assertNotNull(bottom);

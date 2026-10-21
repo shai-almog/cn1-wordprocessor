@@ -106,6 +106,24 @@ public final class Session {
     return inCell() ? cell.column : -1;
   }
 
+  /** The footnote/endnote being edited, at its story level or in one of its tables' cells. */
+  public String enclosingNote() {
+    return cell == null ? null : cell.top().note;
+  }
+
+  /**
+   * Enters cell {@code path} (block, row, column triples relative to the note story) of a table
+   * in note {@code id}, as clicking a note table's cell on the page does.
+   */
+  public void enterNoteCell(String id, int[] path) {
+    if (id.equals(enclosingNote()) && java.util.Arrays.equals(path, cellPath())) return;
+    if (!id.equals(noteStory())) {
+      leaveCell();
+      enterNote(id);
+    }
+    for (int i = 0; i + 2 < path.length; i += 3) enterNestedCell(path[i], path[i + 1], path[i + 2]);
+  }
+
   /** The footnote/endnote whose story text commands edit, or null. */
   public String noteStory() {
     return cell == null ? null : cell.note;

@@ -247,7 +247,9 @@ final class DocxFurniture {
                   + W
                   + "\"><w:compatSetting w:name=\"compatibilityMode\""
                   + " w:uri=\"http://schemas.microsoft.com/office/word\""
-                  + " w:val=\"15\"/></w:compat>"));
+                  + " w:val=\""
+                  + document.properties.setting(Docx.COMPAT_SETTING, "15")
+                  + "\"/></w:compat>"));
     for (int i = settings.getNumChildren() - 1; i >= 0; i--)
       if (!settings.getChildAt(i).isTextElement()
           && "evenAndOddHeaders".equals(Xml.local(settings.getChildAt(i))))

@@ -6,6 +6,33 @@ import java.util.*;
 
 /** Explicitly bounded DOCX subset. Lossy edits require the caller to opt in. */
 public final class Docx {
+  /**
+   * Document setting holding a DOCX compatibility mode below 15 (Word 2013): such documents
+   * place start-aligned tables with the first cell's text, not its border, at the margin, as
+   * Wordcraft's legacy table placement. Absent for current-mode documents.
+   */
+  public static final String COMPAT_SETTING = "docx.compatibilityMode";
+
+  /**
+   * The w:compatSetting compatibilityMode of {@code settings}: 12 (Word 2007) when the part or
+   * the setting is missing, as Wordcraft's DOCX reader assumes.
+   */
+  static int compatibilityMode(Element settings) {
+    Element compat = settings == null ? null : Xml.child(settings, "compat");
+    if (compat == null) return 12;
+    for (int i = 0; i < compat.getNumChildren(); i++) {
+      Element c = compat.getChildAt(i);
+      if (c.isTextElement() || !"compatSetting".equals(Xml.local(c))) continue;
+      if (!"compatibilityMode".equals(Xml.attr(c, "name", ""))) continue;
+      try {
+        return Math.max(11, Math.min(99, Integer.parseInt(Xml.attr(c, "val", "").trim())));
+      } catch (RuntimeException ex) {
+        return 12;
+      }
+    }
+    return 12;
+  }
+
   private static final String W = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
 
   public static final class Opened {
@@ -170,6 +197,11 @@ public final class Docx {
             .properties(TableStyles.store(styles.withDefaultLang(DocxProperties.read(parts, settings, warnings)),
                 TableStyles.readDocx(parts.containsKey("word/styles.xml") ? Xml.parse(parts.get("word/styles.xml")) : null)));
     document = TableStyles.applyAll(document);
+    int compat = compatibilityMode(settings);
+    if (compat < 15)
+      document =
+          document.properties(
+              document.properties.withSetting(COMPAT_SETTING, Integer.toString(compat)));
     Element tracking = settings == null ? null : Xml.child(settings, "trackRevisions");
     Element mirror = settings == null ? null : Xml.child(settings, "mirrorMargins");
     if (mirror != null && enabled(mirror)) document = document.mirrorMargins(true);
