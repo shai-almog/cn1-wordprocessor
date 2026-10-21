@@ -735,6 +735,41 @@ public class SimulatorUiTest {
   }
 
   @Test
+  public void smartArtDesignTabWithLayoutPreviews() throws Exception {
+    edt(
+        () -> {
+          var session = session();
+          session.replaceDocument(Document.empty());
+          var ribbon = (OfficeRibbon) field(app, "ribbon");
+          call(app, "updateStatus");
+          assertFalse(ribbon.tabVisible("SmartArt Design"));
+          new Commands().execute(session, "insert.smartArt", Json.object("layout", "cycle"));
+          editor().refresh();
+          call(app, "updateStatus");
+          // Wordcraft's contextual SmartArt Design tab with its Layouts gallery of drawn previews.
+          assertTrue(ribbon.tabVisible("SmartArt Design"));
+          var thumbs = (com.codename1.ui.Button[]) field(app, "smartArtThumbs");
+          assertEquals(8, thumbs.length);
+          for (var b : thumbs) assertNotNull(b.getName(), b.getIcon());
+          assertEquals(Boolean.TRUE, thumbs[2].getClientProperty("selected"));
+          thumbs[4].released();
+          assertEquals("pyramid", ((Map<?, ?>) new Commands().execute(session, "smartArt.get", Json.object())).get("layout"));
+          call(app, "updateStatus");
+          assertEquals(Boolean.TRUE, thumbs[4].getClientProperty("selected"));
+          assertNull(thumbs[2].getClientProperty("selected"));
+          // A preview draws the layout's shapes.
+          var img = WordProcessor.smartArtPreview("matrix", "accent2", 46, 31);
+          int[] rgb = img.getRGB();
+          boolean drawn = false;
+          for (int v : rgb) drawn |= (v & 0xffffff) == 0xed7d31 && (v >>> 24) != 0;
+          assertTrue(drawn);
+          session.replaceDocument(Document.empty());
+          call(app, "updateStatus");
+          assertFalse(ribbon.tabVisible("SmartArt Design"));
+        });
+  }
+
+  @Test
   public void equationTabAndInEquationCaret() throws Exception {
     edt(
         () -> {

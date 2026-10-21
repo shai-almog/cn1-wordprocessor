@@ -103,6 +103,11 @@ final class OfficeRibbon extends Container {
     return java.util.Collections.unmodifiableList(titles);
   }
 
+  boolean tabVisible(String title) {
+    int index = titles.indexOf(title);
+    return index >= 0 && visibility.get(index);
+  }
+
   void setTabVisible(String title, boolean visible) {
     int index = titles.indexOf(title);
     if (index < 0 || visibility.get(index) == visible) return;

@@ -244,6 +244,8 @@ public class WordProcessor {
     ribbon.setTabVisible("Table Layout", false);
     ribbon.addTab("Equation", equationRibbon());
     ribbon.setTabVisible("Equation", false);
+    ribbon.addTab("SmartArt Design", smartArtRibbon());
+    ribbon.setTabVisible("SmartArt Design", false);
     customTab = OfficeTheme.row();
     ribbon.addTab("Custom", customTab);
     applyRibbonOptions();
@@ -4167,7 +4169,7 @@ public class WordProcessor {
   private void applyRibbonOptions() {
     var hidden = optionList("ribbon.hidden");
     for (String t : ribbon.titles())
-      if (!"Table Layout".equals(t) && !"Equation".equals(t) && !"Custom".equals(t)) ribbon.setTabVisible(t, !hidden.contains(t));
+      if (!"Table Layout".equals(t) && !"Equation".equals(t) && !"SmartArt Design".equals(t) && !"Custom".equals(t)) ribbon.setTabVisible(t, !hidden.contains(t));
     customTab.removeAll();
     var custom = optionList("ribbon.custom");
     for (final String id : custom) {
@@ -5142,7 +5144,18 @@ public class WordProcessor {
     layout.setName("SmartArt layout");
     styleCombo(layout);
     if (got == null) {
-      if (showDialog("Choose a SmartArt Graphic", BoxLayout.encloseY(new Label("Layout"), layout), "Insert", "Cancel"))
+      // Wordcraft's picker shows each layout as a drawn preview; picking one selects it.
+      var picker = new Container(new GridLayout(2, 4));
+      picker.setName("SmartArt picker");
+      for (int i = 0; i < SMART_ART_LAYOUTS.length; i++) {
+        final int k = i;
+        var b = button(SMART_ART_LAYOUT_NAMES[i], () -> layout.setSelectedIndex(k));
+        b.setName("Pick " + SMART_ART_LAYOUT_NAMES[i]);
+        b.setIcon(smartArtPreview(SMART_ART_LAYOUTS[i], "colorful", OfficeTheme.px(72), OfficeTheme.px(48)));
+        b.setTextPosition(Component.BOTTOM);
+        picker.add(b);
+      }
+      if (showDialog("Choose a SmartArt Graphic", BoxLayout.encloseY(picker, new Label("Layout"), layout), "Insert", "Cancel"))
         run("insert.smartArt", Json.object("layout", SMART_ART_LAYOUTS[Math.max(0, layout.getSelectedIndex())]));
       return;
     }
@@ -5176,6 +5189,216 @@ public class WordProcessor {
         new Label("Layout"), layout, new Label("Colors"), colors,
         new Label("Text Pane (Tab-indent for levels)"), BorderLayout.center(pane).add(BorderLayout.EAST, buttons));
     if (showDialog("SmartArt Design", body, "Apply", "Close")) applySmartArtText(pane.getText());
+  }
+
+  private final Button[] smartArtThumbs = new Button[SMART_ART_LAYOUTS.length];
+  private ComboBox<String> smartArtRibbonColors;
+  private boolean syncingSmartArt;
+  private String smartArtThumbColors = "colorful";
+
+  /**
+   * The SmartArt Design contextual tab, shown while a SmartArt graphic is selected, as Wordcraft's
+   * smart_art_design: Create Graphic (Add Shape, Promote, Demote, Text Pane), a Layouts gallery of
+   * drawn previews (the current layout marked), Change Colors and Reset Graphic. Item commands act
+   * on the last item, as Wordcraft's do without a Text Pane item.
+   */
+  private Container smartArtRibbon() {
+    var gallery = new Container(new GridLayout(2, 4));
+    gallery.setName("SmartArt layouts");
+    for (int i = 0; i < SMART_ART_LAYOUTS.length; i++) {
+      final String id = SMART_ART_LAYOUTS[i];
+      var b = button("", () -> {
+        if (!syncingSmartArt) run("smartArt.layout", Json.object("layout", id));
+      });
+      b.setName("SmartArt layout " + SMART_ART_LAYOUT_NAMES[i]);
+      b.setAccessibilityText(SMART_ART_LAYOUT_NAMES[i]);
+      b.setIcon(smartArtPreview(id, "colorful", OfficeTheme.px(46), OfficeTheme.px(31)));
+      OfficeTheme.space(b, 1, 1, 1, 1);
+      smartArtThumbs[i] = b;
+      gallery.add(b);
+    }
+    var colors = new ComboBox<String>(SMART_ART_COLOR_NAMES);
+    colors.setName("SmartArt ribbon colors");
+    styleCombo(colors);
+    colors.addSelectionListener((o, n) -> {
+      if (!syncingSmartArt && n >= 0) run("smartArt.colors", Json.object("variant", SMART_ART_COLORS[n]));
+    });
+    smartArtRibbonColors = colors;
+    return OfficeTheme.groups(
+        OfficeTheme.group(
+            "Create Graphic",
+            BoxLayout.encloseY(
+                button("Add Shape", () -> run("smartArt.addShape", Json.object())),
+                OfficeTheme.row(button("Promote", () -> run("smartArt.promote", Json.object())),
+                    button("Demote", () -> run("smartArt.demote", Json.object()))),
+                button("Text Pane", this::smartArtDialog))),
+        OfficeTheme.group("Layouts", gallery),
+        OfficeTheme.group("SmartArt Styles", BoxLayout.encloseY(new Label("Change Colors"), colors)),
+        OfficeTheme.group("Reset", button("Reset Graphic", () -> run("smartArt.reset", Json.object()))));
+  }
+
+  /** Shows the SmartArt Design tab for a selected graphic and marks its layout and colors. */
+  private void syncSmartArtRibbon() {
+    Map<?, ?> got;
+    try {
+      got = (Map<?, ?>) commands.execute(session, "smartArt.get", Json.object());
+    } catch (RuntimeException e) {
+      got = null;
+    }
+    ribbon.setTabVisible("SmartArt Design", got != null);
+    if (got == null || smartArtRibbonColors == null) return;
+    String layout = String.valueOf(got.get("layout")), colors = String.valueOf(got.get("colors"));
+    syncingSmartArt = true;
+    try {
+      for (int i = 0; i < smartArtThumbs.length; i++) {
+        var b = smartArtThumbs[i];
+        boolean on = SMART_ART_LAYOUTS[i].equals(layout);
+        b.getAllStyles().setBorder(com.codename1.ui.plaf.Border.createLineBorder(on ? 2 : 1, on ? OfficeTheme.ACCENT : 0xc8c8c8));
+        if (!colors.equals(smartArtThumbColors)) b.setIcon(smartArtPreview(SMART_ART_LAYOUTS[i], colors, OfficeTheme.px(46), OfficeTheme.px(31)));
+        b.putClientProperty("selected", on ? Boolean.TRUE : null);
+      }
+      smartArtThumbColors = colors;
+      int c = java.util.Arrays.asList(SMART_ART_COLORS).indexOf(colors);
+      if (c >= 0 && smartArtRibbonColors.getSelectedIndex() != c) smartArtRibbonColors.setSelectedIndex(c);
+    } finally {
+      syncingSmartArt = false;
+    }
+  }
+
+  private static final int[] SMART_ART_ACCENTS = {0x4472c4, 0xed7d31, 0xa5a5a5, 0xffc000, 0x5b9bd5, 0x70ad47};
+
+  /**
+   * A layout preview drawn in code, as Wordcraft's dialogs_smart_art::preview: the layout's shapes
+   * in unit-square coordinates of the square in the middle of the thumbnail, in the colors' accents.
+   */
+  static Image smartArtPreview(String layout, String colors, int w, int h) {
+    var img = Image.createImage(w, h, 0);
+    var g = img.getGraphics();
+    g.setAntiAliased(true);
+    int inset = Math.max(1, Math.min(w, h) / 12);
+    int s = Math.min(w, h) - 2 * inset;
+    int ox = (w - s) / 2, oy = (h - s) / 2;
+    int base = colors.startsWith("accent") ? Math.max(0, Math.min(5, colors.charAt(colors.length() - 1) - '1')) : -1;
+    var t = new Thumb(g, ox, oy, s, base);
+    switch (layout) {
+      case "list": {
+        double[][] at = {{0, .18}, {.35, .18}, {.7, .18}, {.175, .55}, {.525, .55}};
+        for (int k = 0; k < at.length; k++) t.box(at[k][0], at[k][1], at[k][0] + .3, at[k][1] + .27, t.col(k));
+        break;
+      }
+      case "process":
+        for (int k = 0; k < 3; k++) {
+          double bx = k * .37;
+          t.box(bx, .36, bx + .26, .64, t.col(k));
+          if (k < 2) {
+            g.setColor(t.col(k));
+            double ax = bx + .285;
+            g.fillPolygon(new int[] {t.x(ax), t.x(ax + .06), t.x(ax)},
+                new int[] {t.y(.45), t.y(.5), t.y(.55)}, 3);
+          }
+        }
+        break;
+      case "cycle":
+        g.setColor(0x808080);
+        t.circle(.5, .5, .34, false);
+        for (int k = 0; k < 5; k++) {
+          double a = Math.toRadians(-90 + 72 * k);
+          g.setColor(t.col(k));
+          t.circle(.5 + Math.cos(a) * .34, .5 + Math.sin(a) * .34, .12, true);
+        }
+        break;
+      case "hierarchy":
+        g.setColor(0x808080);
+        t.line(.5, .3, .5, .45);
+        t.line(.17, .45, .83, .45);
+        for (double lx : new double[] {.17, .5, .83}) t.line(lx, .45, lx, .6);
+        t.box(.33, .08, .67, .3, t.col(0));
+        double[] xs = {.02, .35, .68};
+        for (int k = 0; k < 3; k++) t.box(xs[k], .6, xs[k] + .3, .82, t.col(k + 1));
+        break;
+      case "pyramid": {
+        double[][] bands = {{.05, .37}, {.37, .66}, {.66, .95}};
+        for (int k = 0; k < 3; k++) {
+          double y0 = bands[k][0], y1 = bands[k][1], h0 = .45 * (y0 - .05) / .9, h1 = .45 * (y1 - .05) / .9;
+          g.setColor(t.col(k));
+          g.fillPolygon(new int[] {t.x(.5 - h0), t.x(.5 + h0), t.x(.5 + h1), t.x(.5 - h1)},
+              new int[] {t.y(y0), t.y(y0), t.y(y1), t.y(y1)}, 4);
+        }
+        break;
+      }
+      case "radial":
+        g.setColor(0x808080);
+        for (int k = 0; k < 4; k++) {
+          double a = Math.toRadians(-90 + 90 * k);
+          t.line(.5, .5, .5 + Math.cos(a) * .36, .5 + Math.sin(a) * .36);
+        }
+        g.setColor(t.col(0));
+        t.circle(.5, .5, .17, true);
+        for (int k = 0; k < 4; k++) {
+          double a = Math.toRadians(-90 + 90 * k);
+          g.setColor(t.col(k + 1));
+          t.circle(.5 + Math.cos(a) * .36, .5 + Math.sin(a) * .36, .12, true);
+        }
+        break;
+      case "matrix":
+        for (int k = 0; k < 4; k++) {
+          double bx = (k % 2) * .5 + .03, by = (k / 2) * .5 + .03;
+          t.box(bx, by, bx + .44, by + .44, t.col(k));
+        }
+        break;
+      default:
+        for (int k = 0; k < 3; k++) {
+          double a = Math.toRadians(-90 + 120 * k);
+          g.setColor(t.col(k));
+          g.setAlpha(128);
+          t.circle(.5 + Math.cos(a) * .15, .5 + Math.sin(a) * .15, .3, true);
+          g.setAlpha(255);
+          t.circle(.5 + Math.cos(a) * .15, .5 + Math.sin(a) * .15, .3, false);
+        }
+        break;
+    }
+    return img;
+  }
+
+  /** Unit-square coordinates of a preview's middle square to pixels, and its accent colors. */
+  private static final class Thumb {
+    final Graphics g;
+    final int ox, oy, s, base;
+
+    Thumb(Graphics g, int ox, int oy, int s, int base) {
+      this.g = g;
+      this.ox = ox;
+      this.oy = oy;
+      this.s = s;
+      this.base = base;
+    }
+
+    int col(int k) {
+      return SMART_ART_ACCENTS[base >= 0 ? base : k % 6];
+    }
+
+    int x(double v) {
+      return (int) (ox + v * s);
+    }
+
+    int y(double v) {
+      return (int) (oy + v * s);
+    }
+
+    void box(double x0, double y0, double x1, double y1, int color) {
+      g.setColor(color);
+      g.fillRect(x(x0), y(y0), Math.max(1, x(x1) - x(x0)), Math.max(1, y(y1) - y(y0)));
+    }
+
+    void circle(double cx, double cy, double r, boolean fill) {
+      int d = Math.max(2, (int) (2 * r * s));
+      if (fill) g.fillArc(x(cx - r), y(cy - r), d, d, 0, 360);
+      else g.drawArc(x(cx - r), y(cy - r), d, d, 0, 360);
+    }
+
+    void line(double x0, double y0, double x1, double y1) {
+      g.drawLine(x(x0), y(y0), x(x1), y(y1));
+    }
   }
 
   /** The Text Pane outline, applied when it differs from the graphic's (one undo step). */
@@ -6756,6 +6979,7 @@ public class WordProcessor {
     if (menus != null) menus.sync();
     ribbon.setTabVisible("Table Layout", session.inCell());
     ribbon.setTabVisible("Equation", editor.equationEditing() != null || EquationEditing.at(session) != null);
+    syncSmartArtRibbon();
     refreshRevisions();
     if (stylesPane != null
         && stylesPane.getParent() != null
