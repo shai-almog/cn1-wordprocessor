@@ -116,7 +116,7 @@ final class PdfShaping {
   // ---------------------------------------------------------------- OpenType shaping
 
   private static final int GLOBAL = 1, ISOL = 2, FINA = 4, MEDI = 8, INIT = 16, RPHF = 32,
-      HALF = 64, POST = 128, LJMO = 256, VJMO = 512, TJMO = 1024, FIN2 = 2048, FIN3 = 4096,
+      POST = 128, LJMO = 256, VJMO = 512, TJMO = 1024, FIN2 = 2048, FIN3 = 4096,
       MED2 = 8192;
   private static final int MERGED = 8;
 
@@ -124,20 +124,6 @@ final class PdfShaping {
   private static final String[] INDIC = {
     "deva", "dev2", "beng", "bng2", "guru", "gur2", "gujr", "gjr2", "orya", "ory2", "taml", "tml2",
     "telu", "tel2", "knda", "knd2", "mlym", "mlm2"
-  };
-
-  /** Pre-base matras per Indic block, as offsets within the block. */
-  private static final int[][] PREBASE = {
-    {0x3f, 0x4e}, {0x3f, 0x47, 0x48}, {0x3f}, {0x3f}, {0x47}, {0x46, 0x47, 0x48}, {}, {},
-    {0x46, 0x47, 0x48}
-  };
-
-  /** Two-part matras per Indic block: {matra, pre-base part, post-base part}..., block offsets. */
-  private static final int[][] SPLITS = {
-    {}, {0x4b, 0x47, 0x3e, 0x4c, 0x47, 0x57}, {}, {},
-    {0x48, 0x47, 0x56, 0x4b, 0x47, 0x3e, 0x4c, 0x47, 0x57},
-    {0x4a, 0x46, 0x3e, 0x4b, 0x47, 0x3e, 0x4c, 0x46, 0x57}, {}, {},
-    {0x4a, 0x46, 0x3e, 0x4b, 0x47, 0x3e, 0x4c, 0x46, 0x57}
   };
 
   /**
@@ -308,8 +294,8 @@ final class PdfShaping {
     }
     String[] scripts;
     int block = indicBlock(script);
-    if (AatShaper.applies(font, ot, gsubScripts(script, block)))
-      return aat(font, ot, buffer, rtl, kerning, ptem);
+    if (AatShaper.applies(font))
+      return aat(font, ot, buffer, rtl, kerning, ptem, gsubScripts(script, block));
     // Scripts of the Universal Shaping Engine use it when the font has their GSUB script, as
     // HarfBuzz; otherwise they take the default shaper.
     boolean use = script != null && block < 0 && isUse(script) && ot.hasScript(true, script);
@@ -326,11 +312,7 @@ final class PdfShaping {
     else if (block >= 0) {
       scripts = ot.hasScript(true, INDIC[2 * block + 1]) ? new String[] {INDIC[2 * block + 1]}
           : new String[] {INDIC[2 * block]};
-      int base = 0x0900 + 0x80 * block;
-      for (int s = 0; s < SPLITS[block].length; s += 3)
-        split(font, buffer, base + SPLITS[block][s], base + SPLITS[block][s + 1],
-            base + SPLITS[block][s + 2]);
-      indicSyllables(buffer, block);
+      IndicShaper.substitute(font, ot, buffer, scripts, block, (flags & NO_DOTTED_CIRCLE) == 0);
     } else if ("hang".equals(script)) {
       scripts = new String[] {"hang"};
       hangul(font, buffer);
@@ -373,20 +355,7 @@ final class PdfShaping {
       gsub(ot, scripts, buffer, new String[] {"abvs", "blws", "haln", "pres", "psts", "rlig",
           "calt", "clig", "liga", "rclt"}, all);
     } else if (block >= 0) {
-      gsub(ot, scripts, buffer, new String[] {"locl", "ccmp"}, all);
-      gsub(ot, scripts, buffer, new String[] {"nukt"}, all);
-      gsub(ot, scripts, buffer, new String[] {"akhn"}, all);
-      gsub(ot, scripts, buffer, new String[] {"rphf"}, RPHF);
-      gsub(ot, scripts, buffer, new String[] {"rkrf"}, all);
-      gsub(ot, scripts, buffer, new String[] {"pref"}, POST);
-      gsub(ot, scripts, buffer, new String[] {"blwf"}, POST);
-      gsub(ot, scripts, buffer, new String[] {"abvf"}, POST);
-      gsub(ot, scripts, buffer, new String[] {"half"}, HALF);
-      gsub(ot, scripts, buffer, new String[] {"pstf"}, POST);
-      gsub(ot, scripts, buffer, new String[] {"vatu"}, POST);
-      gsub(ot, scripts, buffer, new String[] {"cjct"}, all);
-      moveReph(buffer, 0x0930 + 0x80 * block);
-      gsub(ot, scripts, buffer, new String[] {"pres", "abvs", "blws", "psts", "haln", "calt"}, all);
+      // Substituted by IndicShaper.
     } else if (complex) {
       gsub(ot, scripts, buffer, new String[] {"locl", "ccmp"}, all);
       gsub(ot, scripts, buffer, new String[] {"rphf"}, RPHF);
@@ -428,7 +397,9 @@ final class PdfShaping {
         buffer.remove(i--);
         continue;
       }
-      g.adv = gdef && ot.glyphClass(g.id) == 3 ? 0 : font.advance(g.id);
+      // HarfBuzz's Indic shaper keeps mark advances (zero_width_marks none).
+      g.adv = (g.flags & OpenType.HIDDEN) != 0 ? 0
+          : block < 0 && gdef && ot.glyphClass(g.id) == 3 ? 0 : font.advance(g.id);
     }
     clusters(buffer);
     var features = new ArrayList<String>();
@@ -489,7 +460,7 @@ final class PdfShaping {
     }
   }
 
-  /** The GSUB script tags HarfBuzz looks for when deciding between GSUB and 'morx'. */
+  /** The OpenType script tags of a run, preferred first (GPOS beside 'morx' uses them). */
   private static String[] gsubScripts(String script, int block) {
     if (block >= 0) return new String[] {INDIC[2 * block + 1], INDIC[2 * block]};
     if ("mymr".equals(script)) return new String[] {"mym2", "mymr"};
@@ -497,31 +468,53 @@ final class PdfShaping {
   }
 
   /**
-   * HarfBuzz's AAT path: 'morx' instead of GSUB and the script shaper, 'kerx' (else the 'kern'
-   * table) instead of GPOS, marks keeping their advances.
+   * harfrust's AAT path: 'morx' instead of GSUB (with the dumber shaper, so no script shaper and
+   * marks keep their advances); positioning by 'kerx', else GPOS when the face has it (its kern,
+   * curs, dist, abvm, blwm, mark and mkmk), else the 'kern' table; then 'trak'. Default ignorables
+   * the chains left alone are hidden as a zero-advance space, as HarfBuzz.
    */
   private static List<OpenType.Glyph> aat(PdfFonts.TrueType font, OpenType ot,
-      List<OpenType.Glyph> buffer, boolean rtl, boolean kerning, float ptem)
+      List<OpenType.Glyph> buffer, boolean rtl, boolean kerning, float ptem, String[] scripts)
       throws java.io.IOException {
     var aat = new AatShaper(font);
     aat.morx(buffer, rtl);
+    int space = font.glyph(' ');
     for (int i = 0; i < buffer.size(); i++) {
       var g = buffer.get(i);
-      if ((g.cp == 0x200c || g.cp == 0x200d) && buffer.size() > 1) {
+      boolean hidden = (g.cp == 0x200c || g.cp == 0x200d) && g.id == font.glyph(g.cp);
+      if (hidden && space == 0 && buffer.size() > 1) {
         var keep = buffer.get(i > 0 ? i - 1 : i + 1);
         keep.start = Math.min(keep.start, g.start);
         keep.end = Math.max(keep.end, g.end);
         buffer.remove(i--);
         continue;
       }
-      g.adv = font.advance(g.id);
+      if (hidden) {
+        g.id = space;
+        g.flags |= OpenType.HIDDEN;
+      }
+      // A deleted glyph keeps hmtx's last advance until it is dropped, as harfrust's (attachment
+      // offsets across it include that advance; HarfBuzz's C library uses zero).
+      g.adv = hidden ? 0 : font.advance(g.id);
     }
     clusters(buffer);
+    boolean gpos = !aat.hasKerx() && ot.hasGpos();
+    if (gpos) AatShaper.removeDeleted(buffer);
+    if (gpos) {
+      String[] f = kerning ? new String[] {"kern", "curs", "dist", "abvm", "blwm", "mark", "mkmk"}
+          : new String[] {"curs", "dist", "abvm", "blwm", "mark", "mkmk"};
+      int[] masks = new int[f.length];
+      Arrays.fill(masks, -1);
+      ot.rtl = rtl;
+      ot.apply(false, scripts, buffer, f, masks);
+    }
     if (rtl) reverse(buffer, ot);
     if (aat.hasKerx()) aat.kerx(buffer, kerning);
-    else if (kerning)
+    else if (kerning && (!gpos || ot.lookups(false, scripts, "kern").length == 0))
       for (int i = 0; i + 1 < buffer.size(); i++)
         buffer.get(i).adv += font.kern(buffer.get(i).id, buffer.get(i + 1).id);
+    if (!gpos) AatShaper.removeDeleted(buffer);
+    for (var g : buffer) if ((g.flags & OpenType.HIDDEN) != 0) g.adv = 0;
     aat.track(buffer, ptem);
     return buffer;
   }
@@ -821,89 +814,6 @@ final class PdfShaping {
   }
 
   /**
-   * Indic syllables: masks for reph, half and below/post-base forms, the pre-base matras moved
-   * before the consonant cluster, and every syllable merged into one extraction cluster.
-   */
-  private static void indicSyllables(List<OpenType.Glyph> buffer, int block) {
-    int syllable = 0;
-    for (var g : buffer) g.cat = indic(g.cp);
-    for (int s = 0; s < buffer.size(); ) {
-      int n = buffer.size(), e = s + 1, cat = buffer.get(s).cat;
-      // A Malayalam dot reph opens the consonant syllable that follows it, as HarfBuzz's
-      // logical repha mode.
-      boolean dotReph = cat == 9 && e < n && buffer.get(e).cat == 1;
-      if (dotReph) cat = 1;
-      if (cat == 1) {
-        e = dotReph ? s + 1 : s;
-        while (e < n && buffer.get(e).cat == 1) {
-          e++;
-          if (e < n && buffer.get(e).cat == 2) e++;
-          if (e < n && buffer.get(e).cat == 3) {
-            e++;
-            if (e < n && (buffer.get(e).cat == 7 || buffer.get(e).cat == 8)) e++;
-            continue;
-          }
-          break;
-        }
-        while (e < n && (buffer.get(e).cat == 4 || buffer.get(e).cat == 2)) e++;
-        while (e < n && buffer.get(e).cat == 6) e++;
-      } else if (cat == 5) {
-        while (e < n && (buffer.get(e).cat == 2 || buffer.get(e).cat == 4 || buffer.get(e).cat == 6))
-          e++;
-      }
-      syllable(buffer, s, e, ++syllable);
-      if (cat == 1) consonantSyllable(buffer, s, e, block);
-      s = e;
-    }
-  }
-
-  private static void consonantSyllable(List<OpenType.Glyph> buffer, int s, int e, int block) {
-    int ra = 0x0930 + 0x80 * block, consonants = 0;
-    for (int k = s; k < e; k++) if (buffer.get(k).cat == 1) consonants++;
-    // Tamil has no reph; Telugu forms one only with an explicit ZWJ (Ra, virama, ZWJ), as
-    // HarfBuzz's explicit reph mode, and the ZWJ is part of the reph.
-    boolean explicit = block == 6, dot = buffer.get(s).cat == 9;
-    int rephLen = dot ? 1 : explicit ? 3 : 2;
-    boolean reph = dot || block != 5 && consonants > 1 && e - s > rephLen
-        && buffer.get(s).cp == ra && buffer.get(s + 1).cat == 3
-        && (!explicit || buffer.get(s + 2).cat == 7) && buffer.get(s + rephLen).cat == 1;
-    int first = reph ? s + rephLen : s, base = -1;
-    for (int k = e - 1; k >= first; k--) {
-      var g = buffer.get(k);
-      if (g.cat != 1) continue;
-      // A final Ra after a virama takes its below-base form; the consonant before it is the base.
-      boolean belowRa = g.cp == ra && k - 1 > first && buffer.get(k - 1).cat == 3;
-      if (belowRa && base < 0 && k == lastConsonant(buffer, first, e)) continue;
-      base = k;
-      break;
-    }
-    if (base < 0) base = first;
-    buffer.get(base).flags |= OpenType.BASE;
-    if (reph) {
-      for (int k = s; k < s + rephLen; k++) buffer.get(k).mask |= RPHF;
-    }
-    for (int k = first; k < base; k++) buffer.get(k).mask |= HALF;
-    for (int k = base + 1; k < e; k++) buffer.get(k).mask |= POST;
-    // Pre-base matras go before the consonant cluster (after a reph), in their logical order.
-    int at = first;
-    for (int k = base + 1; k < e; k++) {
-      int o = buffer.get(k).cp - (0x0900 + 0x80 * block);
-      for (int p : PREBASE[block])
-        if (o == p) {
-          var m = buffer.remove(k);
-          m.mask = GLOBAL;
-          buffer.add(at++, m);
-          break;
-        }
-    }
-  }
-
-  private static int lastConsonant(List<OpenType.Glyph> buffer, int s, int e) {
-    for (int k = e - 1; k >= s; k--) if (buffer.get(k).cat == 1) return k;
-    return -1;
-  }
-
-  /**
    * Khmer and Myanmar syllables (a base, coeng/stacker plus consonant pairs, then vowel signs,
    * medials and signs): post-base forms masked, the pre-base vowels and the pre-base consonant
    * (Khmer coeng Ro, Myanmar medial Ra) moved before the base, and a Myanmar kinzi masked for
@@ -970,38 +880,6 @@ final class PdfShaping {
         for (int k = 0; k < order.size(); k++) buffer.set(s + k, order.get(k));
       }
       s = e;
-    }
-  }
-
-  /** Moves each formed reph after its syllable's base consonant and below-base forms. */
-  private static void moveReph(List<OpenType.Glyph> buffer, int ra) {
-    for (int i = 0; i < buffer.size(); i++) {
-      var r = buffer.get(i);
-      // As HarfBuzz, a Ra+virama reph moves only if it ligated, an encoded dot reph only if it
-      // did not (a font that ligates it positions it without reordering).
-      boolean dot = r.cp == 0x0d4e, ligated = (r.flags & OpenType.LIGATED) != 0;
-      if ((r.mask & RPHF) == 0 || (dot ? ligated : !ligated || r.cp != ra)) continue;
-      int target = -1;
-      // The dot reph goes after the main consonant (with its nukta and virama), as Malayalam's
-      // after-main reph position.
-      for (int k = i + 1; dot && k < buffer.size() && buffer.get(k).syllable == r.syllable; k++) {
-        var g = buffer.get(k);
-        if ((g.flags & OpenType.BASE) != 0) target = k;
-        else if (target >= 0 && (g.cat == 2 || g.cat == 3)) target = k;
-        else if (target >= 0) break;
-      }
-      for (int k = i + 1; !dot && k < buffer.size() && buffer.get(k).syllable == r.syllable; k++) {
-        var g = buffer.get(k);
-        if ((g.flags & OpenType.BASE) != 0) target = k;
-        else if (target >= 0 && ((g.mask & POST) != 0 && g.cat != 4 && g.cat != 6 || g.cat == 2
-            || g.cat == 3)) target = k;
-        else if (target >= 0) break;
-      }
-      if (target < 0) continue;
-      buffer.remove(i);
-      buffer.add(target, r);
-      r.mask &= ~RPHF;
-      i = target;
     }
   }
 

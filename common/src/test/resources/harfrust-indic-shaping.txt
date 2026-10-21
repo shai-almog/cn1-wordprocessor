@@ -1,0 +1,203 @@
+# harfrust 0.13.3 (Wordcraft's shaper, default features, face 0, font units): font, text, glyph+advance[@dx,dy].
+# Regenerate with a harfrust 0.13.3 shaping of the same lines; macOS system fonts (relative names are in /System/Library/Fonts/Supplemental).
+Tamil Sangam MN.ttc	\u0b95\u0bca	1229+1524|445+1459|1225+1029
+Tamil Sangam MN.ttc	\u0b95\u0bcd\u0bb7	490+2674
+Tamil Sangam MN.ttc	\u0bb8\u0bcd\u0bb0\u0bc0	579+2331
+Tamil Sangam MN.ttc	\u0b95\u0bc8	1231+1888|445+1459
+Tamil Sangam MN.ttc	\u0ba4\u0bae\u0bbf\u0bb4\u0bcd	452+1387|543+1699|475+1371
+Tamil Sangam MN.ttc	\u0b95\u0bcc	1229+1524|445+1459|1235+1741
+Tamil Sangam MN.ttc	\u0b95\u0bcd\u0b95	488+1459|445+1459
+Tamil Sangam MN.ttc	\u0baa\u0bc6	1229+1524|455+1304
+Tamil Sangam MN.ttc	\u0bb6\u0bcd\u0bb0\u0bc0	579+2331
+Tamil Sangam MN.ttc	\u0ba8\u0bcb	1230+1290|453+1367|1225+1029
+Tamil Sangam MN.ttc	\u0b9f\u0bbf	515+1503
+Tamil Sangam MN.ttc	\u0b9f\u0bc0	516+1571
+Tamil Sangam MN.ttc	\u0b95\u0bc1	497+1766
+Tamil Sangam MN.ttc	\u0b9a\u0bc2	506+1705
+Malayalam Sangam MN.ttc	\u0d15\u0d4d\u0d15	273+2422
+Malayalam Sangam MN.ttc	\u0d15\u0d4a	176+1140|131@-15,0+1797|169+892
+Malayalam Sangam MN.ttc	\u0d4e\u0d15	461+339|131@-15,0+1797
+Malayalam Sangam MN.ttc	\u0d15\u0d4d\u0d30	250+440|131@-15,0+1797
+Malayalam Sangam MN.ttc	\u0d2e\u0d32\u0d2f\u0d3e\u0d33\u0d02	156+1188|160+1557|157@-15,0+1791|169+892|161+1292|115@-40,0+749
+Malayalam Sangam MN.ttc	\u0d28\u0d4d\u0d31	388+1852
+Malayalam Sangam MN.ttc	\u0d15\u0d4d\u0d37	275+2892
+Malayalam Sangam MN.ttc	\u0d15\u0d48	178+2247|131@-15,0+1797
+Malayalam Sangam MN.ttc	\u0d15\u0d4c	176+1140|131@-15,0+1797|183+1533
+Malayalam Sangam MN.ttc	\u0d30\u0d4d\u200d	397+1230
+Malayalam Sangam MN.ttc	\u0d28\u0d4d\u0d24	290+2348
+Malayalam Sangam MN.ttc	\u0d38\u0d4d\u0d24\u0d4d\u0d30\u0d40	166+2225|182+0|250+455|146@-15,0+1771|171+546
+Telugu Sangam MN.ttc	\u0c15\u0c4d\u0c15	134+1250|213+1141
+Telugu Sangam MN.ttc	\u0c15\u0c4a	442+1535
+Telugu Sangam MN.ttc	\u0c30\u0c4d\u0c15	160+1347|213+1141
+Telugu Sangam MN.ttc	\u0c24\u0c46\u0c32\u0c41\u0c17\u0c41	420+1648|660+2255|638+1876
+Telugu Sangam MN.ttc	\u0c15\u0c4d\u0c37	211+1254
+Telugu Sangam MN.ttc	\u0c36\u0c4d\u0c30\u0c40	395+1156|239@-2007,0+0
+Telugu Sangam MN.ttc	\u0c15\u0c48	405+1186|540@-2057,0+0
+Telugu Sangam MN.ttc	\u0c30\u0c4d\u200d\u0c15	279+1347|95+0|134+1250
+Telugu Sangam MN.ttc	\u0c15\u0c4d\u0c30	134+1250|239@-663,0+0
+Kannada Sangam MN.ttc	\u0c95\u0ccd\u0c95	135+1258|246+300
+Kannada Sangam MN.ttc	\u0c95\u0cca	359+1258|561+0|176+1296
+Kannada Sangam MN.ttc	\u0cb0\u0ccd\u0c95	135+1258|207+945
+Kannada Sangam MN.ttc	\u0c95\u0ca8\u0ccd\u0ca8\u0ca1	135+1258|154+1496|265+0|147+1521
+Kannada Sangam MN.ttc	\u0c95\u0ccd\u0cb7	205+1252
+Kannada Sangam MN.ttc	\u0c95\u0cc8	359+1258|561+0|187+803
+Kannada Sangam MN.ttc	\u0cb0\u0ccd\u0c95\u0ccb	359+1258|561+0|176+1296|186+695|207+945
+Kannada Sangam MN.ttc	\u0c95\u0ccd\u0cb0	135+1258|272+314
+Devanagari Sangam MN.ttc	\u0915\u093f	1292+526|136+1556
+Devanagari Sangam MN.ttc	\u0930\u094d\u0915	136+1556|1257@-823,0+0
+Devanagari Sangam MN.ttc	\u0915\u094d\u0937	391+1521
+Devanagari Sangam MN.ttc	\u0939\u093f\u0928\u094d\u0926\u0940	1292+526|172+968|957+1791|1221+512
+Devanagari Sangam MN.ttc	\u0915\u094d\u0930	234+1556
+Devanagari Sangam MN.ttc	\u0926\u094d\u0927	321+1594
+Devanagari Sangam MN.ttc	\u0930\u094d\u0915\u093f	1292+526|136+1556|1321@-823,0+0
+Devanagari Sangam MN.ttc	\u0924\u094d\u0930	410+1164
+Bangla Sangam MN.ttc	\u0995\u09bf	168+490|133+1530
+Bangla Sangam MN.ttc	\u0995\u09cb	214+649|133+1530|167+490
+Bangla Sangam MN.ttc	\u09b0\u09cd\u0995	133+1530|216@-426,0+0
+Bangla Sangam MN.ttc	\u09ac\u09be\u0982\u09b2\u09be	155+1107|167+490|119+1184|160+1322|167+490
+Bangla Sangam MN.ttc	\u0995\u09cd\u09b7	212+1825
+Bangla Sangam MN.ttc	\u0995\u09cd\u09b0	319+1610
+Bangla Sangam MN.ttc	\u0995\u09cc	214+649|133+1530|180+490
+Bangla Sangam MN.ttc	\u09b0\u09cd\u0995\u09bf	168+490|133+1530|216@-426,0+0
+Gujarati Sangam MN.ttc	\u0a95\u0abf	748+365|132+951
+Gujarati Sangam MN.ttc	\u0ab0\u0acd\u0a95	132+951|200@-91,0+0
+Gujarati Sangam MN.ttc	\u0a97\u0ac1\u0a9c\u0ab0\u0abe\u0aa4\u0ac0	808+1189|171+0|139+1395|158+843|168+380|147+1079|170+483
+Gujarati Sangam MN.ttc	\u0a95\u0acd\u0ab7	213+1110
+Gujarati Sangam MN.ttc	\u0a95\u0acd\u0ab0	206+979
+Gujarati Sangam MN.ttc	\u0ab0\u0acd\u0a95\u0abf	761+384|132+951|791+0
+Gurmukhi Sangam MN.ttc	\u0a15\u0a3f	165+496|130+1284
+Gurmukhi Sangam MN.ttc	\u0a2a\u0a70\u0a1c\u0a3e\u0a2c\u0a40	150+1231|225+0|137+1245|164+499|152+1208|166+494
+Gurmukhi Sangam MN.ttc	\u0a15\u0a4d\u0a30	198+1284
+Gurmukhi Sangam MN.ttc	\u0a38\u0a4d\u0a35	161+1226|233+0
+Gurmukhi Sangam MN.ttc	\u0a15\u0a4b	130+1284|219+0
+Oriya Sangam MN.ttc	\u0b15\u0b3f	131+1388|168@-694,0+0
+Oriya Sangam MN.ttc	\u0b15\u0b4b	174+996|131+1388|167+280
+Oriya Sangam MN.ttc	\u0b30\u0b4d\u0b15	131+1388|210+0
+Oriya Sangam MN.ttc	\u0b13\u0b21\u0b3c\u0b3f\u0b06	129+1188|181+1341|168@-1379,0+0|120+1610
+Oriya Sangam MN.ttc	\u0b15\u0b4d\u0b37	208+1302
+Oriya Sangam MN.ttc	\u0b15\u0b4d\u0b30	319+1388
+Oriya Sangam MN.ttc	\u0b15\u0b4c	174+996|131+1388|180+370
+Khmer Sangam MN.ttf	\u1780\u17be	364+827|114+1229|369+0
+Khmer Sangam MN.ttf	\u1780\u17d2\u179a	254+860|114+1229
+Khmer Sangam MN.ttf	\u1781\u17d2\u1798\u17c2\u179a	180+827|115+1229|252+0|140+717
+Khmer Sangam MN.ttf	\u179f\u17d2\u178f\u17d2\u179a\u17b8	254+860|145+1946|243+0|170+0
+Khmer Sangam MN.ttf	\u1780\u17c0	366+827|114+1229|371+717
+Lao Sangam MN.ttf	\u0e81\u0eb3	113+1266|187+0|229+881
+Lao Sangam MN.ttf	\u0ea5\u0eb2\u0ea7	134+1137|143+881|135+1096
+Lao Sangam MN.ttf	\u0ec0\u0e81\u0ebb\u0ec8\u0eb2	154+698|113+1266|219+0|143+881
+Lao Sangam MN.ttf	\u0e81\u0ec8\u0eb3	113+1266|223+0|229+881
+Myanmar Sangam MN.ttc	\u1000\u1031	236+1221|114+2212
+Myanmar Sangam MN.ttc	\u1019\u103c\u1014\u103a\u1019\u102c	303+369|139+1270|134+1278|241+0|139+1270|231+924
+Myanmar Sangam MN.ttc	\u1004\u103a\u1039\u1000	114+2212|251+0
+Myanmar Sangam MN.ttc	\u1000\u103c	310+236|114+2212
+Myanmar Sangam MN.ttc	\u1000\u103b\u103d	114+2212|298+314
+/System/Library/Fonts/Kohinoor.ttc	\u0915\u093f	780+273|51+770
+/System/Library/Fonts/Kohinoor.ttc	\u0930\u094d\u0915	51+770|161@-248,0+0
+/System/Library/Fonts/Kohinoor.ttc	\u0915\u094d\u0937	85+749
+/System/Library/Fonts/Kohinoor.ttc	\u0939\u093f\u0928\u094d\u0926\u0940	780+273|83+507|577+794|29+273
+/System/Library/Fonts/Kohinoor.ttc	\u0915\u094d\u0930	234+776
+/System/Library/Fonts/Kohinoor.ttc	\u0926\u094d\u0927	546+677
+/System/Library/Fonts/Kohinoor.ttc	\u0930\u094d\u0915\u093f	780+273|51+770|848@-404,0+0
+/System/Library/Fonts/Kohinoor.ttc	\u0924\u094d\u0930	249+558
+/System/Library/Fonts/Kohinoor.ttc	\u0915\u093c	87+770
+/System/Library/Fonts/Kohinoor.ttc	\u0930\u094d\u200d\u0915	162+194|51+770
+/System/Library/Fonts/Kohinoor.ttc	\u0915\u094d\u200d\u0937	164+566|1+0|81+572
+/System/Library/Fonts/Kohinoor.ttc	\u091c\u094d\u091e	86+702
+/System/Library/Fonts/Kohinoor.ttc	\u0936\u094d\u0930\u0940	262+676|29+273
+/System/Library/Fonts/Kohinoor.ttc	\u0930\u094d\u0926\u094d\u0927	546+677|161@-43,0+0
+/System/Library/Fonts/Kohinoor.ttc	\u0915\u094d\u0924\u094d\u0935	382+1432
+/System/Library/Fonts/Kohinoor.ttc	\u0905	2+725
+/System/Library/Fonts/Kohinoor.ttc	\u0929	106+513
+/System/Library/Fonts/Supplemental/ITFDevanagari.ttc	\u0915\u093f	776+272|51+703
+/System/Library/Fonts/Supplemental/ITFDevanagari.ttc	\u0930\u094d\u0915	51+703|161@-214,0+0
+/System/Library/Fonts/Supplemental/ITFDevanagari.ttc	\u0915\u094d\u0937	85+725
+/System/Library/Fonts/Supplemental/ITFDevanagari.ttc	\u0939\u093f\u0928\u094d\u0926\u0940	776+272|83+477|573+737|29+272
+/System/Library/Fonts/Supplemental/ITFDevanagari.ttc	\u0915\u094d\u0930	234+723
+/System/Library/Fonts/Supplemental/ITFDevanagari.ttc	\u0926\u094d\u0927	546+633
+/System/Library/Fonts/Supplemental/ITFDevanagari.ttc	\u0930\u094d\u0915\u093f	776+272|51+703|825@-369,4+0
+/System/Library/Fonts/Supplemental/ITFDevanagari.ttc	\u0924\u094d\u0930	249+505
+/System/Library/Fonts/Supplemental/ITFDevanagari.ttc	\u0915\u093c	87+703
+/System/Library/Fonts/Supplemental/ITFDevanagari.ttc	\u0930\u094d\u200d\u0915	162+214|1+0|51+703
+/System/Library/Fonts/Supplemental/ITFDevanagari.ttc	\u0915\u094d\u200d\u0937	164+516|1+0|81+561
+/System/Library/Fonts/Supplemental/ITFDevanagari.ttc	\u091c\u094d\u091e	86+648
+/System/Library/Fonts/Supplemental/ITFDevanagari.ttc	\u0936\u094d\u0930\u0940	262+648|29+272
+/System/Library/Fonts/Supplemental/ITFDevanagari.ttc	\u0930\u094d\u0926\u094d\u0927	546+633|161@-18,0+0
+/System/Library/Fonts/Supplemental/ITFDevanagari.ttc	\u0915\u094d\u0924\u094d\u0935	378+1329
+/System/Library/Fonts/Supplemental/ITFDevanagari.ttc	\u0905	2+681
+/System/Library/Fonts/Supplemental/ITFDevanagari.ttc	\u0929	106+478
+/System/Library/Fonts/Supplemental/Shree714.ttc	\u0915\u093f	63+200|23+573
+/System/Library/Fonts/Supplemental/Shree714.ttc	\u0930\u094d\u0915	23+573|316+0
+/System/Library/Fonts/Supplemental/Shree714.ttc	\u0915\u094d\u0937	137+494
+/System/Library/Fonts/Supplemental/Shree714.ttc	\u0939\u093f\u0928\u094d\u0926\u0940	63+200|59+384|158+297|40+409|64+200
+/System/Library/Fonts/Supplemental/Shree714.ttc	\u0915\u094d\u0930	201+578
+/System/Library/Fonts/Supplemental/Shree714.ttc	\u0926\u094d\u0927	247+556
+/System/Library/Fonts/Supplemental/Shree714.ttc	\u0930\u094d\u0915\u093f	63+200|23+573|316+0
+/System/Library/Fonts/Supplemental/Shree714.ttc	\u0924\u094d\u0930	206+436
+/System/Library/Fonts/Supplemental/Shree714.ttc	\u0915\u093c	83+566
+/System/Library/Fonts/Supplemental/Shree714.ttc	\u0930\u094d\u200d\u0915	50+328|77+0|3+0|23+573
+/System/Library/Fonts/Supplemental/Shree714.ttc	\u0915\u094d\u200d\u0937	139+439|3+0|57+402
+/System/Library/Fonts/Supplemental/Shree714.ttc	\u091c\u094d\u091e	138+534
+/System/Library/Fonts/Supplemental/Shree714.ttc	\u0936\u094d\u0930\u0940	134+529|64+200
+/System/Library/Fonts/Supplemental/Shree714.ttc	\u0930\u094d\u0926\u094d\u0927	247+556|130+0
+/System/Library/Fonts/Supplemental/Shree714.ttc	\u0915\u094d\u0924\u094d\u0935	139+439|154+284|55+409
+/System/Library/Fonts/Supplemental/Shree714.ttc	\u0905	7+577
+/System/Library/Fonts/Supplemental/Shree714.ttc	\u0929	43+440
+/System/Library/Fonts/KohinoorBangla.ttc	\u0995\u09bf	19+273|32+691
+/System/Library/Fonts/KohinoorBangla.ttc	\u0995\u09cb	499+271|32+691|18+273
+/System/Library/Fonts/KohinoorBangla.ttc	\u09b0\u09cd\u0995	32+691|106@-176,0+0
+/System/Library/Fonts/KohinoorBangla.ttc	\u09ac\u09be\u0982\u09b2\u09be	54+549|18+273|71+437|59+738|18+273
+/System/Library/Fonts/KohinoorBangla.ttc	\u0995\u09cd\u09b7	64+871
+/System/Library/Fonts/KohinoorBangla.ttc	\u0995\u09cd\u09b0	289+903
+/System/Library/Fonts/KohinoorBangla.ttc	\u0995\u09cc	499+271|32+691|31+273
+/System/Library/Fonts/KohinoorBangla.ttc	\u09b0\u09cd\u0995\u09bf	490+273|32+691|105+0
+/System/Library/Fonts/KohinoorBangla.ttc	\u09af\u09bc	70+563
+/System/Library/Fonts/KohinoorBangla.ttc	\u0995\u09cd\u09af	32+691|108+253
+/System/Library/Fonts/KohinoorBangla.ttc	\u09b0\u200d\u09cd\u09af	58+549|3+0|108+253
+/System/Library/Fonts/KohinoorBangla.ttc	\u09b8\u09cd\u09a4\u09cd\u09b0	342+896
+/System/Library/Fonts/KohinoorGujarati.ttc	\u0a95\u0abf	458+295|35+605
+/System/Library/Fonts/KohinoorGujarati.ttc	\u0ab0\u0acd\u0a95	35+605|98@-135,0+0
+/System/Library/Fonts/KohinoorGujarati.ttc	\u0a97\u0ac1\u0a9c\u0ab0\u0abe\u0aa4\u0ac0	37+767|23+0|42+678|61+510|20+295|50+630|22+295
+/System/Library/Fonts/KohinoorGujarati.ttc	\u0a95\u0acd\u0ab7	69+798
+/System/Library/Fonts/KohinoorGujarati.ttc	\u0a95\u0acd\u0ab0	126+595
+/System/Library/Fonts/KohinoorGujarati.ttc	\u0ab0\u0acd\u0a95\u0abf	458+295|35+605|492@-233,0+0
+/System/Library/Fonts/KohinoorGujarati.ttc	\u0ab6\u0acd\u0ab0\u0ac0	148+745|22+295
+/System/Library/Fonts/KohinoorTelugu.ttc	\u0c15\u0c4d\u0c15	37+516|108+304
+/System/Library/Fonts/KohinoorTelugu.ttc	\u0c15\u0c4a	480+612
+/System/Library/Fonts/KohinoorTelugu.ttc	\u0c30\u0c4d\u0c15	63+621|108+304
+/System/Library/Fonts/KohinoorTelugu.ttc	\u0c24\u0c46\u0c32\u0c41\u0c17\u0c41	384+818|322+1105|297+962
+/System/Library/Fonts/KohinoorTelugu.ttc	\u0c15\u0c4d\u0c37	37+516|592@-248,32+0
+/System/Library/Fonts/KohinoorTelugu.ttc	\u0c36\u0c4d\u0c30\u0c40	287+557|593@-208,32+0
+/System/Library/Fonts/KohinoorTelugu.ttc	\u0c15\u0c48	443+516
+/System/Library/Fonts/KohinoorTelugu.ttc	\u0c30\u0c4d\u200d\u0c15	37+516|107+568
+/System/Library/Fonts/KohinoorTelugu.ttc	\u0c15\u0c4d\u0c30	37+516|593@-248,32+0
+/System/Library/Fonts/KohinoorTelugu.ttc	\u0c38\u0c4d\u0c24\u0c4d\u0c30\u0c40	289+763|146@-388,32+0
+/System/Library/Fonts/MuktaMahee.ttc	\u0a15\u0a3f	608+246|573+567
+/System/Library/Fonts/MuktaMahee.ttc	\u0a2a\u0a70\u0a1c\u0a3e\u0a2c\u0a40	593+555|633@-293,0+0|580+585|607+236|595+573|609+246
+/System/Library/Fonts/MuktaMahee.ttc	\u0a15\u0a4d\u0a30	657+567
+/System/Library/Fonts/MuktaMahee.ttc	\u0a38\u0a4d\u0a35	685+559
+/System/Library/Fonts/MuktaMahee.ttc	\u0a15\u0a4b	573+567|614@-479,0+0
+/System/Library/Fonts/MuktaMahee.ttc	\u0a16\u0a3c	618+571
+/System/Library/Fonts/NotoSansKannada.ttc	\u0c95\u0ccd\u0c95	22+526|95+151
+/System/Library/Fonts/NotoSansKannada.ttc	\u0c95\u0cca	239+526|63+680
+/System/Library/Fonts/NotoSansKannada.ttc	\u0cb0\u0ccd\u0c95	22+526|92+546
+/System/Library/Fonts/NotoSansKannada.ttc	\u0c95\u0ca8\u0ccd\u0ca8\u0ca1	22+526|41+665|114+75|34+724
+/System/Library/Fonts/NotoSansKannada.ttc	\u0c95\u0ccd\u0cb7	284+526
+/System/Library/Fonts/NotoSansKannada.ttc	\u0c95\u0cc8	239+526|74+141
+/System/Library/Fonts/NotoSansKannada.ttc	\u0cb0\u0ccd\u0c95\u0ccb	239+526|63+680|73+368|92+546
+/System/Library/Fonts/NotoSansKannada.ttc	\u0c95\u0ccd\u0cb0	22+526|121+92
+/System/Library/Fonts/NotoSansKannada.ttc	\u0cb0\u0ccd\u200d\u0c95	48+612|3+0|95+151
+/System/Library/Fonts/NotoSansOriya.ttc	\u0b15\u0b3f	19+1354|56@-15,0+0
+/System/Library/Fonts/NotoSansOriya.ttc	\u0b15\u0b4b	62+924|19+1354|55+387
+/System/Library/Fonts/NotoSansOriya.ttc	\u0b30\u0b4d\u0b15	19+1354|128+0
+/System/Library/Fonts/NotoSansOriya.ttc	\u0b13\u0b21\u0b3c\u0b3f\u0b06	17+1309|69+1317|56@3,0+0|8+1681
+/System/Library/Fonts/NotoSansOriya.ttc	\u0b15\u0b4d\u0b37	167+1423
+/System/Library/Fonts/NotoSansOriya.ttc	\u0b15\u0b4d\u0b30	19+1354|580@-225,0+0
+/System/Library/Fonts/NotoSansOriya.ttc	\u0b15\u0b4c	62+924|19+1354|68+387
+/System/Library/Fonts/NotoSansOriya.ttc	\u0b15\u0b4d\u0b5f	19+1354|162+768
+/System/Library/Fonts/Supplemental/Tamil Sangam MN.ttc	\u0b95\u0bca	1229+1524|445+1459|1225+1029
+/System/Library/Fonts/Supplemental/Tamil Sangam MN.ttc	\u0b95\u0bcd\u0bb7	490+2674
+/System/Library/Fonts/Supplemental/Tamil Sangam MN.ttc	\u0bb8\u0bcd\u0bb0\u0bc0	579+2331
+/System/Library/Fonts/Supplemental/Tamil Sangam MN.ttc	\u0b95\u0bc8	1231+1888|445+1459
+/System/Library/Fonts/Supplemental/Tamil Sangam MN.ttc	\u0ba4\u0bae\u0bbf\u0bb4\u0bcd	452+1387|543+1699|475+1371
+/System/Library/Fonts/Supplemental/Tamil Sangam MN.ttc	\u0b95\u0bcc	1229+1524|445+1459|1235+1741
+/System/Library/Fonts/Supplemental/Tamil Sangam MN.ttc	\u0b94	444+3171

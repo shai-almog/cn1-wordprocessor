@@ -209,8 +209,9 @@ public class PdfScriptsTest {
 
   @Test
   public void thaiAndLaoSaraAmDecompose() throws Exception {
+    // Lao Sangam MN has 'morx', so as harfrust its chains decompose Sara Am (hb-shape 14.2.1).
     var lao = new PdfFonts.TrueType(installed("Lao Sangam MN.ttf"));
-    assertEquals("e81 ecd eb2", cps(shape(lao, "\u0e81\u0eb3")));
+    assertEquals("113+1266|187+0|229+881", hb(lao, "\u0e81\u0eb3"));
     var thai = new File(SUPPLEMENTAL + "Silom.ttf");
     if (thai.exists()) {
       // Silom's GSUB lists only 'latn', so as HarfBuzz its 'morx' decomposes Sara Am
@@ -223,10 +224,9 @@ public class PdfScriptsTest {
   @Test
   public void indicScriptsReorderPreBaseAndSplitMatras() throws Exception {
     var bengali = new PdfFonts.TrueType(installed("Bangla Sangam MN.ttc"));
-    // Bengali o: split into e (drawn before ka) and aa (after).
+    // Bengali o: its 'morx' splits it into e (drawn before ka) and aa (after), as hb-shape.
     var ko = shape(bengali, "\u0995\u09cb");
-    assertEquals(0x09c7, ko.get(0).cp);
-    assertEquals(0x0995, ko.get(1).cp);
+    assertEquals("214|133|167", ko.get(0).id + "|" + ko.get(1).id + "|" + ko.get(2).id);
     assertEquals(0, ko.get(0).start);
     assertEquals(2, ko.get(0).end);
     var tamil = new PdfFonts.TrueType(installed("Tamil Sangam MN.ttc"));
@@ -450,8 +450,8 @@ public class PdfScriptsTest {
 
   @Test
   public void aatMorxAndKerxMatchHarfBuzz() throws Exception {
-    // hb-shape 14.2.1 --no-clusters with the macOS faces (face 0): these fonts have 'morx' but no
-    // GSUB for their script, so HarfBuzz shapes with morx and positions with kerx / kern.
+    // hb-shape 14.2.1 --no-clusters with the macOS faces (face 0): these fonts have 'morx', so
+    // HarfBuzz shapes with morx and positions with kerx / kern.
     var tibetan = system(SUPPLEMENTAL + "Kailasa.ttc");
     assertEquals("768+1319|130+0", hb(tibetan, "\u0f40\u0f90\u0f72"));
     assertEquals("350+1319", hb(tibetan, "\u0f66\u0f92\u0fb2\u0f74"));
@@ -469,8 +469,8 @@ public class PdfScriptsTest {
     var thai = system(SUPPLEMENTAL + "Silom.ttf");
     assertEquals("29+473|103+0|78+461", hb(thai, "\u0e01\u0e33"));
     assertEquals("55+535|17+0|23+0|53+533", hb(thai, "\u0e1b\u0e31\u0e48\u0e19"));
-    // Sinhala Sangam MN / Sinhala MN list 'sinh' in GSUB, so HarfBuzz keeps GSUB there; their
-    // license forbids embedding, so they are not loaded here.
+    // Sinhala Sangam MN / Sinhala MN also have 'morx' (harfrust prefers it over their 'sinh'
+    // GSUB); their license forbids embedding, so they are not loaded here.
   }
 
   private static String visual(PdfFonts.TrueType font, String text, boolean rtl, int flags)

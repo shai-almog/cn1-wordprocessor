@@ -14,7 +14,7 @@ import java.util.*;
 final class OpenType {
   /** One glyph of the shaping buffer; positions are in font units. */
   static final class Glyph {
-    int id, cp, start, end, mask, cat, flags, syllable, adv, dx, dy, components = 1;
+    int id, cp, start, end, mask, cat, pos, flags, syllable, adv, dx, dy, components = 1;
 
     Glyph(int id, int cp, int start, int end, int mask) {
       this.id = id;
@@ -27,13 +27,18 @@ final class OpenType {
     Glyph copy(int newId) {
       var g = new Glyph(newId, cp, start, end, mask);
       g.cat = cat;
+      g.pos = pos;
       g.flags = flags;
       g.syllable = syllable;
       return g;
     }
   }
 
-  static final int SUBSTITUTED = 1, LIGATED = 2, BASE = 4;
+  /**
+   * Glyph flags: substituted, ligated and multiplied as HarfBuzz's glyph properties (bit 8 is
+   * PdfShaping's MERGED); HIDDEN marks a default-ignorable shown as a zero-advance space.
+   */
+  static final int SUBSTITUTED = 1, LIGATED = 2, BASE = 4, MULTIPLIED = 16, HIDDEN = 32;
 
   private final PdfFonts.TrueType font;
   /**
@@ -170,6 +175,46 @@ final class OpenType {
     }
   }
 
+  /**
+   * Whether a GSUB lookup of {@code feature} would apply to exactly {@code glyphs}, as HarfBuzz's
+   * would_substitute: single, multiple and alternate lookups for one glyph, ligatures with
+   * exactly these components, and context lookups matching from the first glyph.
+   */
+  boolean wouldSubstitute(String[] scripts, String feature, int... glyphs) {
+    for (int l : lookups(true, scripts, feature)) {
+      try {
+        int lookup = lookupTable(true, l), type = font.u16(lookup);
+        for (int s = 0, n = font.u16(lookup + 4); s < n; s++) {
+          int sub = lookup + font.u16(lookup + 6 + 2 * s), t = type;
+          if (t == 7) {
+            t = font.u16(sub + 2);
+            sub = sub + font.u32(sub + 4);
+          }
+          if (t == 5 || t == 6) {
+            var buffer = new ArrayList<Glyph>();
+            for (int k = 0; k < glyphs.length; k++) buffer.add(new Glyph(glyphs[k], 0, k, k + 1, -1));
+            if (context(true, t, sub, lookup, 0, buffer, 0, 0) >= 0) return true;
+            continue;
+          }
+          int index = font.coverage(sub + font.u16(sub + 2), glyphs[0]);
+          if (index < 0) continue;
+          if (t <= 3 && glyphs.length == 1) return true;
+          if (t != 4 || index >= font.u16(sub + 4)) continue;
+          int set = sub + font.u16(sub + 6 + 2 * index);
+          for (int k = 0, m = font.u16(set); k < m; k++) {
+            int lig = set + font.u16(set + 2 + 2 * k), count = font.u16(lig + 2);
+            boolean match = count == glyphs.length;
+            for (int c = 1; c < count && match; c++) match = font.u16(lig + 4 + 2 * (c - 1)) == glyphs[c];
+            if (match) return true;
+          }
+        }
+      } catch (IOException | RuntimeException malformed) {
+        // A malformed lookup does not apply.
+      }
+    }
+    return false;
+  }
+
   // ------------------------------------------------------------------------------- lookups
 
   private int lookupTable(boolean substitution, int index) throws IOException {
@@ -262,7 +307,7 @@ final class OpenType {
       int seq = sub + font.u16(sub + 6 + 2 * index), count = font.u16(seq);
       if (count == 0 || count > 32) return -1;
       g.id = font.u16(seq + 2);
-      g.flags |= SUBSTITUTED;
+      g.flags |= SUBSTITUTED | (count > 1 ? MULTIPLIED : 0);
       for (int k = 1; k < count; k++) {
         var extra = g.copy(font.u16(seq + 2 + 2 * k));
         buffer.add(i + k, extra);
@@ -305,7 +350,8 @@ final class OpenType {
           buffer.get(k).end = end;
         }
         g.id = font.u16(lig);
-        g.flags = flags | SUBSTITUTED | (count > 1 ? LIGATED : 0);
+        g.flags = (flags & ~MULTIPLIED) | (g.flags & MULTIPLIED) | SUBSTITUTED
+            | (count > 1 ? LIGATED : 0);
         g.components = count;
         for (int k = count - 1; k > 0; k--) buffer.remove(at[k]);
         return i + 1;

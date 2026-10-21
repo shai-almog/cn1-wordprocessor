@@ -32,14 +32,13 @@ final class AatShaper {
     numGlyphs = maxp == null ? 0xffff : font.u16(maxp[0] + 4);
   }
 
-  /** Whether HarfBuzz would shape a run of {@code scripts} in this face with 'morx'. */
-  static boolean applies(PdfFonts.TrueType font, OpenType ot, String[] scripts) {
+  /**
+   * Whether harfrust would shape a horizontal run in this face with 'morx': whenever the face has
+   * one, even beside a GSUB with the run's script (harfrust's apply_morx, HarfBuzz issue 2124).
+   */
+  static boolean applies(PdfFonts.TrueType font) {
     var morx = font.tables.get("morx");
-    if (morx == null || morx[1] < 8) return false;
-    if (!ot.hasGsub()) return true;
-    for (String s : scripts)
-      if (s != null && ot.hasScript(true, s)) return false;
-    return true;
+    return morx != null && morx[1] >= 8;
   }
 
   /** A 32-bit field as is (AAT flags and actions use the high bit). */
@@ -206,7 +205,6 @@ final class AatShaper {
       }
       at += length;
     }
-    removeDeleted(buffer);
   }
 
   private List<OpenType.Glyph> subtable(int type, int st, List<OpenType.Glyph> buffer)
@@ -413,8 +411,11 @@ final class AatShaper {
     }
   }
 
-  /** Drops the glyphs ligature subtables deleted, their text joining the neighbouring glyph. */
-  private static void removeDeleted(List<OpenType.Glyph> buffer) {
+  /**
+   * Drops the glyphs ligature subtables deleted, their text joining the neighbouring glyph; as
+   * harfrust, before GPOS but after 'kerx' / 'kern' (deleted glyphs break kerning pairs).
+   */
+  static void removeDeleted(List<OpenType.Glyph> buffer) {
     for (int i = 0; i < buffer.size(); i++) {
       var g = buffer.get(i);
       if (g.id != DELETED) continue;
@@ -453,8 +454,8 @@ final class AatShaper {
         else if (format == 4) attach(buffer, s);
         else if (kerning && (format == 0 && tuples == 0 || format == 2 && tuples == 0
             || format == 6)) {
+          // As harfrust's apply_simple_kerning, only the second glyph skips marks.
           for (int i = 0; i < buffer.size(); i++) {
-            if (nonspacing(buffer.get(i).cp)) continue;
             int j = i + 1;
             while (j < buffer.size() && nonspacing(buffer.get(j).cp)) j++;
             if (j >= buffer.size()) break;
