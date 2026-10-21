@@ -1768,16 +1768,12 @@ public class WordProcessor {
                   if (!tokens.isEmpty()
                       && ("DATE".equalsIgnoreCase(tokens.get(0))
                           || "TIME".equalsIgnoreCase(tokens.get(0)))) {
-                    for (int i = 1; i + 1 < tokens.size(); i++)
-                      if ("\\@".equals(tokens.get(i))) {
-                        try {
-                          return value.result(
-                              new com.codename1.l10n.SimpleDateFormat(tokens.get(i + 1))
-                                  .format(now));
-                        } catch (RuntimeException ex) {
-                          return value;
-                        }
-                      }
+                    // Wordcraft's references update: the \\@ picture re-formats the date, and
+                    // without one DATE is M/d/yyyy and TIME h:mm am/pm.
+                    String picture = DocumentFields.datePicture(value.instruction);
+                    if (picture == null)
+                      picture = "TIME".equalsIgnoreCase(tokens.get(0)) ? "h:mm am/pm" : "M/d/yyyy";
+                    return value.result(DocumentFields.formatDate(picture, now));
                   }
                   return resolver.resolve(paragraph, offset, value);
                 });
