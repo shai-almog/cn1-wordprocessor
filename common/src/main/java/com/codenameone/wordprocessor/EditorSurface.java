@@ -401,8 +401,8 @@ public final class EditorSurface extends Container
     LayoutEngine.Line found = null;
     for (LayoutEngine.Line line : linesOf(selection.block))
       if (editingBlock(line) == selection.block
-          && selection.caret >= line.start
-          && selection.caret <= line.end) found = line;
+          && selection.caret + noteShift(line) >= line.start
+          && selection.caret + noteShift(line) <= line.end) found = line;
     return found;
   }
 
@@ -416,6 +416,11 @@ public final class EditorSurface extends Container
    */
   private java.util.List<LayoutEngine.Line> linesOf(int block) {
     var result = layout();
+    if (session.noteStory() != null) {
+      var all = new ArrayList<LayoutEngine.Line>();
+      for (LayoutEngine.Page page : result.pages) all.addAll(page.allLines());
+      return all;
+    }
     if (session.inCell()) {
       var all = new ArrayList<LayoutEngine.Line>();
       for (LayoutEngine.Page page : result.pages) all.addAll(page.lines);
@@ -1599,21 +1604,21 @@ public final class EditorSurface extends Container
             fillRange(g, line, a, b, lx, ly, scale);
           }
         }
-        int selectedBlock = editingBlock(line);
+        int selectedBlock = editingBlock(line), shown = selectedBlock < 0 ? 0 : noteShift(line);
         if (!exporting && session.cellSelection() == null
             && selectedBlock >= 0
             && selectedBlock >= selection.startBlock()
             && selectedBlock <= selection.endBlock()
-            && (selectedBlock > selection.startBlock() || selection.start() < line.end)
-            && (selectedBlock < selection.endBlock() || selection.end() > line.start)) {
+            && (selectedBlock > selection.startBlock() || selection.start() + shown < line.end)
+            && (selectedBlock < selection.endBlock() || selection.end() + shown > line.start)) {
           int
               a =
                   selectedBlock == selection.startBlock()
-                      ? Math.max(selection.start(), line.start)
+                      ? Math.max(selection.start() + shown, line.start)
                       : line.start,
               b =
                   selectedBlock == selection.endBlock()
-                      ? Math.min(selection.end(), line.end)
+                      ? Math.min(selection.end() + shown, line.end)
                       : line.end;
           g.setColor(0xc5e9e6);
           fillRange(g, line, a, b, lx, ly, scale);
@@ -1724,7 +1729,7 @@ public final class EditorSurface extends Container
               Math.round(line.height * scale));
         if (!exporting && session.cellSelection() == null && line == caretLine && selection.collapsed()) {
           g.setColor(0x087f80);
-          int cx = lx + Math.round(offsetX(line, selection.caret) * scale);
+          int cx = lx + Math.round(offsetX(line, selection.caret + noteShift(line)) * scale);
           g.fillRect(cx, ly, 2, Math.round(line.height * scale));
         }
         if (line.clipped) g.setClip(clipX, clipY, clipW, clipH);
@@ -1872,7 +1877,10 @@ public final class EditorSurface extends Container
     float x = (absX - viewportX() - pageX(page)) / scale();
     LayoutEngine.Line best = null;
     float distance = Float.MAX_VALUE;
-    for (LayoutEngine.Line l : layout().pages.get(page).lines) {
+    var p = layout().pages.get(page);
+    // An entered note story is hit-tested in the note area too.
+    for (LayoutEngine.Line l : session.noteStory() != null ? p.allLines() : p.lines) {
+      if (session.noteStory() != null && l.row < 0 && l.block < 0 && editingBlock(l) < 0) continue;
       float dy = y < l.y ? l.y - y : y > l.y + l.height ? y - l.y - l.height : 0;
       float dx = x < l.x ? l.x - x : x > l.x + l.width ? x - l.x - l.width : 0;
       float d = dy * 1000 + dx;
@@ -1902,6 +1910,21 @@ public final class EditorSurface extends Container
     return full[n - 3] == range.block && range.contains(range.block, full[n - 2], full[n - 1]);
   }
 
+  /**
+   * Offset of story text within a displayed note line: a note's first paragraph is displayed
+   * after its label and a space. Zero outside an entered note story.
+   */
+  private int noteShift(LayoutEngine.Line line) {
+    String id = session.noteStory();
+    if (id == null || line.row >= 0) return 0;
+    for (Note n : Notes.all(session.document()))
+      if (n.id.equals(id))
+        return n.paragraphs.size() > 0 && n.paragraphs.get(0).id.equals(line.paragraphId)
+            ? n.label.length() + 1
+            : 0;
+    return 0;
+  }
+
   /** The cell path (Session.cellPath) of a line: empty for body lines. */
   static int[] linePath(LayoutEngine.Line line) {
     if (line.row < 0) return new int[0];
@@ -1923,7 +1946,15 @@ public final class EditorSurface extends Container
   private int editingBlock(LayoutEngine.Line line) {
     // A note story being edited is not drawn as the editing story (its first line carries the
     // note label), so body lines are not mistaken for it.
-    if (session.noteStory() != null) return -1;
+    if (session.noteStory() != null) {
+      // While a note story is entered, its paragraphs' lines (in the note area or endnotes) are
+      // the editing story, as Wordcraft draws the selection in the note part.
+      if (line.row >= 0) return -1;
+      var story = session.editingDocument();
+      for (int i = 0; i < story.blocks.size(); i++)
+        if (story.blocks.get(i) instanceof Paragraph p && p.id.equals(line.paragraphId)) return i;
+      return -1;
+    }
     if (!session.inCell()) return line.row < 0 ? line.block : -1;
     if (!java.util.Arrays.equals(linePath(line), session.cellPath())) return -1;
     var d = session.editingDocument();
@@ -1986,16 +2017,20 @@ public final class EditorSurface extends Container
     float x = (absX - viewportX() - pageX(line.page)) / scale() - line.x;
     int best = line.start;
     float distance = Float.MAX_VALUE;
-    var p = lineParagraph(line);
-    for (int i = line.start; i <= line.end; i++) {
-      if (!Graphemes.isBoundary(p.text, i)) continue;
+    int shift = noteShift(line);
+    int story = session.noteStory() == null ? -1 : editingBlock(line);
+    var p =
+        story >= 0 ? session.editingDocument().paragraph(story) : lineParagraph(line);
+    for (int i = Math.max(line.start, shift); i <= line.end; i++) {
+      if (i - shift > p.text.length() || !Graphemes.isBoundary(p.text, i - shift)) continue;
       float d = Math.abs(offsetX(line, i) - x);
       if (d < distance) {
         distance = d;
         best = i;
       }
     }
-    return best;
+    // Offsets in an entered note story exclude the label shown before its first paragraph.
+    return Math.max(0, best - shift);
   }
 
   /** Receives a finished pen stroke: the ink block and its points in that object's points. */
@@ -2147,7 +2182,7 @@ public final class EditorSurface extends Container
     stopInput();
     if (line.row < 0 && clickInlineEquation(line, x, y)) return;
     if (line.row >= 0) session.enterCellPath(linePath(line));
-    else session.leaveCell();
+    else if (session.noteStory() == null || editingBlock(line) < 0) session.leaveCell();
     int block = editingBlock(line), offset = offsetAt(line, x);
     if (block < 0) return;
     session.select(block, offset, offset);
@@ -2252,7 +2287,7 @@ public final class EditorSurface extends Container
     var line = lineAt(x, y);
     if (line == null) return;
     if (line.row >= 0) session.enterCellPath(linePath(line));
-    else session.leaveCell();
+    else if (session.noteStory() == null || editingBlock(line) < 0) session.leaveCell();
     var text = lineParagraph(line).text.toString();
     int offset = Math.min(offsetAt(line, x), text.length());
     int[] word = TextNavigation.wordAt(text, offset);
@@ -2282,9 +2317,13 @@ public final class EditorSurface extends Container
     int block = anchor ? s.anchorBlock : s.block, offset = anchor ? s.anchor : s.caret;
     for (int page = 0; page < layout().pages.size(); page++)
       for (LayoutEngine.Line line : layout().pages.get(page).lines)
-        if (editingBlock(line) == block && offset >= line.start && offset <= line.end)
+        if (editingBlock(line) == block
+            && offset + noteShift(line) >= line.start
+            && offset + noteShift(line) <= line.end)
           return new int[] {
-            viewportX() + pageX(line.page) + Math.round((line.x + offsetX(line, offset)) * scale()),
+            viewportX()
+                + pageX(line.page)
+                + Math.round((line.x + offsetX(line, offset + noteShift(line))) * scale()),
             viewportY() - getScrollY() + pageY(page) + Math.round((line.y + line.height) * scale())
           };
     return null;
@@ -3041,13 +3080,14 @@ public final class EditorSurface extends Container
     if (selection.block == block && selection.caret == offset) chosen = caretLine();
     if (chosen == null)
       for (LayoutEngine.Line line : linesOf(block))
-        if (editingBlock(line) == block && offset >= line.start && offset <= line.end)
-          chosen = line;
+        if (editingBlock(line) == block
+            && offset + noteShift(line) >= line.start
+            && offset + noteShift(line) <= line.end) chosen = line;
     if (chosen != null)
       return new int[] {
         viewportX()
             + pageX(chosen.page)
-            + Math.round((chosen.x + offsetX(chosen, offset)) * scale()),
+            + Math.round((chosen.x + offsetX(chosen, offset + noteShift(chosen))) * scale()),
         viewportY() - getScrollY() + pageY(chosen.page) + Math.round(chosen.y * scale()),
         2,
         Math.round(chosen.height * scale())

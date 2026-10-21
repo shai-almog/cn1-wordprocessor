@@ -431,6 +431,44 @@ public class SimulatorUiTest {
         });
   }
 
+  @Test
+  public void enteredNoteStoryDrawsCaretAndSelectionInNoteArea() throws Exception {
+    final int[] point = new int[2];
+    edt(() -> ((Form) field(app, "form")).show());
+    for (int i = 0; i < 100 && Display.getInstance().getCurrent() != field(app, "form"); i++)
+      Thread.sleep(50);
+    edt(
+        () -> {
+          load("Claim");
+          var s = session();
+          s.select(0, 5, 5);
+          s.insertNote("footnote", "Source text", "");
+          ((Form) field(app, "form")).revalidate();
+          editor().resetScroll();
+          editor().refresh();
+          s.select(0, 0, 0);
+          int bodyY = editor().getCaretRect()[1];
+          s.enterNote(Notes.references(s.document()).get(0).note.id);
+          s.select(0, 6, 6);
+          editor().refresh();
+          int[] r = editor().getCaretRect();
+          assertNotNull("caret drawn in the note area", r);
+          assertTrue("note caret below the body text", r[1] > bodyY);
+          point[0] = r[0] + 1;
+          point[1] = r[1] + Math.max(1, r[3] / 2);
+          s.select(0, 0, 0);
+        });
+    edt(
+        () -> {
+          var editor = editor();
+          editor.pointerPressed(point[0], point[1]);
+          editor.pointerReleased(point[0], point[1]);
+          assertNotNull("click keeps the note story", session().noteStory());
+          assertEquals(6, session().selection().caret);
+          session().leaveCell();
+        });
+  }
+
   // ---- 4. Raw key fallback and the Speech group --------------------------------------------
 
   @Test
