@@ -180,18 +180,21 @@ Shapes, text boxes, WordArt, charts, SmartArt, display equations, ink/canvases, 
   - `wp:positionH`/`wp:positionV` are kept as the object's position (relativeFrom page, margin, column,
     character, left/right/inside/outside margin, paragraph, line, top/bottom margin; `wp:posOffset` or `wp:align`)
     and written back. Layout places the object there (paragraph and line offsets from the anchor paragraph's top).
-  - Text beside a positioned Square float is narrowed line by line; Tight/Through use the wrap polygon's
-    extent over each line; Top and Bottom moves lines below the object. Each line keeps one text segment, on
-    the side with more room. An anchor aligned in its column at the paragraph (what the app itself writes)
-    stays a paragraph-placed object whose square/tight wrap narrows whole paragraphs as before.
+  - Text beside a Square float is laid out line by line in the free spans around it (Wordcraft's row_spans):
+    on both sides, or on the side `wrapText` picks (left, right, largest; read, written back and set by
+    `arrange.wrapText`). Tight/Through use the wrap polygon's extent over each line; Top and Bottom moves
+    lines below the object. Column-aligned paragraph floats and header floats wrap the same way.
+    Tables in the text flow start below floats in their way. Drawings inside table cells are not imported
+    (cells hold paragraphs and nested tables only).
   - Behind/in-front objects take no space (`behindDoc` picks behind).
-  - Dragging an object floats it at the drop point (page-relative on its anchor's page); `arrange.bounds`
-    and `arrange.nudge` do the same from commands.
+  - Dragging an object floats it at the drop point (page-relative on its anchor's page); dropped on another
+    page it re-anchors to the paragraph there (Wordcraft's move_object), with an outline while dragging;
+    `arrange.bounds` (with an optional `page`) and `arrange.nudge` do the same from commands.
 - Groups (`wpg:wgp`) flatten their members through nested `chOff`/`chExt` spaces as Wordcraft's group_members;
   freeforms (`a:custGeom`) flatten cubic/quadratic Beziers into 16 steps, `fill="none"` paths stay open and
   `arcTo` is skipped (as in Wordcraft). Pictures inside groups are kept as picture members (PNG/JPEG
   bytes), drawn on screen and in PDF (image XObjects) and written as `pic:pic`; member and group `a:xfrm rot`
-  turn shapes and pictures (group text moves with the turn but its glyphs stay upright).
+  turn shapes and pictures (group text letters turn too). Standalone shapes and text boxes read and draw their own `a:xfrm` rot/flipH/flipV.
 
 ## Content controls (2026-10-17)
 
@@ -243,7 +246,7 @@ page/margin/column/paragraph offsets and none/square/top-and-bottom/behind/tight
 for header stories (PlcSpaHdr anchors with the header drawing), and OfficeArt groups (SpgrContainer with its
 FSPGR space and members' ChildAnchor rectangles, nested groups) written as `wpg:wgp`. The editor model then
 treats floating DOCX drawings as it does for .docx (a separate paragraph keeping its wrap kind). Not yet:
-encrypted or Word 6/95 files (rejected), shape rotation, line widths and gradients, paragraph-mark revisions, comment
+encrypted or Word 6/95 files (rejected), line widths and gradients, paragraph-mark revisions, comment
 and bookmark boundaries inside table-row end marks, per-cell borders/shading, and list-style formatting
 carried by styles. As in Wordcraft: freeforms (no path read) and formatting revisions are not imported.
 Wordcraft drops comments and revision marks.
@@ -297,7 +300,7 @@ new file. Import only.
   a comments part. `position:absolute` VML shapes become `wp:anchor` floats (left/margin-left,
   top/margin-top, `mso-position-horizontal/vertical-relative` and alignment, `w10:wrap`, negative
   `z-index` behind), and `v:line` (from/to), `v:rect`, `v:roundrect` and `v:oval` preset shapes with
-  fill/stroke colors and stroke weight, as Wordcraft's read_vml. Limitations: VML rotation and flips are
-  not kept; other VML shapes, linked (non-`binData`) pictures and
+  fill/stroke colors and stroke weight, as Wordcraft's read_vml. VML `rotation` (degrees or `fd`) and `flip`
+  are kept as Wordcraft's vml_spin. Limitations: other VML shapes, linked (non-`binData`) pictures and
   undecodable picture data are dropped with a warning; comment dates are not read. Namespace prefixes
   are matched by the conventional `w:`/`wx:`/`aml:` names, not by resolved URIs.
