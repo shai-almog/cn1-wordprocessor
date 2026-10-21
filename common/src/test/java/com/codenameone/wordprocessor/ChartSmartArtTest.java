@@ -298,24 +298,42 @@ public class ChartSmartArtTest {
   }
 
   @Test
-  public void cachedDrawingCarriesConnectorsAndCycleRing() throws Exception {
+  public void cachedDrawingCarriesConnectors() throws Exception {
     String nodes = "Plan\n\tA\n\tB\nBuild\nShip";
     String hier = DocxSmartArt.drawingXml(Drawing.of("smartArt").with("layout", "hierarchy").with("nodes", nodes), 432, 252);
     Xml.parse(hier.getBytes("UTF-8"));
-    // Trunk, bar and one drop per second-row node (A, B, Build, Ship).
-    assertEquals(6, count(hier, "prst=\"line\""));
+    // Wordcraft's tree: Plan, Build and Ship are roots; Plan gets a trunk, a bar and a drop to A and B.
+    assertEquals(4, count(hier, "prst=\"line\""));
     String radial = DocxSmartArt.drawingXml(Drawing.of("smartArt").with("layout", "radial").with("nodes", nodes), 432, 252);
-    assertEquals(2, count(radial, "prst=\"line\"")); // a spoke to Build and Ship
-    String cycle = DocxSmartArt.drawingXml(Drawing.of("smartArt").with("layout", "cycle").with("nodes", nodes), 432, 252);
-    int ring = cycle.indexOf("prst=\"ellipse\"");
-    assertTrue(ring > 0 && cycle.indexOf("<a:noFill/>", ring - 400) > 0); // the unfilled ring comes first
+    assertEquals(4, count(radial, "prst=\"line\"")); // spokes to A, B (Plan's children), Build and Ship
     // Read back as Word would, the connectors draw as open strokes.
     String shapes = DocxCharts.shapes(Xml.parse(hier.getBytes("UTF-8")), Math.round(432 * 12700.0), Math.round(252 * 12700.0));
     var ops = new DrawingOps.Ops();
     DrawingOps.savedShapes(ops, shapes, 432, 252);
+    assertEquals(4, openPaths(ops));
+  }
+
+  @Test
+  public void smartArtDrawsConnectorsAndCycleArrowsOnScreen() {
+    // Three levels: Root > (A > A1, A2), B. Every parent joins its children with elbow lines.
+    var tree = DrawingOps.build(Drawing.of("smartArt").with("layout", "hierarchy").with("nodes", "Root\n\tA\n\t\tA1\n\t\tA2\n\tB"), 400, 300);
+    assertEquals(8, openPaths(tree)); // trunk, bar and two drops under Root and under A
+    var spokes = DrawingOps.build(Drawing.of("smartArt").with("layout", "radial").with("nodes", "Hub\n\tA\n\tB\nC"), 300, 300);
+    assertEquals(3, openPaths(spokes));
+    // Cycle: no ring, an arrow between each pair of circles (filled, rotated along the circle).
+    var cycle = DrawingOps.build(Drawing.of("smartArt").with("layout", "cycle").with("nodes", "One\nTwo\nThree\nFour"), 300, 300);
+    assertEquals(0, openPaths(cycle));
+    int arrows = 0, circles = 0;
+    for (var p : cycle.paths) if (p.closed() && p.points().length == 14) arrows++;
+    for (Object[] s : cycle.shapes) if ("ellipse".equals(s[0])) circles++;
+    assertEquals(4, arrows);
+    assertEquals(4, circles);
+  }
+
+  private static int openPaths(DrawingOps.Ops ops) {
     int open = 0;
     for (var p : ops.paths) if (!p.closed()) open++;
-    assertEquals(6, open);
+    return open;
   }
 
   private static int count(String s, String sub) {

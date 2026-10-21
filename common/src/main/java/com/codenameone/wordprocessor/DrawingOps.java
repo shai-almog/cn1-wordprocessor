@@ -688,33 +688,9 @@ public final class DrawingOps {
         if (i + 1 < n) ops.shape("rightArrow", bx + bw + 4, h / 2 - 5, gap - 8, 10, 0xa5a5a5, -1, 0, "");
       }
     } else if ("cycle".equals(layout)) {
-      float cx = w / 2, cy = h / 2, rad = Math.min(w, h) * .35f;
-      float bw = Math.min(w, h) * .3f, bh = bw * .6f;
-      ops.line(ellipse(cx, cy, rad, rad), 0xa5a5a5, 1.5f, 255);
-      // The ring behind the nodes is cached too, first so it stays under them.
-      ops.shape("ellipse", cx - rad, cy - rad, rad * 2, rad * 2, -1, 0xa5a5a5, -1, "");
-      for (int i = 0; i < n; i++) {
-        double a = -Math.PI / 2 + 2 * Math.PI * i / n;
-        float bx = cx + (float) Math.cos(a) * rad - bw / 2, by = cy + (float) Math.sin(a) * rad - bh / 2;
-        node(ops, label, top.get(i), kids.get(i), bx, by, bw, bh, smartColor(d, i));
-      }
+      cycle(ops, d, label, all, w, h);
     } else if ("hierarchy".equals(layout)) {
-      float bw0 = Math.min(w * .3f, 140), bh = Math.min(h / 3.2f, 50);
-      node(ops, label, top.get(0), Collections.<String>emptyList(), (w - bw0) / 2, 0, bw0, bh, smartColor(d, 0));
-      var second = new ArrayList<String>(kids.get(0));
-      for (int i = 1; i < n; i++) second.add(top.get(i));
-      int m = second.size();
-      if (m > 0) {
-        float gap = 10, bw = Math.min(bw0, (w - gap * (m - 1)) / m);
-        float total = bw * m + gap * (m - 1), sx = (w - total) / 2, by = h - bh;
-        ops.connector(w / 2, bh, w / 2, (bh + by) / 2, 0x7f7f7f, 1);
-        if (m > 1) ops.connector(sx + bw / 2, (bh + by) / 2, sx + total - bw / 2, (bh + by) / 2, 0x7f7f7f, 1);
-        for (int i = 0; i < m; i++) {
-          float bx = sx + i * (bw + gap);
-          ops.connector(bx + bw / 2, (bh + by) / 2, bx + bw / 2, by, 0x7f7f7f, 1);
-          node(ops, label, second.get(i), Collections.<String>emptyList(), bx, by, bw, bh, smartColor(d, i + 1));
-        }
-      }
+      hierarchy(ops, d, label, all, w, h);
     } else if ("pyramid".equals(layout)) {
       float lh = h / n;
       for (int i = 0; i < n; i++) {
@@ -727,23 +703,7 @@ public final class DrawingOps {
         layoutText(ops, label, top.get(i), w / 4, lh * i, w / 2, lh, 0xffffff, "center");
       }
     } else if ("radial".equals(layout)) {
-      // The first top-level node in the middle, the rest around it on spokes.
-      float cx = w / 2, cy = h / 2, s = Math.min(w, h), rad = s * .36f, r0 = s * .17f, r1 = s * .13f;
-      int m = n - 1;
-      for (int i = 0; i < m; i++) {
-        double a = -Math.PI / 2 + 2 * Math.PI * i / m;
-        ops.connector(cx, cy, cx + (float) Math.cos(a) * rad, cy + (float) Math.sin(a) * rad, 0xa5a5a5, 1);
-      }
-      ops.fill(ellipse(cx, cy, r0, r0), smartColor(d, 0), 0xffffff, 1);
-      ops.shape("ellipse", cx - r0, cy - r0, r0 * 2, r0 * 2, smartColor(d, 0), 0xffffff, 0xffffff, top.get(0));
-      layoutText(ops, label, top.get(0), cx - r0, cy - r0, r0 * 2, r0 * 2, 0xffffff, "center");
-      for (int i = 0; i < m; i++) {
-        double a = -Math.PI / 2 + 2 * Math.PI * i / m;
-        float x = cx + (float) Math.cos(a) * rad, y = cy + (float) Math.sin(a) * rad;
-        ops.fill(ellipse(x, y, r1, r1), smartColor(d, i + 1), 0xffffff, 1);
-        ops.shape("ellipse", x - r1, y - r1, r1 * 2, r1 * 2, smartColor(d, i + 1), 0xffffff, 0xffffff, top.get(i + 1));
-        layoutText(ops, label, top.get(i + 1), x - r1, y - r1, r1 * 2, r1 * 2, 0xffffff, "center");
-      }
+      radial(ops, d, label, all, w, h);
     } else if ("venn".equals(layout)) {
       // Overlapping translucent circles around the centre.
       float cx = w / 2, cy = h / 2, s = Math.min(w, h), off = n == 1 ? 0 : s * .17f, r = n == 1 ? s * .45f : s * .3f;
@@ -766,6 +726,172 @@ public final class DrawingOps {
     } else {
       float gap = 6, bh = (h - gap * (n - 1)) / n;
       for (int i = 0; i < n; i++) node(ops, label, top.get(i), kids.get(i), 0, i * (bh + gap), w, bh, smartColor(d, i));
+    }
+  }
+
+  // Wordcraft's SmartArt geometry (wordcraft_docx::smart_art): items as a level list, each item's
+  // parent the last item one level up; ellipse nodes with their text inset by 15%.
+
+  private static int[] parents(List<Object[]> all) {
+    int[] out = new int[all.size()];
+    int[] last = new int[10];
+    int depth = 0;
+    for (int i = 0; i < all.size(); i++) {
+      int l = (Integer) all.get(i)[0] - 1;
+      depth = Math.min(depth, l);
+      out[i] = l == 0 || depth == 0 ? -1 : last[depth - 1];
+      last[depth++] = i;
+    }
+    return out;
+  }
+
+  /** Item i's text, followed by its descendants as bulleted lines when withChildren. */
+  private static String itemText(List<Object[]> all, int i, boolean withChildren) {
+    var b = new StringBuilder((String) all.get(i)[1]);
+    if (withChildren) {
+      int level = (Integer) all.get(i)[0];
+      for (int j = i + 1; j < all.size() && (Integer) all.get(j)[0] > level; j++)
+        b.append("\n\u2022 ").append((String) all.get(j)[1]);
+    }
+    return b.toString();
+  }
+
+  /** A connector in the accent darkened to 60% (Wordcraft's lumMod 60000), 1.5pt. */
+  private static void accentLine(Ops ops, Drawing d, int accent, float x0, float y0, float x1, float y1) {
+    int c = smartColor(d, accent);
+    int dark = ((((c >> 16) & 255) * 6 / 10) << 16) | ((((c >> 8) & 255) * 6 / 10) << 8) | ((c & 255) * 6 / 10);
+    ops.connector(x0, y0, x1, y1, dark, 1.5f);
+  }
+
+  private static void ellipseNode(Ops ops, Drawing label, String text, float cx, float cy, float dia, int color) {
+    float r = dia / 2;
+    ops.fill(ellipse(cx, cy, r, r), color, 0xffffff, 1);
+    ops.shape("ellipse", cx - r, cy - r, dia, dia, color, 0xffffff, 0xffffff, text);
+    layoutText(ops, label, text, cx - r + dia * .15f, cy - r + dia * .15f, dia * .7f, dia * .7f, 0xffffff, "center");
+  }
+
+  /** Circles round a circle, clockwise from the top, with an arrow between each pair. */
+  private static void cycle(Ops ops, Drawing d, Drawing label, List<Object[]> all, float w, float h) {
+    var tops = new ArrayList<Integer>();
+    for (int i = 0; i < all.size(); i++) if ((Integer) all.get(i)[0] == 1 || tops.isEmpty()) tops.add(i);
+    int n = Math.max(1, tops.size());
+    float m = Math.min(w, h), cx = w / 2, cy = h / 2, step = (float) Math.sin(Math.PI / n), dia = m * .32f;
+    for (int k = 0; k < 4; k++) {
+      float r = (m - dia) / 2;
+      dia = n == 1 ? m * .5f : Math.min(m * .32f, 2 * r * step * .62f);
+    }
+    float r = (m - dia) / 2;
+    if (n > 1) {
+      float len = (2 * r * step - dia) * .6f;
+      if (len > 2) {
+        float thick = Math.min(len * .6f, dia * .25f);
+        float[] arrow = geometry("rightArrow", len, thick);
+        for (int k = 0; k < n; k++) {
+          double mid = Math.toRadians(-90 + 360.0 * k / n + 180.0 / n);
+          float x = cx + r * (float) Math.cos(mid), y = cy + r * (float) Math.sin(mid);
+          // Rotated a quarter turn past the angle so it points clockwise along the circle.
+          double rot = mid + Math.PI / 2;
+          float cos = (float) Math.cos(rot), sin = (float) Math.sin(rot);
+          float[] p = new float[arrow.length];
+          for (int i = 0; i < arrow.length; i += 2) {
+            float ax = arrow[i] - len / 2, ay = arrow[i + 1] - thick / 2;
+            p[i] = x + ax * cos - ay * sin;
+            p[i + 1] = y + ax * sin + ay * cos;
+          }
+          int c = smartColor(d, k);
+          ops.fill(p, ((((c >> 16) & 255) * 6 / 10) << 16) | ((((c >> 8) & 255) * 6 / 10) << 8) | ((c & 255) * 6 / 10), -1, 0);
+        }
+      }
+    }
+    for (int k = 0; k < tops.size(); k++) {
+      double a = Math.toRadians(-90 + 360.0 * k / n);
+      float x = n == 1 ? cx : cx + r * (float) Math.cos(a), y = n == 1 ? cy : cy + r * (float) Math.sin(a);
+      ellipseNode(ops, label, itemText(all, tops.get(k), true), x, y, dia, smartColor(d, k));
+    }
+  }
+
+  /** A tree, a row per level: each item centred over the items under it, joined by elbow lines. */
+  private static void hierarchy(Ops ops, Drawing d, Drawing label, List<Object[]> all, float w, float h) {
+    int n = all.size();
+    int[] parent = parents(all);
+    int[] leaves = new int[n];
+    java.util.Arrays.fill(leaves, 1);
+    for (int i = n - 1; i >= 0; i--) {
+      int sum = 0;
+      for (int j = i + 1; j < n; j++) if (parent[j] == i) sum += leaves[j];
+      if (sum > 0) leaves[i] = sum;
+    }
+    int depth = 1, total = 0;
+    for (int i = 0; i < n; i++) {
+      depth = Math.max(depth, (Integer) all.get(i)[0]);
+      if (parent[i] < 0) total += leaves[i];
+    }
+    float unit = w / Math.max(1, total), rh = h / depth;
+    float nw = Math.min(unit * .88f, rh * .62f * 1.8f), nh = Math.min(rh * .62f, nw * .8f);
+    float[] start = new float[n];
+    float at = 0;
+    for (int i = 0; i < n; i++)
+      if (parent[i] < 0) {
+        start[i] = at;
+        at += leaves[i] * unit;
+      }
+    for (int i = 0; i < n; i++) {
+      float s = start[i];
+      for (int k = i + 1; k < n; k++)
+        if (parent[k] == i) {
+          start[k] = s;
+          s += leaves[k] * unit;
+        }
+    }
+    float[] cxs = new float[n], tops = new float[n];
+    for (int i = 0; i < n; i++) {
+      cxs[i] = start[i] + leaves[i] * unit / 2;
+      tops[i] = ((Integer) all.get(i)[0] - 1) * rh + (rh - nh) / 2;
+    }
+    for (int i = 0; i < n; i++) {
+      int first = -1;
+      float lo = cxs[i], hi = cxs[i];
+      for (int k = i + 1; k < n; k++)
+        if (parent[k] == i) {
+          if (first < 0) first = k;
+          lo = Math.min(lo, cxs[k]);
+          hi = Math.max(hi, cxs[k]);
+        }
+      if (first < 0) continue;
+      float pb = tops[i] + nh, ct = tops[first], mid = (pb + ct) / 2;
+      accentLine(ops, d, i, cxs[i], pb, cxs[i], mid);
+      if (hi - lo > .5f) accentLine(ops, d, i, lo, mid, hi, mid);
+      for (int k = i + 1; k < n; k++) if (parent[k] == i) accentLine(ops, d, i, cxs[k], mid, cxs[k], ct);
+    }
+    for (int i = 0; i < n; i++)
+      node(ops, label, (String) all.get(i)[1], Collections.<String>emptyList(), cxs[i] - nw / 2, tops[i], nw, nh,
+          smartColor(d, i));
+  }
+
+  /** The first item in the middle; its children and later top-level items around it on spokes. */
+  private static void radial(Ops ops, Drawing d, Drawing label, List<Object[]> all, float w, float h) {
+    int[] parent = parents(all);
+    var spokes = new ArrayList<Integer>();
+    for (int i = 1; i < all.size(); i++) if (parent[i] == 0 || parent[i] < 0) spokes.add(i);
+    int n = spokes.size();
+    float m = Math.min(w, h), cx = w / 2, cy = h / 2;
+    if (n == 0) {
+      ellipseNode(ops, label, itemText(all, 0, false), cx, cy, m * .5f, smartColor(d, 0));
+      return;
+    }
+    float step = n == 1 ? 1 : (float) Math.sin(Math.PI / n), ds = m * .24f;
+    for (int k = 0; k < 4; k++) ds = Math.min(m * .24f, 2 * ((m - ds) / 2) * step * .85f);
+    float r = (m - ds) / 2;
+    float dc = Math.max(m * .05f, Math.min(m * .36f, 2 * (r - ds / 2 - m * .03f)));
+    for (int k = 0; k < n; k++) {
+      double a = Math.toRadians(-90 + 360.0 * k / n);
+      accentLine(ops, d, 0, cx, cy, cx + r * (float) Math.cos(a), cy + r * (float) Math.sin(a));
+    }
+    ellipseNode(ops, label, itemText(all, 0, false), cx, cy, dc, smartColor(d, 0));
+    for (int k = 0; k < n; k++) {
+      double a = Math.toRadians(-90 + 360.0 * k / n);
+      ellipseNode(ops, label, itemText(all, spokes.get(k), true), cx + r * (float) Math.cos(a),
+          cy + r * (float) Math.sin(a), ds, smartColor(d, k + 1));
     }
   }
 
