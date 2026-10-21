@@ -242,6 +242,8 @@ public class WordProcessor {
     ribbon.addTab("Help", help());
     ribbon.addTab("Table Layout", tableRibbon());
     ribbon.setTabVisible("Table Layout", false);
+    ribbon.addTab("Equation", equationRibbon());
+    ribbon.setTabVisible("Equation", false);
     customTab = OfficeTheme.row();
     ribbon.addTab("Custom", customTab);
     applyRibbonOptions();
@@ -4044,7 +4046,7 @@ public class WordProcessor {
   private void applyRibbonOptions() {
     var hidden = optionList("ribbon.hidden");
     for (String t : ribbon.titles())
-      if (!"Table Layout".equals(t) && !"Custom".equals(t)) ribbon.setTabVisible(t, !hidden.contains(t));
+      if (!"Table Layout".equals(t) && !"Equation".equals(t) && !"Custom".equals(t)) ribbon.setTabVisible(t, !hidden.contains(t));
     customTab.removeAll();
     var custom = optionList("ribbon.custom");
     for (final String id : custom) {
@@ -5538,7 +5540,7 @@ public class WordProcessor {
         pane.add(settingsHeading("Show these ribbon tabs"));
         var hidden = new ArrayList<String>(Arrays.asList(TextUtil.split(AppOptions.get("ribbon.hidden"), ',')));
         for (String title : ribbon.titles()) {
-          if ("Table Layout".equals(title) || "Custom".equals(title)) continue;
+          if ("Table Layout".equals(title) || "Equation".equals(title) || "Custom".equals(title)) continue;
           var box = new CheckBox(title);
           box.setSelected(!hidden.contains(title));
           box.addActionListener(e -> {
@@ -6551,6 +6553,7 @@ public class WordProcessor {
   private void updateStatus() {
     if (menus != null) menus.sync();
     ribbon.setTabVisible("Table Layout", session.inCell());
+    ribbon.setTabVisible("Equation", editor.equationEditing() != null || EquationEditing.at(session) != null);
     refreshRevisions();
     if (stylesPane != null
         && stylesPane.getParent() != null
@@ -6695,6 +6698,74 @@ public class WordProcessor {
 
   private void tableCommand(String command) {
     run("table." + command, Collections.<String, Object>emptyMap());
+  }
+
+  /**
+   * The Equation contextual tab (shown while an equation is selected or edited): in-place editing
+   * and Wordcraft's Structures galleries and Symbols sets.
+   */
+  private Container equationRibbon() {
+    var structures = new ArrayList<Component>();
+    for (int i = 0; i < EquationGallery.STRUCTURES.length; i++) {
+      final String[] row = EquationGallery.STRUCTURES[i];
+      if (!"G".equals(row[0])) continue;
+      final int start = i;
+      structures.add(button(row[2], () -> equationGallery(start)));
+    }
+    var symbols = new ArrayList<Component>();
+    for (final String[] set : EquationGallery.SYMBOLS) symbols.add(button(set[0], () -> equationSymbols(set)));
+    return OfficeTheme.groups(
+        OfficeTheme.group(
+            "Tools",
+            BoxLayout.encloseY(
+                button("Edit in Place", () -> {
+                  if (!editor.editEquation()) Dialog.show("Equation", "Select an equation first", "OK", null);
+                  editor.requestFocus();
+                }),
+                button("Done", () -> editor.endEquation(false)))),
+        OfficeTheme.group("Structures", BoxLayout.encloseY(OfficeTheme.row(structures.subList(0, 6).toArray(new Component[0])),
+            OfficeTheme.row(structures.subList(6, structures.size()).toArray(new Component[0])))),
+        OfficeTheme.group("Symbols", BoxLayout.encloseY(OfficeTheme.row(symbols.subList(0, 4).toArray(new Component[0])),
+            OfficeTheme.row(symbols.subList(4, symbols.size()).toArray(new Component[0])))));
+  }
+
+  /** One Structures gallery (from STRUCTURES row {@code start}) as a picker dialog. */
+  private void equationGallery(int start) {
+    var body = BoxLayout.encloseY();
+    body.setScrollableY(true);
+    var dialog = new Dialog(EquationGallery.STRUCTURES[start][2], new BorderLayout());
+    for (int i = start + 1; i < EquationGallery.STRUCTURES.length && !"G".equals(EquationGallery.STRUCTURES[i][0]); i++) {
+      final String[] row = EquationGallery.STRUCTURES[i];
+      if ("S".equals(row[0])) body.add(new Label(row[1]));
+      else body.add(button(row[2] + "   " + row[3].replace("\u2b1a", "\u25a1"), () -> {
+        dialog.dispose();
+        editor.equationTemplate(row[3]);
+      }));
+    }
+    dialog.add(BorderLayout.CENTER, body);
+    dialog.add(BorderLayout.SOUTH, button("Close", dialog::dispose));
+    dialog.show();
+  }
+
+  /** One Symbols set as a grid of character buttons that type into the equation. */
+  private void equationSymbols(String[] set) {
+    var dialog = new Dialog(set[0], new BorderLayout());
+    var grid = new Container(new com.codename1.ui.layouts.GridLayout(10));
+    grid.setScrollableY(true);
+    String chars = set[1];
+    for (int i = 0; i < chars.length(); i++) {
+      boolean pair = i + 1 < chars.length() && chars.charAt(i) >= '\ud800' && chars.charAt(i) <= '\udbff';
+      final String ch = chars.substring(i, pair ? i + 2 : i + 1);
+      if (pair) i++;
+      grid.add(button(ch, () -> {
+        dialog.dispose();
+        if (editor.equationEditing() == null && !editor.editEquation()) return;
+        editor.commitText(ch);
+      }));
+    }
+    dialog.add(BorderLayout.CENTER, grid);
+    dialog.add(BorderLayout.SOUTH, button("Close", dialog::dispose));
+    dialog.show();
   }
 
   private Container tableRibbon() {

@@ -71,6 +71,7 @@ public final class Commands {
     new TemplateExtension().register(this);
     new MailingsCommands().register(this);
     new TableLayoutCommands().register(this);
+    new EquationCommands().register(this);
     new ComparisonCommands().register(this);
     new CatalogCommands().register(this);
     new CatalogNavigationCommands().register(this);

@@ -60,8 +60,81 @@ public final class EditorSurface extends Container
     return image;
   }
 
+  // ---------------------------------------------------------------- in-place equation editing
+
+  /** The equation being edited in place, or null. */
+  private EquationEditing equation;
+  /** Paragraph offset of the inline equation being painted, or -1. */
+  private int paintingInline = -1;
+
+  /** Starts in-place editing of the equation at the selection; false when there is none. */
+  public boolean editEquation() {
+    if (readOnly()) return false;
+    equation = EquationEditing.at(session);
+    repaint();
+    return equation != null;
+  }
+
+  /** The in-place equation edit in progress, or null. */
+  EquationEditing equationEditing() {
+    return equation;
+  }
+
+  /** Ends in-place equation editing; an inline equation leaves the caret beside it. */
+  public void endEquation(boolean before) {
+    if (equation == null) return;
+    var e = equation;
+    equation = null;
+    e.leave(before);
+    changed.run();
+    repaint();
+  }
+
+  /** Inserts a Structures gallery template in the equation being edited. */
+  public void equationTemplate(String linear) {
+    if (equation == null && !editEquation()) return;
+    equation.insertTemplate(linear);
+    didEdit();
+  }
+
+  /** Keys while an equation is edited in place; true when consumed. */
+  private boolean equationKey(int command, int modifiers) {
+    boolean shift = (modifiers & MOD_SHIFT) != 0;
+    String dir = command == KEY_LEFT ? "left" : command == KEY_RIGHT ? "right" : command == KEY_UP ? "up"
+        : command == KEY_DOWN ? "down" : command == KEY_HOME ? "home" : command == KEY_END ? "end"
+        : command == KEY_TAB ? (shift ? "prev" : "next") : null;
+    if (dir != null) {
+      if (!equation.move(dir)) endEquation("left".equals(dir));
+    } else if (command == KEY_BACKSPACE) equation.backspace();
+    else if (command == KEY_DELETE) equation.delete();
+    else if (command == KEY_ESCAPE) endEquation(false);
+    else return false;
+    didEdit();
+    return true;
+  }
+
+  private boolean editingThisEquation(LayoutEngine.PlacedPicture pic) {
+    return equation != null && pic.block() == equation.block
+        && (equation.field < 0 ? paintingInline < 0 : paintingInline == equation.field);
+  }
+
+  /** The in-equation caret over an equation drawing painted at (px, py). */
+  private void paintEquationCaret(Graphics g, LayoutEngine.PlacedPicture pic, int px, int py, float scale) {
+    float[] c = equation.caret(pic.picture().drawing, pic.width(), pic.height(), fontMetrics);
+    g.setColor(0x1f4e79);
+    g.fillRect(px + Math.round(c[0] * scale), py + Math.round(c[1] * scale), Math.max(1, Math.round(scale)),
+        Math.max(2, Math.round(c[2] * scale)));
+  }
+
   /** Paints a vector drawing from the primitives shared with PDF and HTML export. */
   private void paintDrawing(Graphics g, LayoutEngine.PlacedPicture pic, int px, int py, float scale) {
+    if (editingThisEquation(pic)) {
+      paintDrawingOnly(g, pic, px, py, scale);
+      paintEquationCaret(g, pic, px, py, scale);
+    } else paintDrawingOnly(g, pic, px, py, scale);
+  }
+
+  private void paintDrawingOnly(Graphics g, LayoutEngine.PlacedPicture pic, int px, int py, float scale) {
     DrawingOps.Ops ops = DrawingOps.build(pic.picture().drawing, pic.width(), pic.height(), fontMetrics);
     boolean shapes = g.isShapeSupported();
     boolean aa = g.isAntiAliased();
@@ -1494,9 +1567,12 @@ public final class EditorSurface extends Container
           drawCharacters(g, span, f, scale, sx, sy);
           if (InlineField.OBJECT.equals(span.text) && span.displayText.isEmpty() && textLine(line)) {
             var field = lineParagraph(line).text.fieldAt(span.start);
-            if (Equation.inline(field))
+            if (Equation.inline(field)) {
+              paintingInline = span.start;
               paintDrawing(g, Equation.placed(field, span.glyphStyle, line.block, 0, 0, 0, span.width),
                   sx, sy + f.getAscent(), scale);
+              paintingInline = -1;
+            }
           }
           if (span.style.hasUnderline()) {
             var path = new GeneralPath();
@@ -1871,6 +1947,7 @@ public final class EditorSurface extends Container
 
   @Override
   public void pointerPressed(int x, int y) {
+    if (equation != null) endEquation(false);
     if (ink != null) {
       inkPress(x, y);
       return;
@@ -2473,6 +2550,13 @@ public final class EditorSurface extends Container
   @Override
   public void commitText(String text) {
     if (readOnly()) return;
+    if (equation != null) {
+      // In-place equation editing: typing goes into the equation's current slot.
+      if (!"\n".equals(text)) equation.type(text);
+      else if (!equation.enter()) endEquation(false);
+      didEdit();
+      return;
+    }
     if (session.isComposing()) {
       session.compose(text, text.length());
       session.finishComposition();
@@ -2602,6 +2686,10 @@ public final class EditorSurface extends Container
     }
     session.breakTypingGroup();
     finishComposing();
+    if (equation != null) {
+      if (equationKey(command, modifiers)) return;
+      endEquation(false);
+    }
     var x = session.selection();
     var p = session.editingDocument().paragraph(x.block);
     boolean extend = (modifiers & MOD_SHIFT) != 0;

@@ -203,8 +203,8 @@ public final class Equation {
   // ============================================================================ linear format
 
   private static final String FUNCS =
-      " sin cos tan cot sec csc sinh cosh tanh arcsin arccos arctan log ln exp lim max min det gcd lg ";
-  private static final String NARY = "\u2211\u220f\u2210\u222b\u222c\u222d\u222e\u222f\u2230\u22c3\u22c2\u22c1\u22c0";
+      " sin cos tan cot sec csc sinh cosh tanh csch sech coth arcsin arccos arctan log ln exp lim max min det gcd lg ";
+  private static final String NARY = "\u2211\u220f\u2210\u222b\u222c\u222d\u222e\u222f\u2230\u22c3\u22c2\u22c1\u22c0\u2a00\u2a01\u2a02\u2a04\u2a06";
   private static final String[][] WORDS = {
     {"sum", "\u2211"}, {"prod", "\u220f"}, {"coprod", "\u2210"}, {"int", "\u222b"},
     {"iint", "\u222c"}, {"iiint", "\u222d"}, {"oint", "\u222e"}, {"bigcup", "\u22c3"},
@@ -268,10 +268,10 @@ public final class Equation {
       Node a = scripted(stop);
       while (true) {
         char c = peek();
-        if (c != '/' && c != '\u00a6' && c != '\u2298') return a;
+        if (c != '/' && c != '\u00a6' && c != '\u2298' && c != '\u2044' && c != '\u2215') return a;
         i++;
         Node b = scripted(stop);
-        a = node("f", c == '/' ? "bar" : c == '\u00a6' ? "noBar" : "lin", null, null, strip(a), strip(b == null ? row() : b));
+        a = node("f", c == '/' ? "bar" : c == '\u00a6' ? "noBar" : c == '\u2044' ? "skw" : "lin", null, null, strip(a), strip(b == null ? row() : b));
       }
     }
 
@@ -287,7 +287,7 @@ public final class Equation {
         depth--;
         return null;
       }
-      while (i < s.length() && s.charAt(i) >= '\u0300' && s.charAt(i) <= '\u036f' || i < s.length() && s.charAt(i) == '\u20d7')
+      while (i < s.length() && s.charAt(i) >= '\u0300' && s.charAt(i) <= '\u036f' || i < s.length() && s.charAt(i) >= '\u20d0' && s.charAt(i) <= '\u20ef')
         base = node("acc", String.valueOf(s.charAt(i++)), null, null, strip(base));
       Node sub = null, sup = null;
       while (true) {
@@ -363,6 +363,16 @@ public final class Equation {
         if (c == '[') return group('[', ']');
         if (c == '{') return group('{', '}');
         if (c == '\u27e8') return group('\u27e8', '\u27e9');
+        if (c == '\u3016') {
+          // Word's invisible grouping brackets around an n-ary or function argument.
+          i++;
+          Node r = parseRow("\u3017");
+          if (peek() == '\u3017') i++;
+          return r;
+        }
+        if (c == '\u230a') return group('\u230a', '\u230b');
+        if (c == '\u2308') return group('\u2308', '\u2309');
+        if (c == '\u27e6') return group('\u27e6', '\u27e7');
         if (c == '\u221a') {
           i++;
           return radical(operand(stop));
@@ -458,7 +468,8 @@ public final class Equation {
   private static void op(Node n, StringBuilder b, int depth) {
     boolean atom = "run".equals(n.kind) && simple(n.a)
         || "row".equals(n.kind) && n.args.size() == 1 && "run".equals(n.args.get(0).kind) && simple(n.args.get(0).a)
-        || "d".equals(n.kind) || "m".equals(n.kind);
+        || "d".equals(n.kind) || "m".equals(n.kind)
+        || "row".equals(n.kind) && n.args.size() == 1 && ("d".equals(n.args.get(0).kind) && "(".equals(n.args.get(0).a));
     if (atom) linear(n, b, depth);
     else {
       b.append('(');
@@ -467,8 +478,24 @@ public final class Equation {
     }
   }
 
+  /** An n-ary or function argument: several items go in invisible grouping brackets. */
+  private static void body(Node n, StringBuilder b, int depth, boolean func) {
+    boolean row = "row".equals(n.kind) && !n.args.isEmpty();
+    boolean paren = row && n.args.size() == 1 && "d".equals(n.args.get(0).kind) && "(".equals(n.args.get(0).a);
+    boolean atom = row && n.args.size() == 1 && "run".equals(n.args.get(0).kind) && simple(n.args.get(0).a);
+    // An n-ary operand drops one level of parentheses when parsed and a function argument keeps
+    // them, so Word's invisible grouping brackets carry what plain parentheses cannot.
+    if (func ? row && !atom && !paren : paren) {
+      b.append('\u3016');
+      linear(n, b, depth);
+      b.append('\u3017');
+    } else op(n, b, depth);
+  }
+
   private static boolean simple(String t) {
     if (t.isEmpty()) return false;
+    // The empty-argument placeholder needs no parentheses.
+    if ("\u2b1a".equals(t)) return true;
     boolean digits = true, letters = true;
     for (int i = 0; i < t.length(); i++) {
       char c = t.charAt(i);
@@ -491,11 +518,26 @@ public final class Equation {
         break;
       }
       case "row":
-        for (Node c : n.args) linear(c, b, d);
+        for (int i = 0; i < n.args.size(); i++) {
+          Node c = n.args.get(i);
+          // A letter or digit right after a structure would join its last argument when parsed
+          // back (x^k a becomes x^(ka)); a space keeps them apart and is dropped on parsing.
+          if (i == 0 || "run".equals(n.args.get(i - 1).kind) || "d".equals(n.args.get(i - 1).kind) || b.length() == 0) {
+            linear(c, b, d);
+            continue;
+          }
+          var piece = new StringBuilder();
+          linear(c, piece, d);
+          char last = b.charAt(b.length() - 1), first = piece.length() > 0 ? piece.charAt(0) : ' ';
+          boolean letters = Unicode.letter(last) && Unicode.letter(first);
+          boolean digits = last >= '0' && last <= '9' && first >= '0' && first <= '9';
+          if (letters || digits) b.append(' ');
+          b.append(piece);
+        }
         break;
       case "f":
         op(n.arg(0), b, d);
-        b.append("noBar".equals(n.a) ? "\u00a6" : "lin".equals(n.a) ? "\u2298" : "/");
+        b.append("noBar".equals(n.a) ? "\u00a6" : "lin".equals(n.a) ? "\u2298" : "skw".equals(n.a) ? "\u2044" : "/");
         op(n.arg(1), b, d);
         break;
       case "sSup": case "sSub": case "sSubSup":
@@ -538,7 +580,7 @@ public final class Equation {
           op(n.arg(2), b, d);
         }
         b.append('\u2592');
-        op(n.arg(0), b, d);
+        body(n.arg(0), b, d, false);
         break;
       case "d":
         b.append(n.a);
@@ -573,7 +615,7 @@ public final class Equation {
       case "func":
         linear(n.arg(1), b, d);
         b.append('\u2061');
-        op(n.arg(0), b, d);
+        body(n.arg(0), b, d, true);
         break;
       case "limLow": case "limUpp":
         op(n.arg(0), b, d);
