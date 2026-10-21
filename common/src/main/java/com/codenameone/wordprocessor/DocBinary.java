@@ -115,6 +115,10 @@ final class DocBinary {
     boolean keep, keepNext, pageBreak, inTable, ttp, innerTtp, borders;
     int outline = -1, ilvl, ilfo, itap;
     int[] grid, merge;
+    /** Per-cell tcPr children (tcBorders from the TC80s, shd from the shading sprms). */
+    String[] cellBorders, cellShd;
+    /** The paragraph mark's own tracked insertion or deletion (an empty w:ins/w:del element). */
+    String markRev;
 
     String xml(int lists) {
       var s = new StringBuilder();
@@ -143,6 +147,7 @@ final class DocBinary {
       }
       if (jc != null) s.append("<w:jc w:val=\"").append(jc).append("\"/>");
       if (outline >= 0 && outline < 9) s.append("<w:outlineLvl w:val=\"").append(outline).append("\"/>");
+      if (markRev != null) s.append("<w:rPr>").append(markRev).append("</w:rPr>");
       return s.toString();
     }
   }
@@ -153,6 +158,7 @@ final class DocBinary {
     boolean inTable, cellEnd, rowEnd, borders;
     int depth;
     int[] grid, merge;
+    String[] cellBorders, cellShd;
 
     String xml() {
       String props = sect == null ? pPr : pPr + sect;
@@ -799,17 +805,38 @@ final class DocBinary {
         for (int k = 0; k < count; k++)
           p.grid[k] = Math.max(1, s16(b, a + 3 + (k + 1) * 2) - s16(b, a + 3 + k * 2));
         int tc = a + 3 + (count + 1) * 2;
-        for (int k = 0; k < count && tc + k * 20 + 20 <= a + n; k++)
+        p.cellBorders = new String[count];
+        for (int k = 0; k < count && tc + k * 20 + 20 <= a + n; k++) {
+          var cb = new StringBuilder();
           for (int e = 0; e < 4; e++) {
             long brc = u32(b, tc + k * 20 + 4 + e * 4);
             if (brc != 0 && brc != 0xFFFFFFFFL) p.borders = true;
+            // TC80 rgbrc: top, left, bottom, right Brc80s (nil = 0xFFFFFFFF, none = 0).
+            if (brc != 0xFFFFFFFFL) cb.append(brc80(new String[] {"top", "left", "bottom", "right"}[e], brc));
           }
+          if (cb.length() > 0) p.cellBorders[k] = "<w:tcBorders>" + cb + "</w:tcBorders>";
+        }
         // TC80 flags: fFirstMerged, fMerged, fVertMerge (0x20), fVertRestart (0x40)
         p.merge = new int[64];
         for (int k = 0; k < count && tc + k * 20 + 2 <= a + n; k++) {
           int g = u16(b, tc + k * 20);
           p.merge[k] = (g & 3) | ((g & 0x20) != 0 ? 4 : 0) | ((g & 0x40) != 0 ? 8 : 0);
         }
+        break;
+      }
+      case 0xD609:
+        // sprmTDefTableShd80: one Shd80 per cell, as Wordcraft's T_DEF_TABLE_SHD_80.
+        for (int k = 0; k < 63 && 1 + k * 2 + 2 <= n; k++) cellShd(p, k, shd80(u16(b, a + 1 + k * 2)));
+        break;
+      case 0xD612:
+        // sprmTDefTableShd: one 10-byte Shd per cell.
+        for (int k = 0; k < 63 && 1 + k * 10 + 10 <= n; k++) cellShd(p, k, shd(b, a + 1 + k * 10));
+        break;
+      case 0xD62D: {
+        // sprmTSetShd: cb, itcFirst, itcLim, Shd, as Wordcraft's T_SET_SHD.
+        if (n < 13) break;
+        String fill = shd(b, a + 3);
+        for (int k = u8(b, a + 1); k < Math.min(63, u8(b, a + 2)); k++) cellShd(p, k, fill);
         break;
       }
       case 0x5624: {
@@ -848,6 +875,40 @@ final class DocBinary {
     }
   }
 
+  private static void cellShd(PPr p, int k, String fill) {
+    if (fill == null) return;
+    if (p.cellShd == null) p.cellShd = new String[63];
+    p.cellShd[k] = "<w:shd w:val=\"clear\" w:color=\"auto\" w:fill=\"" + fill + "\"/>";
+  }
+
+  /** A Shd80's fill (icoFore for solid, else icoBack), as Wordcraft's shd80_rgb; null when none. */
+  private static String shd80(int v) {
+    int fore = v & 0x1F, back = v >> 5 & 0x1F, ipat = v >> 10;
+    if (ipat == 0 || (fore == 0x1F && back == 0x1F)) return null;
+    int k = ipat == 1 ? fore : back;
+    return k > 0 && k < ICO.length ? ICO[k] : null;
+  }
+
+  /** A 10-byte Shd's fill (cvFore for solid, else cvBack), as Wordcraft's shd_rgb; null when none. */
+  private static String shd(byte[] b, int at) {
+    int ipat = u16(b, at + 8);
+    if (ipat == 0 || ipat == 0xFFFF) return null;
+    int cv = ipat == 1 ? at : at + 4;
+    if (u8(b, cv + 3) == 0xFF) return null;
+    return hex(u8(b, cv), u8(b, cv + 1), u8(b, cv + 2));
+  }
+
+  /** One Brc80 as a tcBorders side: width in eighths of a point, brcType, ico colour. */
+  private static String brc80(String side, long brc) {
+    int w = (int) (brc & 255), type = (int) (brc >> 8 & 255), ico = (int) (brc >> 16 & 255);
+    if (type == 0 || w == 0)
+      return "<w:" + side + " w:val=\"nil\"/>";
+    String val = type == 3 ? "double" : type == 6 ? "dotted" : type == 7 || type == 22 ? "dashed" : type == 5 ? "thick" : "single";
+    String color = ico > 0 && ico < ICO.length ? ICO[ico] : "auto";
+    return "<w:" + side + " w:val=\"" + val + "\" w:sz=\"" + Math.max(2, Math.min(96, w)) + "\" w:space=\"0\" w:color=\""
+        + color + "\"/>";
+  }
+
   private static int fromPrm0(int isprm) {
     switch (isprm) {
       case 0x05: return 0x2461;
@@ -883,6 +944,17 @@ final class DocBinary {
     s = revision(c) + c.xml();
     rprCache.put(key, s);
     return s;
+  }
+
+  /** The paragraph mark's tracked insertion/deletion as an empty w:ins/w:del, or null. */
+  private String markRevision(long cp) {
+    int[] r = chpx(fcOf(cp));
+    Chr c = new Chr();
+    if (r != null) sprms(word, r[0], r[1], (op, b, a, n) -> applyChr(c, op, b, a));
+    applyPrm(piece(cp), c, null);
+    String w = revision(c);
+    if (w.isEmpty()) return null;
+    return w.substring(0, 6) + " w:id=\"" + ++revIds + "\"" + w.substring(6, w.length() - 2) + "/>";
   }
 
   // ---- fonts and styles ----
@@ -1390,6 +1462,9 @@ final class DocBinary {
         }
         para.grid = p.grid;
         para.merge = p.merge;
+        para.cellBorders = p.cellBorders;
+        para.cellShd = p.cellShd;
+        p.markRev = markRevision(cp);
         para.pPr = p.xml(lfoCount);
         out.add(new Ended(para, cp + 1));
         para = new Para();
@@ -1507,7 +1582,17 @@ final class DocBinary {
       if (own && p.rowEnd) {
         if (!cell.isEmpty()) cells.add(content(cell, level));
         cell.clear();
-        rows.append(row(cells, p.grid, p.merge));
+        if (p.runs.length() > 0) {
+          // Bookmark and comment boundaries on the row-end mark close in the row's last cell.
+          int last = cells.size() - 1;
+          String c = last < 0 ? "" : cells.get(last);
+          int at = c.lastIndexOf("</w:p>");
+          if (at < 0 || c.endsWith("</w:tbl>")) c = c + "<w:p>" + p.runs + "</w:p>";
+          else c = c.substring(0, at) + p.runs + c.substring(at);
+          if (last < 0) cells.add(c);
+          else cells.set(last, c);
+        }
+        rows.append(row(cells, p.grid, p.merge, p.cellBorders, p.cellShd));
         if (grid == null || (p.grid != null && p.grid.length > grid.length)) grid = p.grid;
         borders |= p.borders;
         cells.clear();
@@ -1520,7 +1605,7 @@ final class DocBinary {
       }
     }
     if (!cell.isEmpty()) cells.add(content(cell, level));
-    if (!cells.isEmpty()) rows.append(row(cells, grid, null));
+    if (!cells.isEmpty()) rows.append(row(cells, grid, null, null, null));
     if (rows.length() == 0) return "";
     var s = new StringBuilder("<w:tbl><w:tblPr><w:tblW w:w=\"0\" w:type=\"auto\"/>");
     if (borders) {
@@ -1538,7 +1623,7 @@ final class DocBinary {
    * One row. merge holds per-cell flags from the TAP: 1 first of a horizontal merge, 2 merged into
    * the previous cell, 4 vertically merged, 8 vertical merge restart.
    */
-  private static String row(List<String> cells, int[] grid, int[] merge) {
+  private static String row(List<String> cells, int[] grid, int[] merge, String[] borders, String[] shd) {
     var s = new StringBuilder("<w:tr>");
     if (cells.isEmpty()) s.append("<w:tc><w:p/></w:tc>");
     for (int i = 0; i < cells.size(); ) {
@@ -1553,11 +1638,14 @@ final class DocBinary {
         span++;
       }
       s.append("<w:tc>");
-      if (w > 0 || span > 1 || (m & 4) != 0) {
+      String bd = borders != null && i < borders.length ? borders[i] : null, sh = shd != null && i < shd.length ? shd[i] : null;
+      if (w > 0 || span > 1 || (m & 4) != 0 || bd != null || sh != null) {
         s.append("<w:tcPr>");
         if (w > 0) s.append("<w:tcW w:w=\"").append(w).append("\" w:type=\"dxa\"/>");
         if (span > 1) s.append("<w:gridSpan w:val=\"").append(span).append("\"/>");
         if ((m & 4) != 0) s.append((m & 8) != 0 ? "<w:vMerge w:val=\"restart\"/>" : "<w:vMerge/>");
+        if (bd != null) s.append(bd);
+        if (sh != null) s.append(sh);
         s.append("</w:tcPr>");
       }
       if (body.isEmpty() || body.endsWith("</w:tbl>")) body += "<w:p/>";
@@ -1906,7 +1994,8 @@ final class DocBinary {
    */
   private long[] spContainer(long body, long len, int depth) {
     // 17: rotation (16.16 degrees), 18: FSP flags (fFlipH 0x40, fFlipV 0x80).
-    long[] sh = {-1, 0, 0, -1, -1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    // 19: line width in EMUs (OPT 0x01CB lineWidth; -1 = Word's 0.75 pt default).
+    long[] sh = {-1, 0, 0, -1, -1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1};
     art(body, body + len, depth + 1, sh);
     if (sh[0] >= 0 && shapes.size() < MAX_PARTS * 4) shapes.putIfAbsent(sh[0], sh);
     return sh;
@@ -2022,7 +2111,7 @@ final class DocBinary {
         .append("\"/><a:ext cx=\"").append(cx).append("\" cy=\"").append(cy).append("\"/></a:xfrm><a:prstGeom prst=\"").append(geom)
         .append("\"><a:avLst/></a:prstGeom>");
     g.append(sh[5] == 0 ? "<a:noFill/>" : "<a:solidFill><a:srgbClr val=\"" + color(sh[3], "FFFFFF") + "\"/></a:solidFill>");
-    g.append("<a:ln>").append(sh[6] == 0 ? "<a:noFill/>" : "<a:solidFill><a:srgbClr val=\"" + color(sh[4], "000000")
+    g.append(sh.length > 19 && sh[19] >= 0 ? "<a:ln w=\"" + sh[19] + "\">" : "<a:ln>").append(sh[6] == 0 ? "<a:noFill/>" : "<a:solidFill><a:srgbClr val=\"" + color(sh[4], "000000")
         + "\"/></a:solidFill>").append("</a:ln></wps:spPr>");
     long[] tb = textboxes.get(sh[0]);
     if (tb != null) {
@@ -2066,6 +2155,7 @@ final class DocBinary {
           else if (id == 0x004 && shape.length > 17) shape[17] = (int) v;
           else if (id == 0x181) shape[3] = v;
           else if (id == 0x1C0) shape[4] = v;
+          else if (id == 0x1CB && shape.length > 19) shape[19] = Math.min(v, 1270000L);
           else if (id == 0x1BF && (v & 0x100000) != 0) shape[5] = v >> 4 & 1;
           else if (id == 0x1FF && (v & 0x80000) != 0) shape[6] = v >> 3 & 1;
         }

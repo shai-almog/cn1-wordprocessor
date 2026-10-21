@@ -32,19 +32,25 @@ public class WordXmlTest {
         + " xmlns:aml=\"http://schemas.microsoft.com/aml/2001/core\">"
         + "<w:styles><w:style w:type=\"paragraph\" w:styleId=\"H\"><w:name w:val=\"Big\"/><w:rPr><w:sz w:val=\"40\"/></w:rPr></w:style></w:styles>"
         + "<w:lists/><w:body><wx:sect><w:p><w:pPr><w:pStyle w:val=\"H\"/></w:pPr><w:r><w:rPr><w:i/><w:b-cs/></w:rPr><w:t>Old</w:t></w:r>"
-        + "<aml:annotation aml:id=\"1\" w:type=\"Word.Deletion\"><aml:content><w:r><w:delText>gone</w:delText></w:r></aml:content></aml:annotation>"
+        + "<aml:annotation aml:id=\"1\" aml:author=\"Bo\" aml:createdate=\"2004-05-06T07:08:00Z\" w:type=\"Word.Deletion\"><aml:content><w:r><w:delText>gone</w:delText></w:r></aml:content></aml:annotation>"
         + "<w:hlink w:dest=\"http://x\"><w:r><w:t> link</w:t></w:r></w:hlink>"
         + "<w:r><w:pict><v:shape xmlns:v=\"urn:schemas-microsoft-com:vml\"/></w:pict></w:r></w:p>"
         + "<w:sectPr><w:pgSz w:w=\"12240\" w:h=\"15840\"/></w:sectPr></wx:sect></w:body></w:wordDocument>";
     var opened = open(xml);
     var p = opened.document.paragraph(0);
-    assertEquals("Old link", p.text.toString());
+    assertEquals("Oldgone link", p.text.toString());
     assertTrue(p.text.styleAt(0).italic);
     assertEquals(20, p.text.styleAt(0).size, .001);
     String warnings = opened.warnings.toString();
     assertTrue(warnings, warnings.contains("drawing shapes"));
-    assertTrue(warnings, warnings.contains("tracked changes"));
-    assertEquals("http://x", p.text.styleAt(4).link);
+    // Tracked deletions are kept as revisions with their author and date, as Wordcraft does.
+    assertFalse(warnings, warnings.contains("tracked changes"));
+    Revision gone = null;
+    for (int i = 0; i < p.text.length(); i++) if (p.text.styleAt(i).revision != null) gone = p.text.styleAt(i).revision;
+    assertNotNull(p.text.toString(), gone);
+    assertEquals("Bo", gone.author);
+    assertEquals("2004-05-06T07:08:00Z", gone.date);
+    assertEquals("http://x", p.text.styleAt(8).link);
     assertEquals("bCs", WordXml.rename("b-cs"));
     assertEquals("vMerge", WordXml.rename("vmerge"));
   }
@@ -65,7 +71,7 @@ public class WordXmlTest {
         + "<w:r><w:t>Note</w:t></w:r><w:r><w:footnote><w:p><w:r><w:footnoteRef/></w:r><w:r><w:t> Foot body</w:t></w:r></w:p></w:footnote></w:r>"
         + "<aml:annotation aml:id=\"0\" w:type=\"Word.Comment.Start\"/><w:r><w:t>Said</w:t></w:r>"
         + "<aml:annotation aml:id=\"0\" w:type=\"Word.Comment.End\"/>"
-        + "<w:r><aml:annotation aml:id=\"0\" aml:author=\"Ann\" w:type=\"Word.Comment\"><aml:content>"
+        + "<w:r><aml:annotation aml:id=\"0\" aml:author=\"Ann\" aml:createdate=\"2005-01-02T03:04:00Z\" w:type=\"Word.Comment\"><aml:content>"
         + "<w:p><w:r><w:t>Remark</w:t></w:r></w:p></aml:content></aml:annotation></w:r></w:p>"
         + "<w:p><w:r><w:pict><w:binData w:name=\"wordml://1.png\">" + PNG + "</w:binData>"
         + "<v:shape style=\"width:36pt;height:1in\"><v:imagedata src=\"wordml://1.png\"/></v:shape></w:pict></w:r></w:p>"
@@ -76,6 +82,8 @@ public class WordXmlTest {
         + "</wx:sect></w:body></w:wordDocument>";
     var opened = open(xml);
     var d = opened.document;
+    String commentsPart = new String(WordXml.parts(xml.getBytes("UTF-8"), new java.util.HashSet<String>()).get("word/comments.xml"), "UTF-8");
+    assertTrue(commentsPart, commentsPart.contains("w:date=\"2005-01-02T03:04:00Z\""));
     String warnings = opened.warnings.toString();
     var item = d.paragraph(0);
     assertEquals("Item", item.text.toString());

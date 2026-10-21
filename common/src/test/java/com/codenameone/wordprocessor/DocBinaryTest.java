@@ -610,6 +610,73 @@ public class DocBinaryTest {
     assertTrue(table);
   }
 
+  /** A row with per-cell TC80 borders and shading, a bookmark ending on its row-end mark, then a revised paragraph mark. */
+  private static DocWriter cellFormats() {
+    var d = new DocWriter();
+    int[] cell = {0x16, 0x24, 1}, row = {0x16, 0x24, 1, 0x17, 0x24, 1};
+    int[] def = tdef(0, 0);
+    def[15] = 12;
+    def[16] = 3;
+    def[17] = 6;
+    // sprmTDefTableShd80: cell 0 solid yellow, cell 1 none; sprmTSetShd: cell 1 0x336699.
+    int[] shd = {0x09, 0xD6, 4, 0x07, 0x04, 0, 0};
+    int[] set = {0x2D, 0xD6, 12, 1, 2, 0x33, 0x66, 0x99, 0, 0, 0, 0, 0, 1, 0};
+    d.run("A").mark('\u0007', 0, cell).run("B").mark('\u0007', 0, cell);
+    int rowEnd = d.cp();
+    d.mark('\u0007', 0, join(row, def, shd, set));
+    d.run("Joined").para(0);
+    d.chpx.set(d.cp() - 1, bytes(0x01, 0x08, 1));
+    d.run("Next").para(0);
+    d.ccpText = d.cp();
+    d.tables.put(21, sttb(0, null, "Row"));
+    d.tables.put(22, cat(plc(0, d.ccpText), le32(0)));
+    d.tables.put(23, plc(rowEnd, d.ccpText));
+    return d;
+  }
+
+  @Test
+  public void cellBordersShadingRowEndMarksAndMarkRevisionsTranslate() throws Exception {
+    String doc = part(DocBinary.convert(cellFormats().build()), "word/document.xml");
+    assertTrue(doc, doc.contains("<w:tcBorders><w:top w:val=\"double\" w:sz=\"12\" w:space=\"0\" w:color=\"FF0000\"/>"));
+    assertTrue(doc, doc.contains("<w:shd w:val=\"clear\" w:color=\"auto\" w:fill=\"FFFF00\"/>"));
+    assertTrue(doc, doc.contains("w:fill=\"336699\""));
+    int end = doc.indexOf("<w:bookmarkEnd w:id=\"1\"/>");
+    assertTrue(doc, end > doc.indexOf(">B<") && end < doc.indexOf("</w:tbl>"));
+    assertTrue(doc, doc.matches("(?s).*<w:rPr><w:ins w:id=\"\\d+\" w:author=\"Unknown\"/></w:rPr></w:pPr><w:r><w:t xml:space=\"preserve\">Joined.*"));
+    Document m = DocBinary.read(cellFormats().build()).document;
+    assertTrue(m.plainText(), m.plainText().contains("Next"));
+  }
+
+  @Test
+  public void shapeLineWidthIsKept() throws Exception {
+    var d = new DocWriter();
+    int a = d.cp();
+    d.run("\u0008").para(0);
+    d.ccpText = d.cp();
+    byte[] dg = rec(0xF, 0xF002, rec(0xF, 0xF003, shape(1, 1026, cat(le16(0x1CB), le32(38100)), 1)));
+    d.tables.put(50, cat(rec(0xF, 0xF000), new byte[] {0}, dg));
+    d.tables.put(40, cat(plc(a, d.ccpText), fspa(1026, 0, 0, 1440, 1440, 0)));
+    String doc = part(DocBinary.convert(d.build()), "word/document.xml");
+    assertTrue(doc, doc.contains("<a:ln w=\"38100\">"));
+  }
+
+  @Test
+  public void listCarriedByParagraphStyleApplies() throws Exception {
+    DocWriter d = rich();
+    var stshi = new byte[18];
+    put16(stshi, 0, 2);
+    put16(stshi, 2, 10);
+    d.tables.put(1, cat(le16(18), stshi, style(1, 0xFFF, "Normal", new byte[0], new byte[0]),
+        style(1, 0, "My Heading", bytes(0x0B, 0x46, 2, 0), new byte[0])));
+    String styles = part(DocBinary.convert(d.build()), "word/styles.xml");
+    assertTrue(styles, styles.contains("<w:numPr><w:ilvl w:val=\"0\"/><w:numId w:val=\"2\"/></w:numPr>"));
+    Document m = DocBinary.read(d.build()).document;
+    boolean listed = false;
+    for (int i = 0; i < m.blocks.size(); i++)
+      if (m.blocks.get(i) instanceof Paragraph p && p.text.toString().equals("Styled heading")) listed = p.list != null;
+    assertTrue(listed);
+  }
+
   static byte[] fspa(int spid, int x, int y, int w, int h, int flags) {
     var b = new byte[26];
     put32(b, 0, spid);

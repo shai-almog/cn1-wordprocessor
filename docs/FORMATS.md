@@ -245,11 +245,15 @@ FBSE foDelay offset, preset shapes with solid fill/line colours, and text boxes 
 page/margin/column/paragraph offsets and none/square/top-and-bottom/behind/tight/through wrapping), the same
 for header stories (PlcSpaHdr anchors with the header drawing), and OfficeArt groups (SpgrContainer with its
 FSPGR space and members' ChildAnchor rectangles, nested groups) written as `wpg:wgp`. The editor model then
-treats floating DOCX drawings as it does for .docx (a separate paragraph keeping its wrap kind). Not yet:
-encrypted or Word 6/95 files (rejected), line widths and gradients, paragraph-mark revisions, comment
-and bookmark boundaries inside table-row end marks, per-cell borders/shading, and list-style formatting
-carried by styles. As in Wordcraft: freeforms (no path read) and formatting revisions are not imported.
-Wordcraft drops comments and revision marks.
+treats floating DOCX drawings as it does for .docx (a separate paragraph keeping its wrap kind). Shape line
+widths (OPT lineWidth, clamped to 100 pt as Wordcraft does), per-cell shading (sprmTDefTableShd80/
+sprmTDefTableShd/sprmTSetShd, as Wordcraft's table decode), per-cell TC80 borders (top/left/bottom/right
+Brc80 width, type and colour), paragraph-mark revisions (sprmCFRMarkIns/Del on the mark's CHPX, as an
+inserted/deleted paragraph mark), bookmark and comment boundaries on a row-end mark (closed in the row's
+last cell), and lists carried by paragraph styles (the style's sprmPIlfo/sprmPIlvl as a style `w:numPr`) are
+imported. Not yet: encrypted or Word 6/95 files (rejected). As in Wordcraft: freeforms (no path read),
+gradient fills (the fill colour is used) and formatting revisions are not imported. Wordcraft drops
+comments and revision marks.
 
 ## OpenDocument Text (.odt)
 
@@ -301,6 +305,11 @@ new file. Import only.
   top/margin-top, `mso-position-horizontal/vertical-relative` and alignment, `w10:wrap`, negative
   `z-index` behind), and `v:line` (from/to), `v:rect`, `v:roundrect` and `v:oval` preset shapes with
   fill/stroke colors and stroke weight, as Wordcraft's read_vml. VML `rotation` (degrees or `fd`) and `flip`
-  are kept as Wordcraft's vml_spin. Limitations: other VML shapes, linked (non-`binData`) pictures and
-  undecodable picture data are dropped with a warning; comment dates are not read. Namespace prefixes
-  are matched by the conventional `w:`/`wx:`/`aml:` names, not by resolved URIs.
+  are kept as Wordcraft's vml_spin. `Word.Insertion`/`Word.Deletion` annotations are kept as tracked
+  changes with their `aml:author` and `aml:createdate`, and comment `aml:createdate` is written to the
+  comments part, as Wordcraft's wordml2003 annotation. Limitations: other VML shapes (Wordcraft's
+  read_vml reads only line/rect/roundrect/oval), linked (non-`binData`) pictures (Wordcraft maps only
+  `binData` names to media) and undecodable picture data are dropped with a warning (as in Wordcraft).
+  The comment model has no date field, so a comment's date is not shown or saved back (Wordcraft keeps
+  `Comment.date`; this applies to .docx comments too). Namespace prefixes are matched by the
+  conventional `w:`/`wx:`/`aml:` names, not by resolved URIs.

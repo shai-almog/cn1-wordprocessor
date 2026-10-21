@@ -572,6 +572,12 @@ final class WordXml {
       close(out);
     }
 
+    private String authorDate(Element e, String id) {
+      String date = Xml.attr(e, "aml:createdate", null);
+      return " w:id=\"" + id + "\" w:author=\"" + Xml.attribute(Xml.attr(e, "aml:author", "Unknown")) + '"'
+          + (date == null ? "" : " w:date=\"" + Xml.attribute(date) + '"');
+    }
+
     void annotation(Element e, StringBuilder out) {
       String type = Xml.attr(e, "w:type", "");
       String id = Xml.attribute(Xml.attr(e, "aml:id", "0"));
@@ -580,6 +586,16 @@ final class WordXml {
             .append(Xml.attribute(Xml.attr(e, "w:name", ""))).append("\"/>");
       } else if ("Word.Bookmark.End".equals(type)) {
         out.append("<w:bookmarkEnd w:id=\"").append(id).append("\"/>");
+      } else if (("Word.Insertion".equals(type) || "Word.Deletion".equals(type)) && !inRun) {
+        // Kept as w:ins / w:del with aml:author and aml:createdate, as Wordcraft's wordml2003 annotation.
+        boolean del = "Word.Deletion".equals(type);
+        var inner = new StringBuilder();
+        Element content = Xml.child(e, "content");
+        if (content != null) children(content, inner);
+        String body = inner.toString();
+        if (del) body = body.replace("<w:t>", "<w:delText>").replace("<w:t ", "<w:delText ").replace("</w:t>", "</w:delText>");
+        String tag = del ? "w:del" : "w:ins";
+        out.append('<').append(tag).append(authorDate(e, id)).append('>').append(body).append("</").append(tag).append('>');
       } else if ("Word.Insertion".equals(type)) {
         warnings.add("Word 2003 XML tracked changes are accepted");
         Element content = Xml.child(e, "content");
@@ -594,8 +610,10 @@ final class WordXml {
         String ref = "<w:commentReference w:id=\"" + id + "\"/>";
         out.append(inRun ? ref : "<w:r>" + ref + "</w:r>");
         var entry = new StringBuilder();
+        String date = Xml.attr(e, "aml:createdate", null);
         entry.append("<w:comment w:id=\"").append(id).append("\" w:author=\"")
-            .append(Xml.attribute(Xml.attr(e, "aml:author", "Author"))).append("\" w:initials=\"")
+            .append(Xml.attribute(Xml.attr(e, "aml:author", "Author")))
+            .append(date == null ? "" : "\" w:date=\"" + Xml.attribute(date)).append("\" w:initials=\"")
             .append(Xml.attribute(Xml.attr(e, "w:initials", ""))).append("\">");
         Element content = Xml.child(e, "content");
         boolean run = inRun;
