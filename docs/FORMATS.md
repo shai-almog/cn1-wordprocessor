@@ -323,3 +323,5 @@ new file. Import only.
   The comment model has no date field, so a comment's date is not shown or saved back (Wordcraft keeps
   `Comment.date`; this applies to .docx comments too). Namespace prefixes are matched by the
   conventional `w:`/`wx:`/`aml:` names, not by resolved URIs.
+
+Turned table cells (`w:textDirection` btLr/tbRl) turn everything they hold as Wordcraft's `TurnedCell`: text lines, pictures (kept at their size, centred on their turned place and drawn turned a quarter) and nested tables' lines and cell boxes. Nested tables' own cells inside a cell do not turn independently yet (their text direction is ignored).

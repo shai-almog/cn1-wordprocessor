@@ -499,6 +499,16 @@ public final class LayoutEngine {
     for (int i = 0; i < ASCII.length; i++) ASCII[i] = String.valueOf((char) i);
   }
 
+  /**
+   * The page rectangle {x, y, width, height} of frame rectangle (u, v, w, h) of a turned cell
+   * whose frame origin is {@code at}: frame (u, v) lands at (ox - v, oy + u) going down (turn 1)
+   * and (ox + v, oy - u) going up (turn 2).
+   */
+  static float[] turnRect(int turn, float[] at, float u, float v, float w, float h) {
+    if (turn == 1) return new float[] {at[0] - v - h, at[1] + u, h, w};
+    return new float[] {at[0] + v, at[1] - u - w, h, w};
+  }
+
   /** The longest line turned cell text gets when its row height isn't exact (as Wordcraft). */
   static final float TURNED_MAX = 648;
 
@@ -3055,7 +3065,38 @@ public final class LayoutEngine {
                   cell.width,
                   visibleBottom - visibleTop,
                   cell.format));
+        // Turned cells (btLr/tbRl): as Wordcraft's TurnedCell, everything the cell holds --
+        // nested tables' cells and pictures as well as text -- turns with it, about the same
+        // frame origin as the cell's lines, on the page where the cell starts.
+        float[] turnAt = cell.turn != 0 && top >= first - .01f && top < end - .01f ? turnOrigin(cell, top, first) : null;
+        if (cell.turn != 0) {
+          float pad = cell.format.horizontalPadding, vpad = cell.format.verticalPadding;
+          for (InnerBox b : cell.inner) {
+            if (turnAt == null) break;
+            float[] q = turnRect(cell.turn, turnAt, b.x - pad, b.y - vpad, b.width, b.height);
+            boxes.add(new Box(index, cell.span.row, cell.span.column, pages.size(), q[0], q[1], q[2], q[3], b.format).at(b.path));
+          }
+          for (int i = 0; i < cell.pics.size() && turnAt != null; i++) {
+            float[] r = cell.picBoxes.get(i);
+            float[] q = turnRect(cell.turn, turnAt, r[0] - pad, r[1] - vpad, r[2], r[3]);
+            int[] inner = cell.picPaths.get(i), path = new int[3 + inner.length];
+            path[0] = index;
+            path[1] = cell.span.row;
+            path[2] = cell.span.column;
+            System.arraycopy(inner, 0, path, 3, inner.length);
+            // The picture keeps its own size, centred on its turned place and turned a quarter.
+            float cx = q[0] + q[2] / 2, cy = q[1] + q[3] / 2;
+            var pic = cell.pics.get(i);
+            int deg = ((pic.look.rotation + (cell.turn == 1 ? 90 : 270)) % 360 + 360) % 360;
+            pic = pic.look(pic.look.rotate(deg, pic.look.flipH, pic.look.flipV));
+            pictures.add(
+                new PlacedPicture(
+                    pic, cell.picIndex.get(i), pages.size(), cx - r[2] / 2, cy - r[3] / 2, r[2], r[3],
+                    path, new float[] {q[0], q[1], r[6]}));
+          }
+        }
         for (InnerBox b : cell.inner) {
+          if (cell.turn != 0) break;
           float boxTop = top + cell.shift + b.y;
           float shownTop = Math.max(first, boxTop), shownBottom = Math.min(end, boxTop + b.height);
           if (shownBottom > shownTop)
@@ -3072,7 +3113,7 @@ public final class LayoutEngine {
                         b.format)
                     .at(b.path));
         }
-        for (int i = 0; i < cell.pics.size(); i++) {
+        for (int i = 0; i < cell.pics.size() && cell.turn == 0; i++) {
           float[] r = cell.picBoxes.get(i);
           float picTop = top + cell.shift + r[1], anchor = top + cell.shift + r[5];
           // Drawn on the page where its anchor paragraph shows.
@@ -3092,16 +3133,9 @@ public final class LayoutEngine {
         if (cell.turn != 0) {
           // Turned text is drawn whole on the page where its cell starts (Wordcraft keeps a
           // turned cell's row in one piece).
-          if (top < first - .01f || top >= end - .01f) continue;
+          if (turnAt == null) continue;
           float pad = cell.format.horizontalPadding, vpad = cell.format.verticalPadding;
-          float cw = Math.max(0, cell.width - 2 * pad);
-          float off =
-              "center".equals(cell.format.vertical)
-                  ? Math.max(0, (cw - cell.across) / 2)
-                  : "bottom".equals(cell.format.vertical) ? Math.max(0, cw - cell.across) : 0;
-          float cellX = spec.left + cell.left, cellY = y + top - first;
-          float ox = cell.turn == 2 ? cellX + pad + off : cellX + pad + cw - off;
-          float oy = cell.turn == 2 ? cellY + vpad + cell.len : cellY + vpad;
+          float ox = turnAt[0], oy = turnAt[1];
           for (int i = 0; i < cell.lines.size(); i++)
             current.add(
                 new Line(
@@ -3136,6 +3170,21 @@ public final class LayoutEngine {
                 .at(cell.paths.get(i)));
         }
       }
+    }
+
+    /** The page origin of a turned cell's frame (as its lines' turnX/turnY). */
+    private float[] turnOrigin(CellLayout cell, float top, float first) {
+      float pad = cell.format.horizontalPadding, vpad = cell.format.verticalPadding;
+      float cw = Math.max(0, cell.width - 2 * pad);
+      float off =
+          "center".equals(cell.format.vertical)
+              ? Math.max(0, (cw - cell.across) / 2)
+              : "bottom".equals(cell.format.vertical) ? Math.max(0, cw - cell.across) : 0;
+      float cellX = spec.left + cell.left, cellY = y + top - first;
+      return new float[] {
+        cell.turn == 2 ? cellX + pad + off : cellX + pad + cw - off,
+        cell.turn == 2 ? cellY + vpad + cell.len : cellY + vpad
+      };
     }
 
     void appendEndnotes(List<Note> notes) {

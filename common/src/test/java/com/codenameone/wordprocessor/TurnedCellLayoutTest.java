@@ -87,4 +87,30 @@ public class TurnedCellLayoutTest {
     var pdf = new String(PdfExporter.write(d.page, engine().layout(d, 0)), StandardCharsets.ISO_8859_1);
     assertTrue(pdf.contains("q 0 1 -1 0 "));
   }
+
+  /** As Wordcraft's TurnedCell: a picture in a turned cell turns with the cell's text. */
+  @Test
+  public void picturesTurnWithTheirCell() {
+    var d = turned("tbRl", "120");
+    int at = 0;
+    for (int i = 0; i < d.blocks.size(); i++) if (d.blocks.get(i) instanceof Table) at = i;
+    var t = (Table) d.blocks.get(at);
+    var pic = new Picture("tp1", OdtTest.PNG, 40, 20, "", "left");
+    var cell = new Sequence<Block>().append(pic).append(t.blocks(0, 0).get(0));
+    d = d.blocks(d.blocks.set(at, t.setBlocks(0, 0, cell)), d.nextId);
+    var r = engine().layout(d, 0);
+    LayoutEngine.PlacedPicture placed = null;
+    for (LayoutEngine.PlacedPicture p : r.pages.get(0).pictures) if ("tp1".equals(p.picture().id())) placed = p;
+    assertNotNull(placed);
+    assertEquals(90, placed.picture().look.rotation);
+    LayoutEngine.Box box = null;
+    for (LayoutEngine.Box b : r.pages.get(0).boxes) if (b.column == 0 && b.row == 0) box = b;
+    // Turned a quarter, the 40x20 picture is 20 wide and 40 tall on the page, inside its cell.
+    float cx = placed.x() + placed.width() / 2, cy = placed.y() + placed.height() / 2;
+    assertTrue(cx - 10 >= box.x - .01f && cx + 10 <= box.x + box.width + .01f);
+    assertTrue(cy - 20 >= box.y - .01f && cy + 20 <= box.y + box.height + .01f);
+    // Going down, content stacks leftward from the right: the picture, first, is right of the text.
+    var l = line(r, "turned line");
+    assertTrue(cx > l.pageBounds()[0] + l.pageBounds()[2]);
+  }
 }
