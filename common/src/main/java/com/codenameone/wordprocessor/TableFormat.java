@@ -308,21 +308,68 @@ public final class TableFormat {
     if (row && at < headers) headers += insert ? 1 : -1;
     var result = out.headerRows(Math.min(headers, nr)).altText(title, description).sizing(sizing).props(props);
     // The tracked prior properties follow the same row/column change so they stay aligned.
-    if (revision != null && previous != null && previous.rows() == rows() && previous.columns() == columns()) {
-      result.revision = revision;
-      result.previous = previous.change(row, at, insert);
+    if (revision() != null && previous != null && previous.rows() == rows() && previous.columns() == columns()) {
+      Revision[] rowRevs = new Revision[nr];
+      Revision[][] cellRevs = new Revision[nr][nc];
+      for (int r = 0; r < nr; r++) {
+        int oldR = row ? original(r, at, insert) : r;
+        if (oldR < 0) continue;
+        rowRevs[r] = rowRevision(oldR);
+        for (int c = 0; c < nc; c++) {
+          int oldC = row ? c : original(c, at, insert);
+          if (oldC >= 0) cellRevs[r][c] = cellRevision(oldR, oldC);
+        }
+      }
+      return result.elementRevisions(revision, rowRevs, cellRevs, previous.change(row, at, insert));
     }
     return result;
   }
 
   /**
-   * Tracked table property change (w:tblPrChange, w:trPrChange, w:tcPrChange; Wordcraft
-   * TableProps/RowProps/CellProps fmt_change): the revision and the whole table's properties
-   * before it. One revision covers the table, its rows and cells (Wordcraft keeps one per
-   * element; ids of separate row/cell changes are merged into the table's on read).
+   * Tracked table property changes (w:tblPrChange, w:trPrChange, w:tcPrChange; Wordcraft
+   * TableProps/RowProps/CellProps fmt_change): as Wordcraft, one revision per element -- the
+   * table's own properties, each row's and each cell's -- and the whole table's properties
+   * before the oldest of them ({@link #previous}). Rejecting one element's revision restores
+   * only that element's prior properties.
    */
   public Revision revision() {
+    if (revision != null) return revision;
+    if (rowRevisions != null) for (Revision r : rowRevisions) if (r != null) return r;
+    if (cellRevisions != null)
+      for (Revision[] row : cellRevisions) for (Revision r : row) if (r != null) return r;
+    return null;
+  }
+
+  /** The table-level (w:tblPrChange) revision. */
+  public Revision tableRevision() {
     return revision;
+  }
+
+  /** The row's own (w:trPrChange) revision, null when the row's properties are unchanged. */
+  public Revision rowRevision(int row) {
+    return rowRevisions == null || row >= rowRevisions.length ? null : rowRevisions[row];
+  }
+
+  /** The cell's own (w:tcPrChange) revision, null when the cell's properties are unchanged. */
+  public Revision cellRevision(int row, int column) {
+    return cellRevisions == null || row >= cellRevisions.length || column >= cellRevisions[row].length
+        ? null : cellRevisions[row][column];
+  }
+
+  /** The distinct revisions of the table, its rows and cells, in reading order. */
+  public java.util.List<Revision> revisions() {
+    var out = new java.util.ArrayList<Revision>();
+    var ids = new java.util.HashSet<String>();
+    if (revision != null && ids.add(revision.id)) out.add(revision);
+    for (int r = 0; r < rows(); r++) {
+      var row = rowRevision(r);
+      if (row != null && ids.add(row.id)) out.add(row);
+      for (int c = 0; c < columns(); c++) {
+        var cell = cellRevision(r, c);
+        if (cell != null && ids.add(cell.id)) out.add(cell);
+      }
+    }
+    return out;
   }
 
   public TableFormat previous() {
@@ -330,31 +377,152 @@ public final class TableFormat {
   }
 
   private Revision revision;
+  private Revision[] rowRevisions;
+  private Revision[][] cellRevisions;
   private TableFormat previous;
 
+  /**
+   * The table with {@code value} recorded on every element (table, row, cell) whose properties
+   * differ from {@code before}; on the table itself when none does. Null clears every revision.
+   */
   public TableFormat formatRevision(Revision value, TableFormat before) {
     var out = new TableFormat(cells, columns, heights, headerRows, title, description, sizing, props);
-    if (value != null && before != null) {
-      out.revision = value;
-      out.previous = before.revision == null ? before : before.formatRevision(null, null);
-    }
+    if (value == null || before == null) return out;
+    out.previous = before.clean();
+    out.assign(before, null, value);
+    if (out.revision() == null) out.revision = value;
     return out;
   }
 
-  /** Accept keeps the current properties, reject restores the prior ones (id null: any). */
-  public TableFormat review(String id, boolean accept) {
-    if (revision == null || id != null && !id.equals(revision.id)) return this;
-    return accept ? formatRevision(null, null) : previous;
+  /** Per-element revisions as read from a file (each may be null); prior is the old table. */
+  TableFormat elementRevisions(Revision table, Revision[] rows, Revision[][] cells, TableFormat prior) {
+    var out = new TableFormat(this.cells, columns, heights, headerRows, title, description, sizing, props);
+    out.revision = table;
+    out.rowRevisions = rows;
+    out.cellRevisions = cells;
+    out.previous = prior == null ? null : prior.clean();
+    if (out.revision() == null || out.previous == null) return clean();
+    return out;
   }
 
-  /** Records a property edit as a tracked change, keeping the oldest prior properties. */
+  private TableFormat clean() {
+    return new TableFormat(cells, columns, heights, headerRows, title, description, sizing, props);
+  }
+
+  /**
+   * Gives each element differing from {@code base} its revision from {@code old} (when the
+   * grids match) or else {@code change}; elements equal to base get none.
+   */
+  private void assign(TableFormat base, TableFormat old, Revision change) {
+    boolean same = old != null && old.rows() == rows() && old.columns() == columns();
+    revision = tableKey(this).equals(tableKey(base)) ? null : same && old.revision != null ? old.revision : change;
+    if (base.rows() != rows() || base.columns() != columns()) return;
+    rowRevisions = new Revision[rows()];
+    cellRevisions = new Revision[rows()][columns()];
+    for (int r = 0; r < rows(); r++) {
+      if (!rowKey(this, r).equals(rowKey(base, r)))
+        rowRevisions[r] = same && old.rowRevision(r) != null ? old.rowRevision(r) : change;
+      for (int c = 0; c < columns(); c++)
+        if (!cellKey(this, r, c).equals(cellKey(base, r, c)))
+          cellRevisions[r][c] = same && old.cellRevision(r, c) != null ? old.cellRevision(r, c) : change;
+    }
+  }
+
+  private static String tableKey(TableFormat f) {
+    var p = new java.util.TreeMap<String, String>(f.props);
+    p.remove("directions");
+    var s = f.sizing;
+    return Arrays.toString(f.columns) + '|' + f.title + '|' + f.description + '|' + s.unit + '|' + s.width
+        + '|' + s.align + '|' + s.indent + '|' + s.fixed + '|' + p;
+  }
+
+  private static String rowKey(TableFormat f, int r) {
+    var h = f.heights[r];
+    return h.height + "|" + h.rule + '|' + h.allowBreak + '|' + (r < f.headerRows);
+  }
+
+  private static String cellKey(TableFormat f, int r, int c) {
+    var v = f.cells[r][c];
+    return v.background + "|" + v.borderColor + '|' + v.borderWidth + '|' + v.horizontalPadding + '|'
+        + v.verticalPadding + '|' + v.vertical + '|' + v.sides + '|' + f.direction(r, c);
+  }
+
+  /**
+   * Accept keeps an element's current properties, reject restores its prior ones (id null: every
+   * revision); the other elements' revisions stay.
+   */
+  public TableFormat review(String id, boolean accept) {
+    if (revision() == null) return this;
+    boolean any = false;
+    TableFormat old = previous;
+    boolean grid = old != null && old.rows() == rows() && old.columns() == columns();
+    TableFormat out = this;
+    Revision table = revision;
+    Revision[] rows = rowRevisions == null ? null : rowRevisions.clone();
+    Revision[][] cellRevs = null;
+    if (cellRevisions != null) {
+      cellRevs = new Revision[cellRevisions.length][];
+      for (int r = 0; r < cellRevs.length; r++) cellRevs[r] = cellRevisions[r].clone();
+    }
+    if (matches(table, id)) {
+      any = true;
+      table = null;
+      if (!accept && old != null)
+        out = new TableFormat(cells, old.columns.length == columns.length ? old.columns : columns, heights,
+            headerRows, old.title, old.description, old.sizing, directions(old.props, props));
+    }
+    for (int r = 0; r < rows(); r++) {
+      if (rows != null && matches(rows[r], id)) {
+        any = true;
+        rows[r] = null;
+        if (!accept && grid) {
+          out = out.row(r, old.heights[r]);
+          boolean header = r < old.headerRows;
+          if (header != r < out.headerRows && (header ? r == out.headerRows : r == out.headerRows - 1))
+            out = out.headerRows(header ? r + 1 : r);
+        }
+      }
+      for (int c = 0; c < columns(); c++)
+        if (cellRevs != null && matches(cellRevs[r][c], id)) {
+          any = true;
+          cellRevs[r][c] = null;
+          if (!accept && grid) out = out.cell(r, c, old.cells[r][c]).direction(r, c, old.direction(r, c));
+        }
+    }
+    if (!any) return this;
+    return out.elementRevisions(table, rows, cellRevs, old);
+  }
+
+  private static boolean matches(Revision r, String id) {
+    return r != null && (id == null || id.equals(r.id));
+  }
+
+  /** Table-level props from {@code old} with the cell directions of {@code now}. */
+  private static java.util.TreeMap<String, String> directions(
+      java.util.TreeMap<String, String> old, java.util.TreeMap<String, String> now) {
+    var out = new java.util.TreeMap<String, String>(old);
+    out.remove("directions");
+    if (now.containsKey("directions")) out.put("directions", now.get("directions"));
+    return out;
+  }
+
+  /**
+   * Records a property edit as tracked changes: each element now differing from the properties
+   * before the oldest change keeps its revision or gets {@code change}, as Wordcraft records a
+   * fmt_change per edited table, row and cell.
+   */
   public TableFormat tracked(TableFormat before, Revision change) {
-    if (before.revision != null) return formatRevision(before.revision, before.previous);
-    return formatRevision(change, before);
+    var base = before.previous != null && before.revision() != null ? before.previous : before.clean();
+    var out = clean();
+    out.previous = base;
+    out.assign(base, before, change);
+    return out.revision() == null ? clean() : out;
   }
 
   private TableFormat keep(TableFormat out) {
     out.revision = revision;
+    out.rowRevisions = rowRevisions;
+    out.cellRevisions = cellRevisions;
     out.previous = previous;
     return out;
   }
@@ -437,7 +605,16 @@ public final class TableFormat {
       copy[r] = cells[order[r]];
       h[r] = heights[order[r]];
     }
-    return keep(new TableFormat(copy, columns, h, headerRows, title, description, sizing, props));
+    var out = new TableFormat(copy, columns, h, headerRows, title, description, sizing, props);
+    if (revision() == null || previous == null || previous.rows() != rows()) return out;
+    Revision[] rowRevs = new Revision[rows()];
+    Revision[][] cellRevs = new Revision[rows()][];
+    for (int r = 0; r < order.length; r++) {
+      rowRevs[r] = rowRevision(order[r]);
+      cellRevs[r] = new Revision[columns()];
+      for (int c = 0; c < columns(); c++) cellRevs[r][c] = cellRevision(order[r], c);
+    }
+    return out.elementRevisions(revision, rowRevs, cellRevs, previous.reorder(order));
   }
 
   private static int original(int n, int at, boolean insert) {

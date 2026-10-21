@@ -1810,6 +1810,9 @@ public final class EditorSurface extends Container
         if (textLine(line)) {
           var paragraph = lineParagraph(line);
           revised |= paragraph.formatRevision != null;
+          // A table with a tracked property change (Wordcraft's table fmt_change) is marked
+          // beside each of its lines, as Word marks a table whose properties changed.
+          if (line.row >= 0) revised |= tableRevised(line);
           if (paragraph.breakRevision != null && line.end == paragraph.text.length()) {
             revised = true;
             g.setFont(font(TextStyle.DEFAULT, zoom));
@@ -2187,6 +2190,26 @@ public final class EditorSurface extends Container
   private boolean textLine(LayoutEngine.Line line) {
     return line.block >= 0
         && (line.row >= 0 || session.document().blocks.get(line.block) instanceof Paragraph);
+  }
+
+  /** Whether the line's table, or a table it is nested in, has a table property revision. */
+  private boolean tableRevised(LayoutEngine.Line line) {
+    var blocks = session.document().blocks;
+    if (line.block < 0 || line.block >= blocks.size() || !(blocks.get(line.block) instanceof Table t))
+      return false;
+    int r = line.row, c = line.column;
+    if (t.format.revision() != null) return true;
+    for (int i = 0; i + 2 < line.path.length; i += 3) {
+      if (r >= t.rows() || c >= t.columns()) return false;
+      var inner = t.blocks(r, c);
+      if (line.path[i] < 0 || line.path[i] >= inner.size() || !(inner.get(line.path[i]) instanceof Table n))
+        return false;
+      t = n;
+      r = line.path[i + 1];
+      c = line.path[i + 2];
+      if (t.format.revision() != null) return true;
+    }
+    return false;
   }
 
   private Paragraph lineParagraph(LayoutEngine.Line line) {

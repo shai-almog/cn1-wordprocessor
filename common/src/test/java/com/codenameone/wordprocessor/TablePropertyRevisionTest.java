@@ -79,4 +79,53 @@ public class TablePropertyRevisionTest {
     assertEquals(xml, DocumentXml.write(d));
     verifyTracked(d);
   }
+
+  /** Wordcraft keeps one fmt_change per table, row and cell: separate edits stay separate. */
+  private Session twoEdits() {
+    var s = new Session(Document.empty());
+    s.replace("body");
+    s.select(0, 4, 4);
+    s.insertTable(2, 2);
+    s.trackChanges(true);
+    var t = (Table) s.document().blocks.get(1);
+    s.formatTable(1, t.format.cell(1, 1, t.format.cell(1, 1).background(0xff0000)));
+    t = (Table) s.document().blocks.get(1);
+    s.formatTable(1, t.format.row(0, new TableFormat.Row(30, "exact", false)));
+    return s;
+  }
+
+  @Test public void perElementRevisions() {
+    var d = twoEdits().document();
+    var f = table(d).format;
+    assertNull(f.tableRevision());
+    assertNotNull(f.cellRevision(1, 1));
+    assertNotNull(f.rowRevision(0));
+    assertNull(f.cellRevision(0, 0));
+    assertNotEquals(f.cellRevision(1, 1).id, f.rowRevision(0).id);
+    assertEquals(2, f.revisions().size());
+    int listed = 0;
+    for (Revisions.Change c : Revisions.list(d))
+      if (c.text.endsWith("properties")) listed++;
+    assertEquals(2, listed);
+    // Rejecting the cell's change restores only that cell.
+    var rejected = table(Revisions.resolve(d, f.cellRevision(1, 1).id, false)).format;
+    assertEquals(0xffffff, rejected.cell(1, 1).background);
+    assertEquals(30, rejected.minHeight(0), .01);
+    assertNotNull(rejected.rowRevision(0));
+    assertNull(rejected.cellRevision(1, 1));
+  }
+
+  @Test public void perElementRoundTrips() throws Exception {
+    var d = twoEdits().document();
+    var bytes = new ByteArrayOutputStream();
+    Docx.write(d, bytes);
+    var f = table(Docx.read(new ByteArrayInputStream(bytes.toByteArray())).document).format;
+    assertEquals(2, f.revisions().size());
+    assertNotNull(f.rowRevision(0));
+    assertNotNull(f.cellRevision(1, 1));
+    assertNull(f.tableRevision());
+    var n = table(DocumentXml.read(DocumentXml.write(d))).format;
+    assertEquals(2, n.revisions().size());
+    assertEquals(f.rowRevision(0).id, n.rowRevision(0).id);
+  }
 }

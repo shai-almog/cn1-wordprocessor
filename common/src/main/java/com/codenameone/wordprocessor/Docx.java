@@ -1203,12 +1203,12 @@ static final char COLUMN_BREAK = '\u000B';
       float tableWidth = t.format.preferredWidth(available);
       TableFormats.alternativeXml(b, t.format);
       var before = t.format.previous();
-      if (t.format.revision() != null && before != null) {
+      if (t.format.tableRevision() != null && before != null) {
         var old = new StringBuilder();
         TableFormats.floatXml(old, before);
         TableFormats.sizingXml(old, before);
         TableFormats.alternativeXml(old, before);
-        TableFormats.change(b, "tblPrChange", "tblPr", t.format.revision(), old.toString());
+        TableFormats.change(b, "tblPrChange", "tblPr", t.format.tableRevision(), old.toString());
       }
       b.append("</w:tblPr><w:tblGrid>");
       for (int c = 0; c < t.columns(); c++)
@@ -1233,7 +1233,7 @@ static final char COLUMN_BREAK = '\u000B';
             b.append("<w:gridSpan w:val=\"").append(span.columns).append("\"/>");
           if (span.rows > 1)
             b.append(r == span.row ? "<w:vMerge w:val=\"restart\"/>" : "<w:vMerge/>");
-          if (before != null && t.format.revision() != null && span.row < before.rows() && span.column < before.columns()) {
+          if (before != null && t.format.cellRevision(span.row, span.column) != null && span.row < before.rows() && span.column < before.columns()) {
             var now = new StringBuilder();
             var old = new StringBuilder();
             TableFormats.cellXml(now, t.format.cell(span.row, span.column), cellWidth);
@@ -1242,7 +1242,7 @@ static final char COLUMN_BREAK = '\u000B';
             if (!flow.equals(oldFlow)) now.append(flow);
             if (!"lrTb".equals(oldFlow)) old.append("<w:textDirection w:val=\"").append(oldFlow).append("\"/>");
             if (!now.toString().equals(old.toString()))
-              TableFormats.change(b, "tcPrChange", "tcPr", t.format.revision(), old.toString());
+              TableFormats.change(b, "tcPrChange", "tcPr", t.format.cellRevision(span.row, span.column), old.toString());
           }
           b.append("</w:tcPr>");
           // Nested tables are written inside the cell as Word stores them (w:tc/w:tbl).

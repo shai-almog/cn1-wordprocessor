@@ -1249,29 +1249,72 @@ public final class Session {
    * and resolving a change are not property edits.
    */
   private void trackTableProperties(Document before) {
-    if (!document.trackChanges || !trackFormatting || document.blocks == before.blocks) return;
-    var old = new HashMap<String, Table>();
-    for (Block b : before.blocks) if (b instanceof Table t) old.put(t.id(), t);
-    if (old.isEmpty()) return;
-    var blocks = document.blocks;
+    if (!document.trackChanges || !trackFormatting) return;
+    if (document.blocks != before.blocks) {
+      var old = new HashMap<String, Table>();
+      collectTables(before.blocks, old);
+      var blocks = trackTables(document.blocks, old);
+      if (blocks != document.blocks) document = document.blocks(blocks, document.nextId);
+    }
+    // Header and footer stories' tables, as Wordcraft tracks fmt_change in any story.
+    if (document.furniture != before.furniture && !document.furniture.stories.isEmpty()) {
+      var old = new HashMap<String, Table>();
+      for (Sequence<Block> story : before.furniture.stories.values()) collectTables(story, old);
+      var stories = new java.util.LinkedHashMap<String, Sequence<Block>>();
+      boolean changed = false;
+      for (Map.Entry<String, Sequence<Block>> e : document.furniture.stories.entrySet()) {
+        var next = trackTables(e.getValue(), old);
+        changed |= next != e.getValue();
+        stories.put(e.getKey(), next);
+      }
+      if (changed) {
+        var f = document.furniture;
+        document = document.furniture(
+            new PageFurniture(stories, f.differentFirst, f.differentEven, f.headerDistance, f.footerDistance));
+      }
+    }
+  }
+
+  private static void collectTables(Sequence<Block> blocks, Map<String, Table> out) {
+    for (Block b : blocks)
+      if (b instanceof Table t) {
+        out.put(t.id(), t);
+        for (int r = 0; r < t.rows(); r++)
+          for (int c = 0; c < t.columns(); c++) if (!t.covered(r, c)) collectTables(t.blocks(r, c), out);
+      }
+  }
+
+  /** The blocks with each table (nested ones too) whose properties changed tracked. */
+  private Sequence<Block> trackTables(Sequence<Block> blocks, Map<String, Table> old) {
+    if (old.isEmpty()) return blocks;
     for (int i = 0; i < blocks.size(); i++) {
       if (!(blocks.get(i) instanceof Table t)) continue;
+      var tracked = t;
+      for (int r = 0; r < t.rows(); r++)
+        for (int c = 0; c < t.columns(); c++) {
+          if (t.covered(r, c)) continue;
+          var inner = t.blocks(r, c);
+          var next = trackTables(inner, old);
+          if (next != inner) tracked = tracked.setBlocks(r, c, next);
+        }
       var prior = old.get(t.id());
-        if (prior == null || prior.format == t.format) continue;
-      var was = prior.format;
-      var now = t.format;
-      if (was.rows() != now.rows() || was.columns() != now.columns()) continue;
-      if (was.revision() != null && now.revision() == null) continue;
-      if (now.revision() != null && now.revision() != was.revision()) continue;
-      var a = new StringBuilder();
-      var c = new StringBuilder();
-      TableFormats.nativeXml(a, was.formatRevision(null, null));
-      TableFormats.nativeXml(c, now.formatRevision(null, null));
-      if (a.toString().equals(c.toString())) continue;
-      var change = was.revision() != null ? was.revision() : newRevision("format");
-      blocks = blocks.set(i, t.format(now.tracked(was, change)));
+      if (prior != null && prior.format != t.format) {
+        var was = prior.format;
+        var now = t.format;
+        boolean resolving = was.revisions().size() > now.revisions().size();
+        boolean read = now.revision() != null && !was.revisions().containsAll(now.revisions());
+        if (was.rows() == now.rows() && was.columns() == now.columns() && !resolving && !read) {
+          var a = new StringBuilder();
+          var c = new StringBuilder();
+          TableFormats.nativeXml(a, was.formatRevision(null, null));
+          TableFormats.nativeXml(c, now.formatRevision(null, null));
+          if (!a.toString().equals(c.toString()))
+            tracked = tracked.format(now.tracked(was, newRevision("format")));
+        }
+      }
+      if (tracked != t) blocks = blocks.set(i, tracked);
     }
-    if (blocks != document.blocks) document = document.blocks(blocks, document.nextId);
+    return blocks;
   }
 
   private Revision newRevision(String kind) {

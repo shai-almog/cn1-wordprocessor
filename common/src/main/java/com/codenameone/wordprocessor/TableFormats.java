@@ -29,7 +29,7 @@ final class TableFormats {
           .append("\" fixed=\"")
           .append(size.fixed ? "true" : "false")
           .append("\"");
-    RevisionFormats.attributes(b, f.revision(), "format-");
+    RevisionFormats.attributes(b, f.tableRevision(), "format-");
     b.append(">");
     if (f.revision() != null && f.previous() != null) {
       b.append("<previousFormat>");
@@ -42,6 +42,7 @@ final class TableFormats {
       b.append("<row height=\"").append(f.minHeight(r)).append("\"");
       if ("exact".equals(f.row(r).rule)) b.append(" rule=\"exact\"");
       if (!f.row(r).allowBreak) b.append(" allowBreak=\"false\"");
+      RevisionFormats.attributes(b, f.rowRevision(r), "format-");
       b.append(">");
       for (int c = 0; c < f.columns(); c++) {
         var v = f.cell(r, c);
@@ -58,7 +59,9 @@ final class TableFormats {
             .append(v.verticalPadding)
             .append("\" vertical=\"")
             .append(v.vertical)
-            .append("\"/>");
+            .append('"');
+        RevisionFormats.attributes(b, f.cellRevision(r, c), "format-");
+        b.append("/>");
       }
       b.append("</row>");
     }
@@ -75,6 +78,9 @@ final class TableFormats {
       if (Xml.children(row, "cell").size() > columns)
         throw new IllegalArgumentException("Table cell formats exceed the table width");
     int c = 0, r = 0;
+    Revision[] rowRevs = new Revision[rows];
+    Revision[][] cellRevs = new Revision[rows][columns];
+    boolean own = false;
     for (Element col : Xml.children(props, "column")) f = f.column(c++, number(col, "width", 1));
     for (Element row : Xml.children(props, "row")) {
       float height = number(row, "height", 0);
@@ -85,8 +91,12 @@ final class TableFormats {
                   height,
                   Xml.attr(row, "rule", height == 0 ? "auto" : "atLeast"),
                   !"false".equals(Xml.attr(row, "allowBreak", "true"))));
+      rowRevs[r] = RevisionFormats.nativeRead(row, "format-");
+      own |= rowRevs[r] != null;
       c = 0;
-      for (Element cell : Xml.children(row, "cell"))
+      for (Element cell : Xml.children(row, "cell")) {
+        cellRevs[r][c] = RevisionFormats.nativeRead(cell, "format-");
+        own |= cellRevs[r][c] != null;
         f =
             f.cell(
                 r,
@@ -99,6 +109,7 @@ final class TableFormats {
                     number(cell, "verticalPadding", 4),
                     Xml.attr(cell, "vertical", "top"),
                     Integer.parseInt(Xml.attr(cell, "sides", "15"))));
+      }
       r++;
     }
     f =
@@ -114,7 +125,10 @@ final class TableFormats {
         .altText(Xml.attr(props, "title", ""), Xml.attr(props, "description", ""));
     Revision change = RevisionFormats.nativeRead(props, "format-");
     Element prior = Xml.child(props, "previousFormat");
-    return change == null || prior == null ? f : f.formatRevision(change, nativeRead(prior, rows, columns));
+    if (prior == null || change == null && !own) return f;
+    // Files written before per-element revisions carry one table-wide revision.
+    if (!own) return f.formatRevision(change, nativeRead(prior, rows, columns));
+    return f.elementRevisions(change, rowRevs, cellRevs, nativeRead(prior, rows, columns));
   }
 
   static void sizingXml(StringBuilder b, TableFormat f) {
@@ -218,13 +232,13 @@ final class TableFormats {
     b.append("<w:trPr>");
     rowInner(b, f, r);
     var before = f.previous();
-    if (f.revision() != null && before != null && r < before.rows()) {
+    if (f.rowRevision(r) != null && before != null && r < before.rows()) {
       var now = new StringBuilder();
       var old = new StringBuilder();
       rowInner(now, f, r);
       rowInner(old, before, r);
       if (!now.toString().equals(old.toString()))
-        change(b, "trPrChange", "trPr", f.revision(), old.toString());
+        change(b, "trPrChange", "trPr", f.rowRevision(r), old.toString());
     }
     b.append("</w:trPr>");
   }
@@ -241,16 +255,29 @@ final class TableFormats {
   /**
    * The prior table properties a tracked change carries: the table read again with each
    * w:tblPrChange/w:trPrChange/w:tcPrChange's old properties in place of the current ones
-   * (merges kept from the current cell properties), null when there is none. Wordcraft reads
-   * one revision per element; the first found becomes the table's.
+   * (merges kept from the current cell properties). As Wordcraft, each table, row and cell
+   * keeps its own revision.
    */
   static Table readTracked(Element tbl, Table read, Table skeleton) {
     var swaps = new ArrayList<Element[]>();
     Revision[] found = {null};
-    collectChange(swaps, found, Xml.child(tbl, "tblPr"), "tblPrChange", "tblPr");
+    int rows = read.rows(), columns = read.columns();
+    Revision[] rowRevs = new Revision[rows];
+    Revision[][] cellRevs = new Revision[rows][columns];
+    Revision table = collectChange(swaps, found, Xml.child(tbl, "tblPr"), "tblPrChange", "tblPr");
+    int r = 0;
     for (Element tr : Xml.children(tbl, "tr")) {
-      collectChange(swaps, found, Xml.child(tr, "trPr"), "trPrChange", "trPr");
-      for (Element tc : Xml.children(tr, "tc")) collectChange(swaps, found, Xml.child(tc, "tcPr"), "tcPrChange", "tcPr");
+      Revision row = collectChange(swaps, found, Xml.child(tr, "trPr"), "trPrChange", "trPr");
+      if (r < rows) rowRevs[r] = row;
+      int column = 0;
+      for (Element tc : Xml.children(tr, "tc")) {
+        Element tcPr = Xml.child(tc, "tcPr");
+        Revision cell = collectChange(swaps, found, tcPr, "tcPrChange", "tcPr");
+        if (r < rows && column < columns) cellRevs[r][column] = cell;
+        Element span = tcPr == null ? null : Xml.child(tcPr, "gridSpan");
+        column += span == null ? 1 : Math.max(1, (int) Xml.number(Xml.attr(span, "val", "1")));
+      }
+      r++;
     }
     if (found[0] == null) return read;
     var saved = new ArrayList<List<Element>>();
@@ -287,20 +314,21 @@ final class TableFormats {
         for (Element e : saved.get(k)) swap[0].addChild(e);
       }
     }
-    return read.format(read.format.formatRevision(found[0], previous.format));
+    return read.format(read.format.elementRevisions(table, rowRevs, cellRevs, previous.format));
   }
 
-  private static void collectChange(List<Element[]> out, Revision[] found, Element pr, String change, String props) {
+  private static Revision collectChange(List<Element[]> out, Revision[] found, Element pr, String change, String props) {
     Element ch = pr == null ? null : Xml.child(pr, change);
-    if (ch == null) return;
-    if (found[0] == null)
-      found[0] = new Revision(Xml.attr(ch, "id", "0"), "format", Xml.attr(ch, "author", ""), Xml.attr(ch, "date", ""));
+    if (ch == null) return null;
+    var revision = new Revision(Xml.attr(ch, "id", "0"), "format", Xml.attr(ch, "author", ""), Xml.attr(ch, "date", ""));
+    if (found[0] == null) found[0] = revision;
     Element old = Xml.child(ch, props);
     if (old == null) {
       old = new Element("w:" + props);
       ch.addChild(old);
     }
     out.add(new Element[] {pr, old});
+    return revision;
   }
 
   private static void rowInner(StringBuilder b, TableFormat f, int r) {

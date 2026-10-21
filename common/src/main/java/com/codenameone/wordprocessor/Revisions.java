@@ -75,8 +75,13 @@ public final class Revisions {
    * lists a table's fmt_change; located at the table's first cell paragraph.
    */
   private static void tableChange(List<Change> out, Table t, String story, int block) {
-    if (t.format.revision() == null) return;
-    out.add(new Change(t.format.revision(), t.cell(0, 0).get(0), "Table properties", story, block, -1, -1, 0, 0));
+    // Wordcraft keeps one fmt_change per table, row and cell: each distinct revision is listed.
+    for (Revision r : t.format.revisions()) {
+      String what = r == t.format.tableRevision() ? "Table properties" : "Cell properties";
+      for (int row = 0; row < t.rows() && what.startsWith("Cell"); row++)
+        if (r == t.format.rowRevision(row)) what = "Row properties";
+      out.add(new Change(r, t.cell(0, 0).get(0), what, story, block, -1, -1, 0, 0));
+    }
   }
 
   private static void collect(
