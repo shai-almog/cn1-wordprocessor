@@ -2205,6 +2205,12 @@ public final class LayoutEngine {
       final List<Float> xs = new ArrayList<Float>(), ys = new ArrayList<Float>();
       final List<int[]> paths = new ArrayList<int[]>();
       final List<InnerBox> inner = new ArrayList<InnerBox>();
+      /** Pictures and drawings in this cell (nested cells too) with their cell-relative frames. */
+      final List<Picture> pics = new ArrayList<Picture>();
+      final List<float[]> picBoxes = new ArrayList<float[]>();
+      /** The cell's floats text wraps around, as {x0, y0, x1, y1, topBottom, side} in cell space. */
+      final List<float[]> floats = new ArrayList<float[]>();
+      final List<String> floatSides = new ArrayList<String>();
       final TableFormat.Cell format;
       final float left, width;
       float height, shift;
@@ -2231,14 +2237,35 @@ public final class LayoutEngine {
             nestedTable(nested, k, prefix, width);
             continue;
           }
+          if (content.get(k) instanceof Picture pic) {
+            picture(pic, width);
+            continue;
+          }
           var p = (Paragraph) content.get(k);
           var marker = numbers.next(p);
           height += p.before;
-          for (RawLine line : LayoutEngine.this.lines(p, width)) {
+          List<RawLine> cellLines;
+          if (floats.isEmpty()) cellLines = LayoutEngine.this.lines(p, width);
+          else {
+            // As Wordcraft wraps cell text per line around the cell's floats.
+            final float base = height, innerWidth = width;
+            band = (top, h) -> {
+              float[] c = cellCut(base + top, h, innerWidth);
+              c[2] -= base;
+              return c;
+            };
+            try {
+              cellLines = LayoutEngine.this.lines(p, width);
+            } finally {
+              band = null;
+            }
+          }
+          for (RawLine line : cellLines) {
+            height += line.skip;
             float indent = p.indent + (p.list.isEmpty() ? 0 : 18 * (p.listLevel + 1));
             float first = line.start == 0 ? p.format.firstIndent : 0;
-            float x = format.horizontalPadding + indent + first;
-            float extra = width - indent - first - p.format.rightIndent - line.width;
+            float x = format.horizontalPadding + indent + first + line.lead;
+            float extra = width - indent - first - p.format.rightIndent - line.lead - line.cutRight - line.width;
             if ("center".equals(p.align)) x += extra / 2;
             if ("right".equals(p.align)) x += extra;
             lines.add(line);
@@ -2253,7 +2280,86 @@ public final class LayoutEngine {
           }
           height += p.after;
         }
+        for (float[] f : floats) height = Math.max(height, f[3]);
         height += format.verticalPadding;
+      }
+
+      /**
+       * A picture or drawing in the cell: inline ones take their own line in the cell flow (aligned
+       * as their paragraph); floats are placed in the cell (Word's layoutInCell) from the current
+       * paragraph position and text in the cell wraps around them line by line.
+       */
+      private void picture(Picture pic, float available) {
+        String wrap = pic.wrap();
+        float w = Math.min(pic.width, Math.max(1, available)), h = pic.height * (pic.width > 0 ? w / pic.width : 1);
+        FloatPosition f = "inline".equals(wrap) ? null : FloatPosition.parse(pic.position());
+        if ("inline".equals(wrap)) {
+          float x = format.horizontalPadding;
+          if ("center".equals(pic.align)) x += (available - w) / 2;
+          else if ("right".equals(pic.align)) x += available - w;
+          pics.add(pic);
+          picBoxes.add(new float[] {x, height, w, h});
+          height += h;
+          return;
+        }
+        float x = format.horizontalPadding, y = height;
+        String ha = f == null ? ("right".equals(pic.align) ? "end" : "center".equals(pic.align) ? "center" : "") : f.hAlign;
+        if ("center".equals(ha)) x += (available - w) / 2;
+        else if ("end".equals(ha) || "right".equals(ha) || "outside".equals(ha)) x += available - w;
+        else if (f != null && ha.isEmpty()) x += f.x;
+        if (f != null && f.vAlign.isEmpty()) y += f.y;
+        x = Math.max(0, x);
+        y = Math.max(0, y);
+        pics.add(pic);
+        picBoxes.add(new float[] {x, y, w, h});
+        if (!"front".equals(wrap) && !"behind".equals(wrap)) {
+          float d = "topAndBottom".equals(wrap) ? 0 : 9;
+          floats.add(new float[] {x - d, y, x + w + d, y + h, "topAndBottom".equals(wrap) ? 1 : 0});
+          floatSides.add(f == null ? "bothSides" : f.side);
+        }
+      }
+
+      /** As {@link #cut} for the cell's own floats, in content coordinates of width {@code inner}. */
+      float[] cellCut(float yA, float h, float inner) {
+        float left = 0, right = inner, pad = format.horizontalPadding;
+        var spans = new ArrayList<float[]>();
+        spans.add(new float[] {left, right});
+        float firstBottom = Float.MAX_VALUE;
+        boolean any = false;
+        for (int i = 0; i < floats.size(); i++) {
+          float[] e = floats.get(i);
+          if (e[1] >= yA + h || e[3] <= yA) continue;
+          if (e[4] != 0) return new float[] {0, 0, e[3]};
+          float x0 = e[0] - pad, x1 = e[2] - pad;
+          String side = floatSides.get(i);
+          if (!"bothSides".equals(side)) {
+            boolean textLeft = "left".equals(side) || (!"right".equals(side) && x0 - left >= right - x1);
+            if (textLeft) x1 = Math.max(right, x1);
+            else x0 = Math.min(left, x0);
+          }
+          any = true;
+          firstBottom = Math.min(firstBottom, e[3]);
+          var next = new ArrayList<float[]>();
+          for (float[] sp : spans)
+            if (x1 <= sp[0] || x0 >= sp[1]) next.add(sp);
+            else {
+              next.add(new float[] {sp[0], Math.min(x0, sp[1])});
+              next.add(new float[] {Math.max(x1, sp[0]), sp[1]});
+            }
+          spans = next;
+        }
+        if (!any) return new float[] {0, 0, yA};
+        for (int i = spans.size() - 1; i >= 0; i--) if (spans.get(i)[1] - spans.get(i)[0] < 20) spans.remove(i);
+        if (spans.isEmpty()) return new float[] {0, 0, firstBottom};
+        float[] out = new float[3 + (spans.size() - 1) * 2];
+        out[0] = spans.get(0)[0] - left;
+        out[1] = right - spans.get(spans.size() - 1)[1];
+        out[2] = yA;
+        for (int i = 1; i < spans.size(); i++) {
+          out[1 + i * 2] = spans.get(i - 1)[1] - left;
+          out[2 + i * 2] = spans.get(i)[0] - left;
+        }
+        return out;
       }
 
       /**
@@ -2305,6 +2411,11 @@ public final class LayoutEngine {
           inner.add(new InnerBox(own, sub.left, top, sub.width, cellHeight, sub.format));
           for (InnerBox b : sub.inner)
             inner.add(new InnerBox(b.path, sub.left + b.x, top + shift + b.y, b.width, b.height, b.format));
+          for (int i = 0; i < sub.pics.size(); i++) {
+            float[] r = sub.picBoxes.get(i);
+            pics.add(sub.pics.get(i));
+            picBoxes.add(new float[] {sub.left + r[0], top + shift + r[1], r[2], r[3]});
+          }
           for (int i = 0; i < sub.lines.size(); i++) {
             lines.add(sub.lines.get(i));
             paragraphs.add(sub.paragraphs.get(i));
@@ -2510,6 +2621,15 @@ public final class LayoutEngine {
                         shownBottom - shownTop,
                         b.format)
                     .at(b.path));
+        }
+        for (int i = 0; i < cell.pics.size(); i++) {
+          float[] r = cell.picBoxes.get(i);
+          float picTop = top + cell.shift + r[1];
+          // Drawn on the page where its top shows (block -1: painted, not body-selectable).
+          if (picTop >= first - .01f && picTop < end - .01f)
+            pictures.add(
+                new PlacedPicture(
+                    cell.pics.get(i), -1, pages.size(), spec.left + cell.left + r[0], y + picTop - first, r[2], r[3]));
         }
         for (int i = 0; i < cell.lines.size(); i++) {
           float lineY = top + cell.shift + cell.ys.get(i);

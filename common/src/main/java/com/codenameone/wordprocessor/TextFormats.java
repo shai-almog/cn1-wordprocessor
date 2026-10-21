@@ -186,27 +186,8 @@ public final class TextFormats {
             .append("</title></head><body>");
     for (Block block : doc.blocks) {
       if (block instanceof Paragraph paragraph) paragraph(b, paragraph);
-      else if (block instanceof Picture pic) {
-        if (pic.drawing != null) {
-          b.append("<p style=\"text-align:").append(pic.align).append("\">");
-          svg(b, pic);
-          b.append("</p>");
-          continue;
-        }
-        b.append("<p style=\"text-align:")
-            .append(pic.align)
-            .append("\"><img alt=\"")
-            .append(Xml.escape(pic.alt))
-            .append("\" style=\"width:")
-            .append(pic.width)
-            .append("pt;height:")
-            .append(pic.height)
-            .append("pt\" src=\"data:")
-            .append(pic.mime)
-            .append(";base64,")
-            .append(com.codename1.util.Base64.encodeNoNewline(pic.bytes()))
-            .append("\"></p>");
-      } else if (block instanceof Table t) htmlTable(b, t);
+      else if (block instanceof Picture pic) htmlPicture(b, pic);
+      else if (block instanceof Table t) htmlTable(b, t);
     }
     for (String kind : new String[] {"footnote", "endnote"}) {
       boolean heading = false;
@@ -234,6 +215,29 @@ public final class TextFormats {
   }
 
   /** A table as HTML; nested tables are written inside their cells. */
+  /** A body or cell picture: an inline SVG for drawings, else an img with its data. */
+  private static void htmlPicture(StringBuilder b, Picture pic) {
+    if (pic.drawing != null) {
+      b.append("<p style=\"text-align:").append(pic.align).append("\">");
+      svg(b, pic);
+      b.append("</p>");
+      return;
+    }
+    b.append("<p style=\"text-align:")
+            .append(pic.align)
+            .append("\"><img alt=\"")
+            .append(Xml.escape(pic.alt))
+            .append("\" style=\"width:")
+            .append(pic.width)
+            .append("pt;height:")
+            .append(pic.height)
+            .append("pt\" src=\"data:")
+            .append(pic.mime)
+            .append(";base64,")
+            .append(com.codename1.util.Base64.encodeNoNewline(pic.bytes()))
+            .append("\"></p>");
+  }
+
   private static void htmlTable(StringBuilder b, Table t) {
     b.append("<table style=\"").append(TableFormats.css(t.format)).append("\"");
     if (!t.format.title.isEmpty())
@@ -260,6 +264,7 @@ public final class TextFormats {
         for (Block inner : t.blocks(r, c))
           if (inner instanceof Paragraph p) paragraph(b, p);
           else if (inner instanceof Table nested) htmlTable(b, nested);
+          else if (inner instanceof Picture pic) htmlPicture(b, pic);
         b.append("</td>");
       }
       b.append("</tr>");

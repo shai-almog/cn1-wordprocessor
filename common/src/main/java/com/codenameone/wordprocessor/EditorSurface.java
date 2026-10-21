@@ -636,7 +636,7 @@ public final class EditorSurface extends Container
                 "Edit picture",
                 (component, argument) -> {
                   stopInput();
-                  if (pictureEditor != null) pictureEditor.edit(pic.block());
+                  if (pictureEditor != null && pic.block() >= 0) pictureEditor.edit(pic.block());
                   return true;
                 }));
         nodes.add(node);
@@ -2185,6 +2185,7 @@ public final class EditorSurface extends Container
       float px = (x - viewportX() - pageX(page)) / scale();
       float py = (y - viewportY() + getScrollY() - pageY(page)) / scale();
       for (LayoutEngine.PlacedPicture pic : layout().pages.get(page).pictures) {
+        if (pic.block() < 0) continue; // table-cell pictures are drawn, not body objects
         if (px < pic.x() || px > pic.x() + pic.width() || py < pic.y() || py > pic.y() + pic.height()) continue;
         var d = pic.picture().drawing;
         if (d == null || !("ink".equals(d.kind) || "canvas".equals(d.kind))) continue;
@@ -2281,7 +2282,8 @@ public final class EditorSurface extends Container
       float px = (x - viewportX() - pageX(page)) / scale();
       float py = (y - viewportY() + getScrollY() - pageY(page)) / scale();
       for (LayoutEngine.PlacedPicture pic : layout().pages.get(page).pictures) {
-        if (px >= pic.x() && px <= pic.x() + pic.width() && py >= pic.y() && py <= pic.y() + pic.height()) {
+        if (pic.block() >= 0
+            && px >= pic.x() && px <= pic.x() + pic.width() && py >= pic.y() && py <= pic.y() + pic.height()) {
           stopInput();
           if (clickEquation(pic, px, py)) return;
           // Pressing an object may start dragging it (Wordcraft's arrange.bounds drag).

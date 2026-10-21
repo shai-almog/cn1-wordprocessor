@@ -580,6 +580,7 @@ public final class DocumentXml {
         for (Block inner : t.blocks(r, c))
           if (inner instanceof Paragraph para) paragraph(b, para);
           else if (inner instanceof Table nested) table(b, nested);
+          else if (inner instanceof Picture pic) picture(b, pic);
         b.append("</cell>");
       }
       b.append("</row>");
@@ -607,6 +608,7 @@ public final class DocumentXml {
         for (Element p : Xml.children(cell, null))
           if ("p".equals(Xml.local(p))) content = content.append(readParagraph(p, ids));
           else if ("table".equals(Xml.local(p))) content = content.append(readTable(p, ids));
+          else if ("picture".equals(Xml.local(p))) content = content.append(readPicture(p, ids));
         cells.add(content);
       }
       rows.add(cells);

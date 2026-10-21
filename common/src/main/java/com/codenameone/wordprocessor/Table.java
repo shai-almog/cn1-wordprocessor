@@ -222,7 +222,7 @@ public final class Table implements Block {
     var out = new Sequence<Block>();
     int i = 0;
     for (Block b : old)
-      if (b instanceof Table) out = out.append(b);
+      if (!(b instanceof Paragraph)) out = out.append(b); // nested tables and cell pictures
       else if (i < value.size()) out = out.append(value.get(i++));
     for (; i < value.size(); i++) out = out.append(value.get(i));
     if (!(out.get(out.size() - 1) instanceof Paragraph)) out = widen(value);
@@ -427,7 +427,9 @@ public final class Table implements Block {
               cell.append(
                   b instanceof Table inner
                       ? inner.renumbered(paragraphPrefix, tablePrefix, id)
-                      : ((Paragraph) b).copy(paragraphPrefix + id[0]++, ((Paragraph) b).text));
+                      : b instanceof Picture pic
+                          ? pic.copy(paragraphPrefix + id[0]++)
+                          : ((Paragraph) b).copy(paragraphPrefix + id[0]++, ((Paragraph) b).text));
         row.add(cell);
       }
       out.add(row);

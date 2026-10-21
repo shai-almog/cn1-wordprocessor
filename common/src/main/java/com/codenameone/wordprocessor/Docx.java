@@ -128,7 +128,7 @@ public final class Docx {
         for (Picture image : images)
           blocks.add(image.resize(image.width, image.height, image.alt, align));
       } else if ("tbl".equals(kind)) {
-        Table table = readTable(c, id, warnings, lists, styles, links, comments);
+        Table table = readTable(c, id, warnings, lists, styles, links, comments, pictures);
         if (table != null) blocks.add(table);
       } else if (!"sectPr".equals(kind)) warnings.add("Document feature: " + kind);
     }
@@ -210,6 +210,19 @@ public final class Docx {
       DocxStyles styles,
       DocxLinks links,
       DocxComments comments) {
+    return readTable(table, id, warnings, lists, styles, links, comments, null);
+  }
+
+  /** As above; {@code pictures} reads the cells' drawings (inline and floating) into the cell. */
+  static Table readTable(
+      Element table,
+      long[] id,
+      Set<String> warnings,
+      DocxLists.Read lists,
+      DocxStyles styles,
+      DocxLinks links,
+      DocxComments comments,
+      DocxPictures pictures) {
     var rows = new ArrayList<List<Sequence<Block>>>();
     var spans = new ArrayList<int[]>();
     for (Element row : Xml.children(table, "tr")) {
@@ -229,10 +242,24 @@ public final class Docx {
         // Cells hold paragraphs and nested tables (w:tc/w:tbl), as Word and Wordcraft do.
         var cellBlocks = new ArrayList<Block>();
         for (Element p : Xml.children(cell, null))
-          if ("p".equals(Xml.local(p)))
-            cellBlocks.add(paragraph(p, id, warnings, lists, styles, links, comments));
-          else if ("tbl".equals(Xml.local(p))) {
-            var nested = readTable(p, id, warnings, lists, styles, links, comments);
+          if ("p".equals(Xml.local(p))) {
+            if (pictures == null) {
+              cellBlocks.add(paragraph(p, id, warnings, lists, styles, links, comments));
+              continue;
+            }
+            // As Wordcraft's cells: a paragraph's drawings become cell pictures after its text.
+            var paragraphWarnings = new LinkedHashSet<String>();
+            Paragraph para = paragraph(p, id, paragraphWarnings, lists, styles, links, comments);
+            paragraphWarnings.remove("Run feature: drawing");
+            warnings.addAll(paragraphWarnings);
+            var images = pictures.read(p, id, warnings);
+            if (images.isEmpty() || para.text.length() > 0) cellBlocks.add(para);
+            Element pp = Xml.child(p, "pPr"), jc = pp == null ? null : Xml.child(pp, "jc");
+            String align = jc == null ? "left" : Xml.attr(jc, "val", "left");
+            if (!"center".equals(align) && !"right".equals(align)) align = "left";
+            for (Picture image : images) cellBlocks.add(image.resize(image.width, image.height, image.alt, align));
+          } else if ("tbl".equals(Xml.local(p))) {
+            var nested = readTable(p, id, warnings, lists, styles, links, comments, pictures);
             if (nested != null) cellBlocks.add(nested);
           }
         if (cellBlocks.isEmpty() || !(cellBlocks.get(cellBlocks.size() - 1) instanceof Paragraph))
@@ -873,7 +900,7 @@ static final char COLUMN_BREAK = '\u000B';
         else writeParagraph(b, paragraph, lists, tabs, links, comments, sectionXml, prefix, suffix);
       } else if (block instanceof Picture picture) pictures.write(b, picture);
       else if (block instanceof Table t)
-        writeTable(b, t, sectionPage.contentWidth(), lists, tabs, links, comments);
+        writeTable(b, t, sectionPage.contentWidth(), lists, tabs, links, comments, pictures);
       if (contents != null && blockIndex == contents[1] - 1) {
         b.append("</w:sdtContent></w:sdt>");
         contents = ++rangeIndex < contentsRanges.size() ? contentsRanges.get(rangeIndex) : null;
@@ -1133,6 +1160,19 @@ static final char COLUMN_BREAK = '\u000B';
       DocxTabs tabs,
       DocxLinks links,
       DocxComments comments) {
+    writeTable(b, t, available, lists, tabs, links, comments, null);
+  }
+
+  /** As above; {@code pictures} writes cell pictures and drawings (w:tc/w:p/w:drawing). */
+  static void writeTable(
+      StringBuilder b,
+      Table t,
+      float available,
+      DocxLists lists,
+      DocxTabs tabs,
+      DocxLinks links,
+      DocxComments comments,
+      DocxPictures pictures) {
       b.append("<w:tbl><w:tblPr>");
       TableFormats.sizingXml(b, t.format);
       float tableWidth = t.format.preferredWidth(available);
@@ -1166,7 +1206,8 @@ static final char COLUMN_BREAK = '\u000B';
             for (Block inner : t.blocks(r, c))
               if (inner instanceof Paragraph p) writeParagraph(b, p, lists, tabs, links, comments);
               else if (inner instanceof Table nested)
-                writeTable(b, nested, cellWidth, lists, tabs, links, comments);
+                writeTable(b, nested, cellWidth, lists, tabs, links, comments, pictures);
+              else if (inner instanceof Picture pic && pictures != null) pictures.write(b, pic);
           else b.append("<w:p/>");
           b.append("</w:tc>");
         }

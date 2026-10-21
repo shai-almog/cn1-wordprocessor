@@ -184,8 +184,13 @@ Shapes, text boxes, WordArt, charts, SmartArt, display equations, ink/canvases, 
     on both sides, or on the side `wrapText` picks (left, right, largest; read, written back and set by
     `arrange.wrapText`). Tight/Through use the wrap polygon's extent over each line; Top and Bottom moves
     lines below the object. Column-aligned paragraph floats and header floats wrap the same way.
-    Tables in the text flow start below floats in their way. Drawings inside table cells are not imported
-    (cells hold paragraphs and nested tables only).
+    Tables in the text flow start below floats in their way. Pictures and drawings inside table cells (`w:tc/w:p/w:drawing`,
+    inline and anchored) are cell blocks: read and written in DOCX, native, HTML (`<img>`/SVG in `<td>`) and
+    ODT (raster frames only, as in the body); inline ones take their own line in the cell flow, floats are
+    placed in the cell from their paragraph (any anchor is treated as Word's layoutInCell) and cell text
+    wraps around them per line (Square/Tight/Through as rectangles, Top and Bottom). They draw on screen
+    and in PDF but cannot yet be selected, dragged or edited inside the cell; RTF/Markdown cells drop them
+    and .doc import keeps only what the converted DOCX XML carries.
   - Behind/in-front objects take no space (`behindDoc` picks behind).
   - Dragging an object floats it at the drop point (page-relative on its anchor's page); dropped on another
     page it re-anchors to the paragraph there (Wordcraft's move_object), with an outline while dragging;
@@ -194,7 +199,8 @@ Shapes, text boxes, WordArt, charts, SmartArt, display equations, ink/canvases, 
   freeforms (`a:custGeom`) flatten cubic/quadratic Beziers into 16 steps, `fill="none"` paths stay open and
   `arcTo` is skipped (as in Wordcraft). Pictures inside groups are kept as picture members (PNG/JPEG
   bytes), drawn on screen and in PDF (image XObjects) and written as `pic:pic`; member and group `a:xfrm rot`
-  turn shapes and pictures (group text letters turn too). Standalone shapes and text boxes read and draw their own `a:xfrm` rot/flipH/flipV.
+  turn shapes and pictures (group text letters turn too). Standalone shapes and text boxes read and draw their own `a:xfrm` rot/flipH/flipV. DOCX export writes shape and text-box rotation and flips in the standard
+  `a:xfrm` (rot/flipH/flipV) so Word turns them, as well as in the private extension.
 
 ## Content controls (2026-10-17)
 

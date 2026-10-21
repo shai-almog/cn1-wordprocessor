@@ -76,14 +76,17 @@ final class TextBlocks {
     if (source.trim().length() > 0) {
       try {
         // HTML cells may hold nested tables (Wordcraft nests tables in cells); read them too.
-        boolean nested = format == RichTextFormat.HTML && source.toLowerCase().indexOf("<table") >= 0;
+        // Pictures in cells (<img>) are kept as cell pictures, as Wordcraft's cells hold them.
+        String lower = source.toLowerCase();
+        boolean nested = format == RichTextFormat.HTML && (lower.indexOf("<table") >= 0 || lower.indexOf("<img") >= 0);
         Document d = TextFormats.read(source, format, nested);
         for (Block b : d.blocks)
           if (b instanceof Table inner) {
             long[] n = {next};
             out = out.append(inner.renumbered("x", "x", n));
             next = n[0];
-          } else if (b instanceof Paragraph p && (p.text.length() > 0 || out.size() == 0))
+          } else if (b instanceof Picture pic) out = out.append(pic.copy(id()));
+          else if (b instanceof Paragraph p && (p.text.length() > 0 || out.size() == 0))
             out = out.append(new Paragraph(id(), p.text).with("align", p.align));
         if (out.size() > 0 && !(out.get(out.size() - 1) instanceof Paragraph))
           out = out.append(new Paragraph(id(), new RichText()));
@@ -983,7 +986,7 @@ final class TextBlocks {
             rtfTable(b, inner, depth + 1, cellWidth);
             continue;
           }
-          var p = (Paragraph) block;
+          if (!(block instanceof Paragraph p)) continue; // cell pictures: not kept in RTF cells
           b.append("\\pard\\plain\\intbl");
           if (depth > 1) b.append("\\itap").append(depth);
           b.append(' ');
