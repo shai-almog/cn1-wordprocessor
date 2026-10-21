@@ -234,6 +234,11 @@ final class DocxFurniture {
       settings.addChild(Xml.parse("<w:evenAndOddHeaders xmlns:w=\"" + W + "\"/>"));
     for (int i = settings.getNumChildren() - 1; i >= 0; i--)
       if (!settings.getChildAt(i).isTextElement()
+          && "mirrorMargins".equals(Xml.local(settings.getChildAt(i)))) settings.removeChildAt(i);
+    if (document.mirrorMargins())
+      settings.addChild(Xml.parse("<w:mirrorMargins xmlns:w=\"" + W + "\"/>"));
+    for (int i = settings.getNumChildren() - 1; i >= 0; i--)
+      if (!settings.getChildAt(i).isTextElement()
           && "trackRevisions".equals(Xml.local(settings.getChildAt(i)))) settings.removeChildAt(i);
     if (document.trackChanges)
       settings.addChild(Xml.parse("<w:trackRevisions xmlns:w=\"" + W + "\"/>"));

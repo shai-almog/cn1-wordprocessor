@@ -47,6 +47,8 @@ Headers/footers are block stories like Word's and Wordcraft's: paragraphs, table
 
 Section update: native storage and DOCX now preserve paragraph section boundaries, paper geometry, next/continuous/odd/even starts, page-number restarts and inherited versus explicitly empty header/footer stories. PDF uses each page's own MediaBox; resolved PAGE results follow section numbering. Oversized margin content produces layout warnings and PDF export fails rather than silently dropping content. `w:gutter` is added to the left margin and written back apart, and `lnNumType` start/distance are honored (as Wordcraft). Columns, mirrored margins, complex continuous-section layout and nondecimal section numbering remain unsupported.
 
+Mirrored margins (`w:settings/w:mirrorMargins`, Layout command `layout.mirrorMargins`) are read, written and kept natively; as Wordcraft's `mirror_even_pages`, even pages put the inside margin and gutter on the right, moving their header, text, notes, footer and column rules to start at the outside margin while page borders stay. Section columns (equal and unequal widths, separator lines) were already supported.
+
 
 Tracked text insertions/deletions use DOCX `ins`/`del` and `delText`; paragraph marks carry their own revision metadata. Character and paragraph formatting use `rPrChange`/`pPrChange`, with original property values and author/date metadata. Native XML preserves the same history and the track-changes flag. Resolving a selection splits revisions at its boundaries; fields remain atomic. Format-only edits and style changes can be accepted/rejected after native or DOCX reopen. Imported inherited paragraph-style changes also retain their original character defaults.
 

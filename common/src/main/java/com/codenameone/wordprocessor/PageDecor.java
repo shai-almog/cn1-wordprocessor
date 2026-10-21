@@ -42,7 +42,9 @@ public final class PageDecor {
       java.util.Arrays.asList("verticalAlign", "rtl", "textDirection", "grid", "gridPitch", "charPitch",
           // Wordcraft SectionProps: gutter (points, already part of the page's left margin),
           // line-number start (first number) and distance from the text (points).
-          "gutter", "lineStart", "lineDistance");
+          "gutter", "lineStart", "lineDistance",
+          // Document-wide w:mirrorMargins, carried on each section (Document.mirrorMargins).
+          "mirrorMargins");
 
   public static final java.util.List<String> VERTICAL_ALIGN =
       java.util.Arrays.asList("top", "center", "both", "bottom");
@@ -136,7 +138,7 @@ public final class PageDecor {
       if ("verticalAlign".equals(key) && !VERTICAL_ALIGN.contains(value)
           || "textDirection".equals(key) && !TEXT_DIRECTIONS.contains(value)
           || "grid".equals(key) && !GRIDS.contains(value)
-          || "rtl".equals(key) && !"true".equals(value) && !"false".equals(value))
+          || ("rtl".equals(key) || "mirrorMargins".equals(key)) && !"true".equals(value) && !"false".equals(value))
         throw new IllegalArgumentException("Invalid " + key + ": " + value);
       if (key.endsWith("Pitch")) {
         float f = Float.parseFloat(value);

@@ -171,6 +171,8 @@ public final class Docx {
                 TableStyles.readDocx(parts.containsKey("word/styles.xml") ? Xml.parse(parts.get("word/styles.xml")) : null)));
     document = TableStyles.applyAll(document);
     Element tracking = settings == null ? null : Xml.child(settings, "trackRevisions");
+    Element mirror = settings == null ? null : Xml.child(settings, "mirrorMargins");
+    if (mirror != null && enabled(mirror)) document = document.mirrorMargins(true);
     document =
         RevisionFormats.reserveIds(document.trackChanges(tracking != null && enabled(tracking)));
     var definitions =

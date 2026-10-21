@@ -294,6 +294,25 @@ public final class Document {
             bookmarks, bibliography, properties);
   }
 
+  /**
+   * Mirrored margins (w:settings/w:mirrorMargins) is a document setting; it is carried on every
+   * section's layout so the layout of each page sees it.
+   */
+  public boolean mirrorMargins() {
+    return "true".equals(lastSection.decor.layout("mirrorMargins", "false"));
+  }
+
+  public Document mirrorMargins(boolean value) {
+    var next = new LinkedHashMap<String, Section>();
+    for (Map.Entry<String, Section> e : sections.entrySet())
+      next.put(e.getKey(), mirrored(e.getValue(), value));
+    return sections(next, mirrored(lastSection, value));
+  }
+
+  private static Section mirrored(Section s, boolean value) {
+    return s.decor(s.decor.withLayout("mirrorMargins", value ? "true" : null));
+  }
+
   public Document sections(Map<String, Section> value, Section last) {
     if (value == null || last == null) throw new NullPointerException();
     var ids = new HashSet<String>();

@@ -235,6 +235,11 @@ public final class LayoutEngine {
 
   /** Section vertical alignment: moves a page's body content down by dy points. */
   private static List<Line> shiftLines(List<Line> lines, float dy) {
+    return shiftLines(lines, 0, dy);
+  }
+
+  private static List<Line> shiftLines(List<Line> lines, float dx, float dy) {
+    if (dx == 0 && dy == 0) return lines;
     var out = new ArrayList<Line>();
     for (Line line : lines) {
       var raw = new RawLine();
@@ -247,25 +252,45 @@ public final class LayoutEngine {
       raw.spans.addAll(line.spans);
       raw.barTabs = line.barTabs;
       out.add(
-          new Line(line.block, line.row, line.column, line.paragraphId, line.page, line.x,
+          new Line(line.block, line.row, line.column, line.paragraphId, line.page, line.x + dx,
               line.y + dy, raw, line.marker, line.clipHeight).at(line.path));
     }
     return out;
   }
 
   private static List<Box> shiftBoxes(List<Box> boxes, float dy) {
+    return shiftBoxes(boxes, 0, dy);
+  }
+
+  private static List<Box> shiftBoxes(List<Box> boxes, float dx, float dy) {
+    if (dx == 0 && dy == 0) return boxes;
     var out = new ArrayList<Box>();
     for (Box b : boxes)
       out.add(
-          new Box(b.block, b.row, b.column, b.page, b.x, b.y + dy, b.width, b.height, b.format)
+          new Box(b.block, b.row, b.column, b.page, b.x + dx, b.y + dy, b.width, b.height, b.format)
               .at(b.path));
     return out;
   }
 
+  private static float[] moved(float[] frame, float dx, float dy) {
+    if (frame == null) return null;
+    var out = frame.clone();
+    out[0] += dx;
+    if (out.length > 1) out[1] += dy;
+    return out;
+  }
+
   private static List<PlacedPicture> shiftPictures(List<PlacedPicture> pictures, float dy) {
+    return shiftPictures(pictures, 0, dy);
+  }
+
+  private static List<PlacedPicture> shiftPictures(List<PlacedPicture> pictures, float dx, float dy) {
+    if (dx == 0 && dy == 0) return pictures;
     var out = new ArrayList<PlacedPicture>();
     for (PlacedPicture p : pictures)
-      out.add(new PlacedPicture(p.picture, p.block, p.page, p.x, p.y + dy, p.width, p.height));
+      out.add(
+          new PlacedPicture(p.picture, p.block, p.page, p.x + dx, p.y + dy, p.width, p.height, p.cell,
+              moved(p.frame, dx, dy)));
     return out;
   }
 
@@ -1355,28 +1380,39 @@ public final class LayoutEngine {
               b.pages.size(),
               body.bottom - context.furniture.footerDistance,
               warnings);
+      // Mirrored margins (w:mirrorMargins), as Wordcraft's mirror_even_pages: even pages have the
+      // inside margin (and gutter) on the right, so their header, text, notes and footer move to
+      // start at the outside margin; page borders, measured from the page edge, stay.
+      boolean mirrored =
+          page.number % 2 == 0
+              && "true".equals(ranges.get(page.section).resolved.decor.layout("mirrorMargins", "false"));
+      float dx = mirrored ? page.spec.right - page.spec.left : 0;
+      if (!(Math.abs(dx) < 1e6f) || Math.abs(dx) < .001f) dx = 0;
+      var spec = dx == 0 ? page.spec
+          : new PageSpec(page.spec.width, page.spec.height, page.spec.top, page.spec.left,
+              page.spec.bottom, page.spec.right);
       var rebuilt =
           new Page(
-              page.spec,
+              spec,
               page.section,
               page.sectionPage,
               page.number,
-              dy == 0 ? page.lines : shiftLines(page.lines, dy),
-              dy == 0 ? page.boxes : shiftBoxes(page.boxes, dy),
-              dy == 0 ? page.pictures : shiftPictures(page.pictures, dy),
-              Collections.unmodifiableList(header.lines),
-              Collections.unmodifiableList(footer.lines),
-              page.notes);
-      rebuilt.furnitureBoxes.addAll(header.boxes);
-      rebuilt.furnitureBoxes.addAll(footer.boxes);
-      rebuilt.furniturePictures.addAll(header.pictures);
-      rebuilt.furniturePictures.addAll(footer.pictures);
-      rebuilt.columnRules.addAll(page.columnRules);
+              shiftLines(page.lines, dx, dy),
+              shiftBoxes(page.boxes, dx, dy),
+              shiftPictures(page.pictures, dx, dy),
+              Collections.unmodifiableList(shiftLines(header.lines, dx, 0)),
+              Collections.unmodifiableList(shiftLines(footer.lines, dx, 0)),
+              shiftLines(page.notes, dx, 0));
+      rebuilt.furnitureBoxes.addAll(shiftBoxes(header.boxes, dx, 0));
+      rebuilt.furnitureBoxes.addAll(shiftBoxes(footer.boxes, dx, 0));
+      rebuilt.furniturePictures.addAll(shiftPictures(header.pictures, dx, 0));
+      rebuilt.furniturePictures.addAll(shiftPictures(footer.pictures, dx, 0));
+      for (float[] r : page.columnRules) rebuilt.columnRules.add(new float[] {r[0] + dx, r[1], r[2]});
       for (Frame f : page.frames)
         rebuilt.frames.add(
-            dy == 0
+            dy == 0 && dx == 0
                 ? f
-                : new Frame(f.x, f.top + dy, f.width, f.bottom + dy, f.borders, f.shading, f.first, f.last));
+                : new Frame(f.x + dx, f.top + dy, f.width, f.bottom + dy, f.borders, f.shading, f.first, f.last));
       rebuilt.decor = ranges.get(page.section).resolved.decor;
       var numbering = rebuilt.decor;
       if (numbering.lineCountBy > 0) {

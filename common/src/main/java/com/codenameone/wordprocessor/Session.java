@@ -2082,6 +2082,11 @@ public final class Session {
         });
   }
 
+  /** Document-wide mirrored margins (Layout > Margins > Mirrored). */
+  public void mirrorMargins(boolean value) {
+    transact(s -> document = document.mirrorMargins(value));
+  }
+
   public void section(final Section value) {
     int block = cell != null ? cell.top().block : selection.block;
     leaveCell();

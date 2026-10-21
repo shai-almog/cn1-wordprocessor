@@ -149,6 +149,12 @@ final class LayoutDesignCommands implements Commands.Extension {
     c.edit("layout.sectionRtl", "value?:boolean",
         "Right-to-left section: columns and gutter run right to left",
         (s, a) -> sectionLayout(s, "rtl", String.valueOf(!a.containsKey("value") || Boolean.TRUE.equals(a.get("value")))));
+    c.edit("layout.mirrorMargins", "value?:boolean",
+        "Mirrored margins: even pages put the inside margin and gutter on the right",
+        (s, a) -> {
+          s.mirrorMargins(!a.containsKey("value") || Boolean.TRUE.equals(a.get("value")));
+          return s.document().mirrorMargins();
+        });
     c.edit("layout.verticalAlign", "value:string",
         "Vertical page alignment of the section: top, center, both or bottom",
         (s, a) -> sectionLayout(s, "verticalAlign", Commands.str(a, "value")));
