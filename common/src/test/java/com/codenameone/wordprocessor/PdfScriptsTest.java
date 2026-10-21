@@ -344,4 +344,85 @@ public class PdfScriptsTest {
     assertEquals(18282, old.get(0).id);
     assertEquals(18303, old.get(1).id);
   }
+
+  private static String ids(PdfFonts.TrueType font, int... cps) throws IOException {
+    var sb = new StringBuilder();
+    for (int cp : cps) sb.appendCodePoint(cp);
+    var out = new StringBuilder();
+    for (var g : shape(font, sb.toString())) out.append(out.length() > 0 ? "|" : "").append(g.id);
+    return out.toString();
+  }
+
+  @Test
+  public void universalShapingEngineMatchesHarfBuzz() throws Exception {
+    // Expected glyph ids are hb-shape 14.2.1's (GSUB, --trace) with the installed Noto fonts:
+    // reph, pre-base vowels, medials, stacked consonants, a Repha and a dotted circle in a
+    // broken cluster (Lepcha).
+    var java = new PdfFonts.TrueType(installed("NotoSansJavanese-Regular.otf"));
+    assertEquals("92|24|293|78", ids(java, 0xa98f, 0xa9c0, 0xa9b1, 0xa9ba, 0xa9b4));
+    assertEquals("191|54|80", ids(java, 0xa9ab, 0xa9c0, 0xa98f, 0xa9bf, 0xa9b6));
+    assertEquals("92|24|11", ids(java, 0xa98f, 0xa9ba, 0xa982));
+    assertEquals("61|100|94|12|92|43|286|78",
+        ids(java, 0xa9b2, 0xa9be, 0xa9bc, 0xa983, 0xa9a0, 0xa9c0, 0xa9ab, 0xa9ba, 0xa9b4));
+    var bali = new PdfFonts.TrueType(installed("NotoSerifBalinese-Regular.ttf"));
+    assertEquals("67|24|130", ids(bali, 0x1b13, 0x1b44, 0x1b13, 0x1b3e));
+    assertEquals("50|130|59", ids(bali, 0x1b2d, 0x1b44, 0x1b13, 0x1b36));
+    assertEquals("20|8|24|154|171|71|55|170",
+        ids(bali, 0x1b0f, 0x1b03, 0x1b13, 0x1b44, 0x1b2b, 0x1b3c, 0x1b32, 0x1b44, 0x1b0b));
+    var brahmi = new PdfFonts.TrueType(installed("NotoSansBrahmi-Regular.ttf"));
+    assertEquals("53|75|24|67", ids(brahmi, 0x11030, 0x11046, 0x11013, 0x1103e));
+    var batak = new PdfFonts.TrueType(installed("NotoSansBatak-Regular.ttf"));
+    assertEquals("9|84|12|71", ids(batak, 0x1bc0, 0x1bf2, 0x1bc2, 0x1be7));
+    var cham = new PdfFonts.TrueType(installed("NotoSansCham-Regular.ttf"));
+    assertEquals("89|127|23", ids(cham, 0xaa06, 0xaa34, 0xaa2f));
+    var lepcha = new PdfFonts.TrueType(installed("NotoSansLepcha-Regular.ttf"));
+    assertEquals("49|128|127|106", ids(lepcha, 0x1c00, 0x1c24, 0x1c2d, 0x1c26));
+  }
+
+  @Test
+  public void useSyllablesFromTheCategoryTable() {
+    // Ka, pangkon, Sa, taling (a pre-base vowel) is one standard cluster; a lone vowel sign
+    // is a broken cluster.
+    var buffer = new ArrayList<OpenType.Glyph>();
+    for (int cp : new int[] {0xa98f, 0xa9c0, 0xa9b1, 0xa9ba, 0xa9b4})
+      buffer.add(new OpenType.Glyph(1, cp, 0, 1, 1));
+    buffer.add(new OpenType.Glyph(1, 0xa9b6, 1, 2, 1));
+    for (var g : buffer) g.cat = UseShaper.category(g.cp);
+    assertEquals(UseShaper.B, UseShaper.category(0xa98f));
+    assertEquals(UseShaper.VPre, UseShaper.category(0xa9ba));
+    UseShaper.findSyllables(buffer);
+    for (int i = 1; i < 5; i++) assertEquals(buffer.get(0).syllable, buffer.get(i).syllable);
+    assertEquals(UseShaper.STANDARD, buffer.get(0).syllable & 15);
+    assertEquals(UseShaper.BROKEN, buffer.get(5).syllable & 15);
+    assertEquals("java", PdfShaping.script(0xa98f));
+  }
+
+  @Test
+  public void malayalamDotRephMovesAfterTheMainConsonant() throws Exception {
+    // hb-shape 14.2.1 (GSUB) with the macOS Sama and Baloo Chettan Malayalam assets: the dot
+    // reph opens the next syllable, the pre-base E sign goes first and the reph follows the
+    // main consonant (Malayalam's after-main position).
+    var assets = new File("/System/Library/AssetsV2/PreinstalledAssetsV2/InstallWithOs/"
+        + "com_apple_MobileAsset_Font7");
+    File sama = null, baloo = null;
+    for (File d : assets.isDirectory() ? assets.listFiles() : new File[0]) {
+      var f = new File(d, "AssetData/SamaMalayalam.ttc");
+      if (f.exists()) sama = f;
+      f = new File(d, "AssetData/BalooChettanMalayalam.ttc");
+      if (f.exists()) baloo = f;
+    }
+    Assume.assumeTrue(sama != null && baloo != null);
+    PdfFonts.TrueType s, b;
+    try (var in = new FileInputStream(sama)) {
+      s = new PdfFonts.TrueType(FontSubset.face(in.readAllBytes(), 0));
+    }
+    try (var in = new FileInputStream(baloo)) {
+      b = new PdfFonts.TrueType(FontSubset.face(in.readAllBytes(), 0));
+    }
+    assertEquals("77|130|117", ids(s, 0x0d4e, 0x0d15, 0x0d3f));
+    assertEquals("77|77|130", ids(s, 0x0d15, 0x0d4e, 0x0d15));
+    assertEquals("849|803|856", ids(b, 0x0d4e, 0x0d15, 0x0d46));
+    assertEquals("849|888|856", ids(b, 0x0d4e, 0x0d15, 0x0d4d, 0x0d15, 0x0d46));
+    assertEquals(9, PdfShaping.indic(0x0d4e));
+  }
 }

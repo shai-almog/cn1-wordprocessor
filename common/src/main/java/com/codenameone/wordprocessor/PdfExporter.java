@@ -370,7 +370,7 @@ public final class PdfExporter {
         int figure = structure.mcid(pageNumber, structure.figure(pic.picture().alt));
         content.append("/Figure << /MCID ").append(figure).append(" >> BDC\n");
         if (pic.picture().drawing != null) {
-          PdfDrawings.paint(content, pic, spec.height);
+          PdfDrawings.paint(content, pic, spec.height, fonts, null);
           content.append("EMC\n");
           continue;
         }
@@ -501,7 +501,8 @@ public final class PdfExporter {
             var math = inlineMath(layout.document, line, span.start);
             if (math != null)
               PdfDrawings.paint(content, Equation.placed(math, span.glyphStyle, line.block, 0, line.x + span.x,
-                  line.y + span.top + span.glyphStyle.renderedSize(), span.width), spec.height);
+                  line.y + span.top + span.glyphStyle.renderedSize(), span.width), spec.height, fonts,
+                  span.glyphStyle);
           }
           if (span.displayText.isEmpty()) continue;
           var s = span.glyphStyle;
@@ -602,7 +603,7 @@ public final class PdfExporter {
       for (LayoutEngine.PlacedPicture pic : LayoutEngine.byDepth(page.pictures, true)) {
         int figure = structure.mcid(pageNumber, structure.figure(pic.picture().alt));
         content.append("/Figure << /MCID ").append(figure).append(" >> BDC\n");
-        PdfDrawings.paint(content, pic, spec.height);
+        PdfDrawings.paint(content, pic, spec.height, fonts, null);
         content.append("EMC\n");
       }
       int pageId = 7 + pageIndex++ * 2;

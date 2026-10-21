@@ -3,13 +3,22 @@ package com.codenameone.wordprocessor;
 import java.io.IOException;
 
 /**
- * Paints {@link Drawing}s into a PDF content stream as vector paths and base-font text. PDF output
- * has no soft masks here, so partial transparency is blended against a white page.
+ * Paints {@link Drawing}s into a PDF content stream as vector paths and text. With embedded fonts the
+ * text (equation runs, drawing labels) goes through the same shaped, subset, fallback-aware path as
+ * body text, so math alphanumerics, Greek and operators print from the base face or an installed
+ * math-capable face (STIX Two Math, Cambria Math...); without them it is base-font WinAnsi text.
+ * PDF output has no soft masks here, so partial transparency is blended against a white page.
  */
 final class PdfDrawings {
   private PdfDrawings() {}
 
   static void paint(StringBuilder c, LayoutEngine.PlacedPicture pic, float pageHeight) {
+    paint(c, pic, pageHeight, null, null);
+  }
+
+  /** Paints with {@code fonts} (null for the base-font path), text styled from {@code base}. */
+  static void paint(StringBuilder c, LayoutEngine.PlacedPicture pic, float pageHeight,
+      PdfFonts fonts, TextStyle base) {
     DrawingOps.Ops ops = DrawingOps.build(pic.picture().drawing, pic.width(), pic.height());
     float ox = pic.x(), oy = pageHeight - pic.y();
     c.append("q 1 j 1 J\n");
@@ -25,22 +34,36 @@ final class PdfDrawings {
     }
     for (DrawingOps.Text t : ops.texts) {
       String s = literal(t.text());
+      // Bold and italic text uses the bold/italic face of the base font set.
+      TextStyle style = fonts == null ? null : (base == null ? TextStyle.DEFAULT : base)
+          .with("bold", t.bold() ? "true" : "false").with("italic", t.italic() ? "true" : "false");
+      String shown = null;
       float width = t.text().length() * t.size() * (t.bold() ? .56f : .5f);
-      float x = ox + t.x(), base = oy - t.y() - t.size();
+      if (fonts != null && !t.text().isEmpty()) {
+        try {
+          shown = fonts.show(style, t.text(), false, n(t.size()));
+          width = fonts.width(style, t.text(), t.size());
+        } catch (IOException | RuntimeException unusable) {
+          shown = null;
+        }
+      }
+      float x = ox + t.x(), baseline = oy - t.y() - t.size();
       if ("center".equals(t.align())) x += (t.width() - width) / 2;
       else if ("right".equals(t.align())) x += t.width() - width;
       c.append("BT ").append(rgb(t.color())).append(" rg ");
       if (t.outline() >= 0) c.append(rgb(t.outline())).append(" RG 0.75 w 2 Tr ");
-      // Bold text (a bold equation run, a bold label) uses the bold face of the base font set.
-      c.append(t.bold() ? "/F1 " : "/F0 ").append(n(t.size())).append(" Tf ");
+      if (shown == null) c.append(t.bold() ? "/F1 " : "/F0 ").append(n(t.size())).append(" Tf ");
       if (t.rotation() != 0) {
         double a = Math.toRadians(-t.rotation());
         float cos = (float) Math.cos(a), sin = (float) Math.sin(a);
         float rx = ox + t.x() + (t.rotation() == 90 ? t.size() : 0), ry = oy - t.y() - (t.rotation() == 90 ? 0 : t.width());
         c.append(n(cos)).append(' ').append(n(sin)).append(' ').append(n(-sin)).append(' ').append(n(cos))
             .append(' ').append(n(rx)).append(' ').append(n(ry));
-      } else c.append(t.italic() ? "1 0 0.2 1 " : "1 0 0 1 ").append(n(x)).append(' ').append(n(base));
-      c.append(" Tm (").append(s).append(") Tj ET\n");
+      } else
+        c.append(t.italic() && shown == null ? "1 0 0.2 1 " : "1 0 0 1 ").append(n(x)).append(' ')
+            .append(n(baseline));
+      if (shown != null) c.append(" Tm ").append(shown).append(" ET\n");
+      else c.append(" Tm (").append(s).append(") Tj ET\n");
     }
     c.append("Q\n");
   }

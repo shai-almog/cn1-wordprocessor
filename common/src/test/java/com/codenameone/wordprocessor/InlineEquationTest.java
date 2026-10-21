@@ -10,6 +10,7 @@ import java.io.ByteArrayOutputStream;
 import java.util.LinkedHashMap;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
+import org.junit.Assume;
 import org.junit.Test;
 
 /** Inline equations (m:oMath in a paragraph), the built-in gallery and LaTeX math import. */
@@ -145,5 +146,44 @@ public class InlineEquationTest {
     assertEquals(3, displayCount(d));
     String tex = Latex.write(d);
     assertTrue(tex, tex.contains("$") && tex.contains("\\["));
+  }
+
+  @Test
+  public void equationTextUsesTheEmbeddedFontsWithAMathFallback() throws Exception {
+    // A math bold A, Greek and a relation: the base Helvetica/WinAnsi path printed '?' for them;
+    // with embedded fonts they are shaped through the body font chain and fall back to an
+    // installed math face (STIX Two Math on macOS).
+    Assume.assumeTrue(new java.io.File("/System/Library/Fonts/Supplemental/STIXTwoMath.otf").exists());
+    // Only the math faces are listed (unit tests have no platform file system).
+    String dir = "/System/Library/Fonts/Supplemental";
+    SystemFonts.configure(new SystemFonts.Files() {
+      public String[] list(String path) {
+        return new String[] {"STIXGeneral.otf", "STIXTwoMath.otf"};
+      }
+
+      public boolean isDirectory(String path) {
+        return path.equals(dir);
+      }
+
+      public java.io.InputStream open(String path) throws java.io.IOException {
+        return new java.io.FileInputStream(path);
+      }
+    }, java.util.Collections.singletonList(dir));
+    try {
+      equationPdf();
+    } finally {
+      SystemFonts.configure(null, null);
+    }
+  }
+
+  private void equationPdf() throws Exception {
+    Document d = open("<w:p><m:oMathPara " + M + "><m:oMath><m:r><m:t>\ud835\udc00+\u03b1\u2264\u03b2</m:t>"
+        + "</m:r></m:oMath></m:oMathPara></w:p>").document;
+    var fonts = BundledFonts.provider(path -> InlineEquationTest.class.getResourceAsStream(path));
+    String pdf = new String(PdfExporter.write(d, fonts), "ISO-8859-1");
+    assertTrue(pdf.contains("STIXTwoMath"));
+    assertFalse(pdf.contains("(?+"));
+    assertEquals(SystemFonts.MATH[0], SystemFonts.preferred(0x1d400)[0]);
+    assertTrue(SystemFonts.math(0x2264));
   }
 }

@@ -287,8 +287,20 @@ final class SystemFonts {
     return result;
   }
 
+  /** Math-capable families, preferred for math alphanumerics, operators and math symbols. */
+  static final String[] MATH = {"STIX Two Math", "Cambria Math", "STIX Math", "Latin Modern Math",
+    "TeX Gyre Termes Math", "Noto Sans Math", "STIXGeneral", "DejaVu Math TeX Gyre"};
+
+  /** Math alphanumerics, letterlike symbols, arrows, operators and math symbol blocks. */
+  static boolean math(int cp) {
+    return cp >= 0x1d400 && cp <= 0x1d7ff || cp >= 0x2100 && cp <= 0x214f
+        || cp >= 0x2190 && cp <= 0x23ff || cp >= 0x27c0 && cp <= 0x27ef
+        || cp >= 0x2980 && cp <= 0x2aff;
+  }
+
   /** Wordcraft's per-script preferred families for complex scripts. */
   static String[] preferred(int cp) {
+    if (math(cp)) return MATH;
     if (cp >= 0x1000 && cp <= 0x109f)
       return new String[] {"Myanmar Text", "Noto Sans Myanmar", "Padauk", "Pyidaungsu",
         "Noto Serif Myanmar", "Myanmar Sangam MN", "Myanmar MN"};

@@ -157,7 +157,13 @@ final class PdfShaping {
     if (cp >= 0x1780 && cp <= 0x17ff || cp >= 0x19e0 && cp <= 0x19ff) return "khmr";
     if (cp >= 0x1000 && cp <= 0x109f || cp >= 0xaa60 && cp <= 0xaa7f
         || cp >= 0xa9e0 && cp <= 0xa9ff) return "mymr";
-    return null;
+    return UseShaper.script(cp);
+  }
+
+  private static boolean isUse(String script) {
+    return !"arab".equals(script) && !"hebr".equals(script) && !"thai".equals(script)
+        && !"lao ".equals(script) && !"hang".equals(script) && !"khmr".equals(script)
+        && !"mymr".equals(script);
   }
 
   /** Index k of an Indic script tag (block U+0900 + 0x80 k), or -1. */
@@ -191,7 +197,7 @@ final class PdfShaping {
 
   /**
    * Indic category (Devanagari through Malayalam, by offset within the block): 1 consonant,
-   * 2 nukta, 3 virama, 4 matra, 5 vowel, 6 modifier, 7 ZWJ, 8 ZWNJ.
+   * 2 nukta, 3 virama, 4 matra, 5 vowel, 6 modifier, 7 ZWJ, 8 ZWNJ, 9 repha (Malayalam dot reph).
    */
   static int indic(int cp) {
     if (cp == 0x200d) return 7;
@@ -201,6 +207,7 @@ final class PdfShaping {
     if (k == 1 && (o == 0x4e || o == 0x70 || o == 0x71)) return 1; // khanda ta, Assamese ra/wa
     if (k == 2 && (o == 0x70 || o == 0x71)) return 6; // tippi, addak
     if (k == 2 && o == 0x75) return 4; // yakash
+    if (k == 8 && o == 0x4e) return 9; // dot reph, HarfBuzz's Repha category
     if (k == 8 && (o >= 0x54 && o <= 0x56 || o >= 0x7a)) return 1; // chillus
     if (k == 8 && o >= 0x58 && o <= 0x5e) return 0;
     if (o >= 0x15 && o <= 0x39 || o >= 0x58 && o <= 0x5f || o >= 0x78) return 1;
@@ -278,7 +285,10 @@ final class PdfShaping {
     }
     String[] scripts;
     int block = indicBlock(script);
-    boolean complex = block >= 0 || "khmr".equals(script) || "mymr".equals(script);
+    // Scripts of the Universal Shaping Engine use it when the font has their GSUB script, as
+    // HarfBuzz; otherwise they take the default shaper.
+    boolean use = script != null && block < 0 && isUse(script) && ot.hasScript(true, script);
+    boolean complex = use || block >= 0 || "khmr".equals(script) || "mymr".equals(script);
     if ("arab".equals(script)) {
       scripts = new String[] {"arab"};
       if (ot.hasScript(true, "arab")) arabicMasks(buffer);
@@ -305,9 +315,27 @@ final class PdfShaping {
     } else if ("mymr".equals(script)) {
       scripts = ot.hasScript(true, "mym2") ? new String[] {"mym2"} : new String[] {"mymr"};
       clusterSyllables(buffer, true);
+    } else if (use) {
+      scripts = new String[] {script};
+      UseShaper.setup(buffer, RPHF, new int[] {ISOL, INIT, MEDI, FINA});
     } else scripts = new String[] {"latn"};
     int all = -1;
-    if (block >= 0) {
+    if (use) {
+      gsub(ot, scripts, buffer, new String[] {"locl", "ccmp", "nukt", "akhn"}, all);
+      for (var g : buffer) g.flags &= ~OpenType.SUBSTITUTED;
+      gsub(ot, scripts, buffer, new String[] {"rphf"}, RPHF);
+      UseShaper.recordRphf(buffer, RPHF);
+      for (var g : buffer) g.flags &= ~OpenType.SUBSTITUTED;
+      gsub(ot, scripts, buffer, new String[] {"pref"}, all);
+      UseShaper.recordPref(buffer);
+      gsub(ot, scripts, buffer, new String[] {"rkrf", "abvf", "blwf", "half", "pstf", "vatu",
+          "cjct"}, all);
+      UseShaper.reorder(buffer, font.glyph(0x25cc));
+      ot.apply(true, scripts, buffer, new String[] {"isol", "init", "medi", "fina"},
+          new int[] {ISOL, INIT, MEDI, FINA});
+      gsub(ot, scripts, buffer, new String[] {"abvs", "blws", "haln", "pres", "psts", "rlig",
+          "calt", "clig", "liga", "rclt"}, all);
+    } else if (block >= 0) {
       gsub(ot, scripts, buffer, new String[] {"locl", "ccmp"}, all);
       gsub(ot, scripts, buffer, new String[] {"nukt"}, all);
       gsub(ot, scripts, buffer, new String[] {"akhn"}, all);
@@ -583,8 +611,12 @@ final class PdfShaping {
     for (var g : buffer) g.cat = indic(g.cp);
     for (int s = 0; s < buffer.size(); ) {
       int n = buffer.size(), e = s + 1, cat = buffer.get(s).cat;
+      // A Malayalam dot reph opens the consonant syllable that follows it, as HarfBuzz's
+      // logical repha mode.
+      boolean dotReph = cat == 9 && e < n && buffer.get(e).cat == 1;
+      if (dotReph) cat = 1;
       if (cat == 1) {
-        e = s;
+        e = dotReph ? s + 1 : s;
         while (e < n && buffer.get(e).cat == 1) {
           e++;
           if (e < n && buffer.get(e).cat == 2) e++;
@@ -612,9 +644,9 @@ final class PdfShaping {
     for (int k = s; k < e; k++) if (buffer.get(k).cat == 1) consonants++;
     // Tamil has no reph; Telugu forms one only with an explicit ZWJ (Ra, virama, ZWJ), as
     // HarfBuzz's explicit reph mode, and the ZWJ is part of the reph.
-    boolean explicit = block == 6;
-    int rephLen = explicit ? 3 : 2;
-    boolean reph = block != 5 && consonants > 1 && e - s > rephLen
+    boolean explicit = block == 6, dot = buffer.get(s).cat == 9;
+    int rephLen = dot ? 1 : explicit ? 3 : 2;
+    boolean reph = dot || block != 5 && consonants > 1 && e - s > rephLen
         && buffer.get(s).cp == ra && buffer.get(s + 1).cat == 3
         && (!explicit || buffer.get(s + 2).cat == 7) && buffer.get(s + rephLen).cat == 1;
     int first = reph ? s + rephLen : s, base = -1;
@@ -727,9 +759,20 @@ final class PdfShaping {
   private static void moveReph(List<OpenType.Glyph> buffer, int ra) {
     for (int i = 0; i < buffer.size(); i++) {
       var r = buffer.get(i);
-      if ((r.mask & RPHF) == 0 || (r.flags & OpenType.LIGATED) == 0 || r.cp != ra) continue;
+      // As HarfBuzz, a Ra+virama reph moves only if it ligated, an encoded dot reph only if it
+      // did not (a font that ligates it positions it without reordering).
+      boolean dot = r.cp == 0x0d4e, ligated = (r.flags & OpenType.LIGATED) != 0;
+      if ((r.mask & RPHF) == 0 || (dot ? ligated : !ligated || r.cp != ra)) continue;
       int target = -1;
-      for (int k = i + 1; k < buffer.size() && buffer.get(k).syllable == r.syllable; k++) {
+      // The dot reph goes after the main consonant (with its nukta and virama), as Malayalam's
+      // after-main reph position.
+      for (int k = i + 1; dot && k < buffer.size() && buffer.get(k).syllable == r.syllable; k++) {
+        var g = buffer.get(k);
+        if ((g.flags & OpenType.BASE) != 0) target = k;
+        else if (target >= 0 && (g.cat == 2 || g.cat == 3)) target = k;
+        else if (target >= 0) break;
+      }
+      for (int k = i + 1; !dot && k < buffer.size() && buffer.get(k).syllable == r.syllable; k++) {
         var g = buffer.get(k);
         if ((g.flags & OpenType.BASE) != 0) target = k;
         else if (target >= 0 && ((g.mask & POST) != 0 && g.cat != 4 && g.cat != 6 || g.cat == 2
