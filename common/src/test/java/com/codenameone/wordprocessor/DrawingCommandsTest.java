@@ -192,6 +192,22 @@ public class DrawingCommandsTest {
   }
 
   @Test
+  public void draggingAnObjectFloatsItWhereDroppedAndNudgeMovesIt() throws Exception {
+    var s = new Session(Document.empty());
+    int shape = block(run(s, "insert.shape", "shape", "rect", "width", 80, "height", 40));
+    s.replace("Some text beside the shape. ".repeat(20));
+    assertEquals("page,,250;page,,300", run(s, "arrange.bounds", "block", shape, "x", 250, "y", 300));
+    assertEquals("square", ((Picture) s.document().blocks.get(shape)).wrap());
+    LayoutEngine engine = PdfExporter.layoutEngine(null);
+    var pic = engine.layout(s.document(), 1).pages.get(0).pictures.get(0);
+    assertEquals(250, pic.x(), .01f);
+    assertEquals(300, pic.y(), .01f);
+    assertEquals("page,,256;page,,298", run(s, "arrange.nudge", "block", shape, "dx", 6, "dy", -2));
+    s.undo();
+    assertEquals("page,,250;page,,300", ((Picture) s.document().blocks.get(shape)).position());
+  }
+
+  @Test
   public void smartArtOutlineMatchesWordcraftSemantics() {
     Session s = new Session(Document.empty());
     int art = block(run(s, "insert.smartArt", "layout", "basicList", "items",

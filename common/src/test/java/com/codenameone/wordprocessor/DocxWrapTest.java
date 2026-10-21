@@ -78,4 +78,79 @@ public class DocxWrapTest {
     var e = engine.layout(doc(Picture.drawing("i1", behind, 200, 200, "", "left"), text), 0).pages.get(0).lines.get(0);
     assertTrue(e.x < a.x);
   }
+
+  private static LayoutEngine engine() {
+    return new LayoutEngine(new LayoutEngine.Metrics() {
+      public float width(String text, TextStyle style) {
+        return text.length() * 6;
+      }
+
+      public float height(TextStyle style) {
+        return 12;
+      }
+    });
+  }
+
+  @Test
+  public void positionsAreReadAndRoundTrip() throws Exception {
+    String[] t = wrap("<wp:positionH relativeFrom=\"page\"><wp:posOffset>3810000</wp:posOffset></wp:positionH>"
+        + "<wp:positionV relativeFrom=\"margin\"><wp:align>bottom</wp:align></wp:positionV><wp:wrapSquare/>", "");
+    assertEquals("page,,300;margin,end,0", t[3]);
+    assertEquals("character,center,0;line,,-6",
+        wrap("<wp:positionH relativeFrom=\"character\"><wp:align>center</wp:align></wp:positionH>"
+            + "<wp:positionV relativeFrom=\"line\"><wp:posOffset>-76200</wp:posOffset></wp:positionV>", "")[3]);
+    // Aligned in the column at the paragraph is the picture's own alignment.
+    assertEquals("", wrap("<wp:positionH relativeFrom=\"column\"><wp:align>right</wp:align></wp:positionH>"
+        + "<wp:positionV relativeFrom=\"paragraph\"><wp:posOffset>0</wp:posOffset></wp:positionV>", "")[3]);
+    Drawing d = Drawing.of("shape").with("wrap", "square").with("position", "page,,300;margin,end,0");
+    var out = new ByteArrayOutputStream();
+    Docx.write(doc(Picture.drawing("i1", d, 50, 50, "", "left"), "x"), out);
+    Picture back = (Picture) Docx.read(new ByteArrayInputStream(out.toByteArray())).document.blocks.get(0);
+    assertEquals("page,,300;margin,end,0", back.position());
+    // A raster picture keeps its position in its look, through native XML too.
+    Picture raster = new Picture("i2", png(), 40, 40, "", "left",
+        Picture.Look.NONE.wrap("square", "").position("margin,center,0;page,,72"));
+    Document nd = doc(raster, "x");
+    Picture again = (Picture) DocumentXml.read(DocumentXml.write(nd)).blocks.get(0);
+    assertEquals("margin,center,0;page,,72", again.position());
+  }
+
+  private static byte[] png() throws Exception {
+    return OdtTest.PNG;
+  }
+
+  @Test
+  public void positionedSquareFloatNarrowsEachLineBesideIt() {
+    Drawing d = Drawing.of("shape").with("wrap", "square").with("position", "page,,250;page,,100");
+    var page = engine().layout(doc(Picture.drawing("i1", d, 100, 100, "", "left"), "word ".repeat(200)), 0).pages.get(0);
+    var pic = page.pictures.get(0);
+    assertEquals(250, pic.x(), .01f);
+    assertEquals(100, pic.y(), .01f);
+    int beside = 0, full = 0;
+    for (var l : page.lines) {
+      if (l.y + l.height > 100 && l.y < 200) {
+        beside++;
+        assertTrue(l.x + l.width <= 241.5f);
+      } else if (l.width > 300) full++;
+    }
+    assertTrue(beside >= 7);
+    assertTrue(full > 3);
+  }
+
+  @Test
+  public void topAndBottomFloatClearsItsBandAndTightFollowsTheOutlinePerLine() {
+    Drawing tb = Drawing.of("shape").with("wrap", "topBottom").with("position", "margin,,0;page,,100");
+    var page = engine().layout(doc(Picture.drawing("i1", tb, 100, 100, "", "left"), "word ".repeat(200)), 0).pages.get(0);
+    for (var l : page.lines) assertFalse(l.y + l.height > 100 && l.y < 200);
+    // A triangle pointing down at the left margin: lines beside its top start right of it, lower
+    // lines of the same paragraph start further left as the outline narrows.
+    Drawing tight = Drawing.of("shape").with("wrap", "tight").with("wrapPolygon", "1;0,0 21600,0 0,21600")
+        .with("position", "margin,,0;page,,20");
+    var p2 = engine().layout(doc(Picture.drawing("i1", tight, 200, 200, "", "left"), "word ".repeat(200)), 0).pages.get(0);
+    var first = p2.lines.get(0);
+    var lower = p2.lines.get(12);
+    assertTrue(first.x >= 220);
+    assertTrue(lower.x < first.x - 50);
+    assertTrue(lower.x > 20);
+  }
 }

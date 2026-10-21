@@ -77,16 +77,13 @@ final class DocxPictures {
         // As Wordcraft's anchor_float: the wrap kind (wrapNone is behind or in front of the text
         // by behindDoc), the Tight/Through wrap polygon and the horizontal alignment. The
         // position itself becomes the picture's own paragraph at its anchor.
-        String[] wrap = inline != null ? new String[] {"inline", "", "left"} : anchorWrap(anchor);
-        if (anchor != null && Xml.child(anchor, "positionH") != null
-            && Xml.child(Xml.child(anchor, "positionH"), "align") == null)
-          warnings.add("Floating picture offset converted to a paragraph position");
+        String[] wrap = inline != null ? new String[] {"inline", "", "left", ""} : anchorWrap(anchor);
         Element extent0 = Xml.child(container, "extent"), props0 = Xml.child(container, "docPr");
         Drawing drawing = DocxDrawings.extension(container);
         if (drawing == null) drawing = DocxDrawings.shape(container, warnings);
         if (drawing == null && extent0 != null) drawing = object(container, extent0, warnings);
         if (drawing != null && !"inline".equals(wrap[0]) && !"equation".equals(drawing.kind))
-          drawing = drawing.with("wrap", wrap[0]).with("wrapPolygon", wrap[1]);
+          drawing = drawing.with("wrap", wrap[0]).with("wrapPolygon", wrap[1]).with("position", wrap[3]);
         if (drawing != null && extent0 != null) {
           result.add(
               Picture.drawing(
@@ -105,7 +102,7 @@ final class DocxPictures {
           throw new IllegalArgumentException("Drawing is not an embedded picture");
         var data = parts.get(targets.get(Xml.attr(blip, "embed", "")));
         if (data == null) throw new IllegalArgumentException("Picture data missing or external");
-        Picture.Look look = look(container, warnings).wrap(wrap[0], wrap[1]);
+        Picture.Look look = look(container, warnings).wrap(wrap[0], wrap[1]).position(wrap[3]);
         result.add(
             new Picture(
                 "i" + id[0]++,
@@ -136,7 +133,7 @@ final class DocxPictures {
   static String[] anchorWrap(Element anchor) {
     String on = Xml.attr(anchor, "behindDoc", "0");
     boolean behind = "1".equals(on) || "true".equals(on) || "on".equals(on);
-    String wrap = "square", polygon = "", align = "left";
+    String wrap = "square", polygon = "", align = "left", h = "column,,0", vpos = "paragraph,,0";
     for (Element k : Xml.children(anchor, null)) {
       String n = Xml.local(k);
       if ("wrapSquare".equals(n)) wrap = "square";
@@ -146,14 +143,44 @@ final class DocxPictures {
         wrap = "wrapTight".equals(n) ? "tight" : "through";
         Element poly = Xml.child(k, "wrapPolygon");
         if (poly != null) polygon = polygon(poly);
-      } else if ("positionH".equals(n)) {
+      } else if ("positionH".equals(n) || "positionV".equals(n)) {
+        boolean horiz = "positionH".equals(n);
         Element a = Xml.child(k, "align");
         String v = a == null ? "" : Xml.text(a).trim();
-        if ("right".equals(v) || "outside".equals(v)) align = "right";
-        else if ("center".equals(v)) align = "center";
+        if (horiz && ("right".equals(v) || "outside".equals(v))) align = "right";
+        else if (horiz && "center".equals(v)) align = "center";
+        Element o = Xml.child(k, "posOffset");
+        float off = o == null ? 0 : Xml.number(Xml.text(o).trim()) / 12700f;
+        String part = relativeFrom(Xml.attr(k, "relativeFrom", ""), horiz) + "," + floatAlign(v) + "," + FloatPosition.num(off);
+        if (horiz) h = part;
+        else vpos = part;
       }
     }
-    return new String[] {wrap, polygon, align};
+    String pos = h + ";" + vpos;
+    // At the anchor paragraph, aligned in the column, is the picture's own align: no position.
+    String a = "left".equals(align) ? "start" : "right".equals(align) ? "end" : align;
+    if (pos.equals("column,,0;paragraph,,0") || pos.equals("column," + a + ",0;paragraph,,0")) pos = "";
+    return new String[] {wrap, polygon, align, pos};
+  }
+
+  /** Wordcraft's Anchor for a wp:positionH/V relativeFrom (column / paragraph by default). */
+  static String relativeFrom(String r, boolean horiz) {
+    switch (r) {
+      case "page": case "margin": case "insideMargin": case "outsideMargin": return r;
+      case "leftMargin": case "rightMargin": case "character": return horiz ? r : "paragraph";
+      case "topMargin": case "bottomMargin": case "line": case "paragraph": return horiz ? "column" : r;
+      default: return horiz ? "column" : "paragraph";
+    }
+  }
+
+  /** Wordcraft's FloatAlign: start (left/top), center, end (right/bottom), inside, outside. */
+  static String floatAlign(String v) {
+    switch (v) {
+      case "left": case "top": return "start";
+      case "right": case "bottom": return "end";
+      case "center": case "inside": case "outside": return v;
+      default: return "";
+    }
   }
 
   /** wp:start and wp:lineTo points, capped at 1024 and clamped to 4x the 21600 space. */

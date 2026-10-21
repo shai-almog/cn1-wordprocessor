@@ -44,9 +44,20 @@ public final class Picture implements Block {
 
     /** Text wrapping and the wrap polygon (see the full constructor). */
     public final String wrap, wrapPolygon;
+    /** See {@link #position(String)}. */
+    public final String position;
 
     public Look wrap(String wrap, String polygon) {
-      return new Look(cropLeft, cropTop, cropRight, cropBottom, borderColor, borderWidth, rotation, flipH, flipV, brightness, contrast, transparency, colorMode, effect, backgroundTolerance, wrap, polygon);
+      return new Look(cropLeft, cropTop, cropRight, cropBottom, borderColor, borderWidth, rotation, flipH, flipV, brightness, contrast, transparency, colorMode, effect, backgroundTolerance, wrap, polygon, position);
+    }
+
+    /**
+     * A float's position as Wordcraft's Float h_rel/h_align/x and v_rel/v_align/y:
+     * "hRel,hAlign,x;vRel,vAlign,y" (points; an empty align places by the offset), or "" to
+     * stand at the anchor paragraph aligned by the picture's align.
+     */
+    public Look position(String position) {
+      return new Look(cropLeft, cropTop, cropRight, cropBottom, borderColor, borderWidth, rotation, flipH, flipV, brightness, contrast, transparency, colorMode, effect, backgroundTolerance, wrap, wrapPolygon, position);
     }
 
     public Look(
@@ -122,6 +133,30 @@ public final class Picture implements Block {
         int backgroundTolerance,
         String wrap,
         String wrapPolygon) {
+      this(cropLeft, cropTop, cropRight, cropBottom, borderColor, borderWidth, rotation, flipH, flipV,
+          brightness, contrast, transparency, colorMode, effect, backgroundTolerance, wrap, wrapPolygon, "");
+    }
+
+    public Look(
+        float cropLeft,
+        float cropTop,
+        float cropRight,
+        float cropBottom,
+        int borderColor,
+        float borderWidth,
+        int rotation,
+        boolean flipH,
+        boolean flipV,
+        int brightness,
+        int contrast,
+        int transparency,
+        String colorMode,
+        String effect,
+        int backgroundTolerance,
+        String wrap,
+        String wrapPolygon,
+        String position) {
+      this.position = position == null ? "" : position;
       if (!WRAPS.contains(wrap)) throw new IllegalArgumentException("Invalid wrap");
       this.wrap = wrap;
       this.wrapPolygon = wrapPolygon == null ? "" : wrapPolygon;
@@ -158,29 +193,29 @@ public final class Picture implements Block {
     }
 
     public Look crop(float l, float t, float r, float b) {
-      return new Look(l, t, r, b, borderColor, borderWidth, rotation, flipH, flipV, brightness, contrast, transparency, colorMode, effect, backgroundTolerance, wrap, wrapPolygon);
+      return new Look(l, t, r, b, borderColor, borderWidth, rotation, flipH, flipV, brightness, contrast, transparency, colorMode, effect, backgroundTolerance, wrap, wrapPolygon, position);
     }
 
     public Look border(int color, float width) {
-      return new Look(cropLeft, cropTop, cropRight, cropBottom, color, width, rotation, flipH, flipV, brightness, contrast, transparency, colorMode, effect, backgroundTolerance, wrap, wrapPolygon);
+      return new Look(cropLeft, cropTop, cropRight, cropBottom, color, width, rotation, flipH, flipV, brightness, contrast, transparency, colorMode, effect, backgroundTolerance, wrap, wrapPolygon, position);
     }
 
     public Look rotate(int degrees, boolean h, boolean v) {
-      return new Look(cropLeft, cropTop, cropRight, cropBottom, borderColor, borderWidth, degrees, h, v, brightness, contrast, transparency, colorMode, effect, backgroundTolerance, wrap, wrapPolygon);
+      return new Look(cropLeft, cropTop, cropRight, cropBottom, borderColor, borderWidth, degrees, h, v, brightness, contrast, transparency, colorMode, effect, backgroundTolerance, wrap, wrapPolygon, position);
     }
 
     /** Brightness and contrast -100..100, transparency 0..100 percent. */
     public Look adjust(int brightness, int contrast, int transparency, String colorMode) {
-      return new Look(cropLeft, cropTop, cropRight, cropBottom, borderColor, borderWidth, rotation, flipH, flipV, brightness, contrast, transparency, colorMode, effect, backgroundTolerance, wrap, wrapPolygon);
+      return new Look(cropLeft, cropTop, cropRight, cropBottom, borderColor, borderWidth, rotation, flipH, flipV, brightness, contrast, transparency, colorMode, effect, backgroundTolerance, wrap, wrapPolygon, position);
     }
 
     public Look effect(String name) {
-      return new Look(cropLeft, cropTop, cropRight, cropBottom, borderColor, borderWidth, rotation, flipH, flipV, brightness, contrast, transparency, colorMode, name, backgroundTolerance, wrap, wrapPolygon);
+      return new Look(cropLeft, cropTop, cropRight, cropBottom, borderColor, borderWidth, rotation, flipH, flipV, brightness, contrast, transparency, colorMode, name, backgroundTolerance, wrap, wrapPolygon, position);
     }
 
     /** Tolerance 0-100, or -1 to keep the background. */
     public Look removeBackground(int tolerance) {
-      return new Look(cropLeft, cropTop, cropRight, cropBottom, borderColor, borderWidth, rotation, flipH, flipV, brightness, contrast, transparency, colorMode, effect, tolerance, wrap, wrapPolygon);
+      return new Look(cropLeft, cropTop, cropRight, cropBottom, borderColor, borderWidth, rotation, flipH, flipV, brightness, contrast, transparency, colorMode, effect, tolerance, wrap, wrapPolygon, position);
     }
 
     public boolean adjusted() {
@@ -207,7 +242,8 @@ public final class Picture implements Block {
           && effect.equals(k.effect)
           && backgroundTolerance == k.backgroundTolerance
           && wrap.equals(k.wrap)
-          && wrapPolygon.equals(k.wrapPolygon);
+          && wrapPolygon.equals(k.wrapPolygon)
+          && position.equals(k.position);
     }
 
     @Override
@@ -233,6 +269,32 @@ public final class Picture implements Block {
   /** Text wrapping: a drawing's own "wrap", else the picture look's. */
   public String wrap() {
     return drawing != null ? drawing.get("wrap", "inline") : look == null ? "inline" : look.wrap;
+  }
+
+  /**
+   * As Wordcraft's arrange.bounds drag: the object floating (Square when it was inline) with its
+   * top left at page point x, y of its anchor's page.
+   */
+  public Picture movedTo(float x, float y) {
+    String pos = "page,," + FloatPosition.num(x) + ";page,," + FloatPosition.num(y);
+    String w = "inline".equals(wrap()) ? "square" : wrap();
+    if (drawing != null) return drawing(drawing.with("wrap", w).with("position", pos));
+    return look(look.wrap(w, look.wrapPolygon).position(pos));
+  }
+
+  /** As Wordcraft's arrange.nudge: a positioned float's offsets moved by dx, dy points. */
+  public Picture nudged(float dx, float dy) {
+    FloatPosition f = FloatPosition.parse(position());
+    if (f == null || !f.hAlign.isEmpty() || !f.vAlign.isEmpty())
+      throw new IllegalArgumentException("Drag the object to float it before nudging");
+    String pos = new FloatPosition(f.hRel, "", f.x + dx, f.vRel, "", f.y + dy).toString();
+    if (drawing != null) return drawing(drawing.with("position", pos));
+    return look(look.position(pos));
+  }
+
+  /** A float's position ({@link Look#position(String)}): a drawing's own, else the look's. */
+  public String position() {
+    return drawing != null ? drawing.get("position", "") : look == null ? "" : look.position;
   }
 
   /** The wrap polygon ("edited;x,y x,y ..." in 21600 wrap space), or "". */

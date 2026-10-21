@@ -2234,6 +2234,13 @@ public final class EditorSurface extends Container
         if (px >= pic.x() && px <= pic.x() + pic.width() && py >= pic.y() && py <= pic.y() + pic.height()) {
           stopInput();
           if (clickEquation(pic, px, py)) return;
+          // Pressing an object may start dragging it (Wordcraft's arrange.bounds drag).
+          movePic = pic;
+          movePage = page;
+          moveDx = px - pic.x();
+          moveDy = py - pic.y();
+          movePressX = x;
+          movePressY = y;
           if (pictureEditor != null) pictureEditor.edit(pic.block());
           return;
         }
@@ -2288,12 +2295,40 @@ public final class EditorSurface extends Container
     changed.run();
   }
 
+  /** The object being dragged to a new position, its page and the grab offset in points. */
+  private LayoutEngine.PlacedPicture movePic;
+  private int movePage, movePressX, movePressY;
+  private float moveDx, moveDy;
+
+  /**
+   * Drops a dragged object: as Wordcraft, it floats with its top left where it was dropped,
+   * measured from its anchor page's top left (Square wrapped if it was inline). A press that
+   * barely moved is a click.
+   */
+  private boolean dropMoved(int x, int y) {
+    var pic = movePic;
+    movePic = null;
+    if (pic == null || Math.abs(x - movePressX) + Math.abs(y - movePressY) < OfficeTheme.px(4)) return false;
+    var block = session.document().blocks.get(pic.block());
+    if (!(block instanceof Picture)) return false;
+    float px = (x - viewportX() - pageX(movePage)) / scale() - moveDx;
+    float py = (y - viewportY() + getScrollY() - pageY(movePage)) / scale() - moveDy;
+    var spec = session.document().page;
+    px = Math.max(-pic.width() / 2, Math.min(spec.width - pic.width() / 2, px));
+    py = Math.max(-pic.height() / 2, Math.min(spec.height - pic.height() / 2, py));
+    session.replacePicture(pic.block(), ((Picture) block).movedTo(px, py));
+    refresh();
+    changed.run();
+    return true;
+  }
+
   @Override
   public void pointerDragged(int x, int y) {
     if (ink != null) {
       inkDrag(x, y);
       return;
     }
+    if (movePic != null) return;
     if (OfficeTheme.mobile() && !touchSelecting) {
       if (Math.abs(x - touchX) + Math.abs(y - touchY) > OfficeTheme.px(6)) touchMoved = true;
       super.pointerDragged(x, y);
@@ -2342,7 +2377,13 @@ public final class EditorSurface extends Container
       inkRelease();
       return;
     }
+    if (dropMoved(x, y)) {
+      dragBlock = -1;
+      return;
+    }
     if (OfficeTheme.mobile() && !touchMoved && !touchSelecting && pinchStart == 0) placeCaret(x, y);
+    // Touch places the caret on release: dragging an object is a desktop pointer gesture.
+    movePic = null;
     dragBlock = -1;
     dragTable = -1;
     dragHandle = 0;

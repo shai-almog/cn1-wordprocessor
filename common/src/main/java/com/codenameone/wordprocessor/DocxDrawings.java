@@ -86,10 +86,12 @@ final class DocxDrawings {
     }
     b.append("<wp:anchor").append(ns).append(" distT=\"0\" distB=\"0\" distL=\"114300\" distR=\"114300\" simplePos=\"0\"")
         .append(" relativeHeight=\"251658240\" behindDoc=\"").append("behind".equals(wrap) ? 1 : 0)
-        .append("\" locked=\"0\" layoutInCell=\"1\" allowOverlap=\"1\"><wp:simplePos x=\"0\" y=\"0\"/>")
-        .append("<wp:positionH relativeFrom=\"column\"><wp:align>").append(p.align)
-        .append("</wp:align></wp:positionH><wp:positionV relativeFrom=\"paragraph\"><wp:posOffset>0</wp:posOffset></wp:positionV>")
-        .append("<wp:extent cx=\"").append(cx).append("\" cy=\"").append(cy).append("\"/><wp:effectExtent l=\"0\" t=\"0\" r=\"0\" b=\"0\"/>");
+        .append("\" locked=\"0\" layoutInCell=\"1\" allowOverlap=\"1\"><wp:simplePos x=\"0\" y=\"0\"/>");
+    FloatPosition pos = FloatPosition.parse(p.position());
+    if (pos != null) pos.writeDocx(b);
+    else b.append("<wp:positionH relativeFrom=\"column\"><wp:align>").append(p.align)
+        .append("</wp:align></wp:positionH><wp:positionV relativeFrom=\"paragraph\"><wp:posOffset>0</wp:posOffset></wp:positionV>");
+    b.append("<wp:extent cx=\"").append(cx).append("\" cy=\"").append(cy).append("\"/><wp:effectExtent l=\"0\" t=\"0\" r=\"0\" b=\"0\"/>");
     if ("square".equals(wrap)) b.append("<wp:wrapSquare wrapText=\"bothSides\"/>");
     else if ("topBottom".equals(wrap)) b.append("<wp:wrapTopAndBottom/>");
     else if ("behind".equals(wrap) || "front".equals(wrap)) b.append("<wp:wrapNone/>");

@@ -393,6 +393,12 @@ public final class LayoutEngine {
     /** Extra left offset beside a drop cap, and the baseline from the line top. */
     float lead, baseline;
 
+    /**
+     * Beside floating objects (Wordcraft's per-line exclusions): the right cut narrowing this line
+     * (the left one is added to lead) and the gap above it where a float blocked the whole width.
+     */
+    float cutRight, skip;
+
     /** The first line of a drop-capped paragraph carries the large letter and its x offset. */
     RawLine drop;
 
@@ -613,6 +619,17 @@ public final class LayoutEngine {
     return widths;
   }
 
+  /**
+   * The floats beside a body paragraph being broken into lines: for a line at top (from the
+   * paragraph's first line) about height tall, {left cut, right cut, top} within the column, the
+   * top moved down when a float leaves no room there. Null outside floats.
+   */
+  interface Band {
+    float[] cut(float top, float height);
+  }
+
+  private Band band;
+
   private List<RawLine> lines(Paragraph p, float width) {
     return lines(p, width, false);
   }
@@ -636,7 +653,7 @@ public final class LayoutEngine {
     }
     boolean dropped = allowDrop && !p.format.dropCap.isEmpty() && p.text.length() > 0
         && !Character.isWhitespace(p.text.charAt(0)) && !p.text.objectAt(0);
-    if (c != null && c.width == width && c.drop == dropped) {
+    if (c != null && c.width == width && c.drop == dropped && band == null) {
       nextCache.put(p, c);
       if (content != null) nextByContent.put(content, c);
       return c.lines;
@@ -665,10 +682,25 @@ public final class LayoutEngine {
     }
     byte[] levels = Bidi.needed(text, p.format.rtl) ? Bidi.levels(text, p.format.rtl) : null;
     int start = 0;
+    float bandY = 0;
     do {
       var line = new RawLine();
       if (out.size() < dropLines) line.lead = dropWidth;
-      float available = Math.max(1, width - (start == 0 ? p.format.firstIndent : 0) - line.lead);
+      if (band != null) {
+        float left = p.indent + (p.list.isEmpty() ? 0 : 18 * (p.listLevel + 1)) + (start == 0 ? p.format.firstIndent : 0);
+        float est = metrics.height(TextStyle.DEFAULT);
+        for (int guard = 0; guard < 64; guard++) {
+          float[] cut = band.cut(bandY, est);
+          if (cut[2] <= bandY) {
+            line.lead += Math.max(0, cut[0] - left);
+            line.cutRight = Math.max(0, cut[1] - p.format.rightIndent);
+            break;
+          }
+          line.skip += cut[2] - bandY;
+          bandY = cut[2];
+        }
+      }
+      float available = Math.max(1, width - (start == 0 ? p.format.firstIndent : 0) - line.lead - line.cutRight);
       line.start = start;
       line.height = metrics.height(TextStyle.DEFAULT);
       int end = start == 0 ? skip : start, lastBreak = -1;
@@ -832,6 +864,7 @@ public final class LayoutEngine {
         }
       }
       out.add(line);
+      bandY += line.height;
       start = end;
       if (start < text.length() && text.charAt(start) == '\n') start++;
     } while (start < text.length());
@@ -853,6 +886,7 @@ public final class LayoutEngine {
       if (out.size() < dropLines && y + out.get(n - 1).height < bottom)
         out.get(n - 1).height = bottom - y;
     }
+    if (band != null) return out;
     c = new Cached(width, out, dropped);
     nextCache.put(p, c);
     if (content != null) nextByContent.put(content, c);
@@ -1655,7 +1689,20 @@ public final class LayoutEngine {
                     spec.width, spec.height, spec.top, spec.right + polygonCut(wrapRight), spec.bottom,
                     spec.left + polygonCut(wrapLeft));
       }
-      var ls = lines(p, spec.contentWidth(), index >= 0);
+      List<RawLine> ls;
+      final float base = y + p.before;
+      if (index >= 0 && floatsBelow(base)) {
+        band = (top, h) -> {
+          float[] c = cut(base + top, h);
+          c[2] -= base;
+          return c;
+        };
+        try {
+          ls = lines(p, spec.contentWidth(), true);
+        } finally {
+          band = null;
+        }
+      } else ls = lines(p, spec.contentWidth(), index >= 0);
       if (gridPitch > 0 && index >= 0) {
         // Snap each line to whole grid pitches; copies keep the measured cache unchanged.
         var snapped = new ArrayList<RawLine>();
@@ -1672,6 +1719,8 @@ public final class LayoutEngine {
           c.baseline = l.baseline;
           c.drop = l.drop;
           c.dropX = l.dropX;
+          c.cutRight = l.cutRight;
+          c.skip = l.skip;
           c.height = (float) Math.ceil(l.height / gridPitch - .01f) * gridPitch;
           snapped.add(c);
         }
@@ -1712,6 +1761,7 @@ public final class LayoutEngine {
             && l.height + ls.get(lineIndex + 1).height <= pageHeight)
           room(l.height + ls.get(lineIndex + 1).height);
         lineIndex++;
+        y += l.skip;
         room(l.height);
         if (decor && (segPage != pages.size() || segColumn != column)) {
           // A paragraph pushed whole to the next page keeps its top border there.
@@ -1732,9 +1782,9 @@ public final class LayoutEngine {
         float firstIndent = l.start == 0 ? p.format.firstIndent : 0;
         float x = spec.left + indent + firstIndent + l.lead;
         if ("center".equals(p.align))
-          x += (spec.contentWidth() - indent - p.format.rightIndent - firstIndent - l.lead - l.width) / 2;
+          x += (spec.contentWidth() - indent - p.format.rightIndent - firstIndent - l.lead - l.cutRight - l.width) / 2;
         if ("right".equals(p.align))
-          x += spec.contentWidth() - indent - p.format.rightIndent - firstIndent - l.lead - l.width;
+          x += spec.contentWidth() - indent - p.format.rightIndent - firstIndent - l.lead - l.cutRight - l.width;
         current.add(new Line(index, -1, -1, p.id, pages.size(), x, y, l, marker));
         // After the first line, so caret lookups for offset 0 find the text line first.
         if (l.drop != null)
@@ -1794,11 +1844,119 @@ public final class LayoutEngine {
     void clearWrap() {
       if (inWrap()) y = wrapBottom;
       wrapPage = -1;
+      // As Wordcraft's below_floats: below the positioned floats in the way.
+      for (int guard = 0; guard < 64; guard++) {
+        float below = y;
+        for (Excl e : excl)
+          if (e.page == pages.size() && e.y0 <= y + .01f && e.y1 > y && e.x0 < spec.left + spec.contentWidth() && e.x1 > spec.left)
+            below = Math.max(below, e.y1);
+        if (below == y) break;
+        y = below;
+      }
+    }
+
+    /**
+     * A positioned float text wraps around (Wordcraft's wrap areas): its frame grown by the
+     * distance from text, the frame itself and, for Tight/Through, its outline.
+     */
+    final class Excl {
+      final int page;
+      final float x0, y0, x1, y1, fx, fy, fw, fh, dist;
+      final boolean topBottom;
+      final float[] outline;
+
+      Excl(int page, float fx, float fy, float fw, float fh, float dist, boolean topBottom, float[] outline) {
+        this.page = page;
+        this.fx = fx;
+        this.fy = fy;
+        this.fw = fw;
+        this.fh = fh;
+        this.dist = dist;
+        this.topBottom = topBottom;
+        this.outline = outline;
+        x0 = fx - dist;
+        x1 = fx + fw + dist;
+        y0 = fy - (topBottom ? dist : 0);
+        y1 = fy + fh + (topBottom ? dist : 0);
+      }
+    }
+
+    final List<Excl> excl = new ArrayList<>();
+
+    /**
+     * Per line, as Wordcraft lays text beside floats: the floats crossing the band [y, y + h]
+     * cut the column on the side away from the larger free space (a Tight/Through float by its
+     * outline's extent over the band); a Top and Bottom float, or one leaving under 18pt, sends
+     * the line below it.
+     */
+    float[] cut(float yA, float h) {
+      float left = spec.left, right = spec.left + spec.contentWidth();
+      float cutL = 0, cutR = 0;
+      for (Excl e : excl) {
+        if (e.page != pages.size() || e.y0 >= yA + h || e.y1 <= yA || e.x0 >= right || e.x1 <= left) continue;
+        float ox0 = e.x0, ox1 = e.x1;
+        if (e.topBottom) return new float[] {0, 0, e.y1};
+        if (e.outline != null && e.fh > 0) {
+          float[] r = WrapOutline.extent(e.outline, (yA - e.fy) / e.fh, (yA + h - e.fy) / e.fh);
+          if (r == null) continue;
+          ox0 = e.fx + r[0] * e.fw - e.dist;
+          ox1 = e.fx + r[1] * e.fw + e.dist;
+        }
+        float spaceL = ox0 - (left + cutL), spaceR = (right - cutR) - ox1;
+        if (spaceR >= spaceL) cutL = Math.max(cutL, ox1 - left);
+        else cutR = Math.max(cutR, right - ox0);
+        if (right - left - cutL - cutR < 18) return new float[] {0, 0, e.y1};
+      }
+      return new float[] {cutL, cutR, yA};
+    }
+
+    boolean floatsBelow(float from) {
+      for (Excl e : excl) if (e.page == pages.size() && e.y1 > from) return true;
+      return false;
+    }
+
+    /**
+     * A float placed by its wp:positionH/V as Wordcraft's float placement: the offset or
+     * alignment within the page, margin, column, margin areas, or from the anchor paragraph.
+     */
+    void positioned(Picture p, int index, FloatPosition pos, String wrap) {
+      float scale = Math.min(1, Math.min(spec.width / p.width, spec.height / p.height));
+      float w = p.width * scale, h = p.height * scale;
+      PageSpec m = body == null ? spec : body;
+      boolean odd = pages.size() % 2 == 0;
+      float hs, he;
+      switch (pos.hRel) {
+        case "page": hs = 0; he = m.width; break;
+        case "margin": case "insideMargin": case "outsideMargin": hs = m.left; he = m.contentWidth(); break;
+        case "leftMargin": hs = 0; he = m.left; break;
+        case "rightMargin": hs = m.width - m.right; he = m.right; break;
+        default: hs = spec.left; he = spec.contentWidth();
+      }
+      float vs, ve;
+      switch (pos.vRel) {
+        case "page": vs = 0; ve = m.height; break;
+        case "margin": vs = m.top; ve = m.height - m.top - m.bottom; break;
+        case "topMargin": vs = 0; ve = m.top; break;
+        case "bottomMargin": vs = m.height - m.bottom; ve = m.bottom; break;
+        default: vs = y; ve = 0;
+      }
+      float x = FloatPosition.alignIn(hs, he, pos.x, w, pos.hAlign, odd);
+      float top = ve == 0 && !pos.vAlign.isEmpty() ? vs : FloatPosition.alignIn(vs, ve, pos.y, h, pos.vAlign, odd);
+      pictures.add(new PlacedPicture(p, index, pages.size(), x, top, w, h));
+      boolean tight = "tight".equals(wrap) || "through".equals(wrap);
+      if ("square".equals(wrap) || tight || "topBottom".equals(wrap))
+        excl.add(new Excl(pages.size(), x, top, w, h, "topBottom".equals(wrap) ? 0 : 9, "topBottom".equals(wrap),
+            tight ? WrapOutline.parse(p.wrapPolygon()) : null));
     }
 
     void picture(Picture p, int index) {
       numbering.reset();
       String wrap = p.wrap();
+      FloatPosition pos = "inline".equals(wrap) ? null : FloatPosition.parse(p.position());
+      if (pos != null) {
+        positioned(p, index, pos, wrap);
+        return;
+      }
       boolean floating = "behind".equals(wrap) || "front".equals(wrap);
       boolean tight = "tight".equals(wrap) || "through".equals(wrap);
       boolean around = ("square".equals(wrap) || tight) && !"center".equals(p.align);

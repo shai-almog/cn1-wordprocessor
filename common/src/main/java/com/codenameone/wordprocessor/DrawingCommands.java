@@ -497,6 +497,20 @@ final class DrawingCommands implements Commands.Extension {
           else s.replacePicture(block, p.drawing(p.drawing.with("wrap", wrap)));
           return wrap;
         });
+    c.edit("arrange.bounds", "block?:integer,x:number,y:number",
+        "Move an object to page point x, y (points) on its anchor's page: it floats there, Square wrapped if it was inline", (s, a) -> {
+          int block = block(s, a);
+          Picture next = picture(s, block).movedTo(Commands.number(a, "x", 0), Commands.number(a, "y", 0));
+          s.replacePicture(block, next);
+          return next.position();
+        });
+    c.edit("arrange.nudge", "block?:integer,dx?:number,dy?:number",
+        "Move a floating object by dx, dy points", (s, a) -> {
+          int block = block(s, a);
+          Picture next = picture(s, block).nudged(Commands.number(a, "dx", 0), Commands.number(a, "dy", 0));
+          s.replacePicture(block, next);
+          return next.position();
+        });
     c.edit("arrange.bringForward", "block?:integer,all?:boolean",
         "Bring the object forward (or to front with all)", (s, a) -> z(s, a, 1));
     c.edit("arrange.sendBackward", "block?:integer,all?:boolean",
