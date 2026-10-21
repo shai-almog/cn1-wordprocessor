@@ -190,4 +190,53 @@ public class DrawingCommandsTest {
     assertEquals(pic.y(), page.lines.get(0).y, .01f);
     assertEquals(1, LayoutEngine.byDepth(page.pictures, true).size());
   }
+
+  @Test
+  public void smartArtOutlineMatchesWordcraftSemantics() {
+    Session s = new Session(Document.empty());
+    int art = block(run(s, "insert.smartArt", "layout", "basicList", "items",
+        java.util.Arrays.asList("A", "\tA1", Json.object("text", "B", "level", 0))));
+    assertEquals("list", drawing(s, art).get("layout", ""));
+    assertEquals("A\n\tA1\nB", drawing(s, art).get("nodes", ""));
+    // Add after A goes after A's sub-items; below adds a sub-item right under it.
+    run(s, "smartArt.addShape", "block", art, "after", 0, "text", "A2x");
+    assertEquals("A\n\tA1\nA2x\nB", drawing(s, art).get("nodes", ""));
+    run(s, "smartArt.addShape", "block", art, "after", 0, "text", "A0", "below", true);
+    assertEquals("A\n\tA0\n\tA1\nA2x\nB", drawing(s, art).get("nodes", ""));
+    // Demote A2x: the item before it is at least its level.
+    run(s, "smartArt.demote", "block", art, "index", 3);
+    assertEquals("A\n\tA0\n\tA1\n\tA2x\nB", drawing(s, art).get("nodes", ""));
+    // Promote A moves nothing (top level): an error, no undo step.
+    try {
+      run(s, "smartArt.promote", "block", art, "index", 0);
+      fail();
+    } catch (RuntimeException expected) {
+    }
+    // Demoting the first item is refused.
+    try {
+      run(s, "smartArt.demote", "block", art, "index", 0);
+      fail();
+    } catch (RuntimeException expected) {
+    }
+    // Demote B (last, default) moves it under A2x's level: allowed, B becomes level 1.
+    run(s, "smartArt.demote", "block", art);
+    assertEquals("A\n\tA0\n\tA1\n\tA2x\n\tB", drawing(s, art).get("nodes", ""));
+    s.undo();
+    assertEquals("A\n\tA0\n\tA1\n\tA2x\nB", drawing(s, art).get("nodes", ""));
+    // Promoting an item takes its sub-items along.
+    run(s, "smartArt.items", "block", art, "items", java.util.Arrays.asList("R", "\tC", "\t\tG"));
+    run(s, "smartArt.promote", "block", art, "index", 1);
+    assertEquals("R\nC\n\tG", drawing(s, art).get("nodes", ""));
+    run(s, "smartArt.colors", "block", art, "variant", "accent3");
+    run(s, "smartArt.layout", "block", art, "layout", "venn");
+    var got = (Map<?, ?>) run(s, "smartArt.get", "block", art);
+    assertEquals("venn", got.get("layout"));
+    assertEquals("accent3", got.get("colors"));
+    assertEquals(3, ((List<?>) got.get("items")).size());
+    assertTrue(DrawingOps.build(drawing(s, art), 432, 252).paths.size() >= 2);
+    run(s, "smartArt.layout", "block", art, "layout", "radial");
+    assertTrue(DrawingOps.build(drawing(s, art), 432, 252).paths.size() >= 2);
+    assertEquals("radial", DocxCharts.layout("urn:microsoft.com/office/officeart/2005/8/layout/radial1"));
+    assertEquals("venn", DocxCharts.layout("urn:microsoft.com/office/officeart/2005/8/layout/venn1"));
+  }
 }

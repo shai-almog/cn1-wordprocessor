@@ -219,17 +219,33 @@ final class DrawingCommands implements Commands.Extension {
         });
 
     // ---------------------------------------------------------------- SmartArt
+    // The same operations as Wordcraft's SmartArt Design tab and Text Pane (insert.smartArt,
+    // smartArt.items/textPane/addShape/promote/demote/layout/colors/reset): items are lines whose
+    // leading tabs are their level (0-7), at most 100 of them; each command is one undo step.
     c.register(
         "insert.smartArt",
-        "Insert SmartArt: " + DrawingOps.SMART_ART + "; nodes are lines, tab-indented for levels",
-        "layout?:string,nodes?:string",
+        "Insert SmartArt: " + DrawingOps.SMART_ART + " (basicList is list); nodes are lines, tab-indented for levels",
+        "layout?:string,nodes?:string,items?:array,colors?:string",
         true,
         (s, a) -> {
-          String layout = Commands.str(a, "layout", "list");
-          if (!DrawingOps.SMART_ART.contains(layout)) throw new IllegalArgumentException("Unknown layout: " + layout);
+          String layout = layout(Commands.str(a, "layout", "list"));
           var d = Drawing.of("smartArt").with("layout", layout).with("nodes", "Text\nText\nText");
           if (a.containsKey("nodes")) d = d.with("nodes", nodes(Commands.str(a, "nodes")));
-          return insert(s, d, 432, 216, "SmartArt " + layout);
+          if (a.containsKey("items")) d = d.with("nodes", items(a.get("items")));
+          if (a.containsKey("colors")) d = d.with("colors", colors(Commands.str(a, "colors")));
+          return insert(s, d, 432, 252, "SmartArt " + layout);
+        });
+    c.query("smartArt.get", "block?:integer",
+        "The selected SmartArt graphic: layout, colors and items (text and level)", (s, a) -> {
+          Drawing d = smart(s, a);
+          var items = new ArrayList<Object>();
+          for (String line : lines(d)) items.add(Json.object("text", line.trim(), "level", tabs(line).length()));
+          return Json.object("layout", d.get("layout", "list"), "colors", d.get("colors", "accent1"), "items", items);
+        });
+    c.edit("smartArt.items", "block?:integer,items:array",
+        "Replace the SmartArt outline: strings (leading tabs are the level) or {text, level 0-7}", (s, a) -> {
+          Drawing d = smart(s, a);
+          return update(s, a, d.with("nodes", items(a.get("items"))));
         });
     c.edit("smartArt.textPane", "block?:integer,nodes?:string",
         "Read or replace SmartArt text (one node per line, tab-indented for levels)", (s, a) -> {
@@ -238,36 +254,39 @@ final class DrawingCommands implements Commands.Extension {
           return d.get("nodes", "");
         });
     c.edit("smartArt.addShape", "block?:integer,text?:string,after?:integer,below?:boolean",
-        "Add a SmartArt node after the given node (default last)", (s, a) -> {
+        "Add a SmartArt item after the given item and the items under it (default the last); below adds a sub-item right under it",
+        (s, a) -> {
           Drawing d = smart(s, a);
           var lines = lines(d);
-          int after = Commands.integer(a, "after", lines.size() - 1);
-          if (after < -1 || after >= lines.size()) throw new IllegalArgumentException("Node out of range");
-          String indent = after < 0 ? "" : tabs(lines.get(after));
-          if (a.containsKey("below") && (Boolean) a.get("below")) indent += "\t";
-          lines.add(after + 1, indent + (Commands.str(a, "text", "Text")));
+          if (lines.size() >= MAX_ITEMS) throw new IllegalStateException("A SmartArt graphic holds at most " + MAX_ITEMS + " items");
+          String text = clean(Commands.str(a, "text", ""));
+          // An empty line would not be an item in the outline text, so an empty shape shows Word's placeholder.
+          if (text.isEmpty()) text = "Text";
+          if (lines.isEmpty()) {
+            lines.add(text);
+            return update(s, a, d.with("nodes", join(lines)));
+          }
+          int at = Math.min(Commands.integer(a, "after", lines.size() - 1), lines.size() - 1);
+          if (at < 0) throw new IllegalArgumentException("Item out of range");
+          int level = tabs(lines.get(at)).length();
+          if (Boolean.TRUE.equals(a.get("below"))) lines.add(at + 1, indent(Math.min(MAX_LEVEL, level + 1)) + text);
+          else lines.add(descendantsEnd(lines, at), indent(level) + text);
           return update(s, a, d.with("nodes", join(lines)));
         });
-    c.edit("smartArt.promote", "block?:integer,node:integer",
-        "Promote a SmartArt node one level", (s, a) -> level(s, a, -1));
-    c.edit("smartArt.demote", "block?:integer,node:integer",
-        "Demote a SmartArt node one level", (s, a) -> level(s, a, 1));
+    c.edit("smartArt.promote", "block?:integer,index?:integer,node?:integer",
+        "Promote a SmartArt item (default the last) and the items under it one level", (s, a) -> level(s, a, -1));
+    c.edit("smartArt.demote", "block?:integer,index?:integer,node?:integer",
+        "Demote a SmartArt item (default the last) and the items under it one level", (s, a) -> level(s, a, 1));
     c.register(
         "smartArt.layout",
         "Change SmartArt layout: " + DrawingOps.SMART_ART,
         "block?:integer,layout:string",
         true,
-        (s, a) -> {
-          String layout = Commands.str(a, "layout");
-          if (!DrawingOps.SMART_ART.contains(layout)) throw new IllegalArgumentException("Unknown layout: " + layout);
-          return update(s, a, smart(s, a).with("layout", layout));
-        });
-    c.edit("smartArt.colors", "block?:integer,colors:string",
+        (s, a) -> update(s, a, smart(s, a).with("layout", layout(Commands.str(a, "layout")))));
+    c.edit("smartArt.colors", "block?:integer,colors?:string,variant?:string",
         "SmartArt colors: colorful or accent1..accent6", (s, a) -> {
-          String v = Commands.str(a, "colors");
-          if (!"colorful".equals(v) && !(v.startsWith("accent") && v.length() == 7 && v.charAt(6) >= '1' && v.charAt(6) <= '6'))
-            throw new IllegalArgumentException("colors: colorful or accent1..accent6");
-          return update(s, a, smart(s, a).with("colors", v));
+          String v = Commands.str(a, a.containsKey("variant") ? "variant" : "colors");
+          return update(s, a, smart(s, a).with("colors", colors(v)));
         });
     c.edit("smartArt.reset", "block?:integer",
         "Reset SmartArt colors and styles, keeping text and layout", (s, a) -> {
@@ -640,18 +659,78 @@ final class DrawingCommands implements Commands.Extension {
     return b.toString();
   }
 
+  static final int MAX_ITEMS = 100, MAX_LEVEL = 7;
+
   private static Object level(Session s, Map<String, Object> a, int delta) {
     Drawing d = smart(s, a);
     var lines = lines(d);
-    int node = Commands.integer(a, "node");
-    if (node < 0 || node >= lines.size()) throw new IllegalArgumentException("Node out of range");
-    String line = lines.get(node), indent = tabs(line);
-    if (delta < 0 && indent.isEmpty()) return false;
-    if (delta > 0 && (node == 0 || indent.length() >= tabs(lines.get(node - 1)).length() + 1 || indent.length() >= 8))
-      return false;
-    lines.set(node, delta < 0 ? line.substring(1) : "\t" + line);
+    if (lines.isEmpty()) throw new IllegalStateException("The graphic has no items");
+    int node = Commands.integer(a, a.containsKey("index") ? "index" : "node", lines.size() - 1);
+    if (node < 0 || node >= lines.size()) throw new IllegalArgumentException("Item out of range");
+    int level = tabs(lines.get(node)).length(), end = descendantsEnd(lines, node);
+    if (delta < 0 && level == 0) throw new IllegalStateException("This item is already at the top level");
+    if (delta > 0) {
+      int deepest = 0;
+      for (int j = node; j < end; j++) deepest = Math.max(deepest, tabs(lines.get(j)).length());
+      if (node == 0 || tabs(lines.get(node - 1)).length() < level || deepest >= MAX_LEVEL)
+        throw new IllegalStateException("This item can't go down a level (it needs an item before it at its level)");
+    }
+    for (int j = node; j < end; j++) lines.set(j, delta < 0 ? lines.get(j).substring(1) : "\t" + lines.get(j));
     update(s, a, d.with("nodes", join(lines)));
     return true;
+  }
+
+  /** The index after item i and the items under it (deeper items that follow it). */
+  static int descendantsEnd(List<String> lines, int i) {
+    int level = tabs(lines.get(i)).length(), j = i + 1;
+    while (j < lines.size() && tabs(lines.get(j)).length() > level) j++;
+    return j;
+  }
+
+  private static String indent(int level) {
+    var b = new StringBuilder();
+    for (int i = 0; i < level; i++) b.append('\t');
+    return b.toString();
+  }
+
+  /** Item text: control characters as spaces, ends trimmed, at most 1000 characters. */
+  private static String clean(String t) {
+    var b = new StringBuilder();
+    for (int i = 0; i < t.length() && b.length() < 1000; i++) b.append(t.charAt(i) < ' ' ? ' ' : t.charAt(i));
+    return b.toString().trim();
+  }
+
+  private static String items(Object v) {
+    if (!(v instanceof List<?> list)) throw new IllegalArgumentException("items: [string | {text, level}]");
+    var lines = new ArrayList<String>();
+    for (Object it : list) {
+      if (lines.size() >= MAX_ITEMS) break;
+      int level = 0;
+      String text;
+      if (it instanceof Map<?, ?> m) {
+        text = m.get("text") == null ? "" : String.valueOf(m.get("text"));
+        if (m.get("level") instanceof Number n) level = n.intValue();
+      } else if (it instanceof String str) {
+        while (level < str.length() && str.charAt(level) == '\t') level++;
+        text = str;
+      } else throw new IllegalArgumentException("items: [string | {text, level}]");
+      text = clean(text);
+      lines.add(indent(Math.max(0, Math.min(MAX_LEVEL, level))) + (text.isEmpty() ? "Text" : text));
+    }
+    if (lines.isEmpty()) throw new IllegalArgumentException("SmartArt needs at least one item");
+    return join(lines);
+  }
+
+  private static String layout(String id) {
+    String l = DrawingOps.smartLayout(id);
+    if (l == null) throw new IllegalArgumentException("Unknown layout: " + id + " (" + DrawingOps.SMART_ART + ")");
+    return l;
+  }
+
+  private static String colors(String v) {
+    if (!"colorful".equals(v) && !(v.startsWith("accent") && v.length() == 7 && v.charAt(6) >= '1' && v.charAt(6) <= '6'))
+      throw new IllegalArgumentException("colors: colorful or accent1..accent6");
+    return v;
   }
 
   /** Numbers every numbered equation 1, 2, 3 in document order; returns the count. */

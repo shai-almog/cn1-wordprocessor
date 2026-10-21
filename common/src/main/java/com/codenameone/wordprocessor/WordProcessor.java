@@ -1438,7 +1438,8 @@ public class WordProcessor {
         OfficeTheme.group(
             "Illustrations",
             OfficeTheme.row(
-                iconButton("Pictures", FontImage.MATERIAL_IMAGE, this::insertPicture, true))),
+                iconButton("Pictures", FontImage.MATERIAL_IMAGE, this::insertPicture, true),
+                iconButton("SmartArt", FontImage.MATERIAL_ACCOUNT_TREE, this::smartArtDialog, true))),
         OfficeTheme.group(
             "Links",
             OfficeTheme.row(
@@ -3456,9 +3457,15 @@ public class WordProcessor {
             "Speech",
             OfficeTheme.row(
                 iconButton("Read Aloud", FontImage.MATERIAL_RECORD_VOICE_OVER, () -> readAloud("start"), true),
-                iconButton("Stop Reading", FontImage.MATERIAL_STOP, () -> readAloud("stop"), true),
-                iconButton("Dictate", FontImage.MATERIAL_MIC, this::dictate, true),
-                readingSpeed())),
+                BoxLayout.encloseY(
+                    OfficeTheme.row(
+                        iconButton("Previous sentence", FontImage.MATERIAL_SKIP_PREVIOUS, () -> readAloud("previous"), false),
+                        iconButton("Pause or resume reading", FontImage.MATERIAL_PAUSE, () -> readAloud("playPause"), false),
+                        iconButton("Next sentence", FontImage.MATERIAL_SKIP_NEXT, () -> readAloud("next"), false),
+                        iconButton("Stop Reading", FontImage.MATERIAL_STOP, () -> readAloud("stop"), false)),
+                    readAloudStatus),
+                BoxLayout.encloseY(readingSpeed(), skipCitationsBox()),
+                iconButton("Dictate", FontImage.MATERIAL_MIC, this::dictate, true))),
         OfficeTheme.group(
             "Comments",
             OfficeTheme.row(
@@ -4807,10 +4814,18 @@ public class WordProcessor {
   }
 
   private com.codename1.ui.util.UITimer readAloudTimer;
+  private final Label readAloudStatus = named(new Label("Stopped"), "Read Aloud status");
+
+  private static <T extends Component> T named(T c, String name) {
+    c.setName(name);
+    return c;
+  }
 
   /**
-   * Read Aloud: speaks the sentence at the caret through {@link Speech}, then advances sentence by
-   * sentence after an estimated speaking time (TextToSpeech has no completion callback).
+   * Read Aloud, as Wordcraft's player: start at the caret, previous / pause-resume / next / stop,
+   * the speed and "Skip citations & bibliography". Each sentence is selected (the highlight, and
+   * the caret stays where reading stopped) and spoken through {@link Speech}; the next one follows
+   * after an estimated speaking time (TextToSpeech has no completion callback).
    */
   private void readAloud(String action) {
     if (readAloudTimer != null) {
@@ -4824,19 +4839,39 @@ public class WordProcessor {
     }
     Map<?, ?> r;
     try {
-      r = (Map<?, ?>) commands.execute(session, "review.readAloud", Json.object("action", action, "rate", Speech.rate()));
+      r = (Map<?, ?>) commands.execute(session, "review.readAloud",
+          Json.object("action", action, "rate", Speech.rate(), "skipCitations", Speech.skipCitations()));
     } catch (RuntimeException e) {
+      readAloudStatus.setText("Stopped");
       return;
     }
+    readAloudStatus.setText(readAloudState(r));
     editor.revealSelection();
     edited(false);
-    if (!Boolean.TRUE.equals(r.get("reading"))) return;
+    if (!Boolean.TRUE.equals(r.get("reading")) || Boolean.TRUE.equals(r.get("paused"))) return;
     String text = String.valueOf(r.get("text"));
     float readAloudRate = Speech.rate();
     Speech.engine().speak(text, readAloudRate);
     readAloudTimer =
         com.codename1.ui.util.UITimer.timer(
             (int) Speech.duration(text, readAloudRate), false, form, () -> readAloud("next"));
+  }
+
+  /** The player's status line, as Wordcraft's: "Sentence i / n", Paused, Finished or Stopped. */
+  static String readAloudState(Map<?, ?> r) {
+    if (Boolean.TRUE.equals(r.get("done"))) return "Finished";
+    if (!Boolean.TRUE.equals(r.get("reading"))) return "Stopped";
+    if (Boolean.TRUE.equals(r.get("paused"))) return "Paused";
+    return "Sentence " + (((Number) r.get("index")).intValue() + 1) + " / " + r.get("count");
+  }
+
+  /** "Skip citations & bibliography", persisted; applies from the next Read Aloud start. */
+  private Component skipCitationsBox() {
+    var box = new CheckBox("Skip citations");
+    box.setName("Skip citations");
+    box.setSelected(Speech.skipCitations());
+    box.addActionListener(e -> Speech.skipCitations(box.isSelected()));
+    return box;
   }
 
   /** Reading speed choice for the Speech group; persisted in AppOptions and used by the next sentence. */
@@ -4886,6 +4921,86 @@ public class WordProcessor {
     var area = new com.codename1.ui.TextArea(String.valueOf(current), 8, 40);
     if (showDialog("Edit Chart Data", area, "Apply", "Cancel"))
       run("chart.editData", Json.object("data", area.getText()));
+  }
+
+  static final String[] SMART_ART_LAYOUTS = {"list", "process", "cycle", "hierarchy", "pyramid", "radial", "matrix", "venn"};
+  static final String[] SMART_ART_LAYOUT_NAMES = {"Basic List", "Process", "Cycle", "Hierarchy", "Pyramid", "Radial", "Matrix", "Venn"};
+  static final String[] SMART_ART_COLORS = {"accent1", "accent2", "accent3", "accent4", "accent5", "accent6", "colorful"};
+  static final String[] SMART_ART_COLOR_NAMES = {"Accent 1", "Accent 2", "Accent 3", "Accent 4", "Accent 5", "Accent 6", "Colorful"};
+
+  /**
+   * SmartArt: with a SmartArt graphic selected, its Design controls and Text Pane (as Wordcraft's
+   * SmartArt Design tab and Text Pane); otherwise the layout picker that inserts one. Every button
+   * runs one smartArt.* command, so each change is one undo step and macros/MCP get the same.
+   */
+  private void smartArtDialog() {
+    editor.stopInput();
+    Map<?, ?> got;
+    try {
+      got = (Map<?, ?>) commands.execute(session, "smartArt.get", Json.object());
+    } catch (RuntimeException e) {
+      got = null;
+    }
+    var layout = new ComboBox<String>(SMART_ART_LAYOUT_NAMES);
+    layout.setName("SmartArt layout");
+    styleCombo(layout);
+    if (got == null) {
+      if (showDialog("Choose a SmartArt Graphic", BoxLayout.encloseY(new Label("Layout"), layout), "Insert", "Cancel"))
+        run("insert.smartArt", Json.object("layout", SMART_ART_LAYOUTS[Math.max(0, layout.getSelectedIndex())]));
+      return;
+    }
+    layout.setSelectedIndex(Math.max(0, java.util.Arrays.asList(SMART_ART_LAYOUTS).indexOf(String.valueOf(got.get("layout")))));
+    var colors = new ComboBox<String>(SMART_ART_COLOR_NAMES);
+    colors.setName("SmartArt colors");
+    styleCombo(colors);
+    colors.setSelectedIndex(Math.max(0, java.util.Arrays.asList(SMART_ART_COLORS).indexOf(String.valueOf(got.get("colors")))));
+    var pane = new com.codename1.ui.TextArea(String.valueOf(commands.execute(session, "smartArt.textPane", Json.object())), 8, 36);
+    pane.setName("SmartArt Text Pane");
+    Runnable refresh = () -> pane.setText(String.valueOf(commands.execute(session, "smartArt.textPane", Json.object())));
+    java.util.function.Consumer<Runnable> step = r -> {
+      // Pending Text Pane typing is applied first, as its own step, so buttons act on what is shown.
+      applySmartArtText(pane.getText());
+      r.run();
+      refresh.run();
+      form.revalidate();
+    };
+    layout.addSelectionListener((o, n) -> step.accept(() -> run("smartArt.layout", Json.object("layout", SMART_ART_LAYOUTS[Math.max(0, n)]))));
+    colors.addSelectionListener((o, n) -> step.accept(() -> run("smartArt.colors", Json.object("variant", SMART_ART_COLORS[Math.max(0, n)]))));
+    var buttons = BoxLayout.encloseY(
+        button("Add Shape", () -> step.accept(() -> run("smartArt.addShape", Json.object("after", smartArtLine(pane))))),
+        button("Add Shape Below", () -> step.accept(() -> run("smartArt.addShape", Json.object("after", smartArtLine(pane), "below", true)))),
+        button("Promote", () -> step.accept(() -> run("smartArt.promote", Json.object("index", smartArtLine(pane))))),
+        button("Demote", () -> step.accept(() -> run("smartArt.demote", Json.object("index", smartArtLine(pane))))),
+        button("Reset Graphic", () -> step.accept(() -> {
+          run("smartArt.reset", Json.object());
+          colors.setSelectedIndex(0);
+        })));
+    var body = BoxLayout.encloseY(
+        new Label("Layout"), layout, new Label("Colors"), colors,
+        new Label("Text Pane (Tab-indent for levels)"), BorderLayout.center(pane).add(BorderLayout.EAST, buttons));
+    if (showDialog("SmartArt Design", body, "Apply", "Close")) applySmartArtText(pane.getText());
+  }
+
+  /** The Text Pane outline, applied when it differs from the graphic's (one undo step). */
+  private void applySmartArtText(String text) {
+    Object now = commands.execute(session, "smartArt.textPane", Json.object());
+    if (!String.valueOf(now).equals(text) && !text.trim().isEmpty()) run("smartArt.textPane", Json.object("nodes", text));
+  }
+
+  /** The item index of the Text Pane line holding the cursor (blank lines are not items). */
+  static int smartArtLine(com.codename1.ui.TextArea pane) {
+    String t = pane.getText();
+    int cursor = Math.max(0, Math.min(t.length(), pane.getCursorPosition()));
+    int items = 0;
+    boolean content = false;
+    for (int i = 0; i < cursor; i++) {
+      char c = t.charAt(i);
+      if (c == '\n') {
+        if (content) items++;
+        content = false;
+      } else if (c > ' ') content = true;
+    }
+    return items;
   }
 
   private void rename() {
@@ -5081,6 +5196,7 @@ public class WordProcessor {
         .item("Picture…", menuAction("Picture", this::insertPicture))
         .item("Chart…", menuAction("Chart", cmd("insert.chart")))
         .item("Edit Chart Data…", menuAction("Edit Chart Data", this::chartDataDialog))
+        .item("SmartArt…", menuAction("SmartArt", this::smartArtDialog))
         .item("Shape…", menuAction("Shape", cmd("insert.shape")))
         .item("Text Box", menuAction("Text Box", cmd("insert.textBox")))
         .submenu("Equation")

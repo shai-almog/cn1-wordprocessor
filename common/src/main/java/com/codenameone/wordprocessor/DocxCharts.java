@@ -347,7 +347,9 @@ final class DocxCharts {
     String s = id.toLowerCase();
     int slash = s.lastIndexOf('/');
     if (slash >= 0) s = s.substring(slash + 1);
-    if (s.contains("cycle") || s.contains("radial") || s.contains("venn")) return "cycle";
+    if (s.contains("radial")) return "radial";
+    if (s.contains("venn")) return "venn";
+    if (s.contains("cycle")) return "cycle";
     if (s.contains("hierarchy") || s.contains("orgchart")) return "hierarchy";
     if (s.contains("pyramid")) return "pyramid";
     if (s.contains("matrix")) return "matrix";

@@ -43,6 +43,7 @@ public final class AppOptions {
     // The page goes dark with the app in Dark Mode, as in Word; View > Dark Page overrides it.
     d.put("darkPage", "true");
     d.put("readAloudRate", "1.0");
+    d.put("readAloudSkipCitations", "true");
     DEFAULTS = Collections.unmodifiableMap(d);
   }
 

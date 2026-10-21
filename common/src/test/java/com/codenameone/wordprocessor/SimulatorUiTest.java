@@ -446,9 +446,30 @@ public class SimulatorUiTest {
             assertEquals("1.5x", speed.getSelectedItem());
             speed.setSelectedIndex(0);
             assertEquals(.5f, Speech.rate(), .001f);
+            // Wordcraft's player controls and its 3x top speed.
+            assertEquals("3x", speed.getModel().getItemAt(speed.getModel().getSize() - 1));
+            for (String n : new String[] {"Previous sentence", "Pause or resume reading", "Next sentence", "Stop Reading", "Read Aloud status"})
+              assertNotNull(n, named(review, n));
+            com.codename1.ui.CheckBox skip = (com.codename1.ui.CheckBox) named(review, "Skip citations");
+            assertTrue(skip.isSelected());
+            skip.pressed();
+            skip.released();
+            assertFalse(Speech.skipCitations());
           });
     } finally {
       AppOptions.set("readAloudRate", saved);
+      Speech.skipCitations(true);
     }
+  }
+
+  @Test
+  public void insertRibbonOffersSmartArt() throws Exception {
+    edt(
+        () -> {
+          Method m = WordProcessor.class.getDeclaredMethod("insert");
+          m.setAccessible(true);
+          Container insert = (Container) m.invoke(app);
+          assertNotNull("SmartArt button", named(insert, "SmartArt"));
+        });
   }
 }

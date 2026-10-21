@@ -15,7 +15,8 @@ public class SpeechRateTest {
     assertEquals("1.25x", Speech.label(1.25f));
     assertEquals("2x", Speech.label(2f));
     assertEquals(.5f, Speech.clamp(.1f), 0);
-    assertEquals(2f, Speech.clamp(9f), 0);
+    assertEquals(3f, Speech.clamp(9f), 0);
+    assertEquals("3x", Speech.label(3f));
     assertEquals(1f, Speech.clamp(Float.NaN), 0);
   }
 
@@ -26,14 +27,14 @@ public class SpeechRateTest {
       Speech.rate(2f);
       assertEquals(2f, Speech.rate(), 0);
       Speech.rate(7f);
-      assertEquals(2f, Speech.rate(), 0);
+      assertEquals(3f, Speech.rate(), 0);
       AppOptions.set("readAloudRate", "junk");
       assertEquals(1f, Speech.rate(), 0);
       String s = "one two three four five six seven eight";
       long slow = Speech.duration(s, .5f), normal = Speech.duration(s, 1f), fast = Speech.duration(s, 2f);
-      assertEquals(8 * 375 + 400, normal);
-      assertEquals(8 * 750 + 400, slow);
-      assertEquals(8 * 375 / 2 + 400, fast);
+      assertEquals(8 * 60000 / 180 + 400, normal); // Wordcraft: 180 words per minute at 1x
+      assertEquals(8 * 60000 / 90 + 400, slow);
+      assertEquals(8 * 60000 / 360 + 400, fast);
     } finally {
       AppOptions.set("readAloudRate", saved);
     }

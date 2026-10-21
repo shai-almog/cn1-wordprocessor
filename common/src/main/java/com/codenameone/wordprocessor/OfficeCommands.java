@@ -44,7 +44,7 @@ final class OfficeCommands implements Commands.Extension {
 
   private static final SessionMap<List<Version>> VERSIONS = SessionMap.forDocument();
   private static final SessionMap<List<Object>> RECORDING = new SessionMap<>();
-  private static final SessionMap<int[]> READING = SessionMap.forDocument();
+  private static final SessionMap<ReadAloud.Reading> READING = SessionMap.forDocument();
   private static final SessionMap<String> PASSWORDS = SessionMap.forDocument();
 
   /** The password Word documents saved from this session are encrypted with, or null. */
@@ -418,42 +418,46 @@ final class OfficeCommands implements Commands.Extension {
           for (Map<String, String> r : results) out.add(new LinkedHashMap<String, Object>(r));
           return Json.object("results", out, "cited", tag);
         });
-    c.query("review.readAloud", "action?:string,rate?:number",
-        "Read Aloud: start at the caret, advance to the next or previous sentence, or stop; selects the sentence being read and returns its text and the speaking rate",
+    c.query("review.readAloud", "action?:string,rate?:number,skipCitations?:boolean",
+        "Read Aloud (as Wordcraft's player): start at the caret, next, previous, pause, resume, playPause,"
+            + " current or stop. Selects the sentence being read and returns its spoken text, index/count,"
+            + " the speed (0.5-3, clamped) and whether citations and the bibliography are skipped (default true)",
         (s, a) -> {
           String action = a.containsKey("action") ? Commands.str(a, "action") : READING.containsKey(s) ? "stop" : "start";
+          float rate = ReadAloud.clamp(Commands.number(a, "rate", 1f));
+          boolean skip = !a.containsKey("skipCitations") || Boolean.TRUE.equals(a.get("skipCitations"));
           if ("stop".equals(action)) {
             READING.remove(s);
             return Json.object("reading", false);
           }
-          float rate = Commands.number(a, "rate", 1f);
-          if (rate < .25f || rate > 4f) throw new IllegalArgumentException("Rate is 0.25-4");
-          var d = s.document();
-          int[] at;
+          ReadAloud.Reading r;
           if ("start".equals(action)) {
             var x = s.selection();
-            at = new int[] {x.block, Math.min(x.anchor, x.caret)};
+            int block = Math.min(x.block, x.anchorBlock);
+            int offset = x.block == x.anchorBlock ? Math.min(x.anchor, x.caret) : x.block < x.anchorBlock ? x.caret : x.anchor;
+            r = new ReadAloud.Reading(ReadAloud.sentences(s.document(), block, offset, skip));
           } else {
-            at = READING.get(s);
-            if (at == null) throw new IllegalStateException("Read Aloud is not running");
-            at = "previous".equals(action) ? previousSentence(d, at) : nextSentence(d, at);
+            r = READING.get(s);
+            if (r == null) throw new IllegalStateException("Read Aloud is not running");
+            switch (action) {
+              case "next" -> r.index++;
+              case "previous" -> r.index = Math.max(0, Math.min(r.index, r.queue.size()) - 1);
+              case "pause" -> r.paused = true;
+              case "resume" -> r.paused = false;
+              case "playPause" -> r.paused = !r.paused;
+              case "current" -> {}
+              default -> throw new IllegalArgumentException("action: start, next, previous, pause, resume, playPause, current or stop");
+            }
           }
-          if (at == null) {
+          if (r.index >= r.queue.size()) {
             READING.remove(s);
-            return Json.object("reading", false, "done", true);
+            return Json.object("reading", false, "done", true, "count", r.queue.size());
           }
-          int[] range = sentence(d, at);
-          if (range == null) {
-            at = nextSentence(d, at);
-            range = at == null ? null : sentence(d, at);
-          }
-          if (range == null) {
-            READING.remove(s);
-            return Json.object("reading", false, "done", true);
-          }
-          READING.put(s, new int[] {range[0], range[1]});
-          s.select(range[0], range[1], range[2]);
-          return Json.object("reading", true, "block", range[0], "text", s.selectedText(), "rate", rate);
+          READING.put(s, r);
+          var u = r.queue.get(r.index);
+          s.select(u.block, u.start, u.end);
+          return Json.object("reading", true, "paused", r.paused, "block", u.block, "text", u.text, "index", r.index,
+              "count", r.queue.size(), "rate", rate, "skipCitations", skip);
         });
     c.edit("review.combine", "xml?:string,docx?:string,author?:string",
         "Combine: merge a reviewer's revised copy (native XML or base64 .docx) into this document as that reviewer's tracked changes",
@@ -632,43 +636,6 @@ final class OfficeCommands implements Commands.Extension {
       if (!pairs[i + 1].isEmpty()) t.replace(pairs[i + 1]);
       if (pairs[i] != null) t.applyStyle(pairs[i]);
     }
-  }
-
-  private static int[] sentence(Document d, int[] at) {
-    if (at[0] >= d.blocks.size() || !(d.blocks.get(at[0]) instanceof Paragraph)) return null;
-    var t = d.paragraph(at[0]).text.plainText();
-    int start = Math.min(at[1], t.length());
-    while (start < t.length() && Character.isWhitespace(t.charAt(start))) start++;
-    if (start >= t.length()) return null;
-    int end = start;
-    while (end < t.length()) {
-      char ch = t.charAt(end++);
-      if ((ch == '.' || ch == '!' || ch == '?') && (end >= t.length() || Character.isWhitespace(t.charAt(end)))) break;
-    }
-    return new int[] {at[0], start, end};
-  }
-
-  private static int[] nextSentence(Document d, int[] at) {
-    int[] cur = sentence(d, at);
-    if (cur != null) {
-      int[] same = sentence(d, new int[] {at[0], cur[2]});
-      if (same != null) return new int[] {at[0], same[1]};
-    }
-    for (int b = at[0] + 1; b < d.blocks.size(); b++)
-      if (sentence(d, new int[] {b, 0}) != null) return new int[] {b, 0};
-    return null;
-  }
-
-  private static int[] previousSentence(Document d, int[] at) {
-    int b = at[0], before = at[1];
-    while (b >= 0) {
-      int[] last = null;
-      for (int[] r = sentence(d, new int[] {b, 0}); r != null && r[1] < before; r = sentence(d, new int[] {b, r[2]})) last = r;
-      if (last != null) return new int[] {b, last[1]};
-      b--;
-      before = Integer.MAX_VALUE;
-    }
-    return null;
   }
 
   static String iso(long millis) {

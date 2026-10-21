@@ -101,22 +101,14 @@ final class Speech {
 
   /**
    * Estimated speaking time in milliseconds. TextToSpeech has no completion callback, so Read
-   * Aloud advances to the next sentence after this estimate (about 160 words per minute at 1x).
+   * Aloud advances to the next sentence after this estimate (Wordcraft's 180 words per minute at 1x).
    */
   static long duration(String text, float rate) {
-    int words = 0;
-    boolean in = false;
-    for (int i = 0; i < text.length(); i++) {
-      boolean space = text.charAt(i) <= ' ';
-      if (!space && !in) words++;
-      in = !space;
-    }
-    long ms = (long) (Math.max(1, words) * 375 / Math.max(.25f, rate));
-    return ms + 400;
+    return ReadAloud.duration(text, rate);
   }
 
-  /** Read Aloud speeds offered in the ribbon, as Word's 0.5x..2x reading speed slider. */
-  static final float[] RATES = {.5f, .75f, 1f, 1.25f, 1.5f, 2f};
+  /** Read Aloud speeds offered in the ribbon: Wordcraft's 0.5x..3x speed range. */
+  static final float[] RATES = {.5f, .75f, 1f, 1.25f, 1.5f, 1.75f, 2f, 2.5f, 3f};
 
   /** Ribbon label for a rate, for example "1.25x". */
   static String label(float rate) {
@@ -141,7 +133,15 @@ final class Speech {
   }
 
   static float clamp(float r) {
-    if (Float.isNaN(r)) return 1f;
-    return Math.max(RATES[0], Math.min(RATES[RATES.length - 1], r));
+    return ReadAloud.clamp(r);
+  }
+
+  /** Whether Read Aloud leaves out citations and the bibliography (AppOptions, default on as in Wordcraft). */
+  static boolean skipCitations() {
+    return !"false".equals(AppOptions.get("readAloudSkipCitations"));
+  }
+
+  static void skipCitations(boolean on) {
+    AppOptions.set("readAloudSkipCitations", String.valueOf(on));
   }
 }

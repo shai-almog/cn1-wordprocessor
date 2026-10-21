@@ -179,6 +179,41 @@ public class OfficeCommandsTest {
   }
 
   @Test
+  public void readAloudMatchesWordcraftPlayer() {
+    var s = new Session(Document.empty());
+    s.replace("Smith et al. found it. See Fig. 2 and J. Doe (\"quoted.\") Done");
+    s.select(0, 0, 0);
+    Map<?, ?> r = (Map<?, ?>) run(s, "review.readAloud", "action", "start", "rate", 9);
+    assertEquals("Smith et al. found it.", r.get("text"));
+    assertEquals(3f, ((Number) r.get("rate")).floatValue(), 0);
+    assertEquals(0, r.get("index"));
+    assertEquals(3, r.get("count"));
+    assertEquals("See Fig. 2 and J. Doe (\"quoted.\")", ((Map<?, ?>) run(s, "review.readAloud", "action", "next")).get("text"));
+    r = (Map<?, ?>) run(s, "review.readAloud", "action", "playPause");
+    assertEquals(Boolean.TRUE, r.get("paused"));
+    assertEquals("Paused", WordProcessor.readAloudState(r));
+    r = (Map<?, ?>) run(s, "review.readAloud", "action", "resume");
+    assertEquals("Sentence 2 / 3", WordProcessor.readAloudState(r));
+    assertEquals("Smith et al. found it.", ((Map<?, ?>) run(s, "review.readAloud", "action", "previous")).get("text"));
+    assertEquals("Smith et al. found it.", ((Map<?, ?>) run(s, "review.readAloud", "action", "previous")).get("text"));
+    // Citation fields are left out and their leftovers tidied; with skip off they are read.
+    var c = new Session(Document.empty());
+    c.replace("Cats purr ");
+    c.insertField(new InlineField("ADDIN ZOTERO_ITEM CSL_CITATION {}", "(Smith 2020)", false, false));
+    c.replace(". Dogs bark.");
+    c.select(0, 0, 0);
+    assertEquals("Cats purr.", ((Map<?, ?>) run(c, "review.readAloud", "action", "start")).get("text"));
+    assertEquals("Cats purr (Smith 2020).",
+        ((Map<?, ?>) run(c, "review.readAloud", "action", "start", "skipCitations", false)).get("text"));
+    assertTrue(ReadAloud.isCitationCode("ADDIN EN.CITE <EndNote>"));
+    assertTrue(ReadAloud.isCitationCode("CITATION Smi20 \\l 1033"));
+    assertFalse(ReadAloud.isCitationCode("ADDIN ZOTERO_PREF_1"));
+    assertFalse(ReadAloud.isCitationCode("PAGE"));
+    assertEquals(2, ReadAloud.split("A long " + "word ".repeat(200) + "end", 0).size());
+    assertTrue(ReadAloud.duration("one two three", .5f) > ReadAloud.duration("one two three", 3f));
+  }
+
+  @Test
   public void combineAddsReviewerChanges() throws IOException {
     var s = new Session(Document.empty());
     s.replace("The quick fox");

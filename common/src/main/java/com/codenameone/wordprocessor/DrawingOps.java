@@ -25,7 +25,15 @@ public final class DrawingOps {
 
   public static final List<String> SMART_ART =
       Collections.unmodifiableList(
-          Arrays.asList("list", "process", "cycle", "hierarchy", "pyramid", "matrix"));
+          Arrays.asList("list", "process", "cycle", "hierarchy", "pyramid", "radial", "matrix", "venn"));
+
+  /** A layout id as stored: Wordcraft's "basicList" (any case) is our "list"; null when unknown. */
+  public static String smartLayout(String id) {
+    String t = id == null ? "" : id.trim();
+    if (t.equalsIgnoreCase("basicList")) return "list";
+    for (String l : SMART_ART) if (l.equalsIgnoreCase(t)) return l;
+    return null;
+  }
 
   public static final List<String> ICONS =
       Collections.unmodifiableList(
@@ -650,6 +658,35 @@ public final class DrawingOps {
             new float[] {w / 2 - w * t0 / 2, lh * i, w / 2 + w * t0 / 2, lh * i, w / 2 + w * t1 / 2, lh * (i + 1), w / 2 - w * t1 / 2, lh * (i + 1)},
             smartColor(d, i), 0xffffff, 1);
         layoutText(ops, label, top.get(i), w / 4, lh * i, w / 2, lh, 0xffffff, "center");
+      }
+    } else if ("radial".equals(layout)) {
+      // The first top-level node in the middle, the rest around it on spokes.
+      float cx = w / 2, cy = h / 2, s = Math.min(w, h), rad = s * .36f, r0 = s * .17f, r1 = s * .13f;
+      int m = n - 1;
+      for (int i = 0; i < m; i++) {
+        double a = -Math.PI / 2 + 2 * Math.PI * i / m;
+        ops.line(new float[] {cx, cy, cx + (float) Math.cos(a) * rad, cy + (float) Math.sin(a) * rad}, 0xa5a5a5, 1, 255);
+      }
+      ops.fill(ellipse(cx, cy, r0, r0), smartColor(d, 0), 0xffffff, 1);
+      layoutText(ops, label, top.get(0), cx - r0, cy - r0, r0 * 2, r0 * 2, 0xffffff, "center");
+      for (int i = 0; i < m; i++) {
+        double a = -Math.PI / 2 + 2 * Math.PI * i / m;
+        float x = cx + (float) Math.cos(a) * rad, y = cy + (float) Math.sin(a) * rad;
+        ops.fill(ellipse(x, y, r1, r1), smartColor(d, i + 1), 0xffffff, 1);
+        layoutText(ops, label, top.get(i + 1), x - r1, y - r1, r1 * 2, r1 * 2, 0xffffff, "center");
+      }
+    } else if ("venn".equals(layout)) {
+      // Overlapping translucent circles around the centre.
+      float cx = w / 2, cy = h / 2, s = Math.min(w, h), off = n == 1 ? 0 : s * .17f, r = n == 1 ? s * .45f : s * .3f;
+      for (int i = 0; i < n; i++) {
+        double a = -Math.PI / 2 + 2 * Math.PI * i / n;
+        float x = cx + (float) Math.cos(a) * off, y = cy + (float) Math.sin(a) * off;
+        ops.paths.add(new Path(ellipse(x, y, r, r), true, smartColor(d, i), smartColor(d, i), 1, 128));
+      }
+      for (int i = 0; i < n; i++) {
+        double a = -Math.PI / 2 + 2 * Math.PI * i / n;
+        float x = cx + (float) Math.cos(a) * off * 1.9f, y = cy + (float) Math.sin(a) * off * 1.9f;
+        layoutText(ops, label, top.get(i), x - r * .7f, y - r * .4f, r * 1.4f, r * .8f, 0x262626, "center");
       }
     } else if ("matrix".equals(layout)) {
       int cols = n <= 1 ? 1 : 2, rowsN = (n + cols - 1) / cols;
