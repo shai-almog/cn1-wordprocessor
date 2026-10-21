@@ -2470,7 +2470,10 @@ public final class EditorSurface extends Container
   public void setComposingText(String text, int relativeCaret) {
     if (readOnly()) return;
     if (!session.isComposing()) composingStart = session.selection().start();
-    session.compose(text, relativeCaret);
+    // As in Codename One's EditorView, the caret sits at the end of the composition. The
+    // relative caret follows each platform's own convention (Android's 1 means "after the
+    // text"), and reading it as an offset put the caret mid-word, so Gboard typed out of order.
+    session.compose(text, text.length());
     composingEnd = composingStart + text.length();
     refresh();
   }
