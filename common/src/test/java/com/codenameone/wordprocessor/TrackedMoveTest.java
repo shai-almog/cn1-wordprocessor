@@ -87,4 +87,28 @@ public class TrackedMoveTest {
         Revisions.resolve(s.document(), null, true).plainText(),
         Revisions.resolve(d, null, true).plainText());
   }
+
+  @Test
+  public void namingAMoveReachesNoteStoriesAndBothEndsResolve() {
+    // Wordcraft cmd/moves.rs names both ends wherever they are: an end in a note (or a header,
+    // footer or nested cell) must carry the move name, or accepting the other end leaves it.
+    var s = new Session(Document.empty());
+    s.replace("Body ");
+    s.insertNote("footnote", "Note text", "");
+    s.reviewAuthor("Ana");
+    s.trackChanges(true);
+    s.select(0, 0, 0);
+    s.pasteText("Moved ");
+    s.enterNote(Notes.all(s.document()).get(0).id);
+    s.select(0, 0, 5);
+    s.deleteBackward();
+    var d = s.document();
+    var ids = new LinkedHashSet<String>();
+    for (Revisions.Change c : Revisions.list(d)) ids.add(c.revision.id);
+    assertTrue(ids.toString(), ids.size() >= 2);
+    d = Revisions.nameMove(d, ids, "moveX");
+    assertEquals(Set.of("moveX"), names(d));
+    d = Revisions.resolveMoves(d, Set.of("moveX"), true);
+    assertTrue(Revisions.list(d).isEmpty());
+  }
 }

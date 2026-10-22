@@ -229,24 +229,51 @@ public final class Revisions {
     return d;
   }
 
-  /** Names the revisions with the given ids as ends of the move {@code name}, in the body and cells. */
+  /**
+   * Names the revisions with the given ids as ends of the move {@code name} in every story
+   * {@link #list} collects: the body, cells at any depth, headers and footers and notes, so
+   * accepting or rejecting either end resolves both (Wordcraft cmd/moves.rs).
+   */
   static Document nameMove(Document d, Set<String> ids, String name) {
+    var sections = new LinkedHashMap<String, Section>();
+    for (Map.Entry<String, Section> entry : d.sections.entrySet())
+      sections.put(entry.getKey(), nameMove(entry.getValue(), ids, name));
+    var result = d.blocks(nameMoveBlocks(d.blocks, ids, name), d.nextId).sections(sections, nameMove(d.lastSection, ids, name));
+    return Notes.map(result, note -> {
+      var named = nameMoveBlocks(note.blocks, ids, name);
+      return sameBlocks(named, note.blocks) ? note : note.blocks(named);
+    });
+  }
+
+  private static Section nameMove(Section section, Set<String> ids, String name) {
+    var furniture = section.furniture;
+    for (String key : PageFurniture.KEYS)
+      if (furniture.stories.containsKey(key)) {
+        var blocks = furniture.blocks(key);
+        var named = nameMoveBlocks(blocks, ids, name);
+        if (!sameBlocks(named, blocks)) furniture = furniture.blocks(key, named);
+      }
+    return furniture == section.furniture ? section : section.furniture(furniture);
+  }
+
+  private static Sequence<Block> nameMoveBlocks(Sequence<Block> source, Set<String> ids, String name) {
     var blocks = new Sequence<Block>();
-    for (Block block : d.blocks) {
+    for (Block block : source) {
       if (block instanceof Paragraph p) block = nameMove(p, ids, name);
       else if (block instanceof Table t) {
         for (int r = 0; r < t.rows(); r++)
           for (int c = 0; c < t.columns(); c++)
             if (!t.covered(r, c)) {
-              var cell = new Sequence<Paragraph>();
-              for (Paragraph p : t.cell(r, c)) cell = cell.append(nameMove(p, ids, name));
-              t = t.setCell(r, c, cell);
+              // Cells hold blocks: nested tables' paragraphs are named too.
+              var cell = t.blocks(r, c);
+              var named = nameMoveBlocks(cell, ids, name);
+              if (!sameBlocks(named, cell)) t = t.setBlocks(r, c, named);
             }
         block = t;
       }
       blocks = blocks.append(block);
     }
-    return d.blocks(blocks, d.nextId);
+    return blocks;
   }
 
   private static Paragraph nameMove(Paragraph p, Set<String> ids, String name) {
