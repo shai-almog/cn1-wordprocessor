@@ -620,10 +620,15 @@ public class SimulatorUiTest {
           var editor = editor();
           var d = Display.getInstance();
           int right = d.getKeyCode(Display.GAME_RIGHT);
+          // The simulator reports modifiers from the last real input its window got; pin them.
+          EditorSurface.rawModifiersForTest = 0;
+          boolean quiet = EditorSurface.quietWithoutInput;
+          try {
           if (editor.textInputActive()) {
             org.junit.Assert.assertFalse("Active input owns the keys", editor.rawKey(right));
-            return;
+            editor.stopInput();
           }
+          org.junit.Assert.assertFalse("Input stopped", editor.textInputActive());
           editor.keyPressed(right);
           at(0, 1);
           editor.keyRepeated(right);
@@ -636,6 +641,13 @@ public class SimulatorUiTest {
           assertEquals("e two", session().document().plainText().trim());
           at(0, 0);
           org.junit.Assert.assertFalse("Letters are not raw editing keys", editor.rawKey('a'));
+          EditorSurface.rawModifiersForTest = TextInputClient.MOD_SHIFT;
+          editor.keyPressed(right);
+          assertEquals("Shift extends the selection", 1, session().selection().end() - session().selection().start());
+          } finally {
+            EditorSurface.rawModifiersForTest = -1;
+            EditorSurface.quietWithoutInput = quiet;
+          }
         });
   }
 

@@ -45,15 +45,28 @@ public final class TextNavigation {
    * digits and marks touching the offset, or the single next character when none is.
    */
   static int[] wordAt(String text, int offset) {
-    int a = Math.max(0, Math.min(offset, text.length())), z = a;
-    while (a > 0 && isWordChar(text.charAt(a - 1))) a--;
-    while (z < text.length() && isWordChar(text.charAt(z))) z++;
-    if (a == z && z < text.length()) z++;
+    int n = text.length();
+    int a = Math.max(0, Math.min(offset, n));
+    // Never start inside a surrogate pair: the selection must cover whole code points.
+    if (a > 0 && a < n && Character.isLowSurrogate(text.charAt(a))
+        && Character.isHighSurrogate(text.charAt(a - 1))) a--;
+    int z = a;
+    while (a > 0) {
+      int cp = Character.codePointBefore(text, a);
+      if (!isWordChar(cp)) break;
+      a -= Character.charCount(cp);
+    }
+    while (z < n) {
+      int cp = Character.codePointAt(text, z);
+      if (!isWordChar(cp)) break;
+      z += Character.charCount(cp);
+    }
+    if (a == z && z < n) z += Character.charCount(Character.codePointAt(text, z));
     return new int[] {a, z};
   }
 
-  private static boolean isWordChar(char c) {
-    return Unicode.letterOrDigit(c) || Unicode.mark(c);
+  private static boolean isWordChar(int cp) {
+    return Unicode.letterOrDigit(cp) || Unicode.mark(cp);
   }
 
   /** Paragraph shortcuts retain the active story and do not jump across embedded blocks. */

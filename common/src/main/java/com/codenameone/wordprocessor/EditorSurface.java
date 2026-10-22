@@ -2973,11 +2973,16 @@ public final class EditorSurface extends Container
     Display d = Display.getInstance();
     int command = EditKeys.rawCommand(keyCode, d.getGameAction(keyCode));
     if (command < 0) return false;
-    onKeyCommand(
-        command,
-        EditKeys.rawModifiers(d.isShiftKeyDown(), d.isAltKeyDown(), d.isMetaKeyDown(), d.isControlKeyDown()));
+    onKeyCommand(command, rawModifiersForTest >= 0 ? rawModifiersForTest : EditKeys.rawModifiers(
+        d.isShiftKeyDown(), d.isAltKeyDown(), d.isMetaKeyDown(), d.isControlKeyDown()));
     return true;
   }
+
+  /**
+   * Test hook: the modifier mask raw keys use instead of the port's live state, which in the
+   * simulator is whatever real input last reached its window. Negative means the live state.
+   */
+  static int rawModifiersForTest = -1;
 
   public void stopInput() {
     session.breakTypingGroup();

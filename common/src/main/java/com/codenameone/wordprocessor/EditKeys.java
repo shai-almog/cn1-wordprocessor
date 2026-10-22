@@ -84,7 +84,12 @@ final class EditKeys {
     return -1;
   }
 
-  /** Modifier mask from the raw modifier state; Meta (Cmd) and Ctrl both mean the line/document jump. */
+  /**
+   * Modifier mask from the raw modifier state. Meta (Cmd) and Ctrl both map to MOD_CTRL, the
+   * line/document jump, because Codename One's TextInputClient defines MOD_CTRL as "control or
+   * command" and its EditorView jumps to the line edge on it on every platform; this fallback
+   * matches the editors the platform input path already follows.
+   */
   static int rawModifiers(boolean shift, boolean alt, boolean meta, boolean ctrl) {
     return (shift ? TextInputClient.MOD_SHIFT : 0)
         | (alt ? TextInputClient.MOD_ALT : 0)
