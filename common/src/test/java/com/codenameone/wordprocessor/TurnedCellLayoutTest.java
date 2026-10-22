@@ -81,6 +81,31 @@ public class TurnedCellLayoutTest {
     for (LayoutEngine.Line x : r.pages.get(0).lines) if (x.column == 1) assertEquals(0, x.turn);
   }
 
+  /** A link in a turned cell: its /Rect covers the turned line on the page, not the unturned frame. */
+  @Test
+  public void pdfLinkRectFollowsTheTurn() throws Exception {
+    var d = turned("btLr", null);
+    int at = 0;
+    for (int i = 0; i < d.blocks.size(); i++) if (d.blocks.get(i) instanceof Table) at = i;
+    var t = (Table) d.blocks.get(at);
+    var linked = TextStyle.DEFAULT.with("link", "https://example.com");
+    t = t.setCell(0, 0, new Sequence<Paragraph>().append(new Paragraph("lp", RichText.of("turned words", linked))));
+    d = d.blocks(d.blocks.set(at, t), d.nextId);
+    var r = engine().layout(d, 0);
+    var l = line(r, "turned");
+    var span = l.spans.get(0);
+    float[] b = l.pageRect(l.x + span.x, l.y, span.width, l.height);
+    var pdf = new String(PdfExporter.write(d.page, r), StandardCharsets.ISO_8859_1);
+    int k = pdf.indexOf("/Subtype /Link /Rect [");
+    assertTrue(k > 0);
+    String[] rect = pdf.substring(k + 22, pdf.indexOf(']', k)).trim().split(" ");
+    float h = d.page.height;
+    assertEquals(b[0], Float.parseFloat(rect[0]), 0.5f);
+    assertEquals(h - b[1] - b[3], Float.parseFloat(rect[1]), 0.5f);
+    assertEquals(b[0] + b[2], Float.parseFloat(rect[2]), 0.5f);
+    assertEquals(h - b[1], Float.parseFloat(rect[3]), 0.5f);
+  }
+
   @Test
   public void pdfTurnsTheCellLines() throws Exception {
     var d = turned("btLr", null);

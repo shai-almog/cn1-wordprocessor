@@ -413,10 +413,13 @@ public final class PdfExporter {
           if (link == null || link.isEmpty() || span.width <= 0) continue;
           var action = structure.action(link, layout, pageIds);
           if (action == null) continue;
-          objects.add(ascii("<< /Type /Annot /Subtype /Link /Rect [" + n(fitK * (line.x + span.x)) + ' '
-              + n(fitK * (spec.height - line.y - line.height) + fitDy) + ' '
-              + n(fitK * (line.x + span.x + span.width)) + ' '
-              + n(fitK * (spec.height - line.y) + fitDy) + "] /Border [0 0 0] " + action + " >>"));
+          // A turned cell line or rotated text-box line: the bounding box of the span's frame
+          // rectangle turned to the page (Line#toPage), since /Rect is page-aligned.
+          float[] box = line.pageRect(line.x + span.x, line.y, span.width, line.height);
+          objects.add(ascii("<< /Type /Annot /Subtype /Link /Rect [" + n(fitK * box[0]) + ' '
+              + n(fitK * (spec.height - box[1] - box[3]) + fitDy) + ' '
+              + n(fitK * (box[0] + box[2])) + ' '
+              + n(fitK * (spec.height - box[1]) + fitDy) + "] /Border [0 0 0] " + action + " >>"));
           annotations.append(objects.size()).append(" 0 R ");
         }
         if (line.turn != 0) {
