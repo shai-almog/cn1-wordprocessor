@@ -168,11 +168,15 @@ final class OpenType {
   void apply(boolean substitution, String[] scripts, List<Glyph> buffer, String[] features,
       int[] masks) {
     var order = new TreeMap<Integer, Integer>();
+    var autoZwnjLookups = new HashSet<Integer>();
     for (int f = 0; f < features.length; f++)
-      for (int l : lookups(substitution, scripts, features[f]))
+      for (int l : lookups(substitution, scripts, features[f])) {
         order.merge(l, masks[f], (a, b) -> a | b);
+        if (!manualJoiners.contains(features[f])) autoZwnjLookups.add(l);
+      }
     if (!substitution) for (var g : buffer) g.attach = -1;
     for (var e : order.entrySet()) {
+      autoZwnj = autoZwnjLookups.contains(e.getKey());
       try {
         runLookup(substitution, e.getKey(), buffer, e.getValue());
       } catch (IOException | RuntimeException malformed) {
@@ -257,6 +261,21 @@ final class OpenType {
     }
   }
 
+  /**
+   * Feature tags the current shaper adds with F_MANUAL_JOINERS (harfrust's Indic and Khmer
+   * feature tables): their lookups do not skip ZWNJ in backtrack/lookahead (auto_zwnj off).
+   */
+  Set<String> manualJoiners = Collections.emptySet();
+
+  static final Set<String> INDIC_MANUAL_JOINERS = new HashSet<>(Arrays.asList("nukt", "akhn",
+      "rphf", "rkrf", "pref", "blwf", "abvf", "half", "pstf", "vatu", "cjct", "init", "pres",
+      "abvs", "blws", "psts", "haln"));
+  static final Set<String> KHMER_MANUAL_JOINERS = new HashSet<>(Arrays.asList("pref", "blwf",
+      "abvf", "pstf", "cfar", "pres", "abvs", "blws", "psts"));
+
+  /** Whether the lookup being run skips ZWNJ in context matching (harfrust's auto_zwnj). */
+  private boolean autoZwnj = true;
+
   /** Whether the lookup being run is a GPOS one (set by runLookup). */
   boolean positioning;
 
@@ -325,8 +344,8 @@ final class OpenType {
 
   /**
    * As above; {@code context} marks backtrack/lookahead matching, where GSUB also skips ZWJ
-   * and ZWNJ (harfrust's ignore_zwj, and ignore_zwnj under auto_zwnj, as hb-shape gives for
-   * Kohinoor U+0930 200C 0947).
+   * always (harfrust's ignore_zwj) and ZWNJ when the lookup's feature has auto_zwnj: Kohinoor's
+   * U+0930 200C 0947 'calt'/'rclt' lookups skip it, while Indic 'pres' (F_MANUAL_JOINERS) stops.
    */
   int nextIndex(int lookup, int flag, List<Glyph> buffer, int i, int step, Want want,
       boolean context) throws IOException {
@@ -335,7 +354,8 @@ final class OpenType {
       if (skip(lookup, flag, g)) continue;
       boolean maybe = ignorable(g)
           && (positioning
-              || !hidden(g.cp) && (context || g.cp != 0x200c && g.cp != 0x200d));
+              || !hidden(g.cp) && (g.cp == 0x200c ? context && autoZwnj
+                  : g.cp != 0x200d || context));
       if (maybe && (want == null || !want.ok(g.id))) continue;
       int syllable = buffer.get(i).syllable;
       return perSyllable && syllable != 0 && g.syllable != syllable ? -1 : j;

@@ -326,6 +326,9 @@ final class PdfShaping {
       buffer.add(new OpenType.Glyph(cp < 32 ? 0 : font.glyph(shown), cp, i, end, GLOBAL));
       i = end;
     }
+    ot.manualJoiners = "khmr".equals(script) ? OpenType.KHMER_MANUAL_JOINERS
+        : indicBlock(script) >= 0 ? OpenType.INDIC_MANUAL_JOINERS
+        : java.util.Collections.<String>emptySet();
     // hb_ot_shape_normalize's reorder round: marks sorted by modified combining class.
     CombiningClass.reorder(buffer);
     String[] scripts;

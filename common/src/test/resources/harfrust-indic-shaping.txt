@@ -216,3 +216,7 @@ Kailasa.ttc	\u0f0b\u0f64	27+214|116+1343
 /System/Library/Fonts/KohinoorBangla.ttc	\u09c7\u0995\u09c7	499+271|104+660|499+271|32+691
 /System/Library/Fonts/Kohinoor.ttc	\u0930\u200c\u0947	77+402|1+0|817@6,0+0
 /System/Library/Fonts/NotoSansOriya.ttc	\u200d\u0b37\u200d\u0b4d\u0b37\u0b4d\u0b47	3+0|50+1352|3+0|157@0,104+0|607@172,104+0|62+924|420+1044
+/System/Library/Fonts/KohinoorBangla.ttc	\u09b7\u200c\u09bf\u0981	19+273|61+565|3+0|72+0
+/System/Library/Fonts/KohinoorGujarati.ttc	\u0abf\u200c\u0abf	21+295|21+295|3+0|96+651
+/System/Library/Fonts/Kohinoor.ttc	\u0924\u200c\u093f\u093f\u200c\u0901	28+273|1+0|781+273|66+556|1+0|129+0
+/System/Library/Fonts/KohinoorTelugu.ttc	\u200c\u0c4d\u0c37\u0c48\u0c4d\u0c48	105+660|29+0|36+0|81+0|29+0|36+0|3+0|138@-317,-302+0
