@@ -327,4 +327,19 @@ public class BalloonsTest {
     assertEquals(before, CharacterMetrics.width(METRICS, "gone", style), 0f);
     assertEquals(shown, style.displayText("gone"));
   }
+
+  @Test
+  public void frameLinesLeavesTheEnginesLayoutCachesAlone() throws Exception {
+    var d = commented();
+    var engine = new LayoutEngine(METRICS);
+    engine.layout(d, 0);
+    var next = LayoutEngine.class.getDeclaredField("nextCache");
+    var content = LayoutEngine.class.getDeclaredField("nextByContent");
+    next.setAccessible(true);
+    content.setAccessible(true);
+    Object a = next.get(engine), b = content.get(engine);
+    engine.frameLines(d, new Sequence<Block>().append(new Paragraph("x", RichText.of("balloon", TextStyle.DEFAULT))), 100, null);
+    assertSame(a, next.get(engine));
+    assertSame(b, content.get(engine));
+  }
 }

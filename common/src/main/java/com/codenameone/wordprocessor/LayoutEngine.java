@@ -1945,6 +1945,10 @@ public final class LayoutEngine {
    */
   List<Line> frameLines(Document doc, Sequence<Block> blocks, float width, float[] height) {
     boolean deleted = metrics.hideDeleted;
+    // Its own paragraph caches: the engine's layout caches (and a layout in progress) are left
+    // exactly as they were.
+    var savedCache = nextCache;
+    var savedByContent = nextByContent;
     try {
       nextCache = new HashMap<>();
       nextByContent = new HashMap<>();
@@ -1953,6 +1957,8 @@ public final class LayoutEngine {
       return laid.lines;
     } finally {
       metrics.hideDeleted = deleted;
+      nextCache = savedCache;
+      nextByContent = savedByContent;
     }
   }
 
