@@ -277,6 +277,7 @@ final class DocxFurniture {
     NoteFormats.settings(settings, document.notes);
     DocxProperties.settings(settings, document.properties, W);
     tabs.settings(settings);
+    schemaOrder(settings);
     parts.put(settingsPath, Xml.write(settings).getBytes("UTF-8"));
     var rels = new String(parts.get(REL), "UTF-8");
     boolean found = false;
@@ -338,5 +339,63 @@ final class DocxFurniture {
                     + kind
                     + "+xml\"/>")
             .getBytes("UTF-8"));
+  }
+
+  /** CT_Settings child sequence (ECMA-376 17.15.1.78). */
+  private static final String[] SETTINGS_ORDER = {
+    "writeProtection", "view", "zoom", "removePersonalInformation", "removeDateAndTime",
+    "doNotDisplayPageBoundaries", "displayBackgroundShape", "printPostScriptOverText",
+    "printFractionalCharacterWidth", "printFormsData", "embedTrueTypeFonts", "embedSystemFonts",
+    "saveSubsetFonts", "saveFormsData", "mirrorMargins", "alignBordersAndEdges",
+    "bordersDoNotSurroundHeader", "bordersDoNotSurroundFooter", "gutterAtTop",
+    "hideSpellingErrors", "hideGrammaticalErrors", "activeWritingStyle", "proofState",
+    "formsDesign", "attachedTemplate", "linkStyles", "stylePaneFormatFilter",
+    "stylePaneSortMethod", "documentType", "mailMerge", "revisionView", "trackRevisions",
+    "doNotTrackMoves", "doNotTrackFormatting", "documentProtection", "autoFormatOverride",
+    "styleLockTheme", "styleLockQFSet", "defaultTabStop", "autoHyphenation",
+    "consecutiveHyphenLimit", "hyphenationZone", "doNotHyphenateCaps", "showEnvelope",
+    "summaryLength", "clickAndTypeStyle", "defaultTableStyle", "evenAndOddHeaders",
+    "bookFoldRevPrinting", "bookFoldPrinting", "bookFoldPrintingSheets",
+    "drawingGridHorizontalSpacing", "drawingGridVerticalSpacing",
+    "displayHorizontalDrawingGridEvery", "displayVerticalDrawingGridEvery",
+    "doNotUseMarginsForDrawingGridOrigin", "drawingGridHorizontalOrigin",
+    "drawingGridVerticalOrigin", "doNotShadeFormData", "noPunctuationKerning",
+    "characterSpacingControl", "printTwoOnOne", "strictFirstAndLastChars", "noLineBreaksAfter",
+    "noLineBreaksBefore", "savePreviewPicture", "doNotValidateAgainstSchema", "saveInvalidXml",
+    "ignoreMixedContent", "alwaysShowPlaceholderText", "doNotDemarcateInvalidXml",
+    "saveXmlDataOnly", "useXSLTWhenSaving", "saveThroughXslt", "showXMLTags",
+    "alwaysMergeEmptyNamespace", "updateFields", "hdrShapeDefaults", "footnotePr", "endnotePr",
+    "compat", "docVars", "rsids", "mathPr", "attachedSchema", "themeFontLang",
+    "clrSchemeMapping", "doNotIncludeSubdocsInStats", "doNotAutoCompressPictures",
+    "forceUpgrade", "captions", "readModeInkLockDown", "smartTagType", "schemaLibrary",
+    "shapeDefaults", "doNotEmbedSmartTags", "decimalSymbol", "listSeparator"
+  };
+
+  /**
+   * Reorders settings children into the CT_Settings sequence (elements appended for the model
+   * would otherwise follow compat). Unknown children (w14/w15 extensions) keep their place
+   * after the known element they followed; text nodes are dropped as whitespace.
+   */
+  static void schemaOrder(Element settings) {
+    var rank = new java.util.HashMap<String, Integer>();
+    for (int i = 0; i < SETTINGS_ORDER.length; i++) rank.put(SETTINGS_ORDER[i], i);
+    var children = new java.util.ArrayList<Element>();
+    var keys = new java.util.ArrayList<Integer>();
+    int previous = -1;
+    for (int i = 0; i < settings.getNumChildren(); i++) {
+      Element child = settings.getChildAt(i);
+      if (child.isTextElement()) continue;
+      Integer r = rank.get(Xml.local(child));
+      // Unknown names sort just after the last known one (2r+1), known ones at 2r.
+      int key = r == null ? 2 * previous + 1 : 2 * r;
+      if (r != null) previous = r;
+      children.add(child);
+      keys.add(key);
+    }
+    var index = new java.util.ArrayList<Integer>();
+    for (int i = 0; i < children.size(); i++) index.add(i);
+    index.sort((x, y) -> Integer.compare(keys.get(x), keys.get(y)));
+    while (settings.getNumChildren() > 0) settings.removeChildAt(0);
+    for (int i : index) settings.addChild(children.get(i));
   }
 }
