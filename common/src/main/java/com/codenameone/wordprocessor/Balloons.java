@@ -193,6 +193,12 @@ public final class Balloons {
       String lastPara = null;
       int lastPage = 0;
       LayoutEngine.Line lastLine = null;
+      // Each paragraph's final laid-out line: a table row split across pages interleaves its
+      // cells' lines, so a cell paragraph is "left" once per page; its mark counts only once,
+      // when leaving its final line (the model paragraph's end).
+      var finalLine = new java.util.HashMap<String, LayoutEngine.Line>();
+      for (LayoutEngine.Page pg : r.pages)
+        for (LayoutEngine.Line l : pg.lines) if (l.block >= 0 && l.paragraphId != null) finalLine.put(l.paragraphId, l);
       for (int p = 0; p <= r.pages.size(); p++) {
         List<LayoutEngine.Line> lines = p < r.pages.size() ? r.pages.get(p).lines : java.util.Collections.<LayoutEngine.Line>emptyList();
         for (int li = 0; li <= lines.size(); li++) {
@@ -204,7 +210,7 @@ public final class Balloons {
           String para = line == null ? null : line.paragraphId;
           if (lastPara != null && !lastPara.equals(para)) {
             // Leaving a paragraph: its deleted mark joins the open deletion or starts one.
-            Revision mark = deletions ? marks.get(lastPara) : null;
+            Revision mark = deletions && finalLine.get(lastPara) == lastLine ? marks.get(lastPara) : null;
             if (mark != null && !mark.inserted() && mark.move == null) {
               if (open == null || !open.who.author.equals(mark.author)) {
                 if (count < MAX_BALLOONS) {

@@ -405,4 +405,32 @@ public class BalloonsTest {
     assertSame(a, next.get(engine));
     assertSame(b, content.get(engine));
   }
+
+  @Test
+  public void aDeletedMarkInARowSplitAcrossPagesIsOneBalloon() {
+    var s = new Session(Document.empty());
+    s.insertTable(1, 2);
+    int at = 0;
+    for (int i = 0; i < s.document().blocks.size(); i++) if (s.document().blocks.get(i) instanceof Table) at = i;
+    s.enterCell(at, 0, 1);
+    s.replace("b");
+    s.leaveCell();
+    s.enterCell(at, 0, 0);
+    String longText = "word ".repeat(4000).trim();
+    s.replace(longText + "\nx");
+    s.reviewAuthor("Ana");
+    s.trackChanges(true);
+    s.selectRange(0, longText.length(), 1, 0);
+    s.deleteBackward();
+    var d = s.document();
+    var engine = new LayoutEngine(METRICS);
+    engine.setHideDeleted(true);
+    var r = engine.layout(d, 0);
+    var pages = new java.util.HashSet<Integer>();
+    for (int p = 0; p < r.pages.size(); p++)
+      for (LayoutEngine.Line l : r.pages.get(p).lines) if (l.block == at) pages.add(p);
+    assertTrue("row split: " + pages, pages.size() > 1);
+    var labels = revisionLabels(d, 0);
+    assertEquals(labels.toString(), 1, java.util.Collections.frequency(labels, "Deleted:\u00b6"));
+  }
 }
