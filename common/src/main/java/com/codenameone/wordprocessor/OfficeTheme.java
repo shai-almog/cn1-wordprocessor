@@ -193,8 +193,14 @@ final class OfficeTheme {
   }
 
   private static final class GroupScroller extends Container {
+    private final Component[] groups;
+    private final Button[] standIns;
+    private int folded;
+
     GroupScroller(Component[] groups) {
       super(BoxLayout.x());
+      this.groups = groups;
+      standIns = new Button[groups.length];
       for (Component group : groups) add(group);
     }
 
@@ -206,6 +212,67 @@ final class OfficeTheme {
                   getScrollDimension().getWidth() - getWidth(),
                   getScrollX() + direction * Math.max(px(150), getWidth() / 2))));
       repaint();
+    }
+
+    /**
+     * Folds groups from the right into one button each until the row fits width, as Word's ribbon
+     * shrinks a narrow window; a folded group opens below its button. Returns true if the row
+     * changed.
+     */
+    boolean fit(int width) {
+      if (width <= 0) return false;
+      int n = groups.length, k = 0;
+      while (k < n - 1 && needed(k) > width) k++;
+      if (k == folded) return false;
+      folded = k;
+      removeAll();
+      for (int i = 0; i < n; i++) {
+        var group = groups[i];
+        if (group.getParent() != null) group.getParent().removeComponent(group);
+        add(i < n - k ? group : standIn(i));
+      }
+      setScrollX(0);
+      return true;
+    }
+
+    /** The row's width with the last k groups folded. */
+    int needed(int k) {
+      int w = 0;
+      for (int i = 0; i < groups.length; i++)
+        w += i < groups.length - k ? groups[i].getPreferredW() : standIn(i).getPreferredW();
+      return w + px(10);
+    }
+
+    private Button standIn(int i) {
+      if (standIns[i] != null) return standIns[i];
+      String caption = caption(groups[i]);
+      var b = new Button(caption + " \u25be");
+      button(b);
+      b.getAllStyles().setFont(font(12, false));
+      b.setAccessibilityText(caption + " group");
+      b.addActionListener(
+          e -> {
+            var group = groups[i];
+            if (group.getParent() != null) group.getParent().removeComponent(group);
+            var popup = new Dialog(new BorderLayout());
+            popup.getDialogStyle().setBgColor(RIBBON);
+            surface(popup.getContentPane(), RIBBON);
+            popup.add(BorderLayout.CENTER, group);
+            applyAppearance(popup);
+            popup.setDisposeWhenPointerOutOfBounds(true);
+            popup.showPopupDialog(b);
+            // Closed: the group waits detached until it is shown again here or unfolds.
+            if (group.getParent() != null) group.getParent().removeComponent(group);
+          });
+      return standIns[i] = b;
+    }
+
+    /** A group's caption: the label under its controls. */
+    private static String caption(Component group) {
+      Component south = group instanceof Container c && c.getLayout() instanceof BorderLayout l ? l.getSouth() : null;
+      if (south instanceof Container footer && footer.getLayout() instanceof BorderLayout f)
+        south = f.getCenter();
+      return south instanceof Label label ? label.getText() : "More";
     }
   }
 
@@ -230,10 +297,10 @@ final class OfficeTheme {
         new Container(new BorderLayout()) {
           protected void laidOut() {
             super.laidOut();
-            int needed = 0;
-            for (Component group : groups) needed += group.getPreferredW();
-            boolean overflow = needed + px(10) > getWidth();
-            if (left.isVisible() != overflow) {
+            boolean changed = row.fit(getWidth());
+            // Arrows only when even the folded row is too wide.
+            boolean overflow = row.needed(row.folded) > getWidth();
+            if (changed || left.isVisible() != overflow) {
               left.setHidden(!overflow);
               left.setVisible(overflow);
               right.setHidden(!overflow);

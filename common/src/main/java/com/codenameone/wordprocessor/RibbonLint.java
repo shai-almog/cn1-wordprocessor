@@ -50,8 +50,8 @@ final class RibbonLint {
       int content = a.getPreferredH() - a.getStyle().getPaddingTop() - a.getStyle().getPaddingBottom();
       if (squeeze && !(a instanceof Container) && a.getHeight() + 1 < content)
         out.add(tab + ": " + name(a) + " is squeezed to " + a.getHeight() + "px; its content needs " + content + "px");
-      // A row wider than the window scrolls behind the ribbon's arrows, so only a fixed
-      // container can cut a control off sideways.
+      // A row wider than the window folds groups or scrolls behind the ribbon's arrows, so only
+      // a fixed container can cut a control off sideways.
       if (a.getY() + a.getHeight() > c.getHeight() + 1
           || !c.isScrollableX() && a.getX() + a.getWidth() > c.getWidth() + 1)
         out.add(tab + ": " + name(a) + " is cut off by its container");

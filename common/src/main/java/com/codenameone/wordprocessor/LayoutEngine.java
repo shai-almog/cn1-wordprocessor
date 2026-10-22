@@ -1613,8 +1613,10 @@ public final class LayoutEngine {
     Builder b = null;
     PageSpec[] bodies = new PageSpec[ranges.size()];
     // Resolve page-count fields, then repaginate if their results need more margin space.
+    Map<Integer, Builder.Excl> seeds = Collections.emptyMap();
     for (int pass = 0; pass < 8; pass++) {
       b = new Builder();
+      b.seed(seeds);
       for (int section = 0; section < ranges.size(); section++) {
         var range = ranges.get(section);
         bodies[section] = bodySpec(contexts.get(section), heights[section][0], heights[section][1]);
@@ -1650,6 +1652,11 @@ public final class LayoutEngine {
             grow = true;
           }
         }
+      }
+      // A float above text that precedes its anchor wraps that text in another pass.
+      if (!b.seedsSettled()) {
+        seeds = new HashMap<>(b.early);
+        continue;
       }
       if (!grow) break;
     }
@@ -2758,9 +2765,36 @@ public final class LayoutEngine {
         y0 = fy - (topBottom ? dist : 0);
         y1 = fy + fh + (topBottom ? dist : 0);
       }
+
+      boolean same(Excl o) {
+        return page == o.page && Math.abs(x0 - o.x0) < .01f && Math.abs(y0 - o.y0) < .01f
+            && Math.abs(x1 - o.x1) < .01f && Math.abs(y1 - o.y1) < .01f;
+      }
     }
 
     final List<Excl> excl = new ArrayList<>();
+
+    /**
+     * Floats from the previous pass that sit above text laid out before their anchor, by block
+     * index, placed from the start; and this pass's, which decide whether another pass runs.
+     */
+    Map<Integer, Excl> seeds = Collections.emptyMap();
+    final Map<Integer, Excl> early = new HashMap<>();
+
+    void seed(Map<Integer, Excl> from) {
+      seeds = from;
+      excl.addAll(from.values());
+    }
+
+    /** True when this pass found the same early floats it was seeded with. */
+    boolean seedsSettled() {
+      if (early.size() != seeds.size()) return false;
+      for (var e : early.entrySet()) {
+        Excl s = seeds.get(e.getKey());
+        if (s == null || !s.same(e.getValue())) return false;
+      }
+      return true;
+    }
 
     /**
      * Per line, as Wordcraft lays text beside floats: the floats crossing the band [y, y + h]
@@ -2860,7 +2894,13 @@ public final class LayoutEngine {
         Excl e = new Excl(pages.size(), x, top, w, h, "topBottom".equals(wrap) ? 0 : 9, "topBottom".equals(wrap),
             tight ? WrapOutline.parse(p.wrapPolygon()) : null);
         e.side = pos.side;
-        excl.add(e);
+        // A float above text already laid out on its page (its anchor comes later) is recorded so
+        // the next pass wraps that text too, as Word wraps the whole page around a float; this
+        // pass's run of a seed from the last one is not added twice.
+        Excl seeded = seeds.get(index);
+        if (seeded != null && seeded.same(e)) e = seeded;
+        else excl.add(e);
+        if (e.y0 < y - .01f && y > spec.top + .01f) early.put(index, e);
       }
     }
 

@@ -406,6 +406,47 @@ public class SimulatorUiTest {
   }
 
   @Test
+  public void narrowRibbonFoldsGroupsFromTheRight() throws Exception {
+    edt(
+        () -> {
+          Component[] groups = new Component[3];
+          for (int i = 0; i < 3; i++) {
+            var wide = new Label("x");
+            wide.setPreferredW(OfficeTheme.px(200));
+            groups[i] = OfficeTheme.group("Group " + i, wide);
+          }
+          var frame = OfficeTheme.groups(groups);
+          var host = new Form(new com.codename1.ui.layouts.BorderLayout());
+          host.add(com.codename1.ui.layouts.BorderLayout.CENTER, frame);
+          host.setWidth(OfficeTheme.px(480));
+          host.setHeight(OfficeTheme.px(200));
+          host.getContentPane().setWidth(OfficeTheme.px(480));
+          host.getContentPane().setHeight(OfficeTheme.px(200));
+          host.getContentPane().layoutContainer();
+          frame.layoutContainer();
+          assertNotNull("the first group stays", groups[0].getParent());
+          assertNull("the last group folds into a button", groups[2].getParent());
+          var buttons = new java.util.ArrayList<String>();
+          collectButtons(frame, buttons);
+          assertTrue("its button carries the caption: " + buttons, buttons.stream().anyMatch(t -> t.startsWith("Group 2")));
+          host.setWidth(OfficeTheme.px(900));
+          host.getContentPane().setWidth(OfficeTheme.px(900));
+          host.getContentPane().invalidate();
+          host.getContentPane().layoutContainer();
+          frame.layoutContainer();
+          assertNotNull("a wide window unfolds it", groups[2].getParent());
+        });
+  }
+
+  private static void collectButtons(Container c, java.util.List<String> out) {
+    for (int i = 0; i < c.getComponentCount(); i++) {
+      var child = c.getComponentAt(i);
+      if (child instanceof Button b && b.isVisible()) out.add(b.getText());
+      if (child instanceof Container k) collectButtons(k, out);
+    }
+  }
+
+  @Test
   public void selectedObjectResizesByItsHandles() throws Exception {
     edt(() -> ((Form) field(app, "form")).show());
     for (int i = 0; i < 100 && Display.getInstance().getCurrent() != field(app, "form"); i++)
@@ -456,6 +497,60 @@ public class SimulatorUiTest {
           session().undo();
           assertEquals("one undo step", after.width, ((Picture) session().document().blocks.get(canvas[0])).width, .01);
         });
+    // Past the double-click interval, so the next click selects instead of opening the settings.
+    Thread.sleep(600);
+    edt(
+        () -> {
+          var editor = editor();
+          // The rotation handle above the top edge turns it to where it is dragged: due right of
+          // the center is a quarter turn.
+          editor.refresh();
+          int[] u = editor.pictureRect(canvas[0]);
+          editor.pointerPressed(u[0] + u[2] / 2, u[1] + u[3] / 2);
+          editor.pointerReleased(u[0] + u[2] / 2, u[1] + u[3] / 2);
+          int top = u[1] - OfficeTheme.px(18);
+          editor.pointerPressed(u[0] + u[2] / 2, top);
+          editor.pointerDragged(u[0] + u[2] / 2 + 40, top);
+          editor.pointerDragged(u[0] + u[2] + 80, u[1] + u[3] / 2 + 2);
+          editor.pointerReleased(u[0] + u[2] + 80, u[1] + u[3] / 2 + 2);
+          var turned = (Picture) session().document().blocks.get(canvas[0]);
+          assertEquals("the rotation handle turns it, snapping to 90", 90, turned.drawing.num("rotation", 0), .01);
+          // Turned, the handle sits right of the center: dragging it below turns it upside down.
+          editor.refresh();
+          int cx = u[0] + u[2] / 2, cy = u[1] + u[3] / 2;
+          int hx = cx + u[3] / 2 + OfficeTheme.px(18);
+          editor.pointerPressed(hx, cy);
+          editor.pointerDragged(hx, cy + 40);
+          editor.pointerDragged(cx + 1, cy + u[3] + 60);
+          editor.pointerReleased(cx + 1, cy + u[3] + 60);
+          var half = (Picture) session().document().blocks.get(canvas[0]);
+          assertEquals("the turned rotation handle is where it is drawn", 180, half.drawing.num("rotation", 0), .01);
+        });
+    Thread.sleep(600);
+    OfficeTheme.mobileOverride = Boolean.TRUE;
+    try {
+      edt(
+          () -> {
+            var editor = editor();
+            // Back to unturned: both rotations.
+            session().undo();
+            session().undo();
+            editor.refresh();
+            int[] r = editor.pictureRect(canvas[0]);
+            var before = (Picture) session().document().blocks.get(canvas[0]);
+            // Touch: a tap selects; a finger landing near, not on, a corner handle resizes.
+            editor.pointerPressed(r[0] + r[2] / 2, r[1] + r[3] / 2);
+            editor.pointerReleased(r[0] + r[2] / 2, r[1] + r[3] / 2);
+            int off = OfficeTheme.px(10);
+            editor.pointerPressed(r[0] + r[2] + off, r[1] + r[3] + off);
+            editor.pointerDragged(r[0] + r[2] + off + 30, r[1] + r[3] + off + 30);
+            editor.pointerReleased(r[0] + r[2] + off + 30, r[1] + r[3] + off + 30);
+            var after = (Picture) session().document().blocks.get(canvas[0]);
+            assertTrue("a touch on the corner handle resizes", after.width > before.width + 5);
+          });
+    } finally {
+      OfficeTheme.mobileOverride = Boolean.FALSE;
+    }
     Thread.sleep(450);
   }
 
@@ -517,6 +612,20 @@ public class SimulatorUiTest {
           editor.stopInput();
           editor.keyPressed(27);
           assertFalse("Escape leaves draw mode", editor.isInking());
+        });
+    edt(
+        () -> {
+          // The Mac port reports Escape as the input session's editor action (cancelOperation:);
+          // it leaves draw mode and, as it once did, must not break the paragraph.
+          Method pen = WordProcessor.class.getDeclaredMethod("selectDrawTool", String.class);
+          pen.setAccessible(true);
+          pen.invoke(app, "pen");
+          assertTrue(editor().isInking());
+          int blocks = session().document().blocks.size();
+          editor().onEditorAction(0);
+          assertFalse("the Mac's Escape leaves draw mode", editor().isInking());
+          editor().onEditorAction(0);
+          assertEquals("Escape adds no paragraph", blocks, session().document().blocks.size());
         });
     Thread.sleep(450);
   }

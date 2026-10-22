@@ -129,6 +129,18 @@ class Check:
         moved = [r for r in self.objects().values() if r[2:] == s[2:]]
         self.expect(any(r[0] > s[0] + 100 for r in moved), f"dragging moves the picture ({s[0]} -> {[r[0] for r in moved]})")
         self.shot('moved')
+        if not moved:
+            return
+        block = next(b for b, r in self.objects().items() if r[2:] == s[2:])
+        r = self.bring_into_view(block)
+        time.sleep(.7)
+        st = self.click(r[0] + r[2] // 2, r[1] + r[3] // 2, block)
+        self.expect(st.get('selectedObject') is not None, 'click selects the moved picture')
+        hx, hy = r[0] + r[2] // 2, r[1] - st['rotateOffset']
+        self.drag(hx, hy, r[0] + r[2] + 120, r[1] + r[3] // 2 + 2, block)
+        xml = self.c.tool('word_snapshot', {'xml': True})['xml']
+        self.expect('rotation="90"' in xml, 'the rotation handle turns the picture a quarter turn')
+        self.shot('rotated')
 
     def draw(self):
         snap = self.c.tool('ui_snapshot', {})
@@ -158,6 +170,13 @@ class Check:
         self.c.tool('ui_activate', {'nodeId': node('Select', 'BUTTON')})
         time.sleep(.5)
         self.expect(not self.ptr([])['inking'], 'Select leaves draw mode')
+        self.c.tool('ui_activate', {'nodeId': node('Pen', 'BUTTON')})
+        time.sleep(1)
+        self.expect(self.ptr([])['inking'], 'Pen restarts draw mode')
+        # The Mac port reports Escape as the text input's editor action (cancelOperation:).
+        blocks = len(self.c.tool('word_snapshot', {})['document']['blocks'])
+        self.expect(not self.ptr([{'type': 'action', 'x': 0, 'y': 0, 'waitMs': 400}])['inking'], 'Escape leaves draw mode')
+        self.expect(len(self.c.tool('word_snapshot', {})['document']['blocks']) == blocks, 'Escape adds no paragraph')
         self.shot('canvas')
 
 

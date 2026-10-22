@@ -8219,6 +8219,13 @@ public class WordProcessor {
                 case "press" -> form.pointerPressed(x, y);
                 case "drag" -> form.pointerDragged(x, y);
                 case "release" -> form.pointerReleased(x, y);
+                // A key press and release; x is the key code (27 is Escape).
+                case "key" -> {
+                  form.keyPressed(x);
+                  form.keyReleased(x);
+                }
+                // The editor action the Mac port sends for Escape (cancelOperation:).
+                case "action" -> editor.onEditorAction(0);
                 default -> throw new IllegalArgumentException("Unknown pointer event " + type);
               }
             }

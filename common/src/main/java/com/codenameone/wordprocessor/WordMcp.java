@@ -74,8 +74,8 @@ final class WordMcp {
     MCP.addTool(
         new Tool(
             "word_pointer",
-            "Deliver in-process pointer events (press, drag, release) at display points to the form, as a mouse would through the port, each optionally followed by waitMs; returns the editor's pointer state. Optional block also returns that object's display bounds first.",
-            "{\"type\":\"object\",\"properties\":{\"block\":{\"type\":\"integer\"},\"events\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"type\":{\"type\":\"string\",\"enum\":[\"press\",\"drag\",\"release\"]},\"x\":{\"type\":\"integer\"},\"y\":{\"type\":\"integer\"},\"waitMs\":{\"type\":\"integer\"}},\"required\":[\"type\",\"x\",\"y\"]}}}}",
+            "Deliver in-process pointer events (press, drag, release) at display points to the form, as a mouse would through the port, or a key (type key, x the key code; 27 is Escape) or the editor action the Mac port sends for Escape (type action), each optionally followed by waitMs; returns the editor's pointer state. Optional block also returns that object's display bounds first.",
+            "{\"type\":\"object\",\"properties\":{\"block\":{\"type\":\"integer\"},\"events\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"type\":{\"type\":\"string\",\"enum\":[\"press\",\"drag\",\"release\",\"key\",\"action\"]},\"x\":{\"type\":\"integer\"},\"y\":{\"type\":\"integer\"},\"waitMs\":{\"type\":\"integer\"}},\"required\":[\"type\",\"x\",\"y\"]}}}}",
             json -> {
               var args = Json.parse(json);
               List<Object> events = (List<Object>) args.get("events");

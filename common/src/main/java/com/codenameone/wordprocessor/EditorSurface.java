@@ -2059,7 +2059,19 @@ public final class EditorSurface extends Container
       }
     }
     paintInk(g);
-    if (resizePic != null && resizing) {
+    if (resizePic != null && resizing && resizeHandle == ROTATE_HANDLE) {
+      // The frame turned to where the rotation handle is, with its angle.
+      int deg = rotatedAngle(resizePic, moveX, moveY);
+      int gx = getX() + pageX(resizePage) + getScrollX() + Math.round(resizePic.x() * scale());
+      int gy = baseY + pageY(resizePage) + Math.round(resizePic.y() * scale());
+      int gw = Math.round(resizePic.width() * scale()), gh = Math.round(resizePic.height() * scale());
+      g.setColor(0x2b579a);
+      boolean turn = g.isAffineSupported();
+      if (turn) g.rotate((float) Math.toRadians(deg), gx + gw / 2, gy + gh / 2);
+      g.drawRect(gx, gy, gw, gh);
+      if (turn) g.rotate((float) -Math.toRadians(deg), gx + gw / 2, gy + gh / 2);
+      g.drawString(deg + "\u00b0", gx + gw / 2 + OfficeTheme.px(8), gy - OfficeTheme.px(24));
+    } else if (resizePic != null && resizing) {
       // The frame the object will be resized to.
       float[] r = resizedRect(resizePic, moveX, moveY);
       int gx = getX() + pageX(resizePage) + getScrollX() + Math.round(r[0] * scale());
@@ -2078,6 +2090,10 @@ public final class EditorSurface extends Container
           int gy = baseY + pageY(page) + Math.round(pic.y() * scale());
           int gw = Math.round(pic.width() * scale()), gh = Math.round(pic.height() * scale());
           int h = OfficeTheme.px(4);
+          // The frame and handles turn with the object, as Word draws them.
+          int deg = turnOf(pic.picture());
+          boolean turn = deg != 0 && g.isAffineSupported();
+          if (turn) g.rotate((float) Math.toRadians(deg), gx + gw / 2, gy + gh / 2);
           g.setColor(0x2b579a);
           g.drawRect(gx, gy, gw, gh);
           for (int i = 0; i <= 2; i++)
@@ -2089,6 +2105,16 @@ public final class EditorSurface extends Container
               g.setColor(0x2b579a);
               g.drawRect(hx, hy, h * 2, h * 2);
             }
+          if (!pic.inCell()) {
+            // Word's rotation handle: a circle above the top edge, joined to it.
+            int rx = gx + gw / 2, ry = gy - Math.round(rotateOffset() * scale());
+            g.drawLine(rx, ry + h, rx, gy);
+            g.setColor(0xffffff);
+            g.fillArc(rx - h, ry - h, h * 2, h * 2, 0, 360);
+            g.setColor(0x2b579a);
+            g.drawArc(rx - h, ry - h, h * 2, h * 2, 0, 360);
+          }
+          if (turn) g.rotate((float) -Math.toRadians(deg), gx + gw / 2, gy + gh / 2);
         }
     }
     if (moving && movePic != null) {
@@ -2571,6 +2597,7 @@ public final class EditorSurface extends Container
   Map<String, Object> pointerState() {
     var m = new LinkedHashMap<String, Object>();
     m.put("selectedObject", selectedPicture);
+    m.put("rotateOffset", OfficeTheme.px(18));
     m.put("inking", ink != null);
     m.put("scrollY", getScrollY());
     m.put("bounds", Arrays.asList(getAbsoluteX(), getAbsoluteY(), getWidth(), getHeight()));
@@ -2658,6 +2685,8 @@ public final class EditorSurface extends Container
       touchY = y;
       touchMoved = touchSelecting = false;
       pinchStart = 0;
+      // A selected object's handles take a finger-sized press: resize or rotate, as Word on a tablet.
+      if (selectedPicture != null && pressHandle(selectedPicture, x, y, OfficeTheme.px(14))) return;
       dragHandle = hitHandle(x, y);
       if (dragHandle != 0) {
         touchSelecting = true;
@@ -2701,7 +2730,7 @@ public final class EditorSurface extends Container
     finishComposing();
     String wasSelected = selectedPicture;
     selectedPicture = null;
-    if (wasSelected != null && pressHandle(wasSelected, x, y)) return;
+    if (wasSelected != null && pressHandle(wasSelected, x, y, OfficeTheme.px(6))) return;
     var line = lineAt(x, y);
     for (int page = 0; page < layout().pages.size(); page++) {
       float px = (x - viewportX() - pageX(page)) / scale();
@@ -2843,6 +2872,9 @@ public final class EditorSurface extends Container
     return best;
   }
 
+  /** The rotation handle's index in {@link #resizeHandle}; 0..8 are the sizing handles. */
+  private static final int ROTATE_HANDLE = 9;
+
   /** The object whose handle is being dragged, the handle (column * 3 + row) and its page. */
   private LayoutEngine.PlacedPicture resizePic;
   private int resizeHandle, resizePage;
@@ -2862,22 +2894,30 @@ public final class EditorSurface extends Container
   }
 
   /** A press on a handle of the selected object starts resizing it, as Word's sizing handles. */
-  private boolean pressHandle(String id, int x, int y) {
-    float tolerance = OfficeTheme.px(6) / scale();
+  private boolean pressHandle(String id, int x, int y, int slop) {
+    float tolerance = slop / scale();
     for (int page = 0; page < layout().pages.size(); page++) {
       float px = (x - viewportX() - pageX(page)) / scale();
       float py = (y - viewportY() + getScrollY() - pageY(page)) / scale();
       for (LayoutEngine.PlacedPicture pic : layout().pages.get(page).pictures) {
         if (!id.equals(pic.picture().id())) continue;
-        for (int i = 0; i <= 2; i++)
-          for (int j = 0; j <= 2; j++) {
-            if (i == 1 && j == 1) continue;
-            float hx = pic.x() + pic.width() * i / 2, hy = pic.y() + pic.height() * j / 2;
+        // The handles turn with the object: test the pointer in its unturned frame.
+        double turn = Math.toRadians(-turnOf(pic.picture()));
+        float ccx = pic.x() + pic.width() / 2, ccy = pic.y() + pic.height() / 2;
+        float ux = (float) (ccx + (px - ccx) * Math.cos(turn) - (py - ccy) * Math.sin(turn));
+        float uy = (float) (ccy + (px - ccx) * Math.sin(turn) + (py - ccy) * Math.cos(turn));
+        px = ux;
+        py = uy;
+        for (int k = 0; k <= ROTATE_HANDLE; k++) {
+            int i = k / 3, j = k % 3;
+            if (k == 4 || k == ROTATE_HANDLE && pic.inCell()) continue;
+            float hx = k == ROTATE_HANDLE ? pic.x() + pic.width() / 2 : pic.x() + pic.width() * i / 2;
+            float hy = k == ROTATE_HANDLE ? pic.y() - rotateOffset() : pic.y() + pic.height() * j / 2;
             if (Math.abs(px - hx) > tolerance || Math.abs(py - hy) > tolerance) continue;
             if (!selectObject(pic)) return false;
             stopInput();
             resizePic = pic;
-            resizeHandle = i * 3 + j;
+            resizeHandle = k;
             resizePage = page;
             movePressX = moveX = x;
             movePressY = moveY = y;
@@ -2911,6 +2951,37 @@ public final class EditorSurface extends Container
     return new float[] {left, top, w, h};
   }
 
+  /** How far above an object its rotation handle sits, in page points. */
+  private float rotateOffset() {
+    return OfficeTheme.px(18) / scale();
+  }
+
+  /**
+   * The clockwise rotation, in whole degrees, the rotation handle dragged to x, y gives: the angle
+   * of the pointer about the object's center, snapping to multiples of 15 within 4 degrees.
+   */
+  private int rotatedAngle(LayoutEngine.PlacedPicture pic, int x, int y) {
+    float cx = viewportX() + pageX(resizePage) + (pic.x() + pic.width() / 2) * scale();
+    float cy = viewportY() - getScrollY() + pageY(resizePage) + (pic.y() + pic.height() / 2) * scale();
+    int deg = (int) Math.round(Math.toDegrees(com.codename1.util.MathUtil.atan2(x - cx, cy - y)));
+    int snap = Math.round(deg / 15f) * 15;
+    if (Math.abs(deg - snap) <= 4) deg = snap;
+    return ((deg % 360) + 360) % 360;
+  }
+
+  /** An object's clockwise turn in degrees: a drawing's own rotation, else its picture look's. */
+  static int turnOf(Picture p) {
+    if (p.drawing != null) return Math.round(p.drawing.num("rotation", 0));
+    return p.look == null ? 0 : p.look.rotation;
+  }
+
+  /** The object turned to deg degrees: a drawing's own rotation, else its picture look's. */
+  static Picture rotated(Picture p, int deg) {
+    if (p.drawing != null) return p.drawing(p.drawing.with("rotation", String.valueOf(deg)));
+    var look = p.look == null ? Picture.Look.NONE : p.look;
+    return p.look(look.rotate(deg, look.flipH, look.flipV));
+  }
+
   /** Applies a handle drag; a press that barely moved changes nothing. */
   private boolean dropResized(int x, int y) {
     var pic = resizePic;
@@ -2918,6 +2989,14 @@ public final class EditorSurface extends Container
     resizing = false;
     if (pic == null) return false;
     if (Math.abs(x - movePressX) + Math.abs(y - movePressY) < OfficeTheme.px(4)) return true;
+    if (resizeHandle == ROTATE_HANDLE) {
+      var blocks = session.editingDocument().blocks;
+      if (pic.block() < blocks.size() && blocks.get(pic.block()) instanceof Picture p) {
+        session.replacePicture(pic.block(), rotated(p, rotatedAngle(pic, x, y)));
+        objectEdited();
+      }
+      return true;
+    }
     float[] r = resizedRect(pic, x, y);
     var blocks = session.editingDocument().blocks;
     if (pic.block() >= blocks.size() || !(blocks.get(pic.block()) instanceof Picture p)) return true;
@@ -2961,9 +3040,7 @@ public final class EditorSurface extends Container
     px = Math.max(-pic.width() / 2, Math.min(spec.width - pic.width() / 2, px));
     py = Math.max(-pic.height() / 2, Math.min(spec.height - pic.height() / 2, py));
     // Re-anchored to the paragraph it was dropped beside, as Word moves the anchor with the
-    // object: the layout wraps only text after a float's anchor, so a float dragged up its page
-    // kept its old anchor below and the text it was dropped on ran underneath it. Wordcraft's
-    // move_object re-anchors only across pages.
+    // object. Wordcraft's move_object re-anchors only across pages.
     Document moved = Picture.reanchored(session.document(), layout(), pic.block(), to, px, py);
     if (moved != null) session.replaceDocument(moved);
     else session.replacePicture(pic.block(), ((Picture) block).movedTo(px, py));
@@ -3911,9 +3988,21 @@ public final class EditorSurface extends Container
     changed.run();
   }
 
+  /**
+   * The platform's "done" action. A desktop port types Return into this multiline editor as text,
+   * so there the action is the Mac's cancelOperation:, which is Escape; it had inserted a paragraph
+   * break. A touch keyboard's action key still breaks the paragraph.
+   */
   @Override
   public void onEditorAction(int action) {
-    commitText("\n");
+    if (OfficeTheme.mobile()) commitText("\n");
+    else if (equation != null) endEquation(false);
+    else if (ink != null && inkExit != null) inkExit.run();
+    else if (selectedPicture != null) {
+      // As Word: Escape drops an object's selection; the text input stays bound so typing goes on.
+      selectedPicture = null;
+      repaint();
+    }
   }
 
   @Override
