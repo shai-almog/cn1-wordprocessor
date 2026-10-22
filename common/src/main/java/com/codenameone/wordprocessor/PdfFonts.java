@@ -262,6 +262,20 @@ final class PdfFonts {
     return resources.toString();
   }
 
+  /**
+   * The /CIDFontType0C program for CFF table {@code cff}: CID-keyed with the used glyphs as CIDs
+   * 1..n. A no-subsetting face ({@code whole}, fsType 0x0100) keeps every glyph, appended after
+   * the used ones, so a name-keyed source is converted rather than embedded raw.
+   */
+  static byte[] cffProgram(byte[] cff, List<Integer> used, int glyphs, boolean whole)
+      throws IOException {
+    if (!whole) return Cff.subset(cff, used);
+    var all = new ArrayList<Integer>(used);
+    var seen = new HashSet<Integer>(used);
+    for (int g = 1; g < glyphs; g++) if (seen.add(g)) all.add(g);
+    return Cff.subset(cff, all);
+  }
+
   static final class Face {
     final String name;
     final int number;
@@ -326,8 +340,8 @@ final class PdfFonts {
       int file;
       if (font.cff) {
         var t = font.tables.get("CFF ");
-        byte[] table = Arrays.copyOfRange(font.data, t[0], t[0] + t[1]);
-        byte[] cff = font.wholeFont ? table : Cff.subset(table, glyphCodes);
+        byte[] cff = cffProgram(Arrays.copyOfRange(font.data, t[0], t[0] + t[1]), glyphCodes,
+            font.glyphs, font.wholeFont);
         file = add(objects, stream("/Subtype /CIDFontType0C", cff, true));
       } else if (font.cff2) {
         file = add(objects, stream("/Subtype /OpenType", font.data, true));

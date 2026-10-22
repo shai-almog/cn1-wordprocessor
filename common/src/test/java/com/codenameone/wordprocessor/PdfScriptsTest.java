@@ -50,9 +50,8 @@ public class PdfScriptsTest {
     out.write(v);
   }
 
-  @Test
-  public void cffSubsetKeepsUsedCharstringsAndLocalSubrs() throws Exception {
-    // A name-keyed CFF: three charstrings and a private DICT with one local subroutine.
+  /** A name-keyed CFF: three charstrings and a private DICT with one local subroutine. */
+  static byte[] nameKeyedCff() throws Exception {
     var charstrings = Cff.writeIndex(Arrays.asList(new byte[] {14}, new byte[] {(byte) 139, 14},
         new byte[] {(byte) 140, (byte) 141, 14}));
     byte[] subrs = Cff.writeIndex(Collections.singletonList(new byte[] {11}));
@@ -83,7 +82,30 @@ public class PdfScriptsTest {
     out.write(charstrings);
     out.write(priv);
     out.write(subrs);
-    byte[] subset = Cff.subset(out.toByteArray(), Arrays.asList(2));
+    return out.toByteArray();
+  }
+
+  /**
+   * A no-subsetting (fsType 0x0100) name-keyed CFF is embedded whole but still CID-keyed, as the
+   * /CIDFontType0C stream requires: the used glyphs are CIDs 1..n, every other glyph follows.
+   */
+  @Test
+  public void wholeNameKeyedCffIsEmbeddedCidKeyed() throws Exception {
+    byte[] whole = PdfFonts.cffProgram(nameKeyedCff(), Arrays.asList(2), 3, true);
+    int[] n = Cff.index(whole, 4), t = Cff.index(whole, n[n.length - 1]);
+    var dict = Cff.dict(whole, t[0], t[1]);
+    assertTrue(dict.containsKey(1230));
+    assertEquals(3, (int) Cff.num(dict, 1234, 0));
+    int[] cs = Cff.index(whole, (int) Cff.num(dict, 17, 0));
+    assertEquals(4, cs.length);
+    assertArrayEquals(new byte[] {(byte) 140, (byte) 141, 14},
+        Arrays.copyOfRange(whole, cs[1], cs[2]));
+    assertArrayEquals(new byte[] {(byte) 139, 14}, Arrays.copyOfRange(whole, cs[2], cs[3]));
+  }
+
+  @Test
+  public void cffSubsetKeepsUsedCharstringsAndLocalSubrs() throws Exception {
+    byte[] subset = Cff.subset(nameKeyedCff(), Arrays.asList(2));
     // Parse the subset back: CID-keyed, .notdef plus the one used glyph, Subrs kept.
     int[] n = Cff.index(subset, 4), t = Cff.index(subset, n[n.length - 1]);
     var dict = Cff.dict(subset, t[0], t[1]);
