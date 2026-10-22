@@ -241,6 +241,22 @@ public final class TextFormats {
     return out.toString();
   }
 
+  /**
+   * RichTextImporter.parse, with a safety net behind limitHtmlDepth: a StackOverflowError from the
+   * recursive HTML parser is caught and the text is read with every tag stripped. The JVM and
+   * ParparVM both let it be caught (ParparVM checks stack depth on method entry and throws a
+   * preallocated StackOverflowError, cn1ThrowStackOverflow in cn1_globals.h, before the native
+   * stack overruns).
+   */
+  static HtmlImporter.Result parseImported(String text, RichTextFormat format) {
+    try {
+      return RichTextImporter.parse(text, format);
+    } catch (StackOverflowError e) {
+      if (format != RichTextFormat.HTML) throw e;
+      return RichTextImporter.parse(limitHtmlDepth(text, 0), format);
+    }
+  }
+
   static Document read(String text, RichTextFormat format, boolean blocks) {
     return read(text, format, blocks, null, null, null);
   }
@@ -255,7 +271,7 @@ public final class TextFormats {
     if (blocks) text = extracted.extract(text);
     if (warnings != null) warnings.addAll(extracted.warnings);
     int count = extracted.blocks.size();
-    HtmlImporter.Result r = RichTextImporter.parse(text, format);
+    HtmlImporter.Result r = parseImported(text, format);
     String[] lines = TextUtil.split(r.getText(), '\n');
     var out = new Sequence<Block>();
     boolean[] used = new boolean[count];

@@ -75,6 +75,13 @@ public class HtmlDeepNestingTest {
   }
 
   @Test
+  public void parserOverflowFallsBackToTagStrippedText() {
+    String html = "<html><body>" + repeat("<span>", 20000) + "innermost</body></html>";
+    String text = TextFormats.parseImported(html, RichTextFormat.HTML).getText();
+    assertTrue(text, text.contains("innermost"));
+  }
+
+  @Test
   public void unclosedTagsDoNotLoseText() {
     var b = new StringBuilder("<html><body>");
     for (int i = 0; i < 3000; i++) b.append("<i>");
