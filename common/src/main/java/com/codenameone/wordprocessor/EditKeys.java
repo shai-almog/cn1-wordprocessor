@@ -81,6 +81,8 @@ final class EditKeys {
     }
     if (keyCode == 8) return TextInputClient.KEY_BACKSPACE;
     if (keyCode == 127) return TextInputClient.KEY_DELETE;
+    // Escape leaves draw mode even when no text input session is bound (after an object press).
+    if (keyCode == 27) return TextInputClient.KEY_ESCAPE;
     return -1;
   }
 

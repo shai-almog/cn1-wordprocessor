@@ -1402,6 +1402,9 @@ public final class EditorSurface extends Container
                   }));
     setScrollableY(true);
     setScrollableX(true);
+    // Component.pointerPressed consumes a press on the interactive scrollbar's thumb or track
+    // before it fires these listeners, so a press that never reaches them belongs to a scrollbar.
+    addPointerPressedListener(e -> pressReachedContent = true);
     addScrollListener(
         (x, y, oldX, oldY) -> {
           if (input != null) host.updateTextInputState(input, getEditingState());
@@ -2054,6 +2057,28 @@ public final class EditorSurface extends Container
       }
     }
     paintInk(g);
+    if (selectedPicture != null && !moving) {
+      // A selected object's frame and its eight handles, as Word marks it.
+      for (int page = 0; page < layout().pages.size(); page++)
+        for (LayoutEngine.PlacedPicture pic : layout().pages.get(page).pictures) {
+          if (!selectedPicture.equals(pic.picture().id())) continue;
+          int gx = getX() + pageX(page) + getScrollX() + Math.round(pic.x() * scale());
+          int gy = baseY + pageY(page) + Math.round(pic.y() * scale());
+          int gw = Math.round(pic.width() * scale()), gh = Math.round(pic.height() * scale());
+          int h = OfficeTheme.px(4);
+          g.setColor(0x2b579a);
+          g.drawRect(gx, gy, gw, gh);
+          for (int i = 0; i <= 2; i++)
+            for (int j = 0; j <= 2; j++) {
+              if (i == 1 && j == 1) continue;
+              int hx = gx + gw * i / 2 - h, hy = gy + gh * j / 2 - h;
+              g.setColor(0xffffff);
+              g.fillRect(hx, hy, h * 2, h * 2);
+              g.setColor(0x2b579a);
+              g.drawRect(hx, hy, h * 2, h * 2);
+            }
+        }
+    }
     if (moving && movePic != null) {
       // Wordcraft's drag outline (frame::paint_outline): the object's frame where it would land.
       int to = pageAt(moveX, moveY);
@@ -2487,9 +2512,16 @@ public final class EditorSurface extends Container
   private final java.util.ArrayList<float[]> inkPoints = new java.util.ArrayList<>();
   private int inkColor = 0x000000;
 
-  /** Draw mode: pointer drags over an ink object or drawing canvas become pen strokes. */
-  public void setInk(InkSink sink, int color) {
+  private Runnable inkExit;
+
+  /**
+   * Draw mode: pointer drags over an ink object or drawing canvas become pen strokes. Presses
+   * elsewhere, or on the canvas's edge band, keep their usual meaning so the canvas can still be
+   * selected and dragged; Escape runs {@code exit}, as Word's Escape leaves the pen.
+   */
+  public void setInk(InkSink sink, int color, Runnable exit) {
     ink = sink;
+    inkExit = exit;
     inkColor = color;
     inkPoints.clear();
     inkBlock = -1;
@@ -2504,7 +2536,10 @@ public final class EditorSurface extends Container
       float px = (x - viewportX() - pageX(page)) / scale();
       float py = (y - viewportY() + getScrollY() - pageY(page)) / scale();
       for (LayoutEngine.PlacedPicture pic : layout().pages.get(page).pictures) {
-        if (px < pic.x() || px > pic.x() + pic.width() || py < pic.y() || py > pic.y() + pic.height()) continue;
+        // The edge band selects and drags the canvas, as a text box's margin band does.
+        float band = OfficeTheme.px(6) / scale();
+        if (px < pic.x() + band || px > pic.x() + pic.width() - band
+            || py < pic.y() + band || py > pic.y() + pic.height() - band) continue;
         var d = pic.picture().drawing;
         if (d == null || !("ink".equals(d.kind) || "canvas".equals(d.kind))) continue;
         if (!selectObject(pic)) continue; // ink strokes go to the object in its cell story
@@ -2518,6 +2553,21 @@ public final class EditorSurface extends Container
       }
     }
     return false;
+  }
+
+  /** Pointer-space bounds {x, y, w, h} of the object in a block, or null when it is not laid out. */
+  int[] pictureRect(int block) {
+    float sc = scale();
+    for (int page = 0; page < layout().pages.size(); page++)
+      for (LayoutEngine.PlacedPicture pic : layout().pages.get(page).pictures)
+        if (pic.block() == block)
+          return new int[] {
+            Math.round(viewportX() + pageX(page) + pic.x() * sc),
+            Math.round(viewportY() - getScrollY() + pageY(page) + pic.y() * sc),
+            Math.round(pic.width() * sc),
+            Math.round(pic.height() * sc)
+          };
+    return null;
   }
 
   private void inkDrag(int x, int y) {
@@ -2571,10 +2621,7 @@ public final class EditorSurface extends Container
   @Override
   public void pointerPressed(int x, int y) {
     if (equation != null) endEquation(false);
-    if (ink != null) {
-      inkPress(x, y);
-      return;
-    }
+    if (ink != null && inkPress(x, y)) return;
     if (OfficeTheme.mobile()) {
       touchX = x;
       touchY = y;
@@ -2588,14 +2635,27 @@ public final class EditorSurface extends Container
       super.pointerPressed(x, y);
       return;
     }
-    placeCaret(x, y);
+    pressReachedContent = false;
+    super.pointerPressed(x, y);
+    scrollbarPress = !pressReachedContent;
+    if (!scrollbarPress) placeCaret(x, y);
   }
+
+  /** True while a desktop press is grabbing the scrollbar thumb or paging its track. */
+  private boolean scrollbarPress, pressReachedContent;
 
   private long lastClick;
   private int clicks, lastClickBlock = -1, lastClickOffset;
 
+  /** The id of the object a click selected, framed with handles until the next click or edit. */
+  private String selectedPicture;
+  private long pictureClick;
+  private int editPictureOnRelease = -1;
+
   private void placeCaret(int x, int y) {
     finishComposing();
+    String wasSelected = selectedPicture;
+    selectedPicture = null;
     var line = lineAt(x, y);
     for (int page = 0; page < layout().pages.size(); page++) {
       float px = (x - viewportX() - pageX(page)) / scale();
@@ -2615,7 +2675,15 @@ public final class EditorSurface extends Container
           moveDy = py - pic.y();
           movePressX = x;
           movePressY = y;
-          if (pictureEditor != null) pictureEditor.edit(pic.block());
+          // A click selects the object so it can be dragged; a double-click that does not drag
+          // opens its settings on release, as in Word. Opening the modal dialog on the press made
+          // objects impossible to drag.
+          long now = System.currentTimeMillis();
+          editPictureOnRelease =
+              pic.picture().id().equals(wasSelected) && now - pictureClick < 500 ? pic.block() : -1;
+          pictureClick = now;
+          selectedPicture = pic.picture().id();
+          repaint();
           return;
         }
       }
@@ -2771,7 +2839,11 @@ public final class EditorSurface extends Container
 
   @Override
   public void pointerDragged(int x, int y) {
-    if (ink != null) {
+    if (scrollbarPress) {
+      super.pointerDragged(x, y);
+      return;
+    }
+    if (ink != null && inkBlock >= 0) {
       inkDrag(x, y);
       return;
     }
@@ -2831,12 +2903,24 @@ public final class EditorSurface extends Container
 
   @Override
   public void pointerReleased(int x, int y) {
-    if (ink != null) {
+    if (scrollbarPress) {
+      scrollbarPress = false;
+      super.pointerReleased(x, y);
+      return;
+    }
+    if (ink != null && inkBlock >= 0) {
       inkRelease();
       return;
     }
+    int edit = editPictureOnRelease;
+    editPictureOnRelease = -1;
     if (dropMoved(x, y)) {
       dragBlock = -1;
+      return;
+    }
+    if (edit >= 0 && pictureEditor != null) {
+      dragBlock = -1;
+      pictureEditor.edit(edit);
       return;
     }
     if (OfficeTheme.mobile() && !touchMoved && !touchSelecting && pinchStart == 0) placeCaret(x, y);
@@ -3310,6 +3394,7 @@ public final class EditorSurface extends Container
 
   @Override
   public void commitText(String text) {
+    selectedPicture = null;
     if (readOnly()) return;
     if (equation != null) {
       // In-place equation editing: typing goes into the equation's current slot.
@@ -3648,6 +3733,10 @@ public final class EditorSurface extends Container
         didEdit();
         return;
       case KEY_ESCAPE:
+        if (ink != null && inkExit != null) {
+          inkExit.run();
+          return;
+        }
         stopInput();
         return;
       default:

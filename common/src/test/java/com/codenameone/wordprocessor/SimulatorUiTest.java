@@ -2,6 +2,7 @@ package com.codenameone.wordprocessor;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -259,6 +260,155 @@ public class SimulatorUiTest {
 
   // ---- 3. Key handling end to end ------------------------------------------------------------
 
+
+  private static void interactiveScroll(boolean on) throws Exception {
+    var laf = editor().getUIManager().getLookAndFeel();
+    Field f = com.codename1.ui.plaf.LookAndFeel.class.getDeclaredField("interactiveScroll");
+    f.setAccessible(true);
+    f.setBoolean(laf, on);
+  }
+
+  private static int thumb(String name) throws Exception {
+    Field f = Component.class.getDeclaredField(name);
+    f.setAccessible(true);
+    return f.getInt(editor());
+  }
+
+  @Test
+  public void scrollbarThumbDragScrollsAndTrackPagesWithoutMovingTheCaret() throws Exception {
+    edt(() -> ((Form) field(app, "form")).show());
+    for (int i = 0; i < 100 && Display.getInstance().getCurrent() != field(app, "form"); i++)
+      Thread.sleep(50);
+    // The native desktop themes (macos-aqua, windows-fluent, gnome-adwaita) set
+    // interactiveScrollBool; the simulator's test theme does not.
+    edt(() -> interactiveScroll(true));
+    edt(
+        () -> {
+          var b = new StringBuilder();
+          for (int i = 0; i < 300; i++) b.append("Paragraph ").append(i).append('\n');
+          load(b.toString());
+          ((Form) field(app, "form")).revalidate();
+          editor().resetScroll();
+          editor().refresh();
+          editor().repaint();
+        });
+    // The thumb's bounds are recorded when the scrollbar is painted.
+    for (int i = 0; i < 100 && thumb("scrollThumbH") <= 0; i++) Thread.sleep(50);
+    assertTrue("vertical scrollbar painted", thumb("scrollThumbH") > 0);
+    edt(
+        () -> {
+          var editor = editor();
+          int x = editor.getAbsoluteX() + thumb("scrollThumbX") + thumb("scrollThumbW") / 2;
+          int y = editor.getAbsoluteY() + thumb("scrollThumbY") + thumb("scrollThumbH") / 2;
+          var before = session().selection();
+          editor.pointerPressed(x, y);
+          editor.pointerDragged(x, y + 40);
+          editor.pointerDragged(x, y + 120);
+          editor.pointerReleased(x, y + 120);
+          assertTrue("thumb drag scrolls", editor.getScrollY() > 0);
+          var after = session().selection();
+          assertEquals("thumb drag leaves the caret", before.block, after.block);
+          assertEquals(before.caret, after.caret);
+          assertEquals("thumb drag selects nothing", "", session().selectedText());
+        });
+    Thread.sleep(450);
+    final int[] start = new int[1];
+    edt(
+        () -> {
+          var editor = editor();
+          start[0] = editor.getScrollY();
+          int x = editor.getAbsoluteX() + thumb("scrollThumbX") + thumb("scrollThumbW") / 2;
+          int y = editor.getAbsoluteY() + thumb("scrollThumbY") + thumb("scrollThumbH") + 10;
+          assertTrue("track below the thumb", y < editor.getAbsoluteY() + editor.getHeight());
+          editor.pointerPressed(x, y);
+          editor.pointerReleased(x, y);
+          assertEquals("track click leaves the caret", 0, session().selection().block);
+        });
+    for (int i = 0; i < 60 && editor().getScrollY() <= start[0]; i++) Thread.sleep(50);
+    assertTrue("track click pages down", editor().getScrollY() > start[0]);
+    // The page scroll animates; later tests must not start while it still moves the view.
+    for (int last = -1, i = 0; i < 60 && editor().getScrollY() != last; i++) {
+      last = editor().getScrollY();
+      Thread.sleep(150);
+    }
+    Thread.sleep(450);
+  }
+
+  @Test
+  public void drawModeKeepsTheCanvasMovableAndEscapeLeavesIt() throws Exception {
+    edt(() -> ((Form) field(app, "form")).show());
+    for (int i = 0; i < 100 && Display.getInstance().getCurrent() != field(app, "form"); i++)
+      Thread.sleep(50);
+    final int[] canvas = {-1};
+    edt(
+        () -> {
+          load("Before");
+          ((Form) field(app, "form")).revalidate();
+          editor().resetScroll();
+          Method pen = WordProcessor.class.getDeclaredMethod("selectDrawTool", String.class);
+          pen.setAccessible(true);
+          pen.invoke(app, "pen");
+          editor().refresh();
+          assertTrue("pen starts draw mode", editor().isInking());
+          var blocks = session().document().blocks;
+          for (int i = 0; i < blocks.size(); i++)
+            if (blocks.get(i) instanceof Picture p && p.drawing != null && "canvas".equals(p.drawing.kind))
+              canvas[0] = i;
+          assertTrue("pen inserts a canvas", canvas[0] >= 0);
+        });
+    Thread.sleep(450);
+    edt(
+        () -> {
+          var editor = editor();
+          int[] r = editor.pictureRect(canvas[0]);
+          assertNotNull(r);
+          String strokes = DocumentXml.write(session().document());
+          // A press in the middle draws.
+          editor.pointerPressed(r[0] + r[2] / 2, r[1] + r[3] / 2);
+          editor.pointerDragged(r[0] + r[2] / 2 + 20, r[1] + r[3] / 2 + 10);
+          editor.pointerReleased(r[0] + r[2] / 2 + 20, r[1] + r[3] / 2 + 10);
+          assertNotEquals("the stroke lands in the canvas", strokes, DocumentXml.write(session().document()));
+        });
+    Thread.sleep(450);
+    edt(
+        () -> {
+          var editor = editor();
+          int[] r = editor.pictureRect(canvas[0]);
+          // Dragging the canvas by its edge moves it instead of drawing.
+          String before = DocumentXml.write(session().document());
+          editor.pointerPressed(r[0] + 2, r[1] + r[3] / 2);
+          editor.pointerDragged(r[0] + 30, r[1] + r[3] / 2 + 40);
+          editor.pointerDragged(r[0] + 80, r[1] + r[3] / 2 + 80);
+          editor.pointerReleased(r[0] + 80, r[1] + r[3] / 2 + 80);
+          editor.refresh();
+          int[] moved = null;
+          var blocks = session().document().blocks;
+          for (int i = 0; i < blocks.size(); i++)
+            if (blocks.get(i) instanceof Picture p && p.drawing != null && "canvas".equals(p.drawing.kind))
+              moved = editor.pictureRect(i);
+          assertTrue("edge drag moves the canvas",
+              moved != null && (moved[0] != r[0] || moved[1] != r[1]) || !before.equals(DocumentXml.write(session().document())));
+          // Escape leaves draw mode, through the raw key path a port uses with no input session.
+          editor.stopInput();
+          editor.keyPressed(27);
+          assertFalse("Escape leaves draw mode", editor.isInking());
+        });
+    Thread.sleep(450);
+  }
+
+  @Test
+  public void everyRibbonTabLaysOutWithoutOverlapOrClipping() throws Exception {
+    edt(() -> ((Form) field(app, "form")).show());
+    for (int i = 0; i < 100 && Display.getInstance().getCurrent() != field(app, "form"); i++)
+      Thread.sleep(50);
+    edt(
+        () -> {
+          var ribbon = (OfficeRibbon) field(app, "ribbon");
+          var out = RibbonLint.check(ribbon, ((Form) field(app, "form"))::revalidate, false);
+          assertTrue(String.join("\n", out), out.isEmpty());
+        });
+  }
+
   private static void load(String text) throws Exception {
     var session = session();
     session.replaceDocument(Document.empty());
@@ -404,6 +554,7 @@ public class SimulatorUiTest {
   @Test
   public void dragAndShiftArrowsSelectFromBodyIntoTable() throws Exception {
     final int[] from = new int[2], to = new int[2];
+    edt(() -> interactiveScroll(true));
     edt(() -> ((Form) field(app, "form")).show());
     for (int i = 0; i < 100 && Display.getInstance().getCurrent() != field(app, "form"); i++)
       Thread.sleep(50);
@@ -509,7 +660,10 @@ public class SimulatorUiTest {
           editor.pointerReleased(at[0][0], at[0][1]);
           var s = session();
           assertTrue("click selects the cell picture in its cell", s.inCell());
-          assertEquals(at[1][0], picked[0]);
+          assertEquals("a single click only selects", -1, picked[0]);
+          editor.pointerPressed(at[0][0], at[0][1]);
+          editor.pointerReleased(at[0][0], at[0][1]);
+          assertEquals("a double-click opens the picture settings", at[1][0], picked[0]);
           new Commands().execute(s, "picture.border", Json.object("color", "ff0000", "width", 2));
           var p = (Picture) s.editingDocument().blocks.get(picked[0]);
           assertEquals(0xff0000, p.look.borderColor);

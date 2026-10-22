@@ -17,6 +17,9 @@ final class WordMcp {
     void beforeCommand();
 
     void changed();
+
+    /** RibbonLint's findings for every ribbon tab, measured in the running look and feel. */
+    List<String> ribbonDefects();
   }
 
   private static boolean started;
@@ -53,6 +56,12 @@ final class WordMcp {
             "Inspect visible native editor cell and line geometry and selection; bounds are display pixels; line heights and clipping heights are also reported in points.",
             "{\"type\":\"object\",\"properties\":{}}",
             json -> onEdt(context::layout)));
+    MCP.addTool(
+        new Tool(
+            "word_ribbon_check",
+            "Select each ribbon tab and report controls squeezed below their preferred size, overlapping, or cut off.",
+            "{\"type\":\"object\",\"properties\":{}}",
+            json -> onEdt(() -> Json.object("defects", context.ribbonDefects()))));
     MCP.addTool(
         new Tool(
             "word_load",

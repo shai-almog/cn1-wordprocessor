@@ -29,3 +29,5 @@ Normal editor jars exclude the opt-in configuration resource, including after a 
 Library tests and MCP model edits alone do not establish native input, rendering, mobile, or Wordcraft feature parity. The eight advanced character properties are available through `format.set`.
 
 
+
+`scripts/ribbon-check.py` selects every ribbon tab of the running agent-debug app and fails on controls that overlap, are cut off, or are squeezed below the height their icon and text need (`word_ribbon_check`, RibbonLint). The simulator's test theme measures controls differently, so ribbon layout is only verified this way; `--screenshots DIR` saves each tab for review.

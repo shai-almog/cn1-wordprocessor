@@ -149,6 +149,10 @@ final class OfficeRibbon extends Container {
     revalidate();
   }
 
+  int selectedIndex() {
+    return selectedIndex;
+  }
+
   void select(int index) {
     selecting = true;
     selectedIndex = index;

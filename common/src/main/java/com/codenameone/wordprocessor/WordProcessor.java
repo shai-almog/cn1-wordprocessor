@@ -980,9 +980,17 @@ public class WordProcessor {
   }
 
   /** Word's stacked small buttons: icon and label flush left in an even column. */
+  /**
+   * A column of small ribbon buttons sharing the row height evenly, as Word's do; a BoxLayout gave
+   * the first ones their full padding and squeezed the last one against its neighbor.
+   */
   private static Container leftColumn(Button... buttons) {
-    for (Button b : buttons) b.setAlignment(Component.LEFT);
-    return BoxLayout.encloseY(buttons);
+    var column = new Container(new com.codename1.ui.layouts.GridLayout(buttons.length, 1));
+    for (Button b : buttons) {
+      b.setAlignment(Component.LEFT);
+      column.add(b);
+    }
+    return column;
   }
 
   private Container home() {
@@ -1950,20 +1958,23 @@ public class WordProcessor {
                             session.activeSection().raw.page.height,
                             session.activeSection().raw.page.width),
                     true),
+                menu("Size", FontImage.MATERIAL_DESCRIPTION, true,
+                    new String[] {"Letter (8.5\" \u00d7 11\")", "A4 (210 \u00d7 297 mm)"},
+                    new Runnable[] {() -> setPage(612, 792), () -> setPage(595.28f, 841.89f)}),
                 iconButton("Columns", FontImage.MATERIAL_VIEW_COLUMN, this::columnsDialog, true),
-                BoxLayout.encloseY(
-                    button("Column break", () -> run("layout.columnBreak", Json.object())),
-                    button("A4", () -> setPage(595.28f, 841.89f)),
-                    button("Letter", () -> setPage(612, 792)),
-                    button("Section break\u2026", this::sectionBreakDialog),
-                    button("Section settings\u2026", this::sectionSettings)))),
+                leftColumn(
+                    menu("Breaks", FontImage.MATERIAL_INSERT_PAGE_BREAK, false,
+                        new String[] {"Column break", "Section break\u2026"},
+                        new Runnable[] {() -> run("layout.columnBreak", Json.object()), this::sectionBreakDialog}),
+                    iconButton("Section Settings\u2026", FontImage.MATERIAL_TUNE, this::sectionSettings, false)))),
         OfficeTheme.group(
             "Paragraph",
-            BoxLayout.encloseY(
-                OfficeTheme.row(
-                    button("Indent +", () -> indent(18)), button("Indent \u2212", () -> indent(-18))),
-                button(
-                    "Space before / after",
+            leftColumn(
+                iconButton("Indent +", FontImage.MATERIAL_FORMAT_INDENT_INCREASE, () -> indent(18), false),
+                iconButton("Indent \u2212", FontImage.MATERIAL_FORMAT_INDENT_DECREASE, () -> indent(-18), false),
+                iconButton(
+                    "Spacing\u2026",
+                    FontImage.MATERIAL_FORMAT_LINE_SPACING,
                     () -> {
                       EditField before = field("0"), after = field("6");
                       if (showDialog(
@@ -1978,7 +1989,8 @@ public class WordProcessor {
                               s.paragraph("after", after.getText());
                             });
                       edited();
-                    }))),
+                    },
+                    false))),
         OfficeTheme.group(
             "Line spacing",
             BoxLayout.encloseY(
@@ -2350,7 +2362,7 @@ public class WordProcessor {
   }
 
   private Container mailings() {
-    mergeStatus = OfficeTheme.label("No recipients", 12, OfficeTheme.INK);
+    mergeStatus = paddedLabel("No recipients");
     return OfficeTheme.groups(
         OfficeTheme.group(
             "Create",
@@ -4363,6 +4375,11 @@ public class WordProcessor {
 
   /** Drop-down button: pick one of the names, then run the command with it as "name". */
   private Button choices(String label, char icon, String id, java.util.List<String> names) {
+    return choices(label, icon, id, names, true);
+  }
+
+  /** A ribbon drop-down; stacked (small) ones sit up to three to a column, as Word's do. */
+  private Button choices(String label, char icon, String id, java.util.List<String> names, boolean large) {
     return iconButton(
         label + " \u25be",
         icon,
@@ -4371,7 +4388,19 @@ public class WordProcessor {
           if (showDialog(label, pick, "Apply", "Cancel"))
             run(id, Json.object("name", pick.getSelectedItem()));
         },
-        true);
+        large);
+  }
+
+  /** A ribbon drop-down whose entries run their own actions. */
+  private Button menu(String label, char icon, boolean large, String[] names, Runnable[] actions) {
+    return iconButton(
+        label + " \u25be",
+        icon,
+        () -> {
+          var pick = new ComboBox<String>(names);
+          if (showDialog(label, pick, "Apply", "Cancel")) actions[pick.getSelectedIndex()].run();
+        },
+        large);
   }
 
   private static java.util.List<String> names(Object[][] table) {
@@ -4426,13 +4455,15 @@ public class WordProcessor {
     drawTool = tool;
     for (Button b : drawTools) OfficeTheme.checked(b, tool.equals(b.getClientProperty("drawTool")));
     if (tool.isEmpty()) {
-      editor.setInk(null, 0);
+      editor.setInk(null, 0, null);
       status.setText("");
       return;
     }
     if (!inkAtCaret()) run("insert.canvas", new HashMap<>());
-    editor.setInk(this::inkStroke, "highlighter".equals(tool) ? 0xffd800 : "eraser".equals(tool) ? 0x9e9e9e : 0x000000);
-    status.setText("eraser".equals(tool) ? "Drag over ink to erase" : "Draw inside the canvas");
+    editor.setInk(this::inkStroke, "highlighter".equals(tool) ? 0xffd800 : "eraser".equals(tool) ? 0x9e9e9e : 0x000000,
+        () -> selectDrawTool(""));
+    status.setText(("eraser".equals(tool) ? "Drag over ink to erase" : "Draw inside the canvas")
+        + "; drag its edge to move it, Esc to stop drawing");
     editor.repaint();
   }
 
@@ -4477,13 +4508,13 @@ public class WordProcessor {
             OfficeTheme.row(
                 choices("Themes", FontImage.MATERIAL_PALETTE, "design.theme", names(LayoutDesignCommands.THEMES)),
                 choices("Style Set", FontImage.MATERIAL_STYLE, "design.styleSet", LayoutDesignCommands.STYLE_SETS),
-                BoxLayout.encloseY(
-                    choices("Colors", FontImage.MATERIAL_COLOR_LENS, "design.themeColors", names(LayoutDesignCommands.COLORS)),
-                    choices("Fonts", FontImage.MATERIAL_FONT_DOWNLOAD, "design.themeFonts", names(LayoutDesignCommands.FONTS))),
-                BoxLayout.encloseY(
-                    choices("Paragraph Spacing", FontImage.MATERIAL_FORMAT_LINE_SPACING, "design.paragraphSpacing", names(LayoutDesignCommands.SPACING)),
-                    choices("Effects", FontImage.MATERIAL_AUTO_AWESOME, "design.effects", LayoutDesignCommands.EFFECTS)),
-                command("Set as Default", FontImage.MATERIAL_CHECK, "design.setDefault", false))),
+                leftColumn(
+                    choices("Colors", FontImage.MATERIAL_COLOR_LENS, "design.themeColors", names(LayoutDesignCommands.COLORS), false),
+                    choices("Fonts", FontImage.MATERIAL_FONT_DOWNLOAD, "design.themeFonts", names(LayoutDesignCommands.FONTS), false),
+                    choices("Effects", FontImage.MATERIAL_AUTO_AWESOME, "design.effects", LayoutDesignCommands.EFFECTS, false)),
+                leftColumn(
+                    choices("Paragraph Spacing", FontImage.MATERIAL_FORMAT_LINE_SPACING, "design.paragraphSpacing", names(LayoutDesignCommands.SPACING), false),
+                    command("Set as Default", FontImage.MATERIAL_CHECK, "design.setDefault", false)))),
         OfficeTheme.group(
             "Page Background",
             OfficeTheme.row(
@@ -4939,7 +4970,15 @@ public class WordProcessor {
   }
 
   private com.codename1.ui.util.UITimer readAloudTimer;
-  private final Label readAloudStatus = named(new Label("Stopped"), "Read Aloud status");
+  private final Label readAloudStatus =
+      named(paddedLabel("Stopped"), "Read Aloud status");
+
+  /** Ribbon status text padded like the buttons it stacks with. */
+  private static Label paddedLabel(String text) {
+    var l = OfficeTheme.label(text, 12, OfficeTheme.INK);
+    OfficeTheme.space(l, 3, 3, 5, 5);
+    return l;
+  }
   /** Wordcraft's floating Read Aloud player; open from Start until Stop (or its close box). */
   private com.codename1.components.InteractionDialog readAloudPlayer;
   private final Label playerStatus = named(new Label("Stopped"), "Player status");
@@ -5070,6 +5109,10 @@ public class WordProcessor {
   private Component skipCitationsBox() {
     var box = new CheckBox("Skip citations");
     box.setName("Skip citations");
+    // Office ribbon text colors (mapped for dark mode), not the native theme's.
+    box.getAllStyles().setFgColor(OfficeTheme.INK);
+    box.getAllStyles().setBgTransparency(0);
+    box.getAllStyles().setFont(OfficeTheme.font(12, false));
     box.setSelected(Speech.skipCitations());
     box.addActionListener(e -> Speech.skipCitations(box.isSelected()));
     return box;
@@ -5087,6 +5130,7 @@ public class WordProcessor {
     var speed = new ComboBox<String>(labels);
     speed.setName("Reading speed");
     speed.setSelectedIndex(selected);
+    OfficeTheme.field(speed, 56);
     speed.addSelectionListener((o, n) -> Speech.rate(Speech.RATES[Math.max(0, n)]));
     styleCombo(speed);
     return speed;
@@ -8164,6 +8208,10 @@ public class WordProcessor {
 
             public void changed() {
               edited(false);
+            }
+
+            public java.util.List<String> ribbonDefects() {
+              return RibbonLint.check(ribbon, form::revalidate);
             }
           });
     } catch (Exception ex) {
