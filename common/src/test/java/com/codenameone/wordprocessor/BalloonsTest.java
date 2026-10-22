@@ -200,14 +200,13 @@ public class BalloonsTest {
       if (span.style.revision != null && !span.style.revision.inserted()) deleted = span;
     assertNotNull(deleted);
     assertTrue(deleted.width > 0);
-    assertTrue(CharacterMetrics.hideDeleted);
     var painted = CharacterMetrics.painted(deleted);
     assertEquals(deleted.width, CharacterMetrics.width(METRICS, deleted.rawDisplay, painted), .5f);
     assertEquals(deleted.rawDisplay.toUpperCase(), painted.displayText(deleted.rawDisplay));
     // A body deletion the layout took out stays out when painted.
     for (LayoutEngine.Span span : page.lines.get(0).spans)
       if (span.style.revision != null && !span.style.revision.inserted())
-        assertEquals(0, CharacterMetrics.width(METRICS, span.rawDisplay, CharacterMetrics.painted(span)), .01f);
+        assertEquals(0, CharacterMetrics.painted(METRICS, span.rawDisplay, span), .01f);
   }
 
   @Test
@@ -306,5 +305,26 @@ public class BalloonsTest {
     var labels = revisionLabels(s.document(), 0);
     assertTrue(labels.toString(), labels.contains("Movedfrom"));
     for (String l : labels) assertFalse(labels.toString(), l.startsWith("Deleted:"));
+  }
+
+  @Test
+  public void anotherEnginesLayoutLeavesTheEditorsMeasurementAlone() {
+    // The hidden/deleted switches belong to each layout: a PDF export laying the document out
+    // without balloons must not change how the editor measures its own laid-out spans.
+    var s = new Session(Document.empty());
+    s.replace("keep gone stay");
+    s.trackChanges(true);
+    s.select(0, 5, 10);
+    s.deleteBackward();
+    var d = s.document();
+    var editor = new LayoutEngine(METRICS);
+    editor.setHideDeleted(true);
+    LayoutEngine.Span keep = editor.layout(d, 0).pages.get(0).lines.get(0).spans.get(0);
+    var style = keep.style.revision(new Revision("r9", "delete", "Ana", ""));
+    float before = CharacterMetrics.width(METRICS, "gone", style);
+    String shown = style.displayText("gone");
+    new LayoutEngine(METRICS).layout(d, 0);
+    assertEquals(before, CharacterMetrics.width(METRICS, "gone", style), 0f);
+    assertEquals(shown, style.displayText("gone"));
   }
 }

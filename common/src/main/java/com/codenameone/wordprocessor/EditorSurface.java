@@ -2145,7 +2145,9 @@ public final class EditorSurface extends Container
             ? s.width
             : "\t".equals(s.text)
                 ? (offset > s.start ? s.width : 0)
-                : prefixWidth(s.text.substring(0, Math.max(0, offset - s.start)), CharacterMetrics.painted(s));
+                : CharacterMetrics.leftOut(s)
+                    ? 0
+                    : prefixWidth(s.text.substring(0, Math.max(0, offset - s.start)), CharacterMetrics.painted(s));
     return s.rtl ? s.x + s.width - into : s.x + into;
   }
 

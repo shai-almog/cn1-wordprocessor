@@ -33,7 +33,9 @@ public final class LayoutEngine {
 
     Span(String t, TextStyle s, int start, float x, float w, float top, String display) {
       rawDisplay = display;
-      displayText = s.displayText(display);
+      // Text its layout left out (hidden, or a deletion in balloons) took no room and shows nothing.
+      displayText =
+          w <= 0 && (s.characters.hidden || s.revision != null && !s.revision.inserted()) ? "" : s.displayText(display);
       glyphStyle = s.markup().glyphStyle(display);
       this.top = top;
       text = t;
@@ -776,6 +778,7 @@ public final class LayoutEngine {
   public void setShowHidden(boolean value) {
     if (value == showHidden) return;
     showHidden = value;
+    metrics.showHidden = value;
     metrics.clear();
     cache = new HashMap<>();
     byContent = new HashMap<>();
@@ -810,13 +813,13 @@ public final class LayoutEngine {
   private boolean enterStory() {
     boolean was = bodyStory;
     bodyStory = false;
-    CharacterMetrics.hideDeleted = false;
+    metrics.hideDeleted = false;
     return was;
   }
 
   private void leaveStory(boolean was) {
     bodyStory = was;
-    CharacterMetrics.hideDeleted = hideDeleted && was;
+    metrics.hideDeleted = hideDeleted && was;
   }
 
   private int measured;
@@ -1569,9 +1572,8 @@ public final class LayoutEngine {
   }
 
   private Result layoutOnce(Document doc, long revision) {
-    CharacterMetrics.showHidden = showHidden;
     bodyStory = true;
-    CharacterMetrics.hideDeleted = hideDeleted;
+    metrics.hideDeleted = hideDeleted;
     nextCache = new HashMap<>();
     nextByContent = new HashMap<>();
     measured = 0;
@@ -1942,17 +1944,15 @@ public final class LayoutEngine {
    * receives the height used. The shared hidden/deleted switches are left as they were.
    */
   List<Line> frameLines(Document doc, Sequence<Block> blocks, float width, float[] height) {
-    boolean shown = CharacterMetrics.showHidden, deleted = CharacterMetrics.hideDeleted;
+    boolean deleted = metrics.hideDeleted;
     try {
-      CharacterMetrics.showHidden = showHidden;
       nextCache = new HashMap<>();
       nextByContent = new HashMap<>();
       var laid = boxStory(doc, blocks, 0, width);
       if (height != null) height[0] = laid.height;
       return laid.lines;
     } finally {
-      CharacterMetrics.showHidden = shown;
-      CharacterMetrics.hideDeleted = deleted;
+      metrics.hideDeleted = deleted;
     }
   }
 

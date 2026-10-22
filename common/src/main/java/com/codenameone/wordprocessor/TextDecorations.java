@@ -28,7 +28,7 @@ public final class TextDecorations {
     float padding =
         spaces == 0
             ? 0
-            : Math.max(0, span.width - CharacterMetrics.width(metrics, raw, CharacterMetrics.painted(span))) / spaces;
+            : Math.max(0, span.width - CharacterMetrics.painted(metrics, raw, span)) / spaces;
     float x = 0, start = -1;
     for (int at = 0; at < raw.length(); ) {
       int end = Graphemes.next(text, at);
@@ -39,7 +39,7 @@ public final class TextDecorations {
       }
       if (!space && start < 0) start = x;
       x +=
-          CharacterMetrics.width(metrics, raw.substring(at, end), CharacterMetrics.painted(span))
+          CharacterMetrics.painted(metrics, raw.substring(at, end), span)
               + (space ? padding : 0);
       at = end;
     }

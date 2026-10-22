@@ -161,10 +161,8 @@ public final class TextStyle {
 
   /** Case effects preserve source text and selection offsets. */
   public String displayText(String text) {
-    // Shown hidden text (Display > Hidden text) is laid out and drawn, as in Wordcraft.
-    return CharacterMetrics.leftOut(this)
-        ? ""
-        : characters.allCaps || characters.smallCaps ? text.toUpperCase(CASE_LOCALE) : text;
+    // Left-out (hidden or balloon-deleted) spans get "" from the layout (LayoutEngine.Span).
+    return characters.allCaps || characters.smallCaps ? text.toUpperCase(CASE_LOCALE) : text;
   }
 
   public boolean smallGlyph(String text) {
