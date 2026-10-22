@@ -92,6 +92,7 @@ final class AatShaper {
         int unit = font.u16(t + 2), i = g - font.u16(t + 4);
         if (i < 0 || i >= font.u16(t + 6)) return -1;
         int v = 0;
+        font.check(t + 8 + unit * i, unit);
         for (int k = 0; k < unit; k++) v = v << 8 | font.data[t + 8 + unit * i + k] & 0xff;
         return v;
       }

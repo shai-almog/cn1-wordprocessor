@@ -110,7 +110,7 @@ final class OpenType {
     for (String tag : tags)
       for (int i = 0; i < n; i++) {
         int rec = list + 2 + 6 * i;
-        if (tag.equals(new String(font.data, rec, 4, "ISO-8859-1")))
+        if (tag.equals(font.tag(rec)))
           return list + font.u16(rec + 4);
       }
     return -1;
@@ -140,7 +140,7 @@ final class OpenType {
             int index = font.u16(lang + 6 + 2 * i);
             if (index >= count) continue;
             int rec = features + 2 + 6 * index;
-            if (!feature.equals(new String(font.data, rec, 4, "ISO-8859-1"))) continue;
+            if (!feature.equals(font.tag(rec))) continue;
             int f = features + font.u16(rec + 4);
             for (int k = 0, c = font.u16(f + 2); k < c; k++) {
               int l = font.u16(f + 4 + 2 * k);
@@ -149,7 +149,7 @@ final class OpenType {
           }
         }
       }
-    } catch (IOException malformed) {
+    } catch (IOException | RuntimeException malformed) {
       result.clear();
     }
     int[] out = new int[result.size()];

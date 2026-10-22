@@ -274,6 +274,40 @@ final class PdfShaping {
   static List<OpenType.Glyph> shapeRun(PdfFonts.TrueType font, OpenType ot, String text,
       int from, int to, boolean rtl, boolean kerning, float ptem, int flags)
       throws java.io.IOException {
+    try {
+      return shapeChecked(font, ot, text, from, to, rtl, kerning, ptem, flags);
+    } catch (java.io.IOException | RuntimeException malformed) {
+      // A corrupt layout table (GSUB/GPOS/GDEF/morx...) must not abort the whole export: this
+      // run degrades to unshaped nominal glyphs with their hmtx advances.
+      return unshaped(font, text, from, to, rtl);
+    }
+  }
+
+  /** One nominal glyph per code point, hmtx advances, in visual order; no layout tables read. */
+  static List<OpenType.Glyph> unshaped(PdfFonts.TrueType font, String text, int from, int to,
+      boolean rtl) throws java.io.IOException {
+    var out = new ArrayList<OpenType.Glyph>();
+    for (int i = from; i < to; ) {
+      int cp = text.charAt(i), end = i + 1;
+      if (cp >= 0xd800 && cp <= 0xdbff && end < to) {
+        int low = text.charAt(end);
+        if (low >= 0xdc00 && low <= 0xdfff) {
+          cp = 0x10000 + ((cp - 0xd800) << 10) + low - 0xdc00;
+          end++;
+        }
+      }
+      var g = new OpenType.Glyph(cp < 32 ? 0 : font.glyph(cp), cp, i, end, GLOBAL);
+      g.adv = font.advance(g.id);
+      out.add(g);
+      i = end;
+    }
+    if (rtl) java.util.Collections.reverse(out);
+    return out;
+  }
+
+  private static List<OpenType.Glyph> shapeChecked(PdfFonts.TrueType font, OpenType ot,
+      String text, int from, int to, boolean rtl, boolean kerning, float ptem, int flags)
+      throws java.io.IOException {
     var buffer = new ArrayList<OpenType.Glyph>();
     String script = null;
     for (int i = from; i < to; ) {

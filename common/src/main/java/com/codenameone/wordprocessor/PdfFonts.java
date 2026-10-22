@@ -515,7 +515,8 @@ final class PdfFonts {
           var v = kernPairs.get(key);
           value = v == null ? 0 : v;
         }
-      } catch (IOException malformed) {
+      } catch (IOException | RuntimeException malformed) {
+        // A corrupt GPOS / kern table: no kerning rather than an aborted export.
         kernLookups = new int[0];
         kernPairs = new HashMap<>();
         value = 0;
@@ -552,7 +553,7 @@ final class PdfFonts {
       var indices = new TreeSet<Integer>();
       for (int i = 0, n = u16(features); i < n; i++) {
         int record = features + 2 + 6 * i;
-        if (!"kern".equals(new String(data, record, 4, "ISO-8859-1"))) continue;
+        if (!"kern".equals(tag(record))) continue;
         int feature = features + u16(record + 4);
         for (int k = 0, c = u16(feature + 2); k < c; k++) indices.add(u16(feature + 4 + 2 * k));
       }
@@ -664,6 +665,12 @@ final class PdfFonts {
     void check(int at, int size) throws IOException {
       if (at < 0 || size < 0 || at > data.length - size)
         throw new IOException("Truncated TrueType font");
+    }
+
+    /** The 4-byte tag at {@code at}, bounds-checked (a corrupt offset is an IOException). */
+    String tag(int at) throws IOException {
+      check(at, 4);
+      return new String(data, at, 4, "ISO-8859-1");
     }
 
     int u16(int at) throws IOException {
