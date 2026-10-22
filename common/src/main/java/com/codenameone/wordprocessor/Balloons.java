@@ -179,30 +179,49 @@ public final class Balloons {
     }
     if (revisions) {
       boolean deletions = "revisions".equals(mode);
-      // Paragraph marks by id, so a deletion running across a deleted mark stays one balloon.
+      // Paragraph marks by id at any depth (nested cells too), so a deletion running across a
+      // deleted mark stays one balloon, as Wordcraft walks every paragraph path of the body.
       var marks = new java.util.HashMap<String, Revision>();
-      for (Block block : d.blocks)
-        if (block instanceof Paragraph para) marks.put(para.id, para.breakRevision);
-        else if (block instanceof Table t)
-          for (int tr = 0; tr < t.rows(); tr++)
-            for (int tc = 0; tc < t.columns(); tc++)
-              if (!t.covered(tr, tc)) for (Paragraph para : t.cell(tr, tc)) marks.put(para.id, para.breakRevision);
+      collectMarks(d.blocks, marks);
+      var cards = new ArrayList<Pending>();
       // Wordcraft's deletion_balloons (cmd/review.rs): deleted text running on across spans,
       // lines and deleted paragraph marks by the same author is one balloon, its text cut to
-      // DELETION_TEXT_CHARS and an ellipsis; a move's source has a "Moved from" balloon instead.
-      var cards = new ArrayList<Pending>();
+      // DELETION_TEXT_CHARS and an ellipsis. A move's ends are not deletions: each end (move
+      // name, from/to) has one "Moved from"/"Moved to" balloon, as move_changes.
+      var seenMoves = new java.util.HashSet<String>();
       Pending open = null;
       String lastPara = null;
-      for (int p = 0; p < r.pages.size(); p++)
-        for (LayoutEngine.Line line : r.pages.get(p).lines) {
-          if (line.block < 0) continue;
-          if (open != null && lastPara != null && !lastPara.equals(line.paragraphId)) {
-            Revision mark = marks.get(lastPara);
-            if (mark != null && !mark.inserted() && mark.move == null && mark.author.equals(open.who.author))
-              open.add("\u00b6");
-            else open = null;
+      int lastPage = 0;
+      LayoutEngine.Line lastLine = null;
+      for (int p = 0; p <= r.pages.size(); p++) {
+        List<LayoutEngine.Line> lines = p < r.pages.size() ? r.pages.get(p).lines : java.util.Collections.<LayoutEngine.Line>emptyList();
+        for (int li = 0; li <= lines.size(); li++) {
+          boolean end = p == r.pages.size();
+          if (end && li > 0) break;
+          LayoutEngine.Line line = end ? null : li < lines.size() ? lines.get(li) : null;
+          if (line == null && !end) continue;
+          if (line != null && line.block < 0) continue;
+          String para = line == null ? null : line.paragraphId;
+          if (lastPara != null && !lastPara.equals(para)) {
+            // Leaving a paragraph: its deleted mark joins the open deletion or starts one.
+            Revision mark = deletions ? marks.get(lastPara) : null;
+            if (mark != null && !mark.inserted() && mark.move == null) {
+              if (open == null || !open.who.author.equals(mark.author)) {
+                if (count < MAX_BALLOONS) {
+                  float[] foot = lastLine.toPage(lastLine.x + lastLine.width, lastLine.y + lastLine.height);
+                  open = new Pending(mark, lastPage, foot);
+                  cards.add(open);
+                  count++;
+                } else open = null;
+              }
+              if (open != null) open.add("\u00b6");
+            } else open = null;
           }
-          lastPara = line.paragraphId;
+          if (line == null) break;
+          lastPara = para;
+          lastPage = p;
+          lastLine = line;
+          boolean formatted = false;
           for (LayoutEngine.Span span : line.spans) {
             var rev = span.style.revision;
             boolean deleted = deletions && rev != null && !rev.inserted();
@@ -211,7 +230,10 @@ public final class Balloons {
                 open.add(span.text);
                 continue;
               }
-              if (count >= MAX_BALLOONS) continue;
+              if (count >= MAX_BALLOONS) {
+                open = null;
+                continue;
+              }
               float[] foot = line.toPage(line.x + span.x, line.y + line.height);
               open = new Pending(rev, p, foot);
               open.add(span.text);
@@ -222,10 +244,12 @@ public final class Balloons {
             if (span.text != null && !span.text.isEmpty()) open = null;
             String label = null;
             Revision who = null;
-            if (deleted) {
-              label = "Moved from";
+            if (deletions && rev != null && rev.move != null) {
+              if (!seenMoves.add(rev.move + (rev.inserted() ? "/to" : "/from"))) continue;
+              label = rev.inserted() ? "Moved to" : "Moved from";
               who = rev;
-            } else if (span.style.formatRevision != null) {
+            } else if (span.style.formatRevision != null && !formatted) {
+              formatted = true;
               label = "Formatted";
               who = span.style.formatRevision;
             }
@@ -235,9 +259,9 @@ public final class Balloons {
             var c = new Pending(who, p, foot);
             c.label = label;
             cards.add(c);
-            break;
           }
         }
+      }
       for (Pending c : cards) {
         int color = authorColor(d, c.who.author);
         var items = new ArrayList<Item>();
@@ -253,6 +277,14 @@ public final class Balloons {
     }
     for (int p = 0; p < pages.size(); p++) place(pages.get(p), r.pages.get(p).spec.width, r.pages.get(p).spec.height);
     return pages;
+  }
+
+  private static void collectMarks(Sequence<Block> blocks, java.util.Map<String, Revision> marks) {
+    for (Block block : blocks)
+      if (block instanceof Paragraph para) marks.put(para.id, para.breakRevision);
+      else if (block instanceof Table t)
+        for (int r = 0; r < t.rows(); r++)
+          for (int c = 0; c < t.columns(); c++) if (!t.covered(r, c)) collectMarks(t.blocks(r, c), marks);
   }
 
   /** Wordcraft's DELETION_TEXT_CHARS: at most this many deleted characters show in a balloon. */

@@ -310,7 +310,7 @@ public class BalloonsTest {
   @Test
   public void anotherEnginesLayoutLeavesTheEditorsMeasurementAlone() {
     // The hidden/deleted switches belong to each layout: a PDF export laying the document out
-    // without balloons must not change how the editor measures its own laid-out spans.
+    // without balloons must not change the editor's laid-out deletion or its measurement.
     var s = new Session(Document.empty());
     s.replace("keep gone stay");
     s.trackChanges(true);
@@ -319,13 +319,76 @@ public class BalloonsTest {
     var d = s.document();
     var editor = new LayoutEngine(METRICS);
     editor.setHideDeleted(true);
-    LayoutEngine.Span keep = editor.layout(d, 0).pages.get(0).lines.get(0).spans.get(0);
-    var style = keep.style.revision(new Revision("r9", "delete", "Ana", ""));
-    float before = CharacterMetrics.width(METRICS, "gone", style);
-    String shown = style.displayText("gone");
+    var line = editor.layout(d, 0).pages.get(0).lines.get(0);
     new LayoutEngine(METRICS).layout(d, 0);
-    assertEquals(before, CharacterMetrics.width(METRICS, "gone", style), 0f);
-    assertEquals(shown, style.displayText("gone"));
+    LayoutEngine.Span deleted = null;
+    for (LayoutEngine.Span span : line.spans)
+      if (span.style.revision != null && !span.style.revision.inserted()) deleted = span;
+    assertNotNull(deleted);
+    assertEquals(0, deleted.width, 0f);
+    assertEquals("", deleted.displayText);
+    assertEquals(0, CharacterMetrics.painted(METRICS, deleted.rawDisplay, deleted), 0f);
+    var again = editor.layout(d, 1).pages.get(0).lines.get(0);
+    assertEquals(line.width, again.width, 0f);
+    assertEquals(line.spans.size(), again.spans.size());
+    for (int i = 0; i < line.spans.size(); i++) assertEquals(line.spans.get(i).width, again.spans.get(i).width, 0f);
+  }
+
+  @Test
+  public void movesHaveOneBalloonPerEndAndLaterDeletionsOnTheLineKeepTheirs() {
+    // Wordcraft move_changes: one "Moved from" and one "Moved to" balloon per move end, even
+    // across paragraphs; a deletion after a move's source on the same line keeps its balloon.
+    var from = TextStyle.DEFAULT.revision(new Revision("r1", "delete", "Ana", "").move("m1"));
+    var to = TextStyle.DEFAULT.revision(new Revision("r2", "insert", "Ana", "").move("m1"));
+    var gone = TextStyle.DEFAULT.revision(new Revision("r3", "delete", "Bo", ""));
+    var first = RichText.of("moved ", to).concat(RichText.of("away ", from)).concat(RichText.of("keep ", TextStyle.DEFAULT))
+        .concat(RichText.of("gone", gone));
+    var second = RichText.of("more ", from).concat(RichText.of("tail", TextStyle.DEFAULT));
+    var d = Document.empty();
+    d = d.blocks(new Sequence<Block>().append(new Paragraph("p1", first)).append(new Paragraph("p2", second)), d.nextId);
+    var labels = revisionLabels(d, 0);
+    assertEquals(labels.toString(), 1, java.util.Collections.frequency(labels, "Movedfrom"));
+    assertEquals(labels.toString(), 1, java.util.Collections.frequency(labels, "Movedto"));
+    assertTrue(labels.toString(), labels.contains("Deleted:gone"));
+  }
+
+  @Test
+  public void aDeletedMarkAloneIsABalloonIncludingTheLastParagraphs() {
+    var s = new Session(Document.empty());
+    s.replace("one\ntwo");
+    s.reviewAuthor("Ana");
+    s.trackChanges(true);
+    s.selectRange(0, 3, 1, 0);
+    s.deleteBackward();
+    var d = s.document();
+    assertEquals(revisionLabels(d, 0).toString(), List.of("Deleted:\u00b6"), revisionLabels(d, 0));
+    // A deleted mark on the last paragraph (as imported): no following line, still a balloon.
+    var last = (Paragraph) d.blocks.get(d.blocks.size() - 1);
+    var blocks = d.blocks.set(d.blocks.size() - 1, last.breakRevision(new Revision("r77", "delete", "Bo", "")));
+    var labels = revisionLabels(d.blocks(blocks, d.nextId), 0);
+    assertEquals(labels.toString(), 2, java.util.Collections.frequency(labels, "Deleted:\u00b6"));
+  }
+
+  @Test
+  public void aDeletionAcrossAMarkInANestedCellIsOneBalloon() {
+    var s = new Session(Document.empty());
+    s.replace("body");
+    s.select(0, 4, 4);
+    s.insertTable(1, 1);
+    s.enterCell(1, 0, 0);
+    s.insertTable(1, 1);
+    s.leaveCell();
+    s.enterCell(1, 0, 0);
+    int at = 0;
+    for (int i = 0; i < s.document().blocks.size(); i++) if (s.document().blocks.get(i) instanceof Table) at = i;
+    s.enterNestedCell(at, 0, 0);
+    s.replace("ab\ncd");
+    s.reviewAuthor("Ana");
+    s.trackChanges(true);
+    s.selectRange(0, 1, 1, 1);
+    s.deleteBackward();
+    var labels = revisionLabels(s.document(), 0);
+    assertEquals(labels.toString(), List.of("Deleted:b\u00b6c"), labels);
   }
 
   @Test
