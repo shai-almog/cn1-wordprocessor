@@ -52,6 +52,13 @@ public class MarkReorderTest {
     assertEquals("61 301 300", order(0x61, 0x301, 0x300));
   }
 
+  /** Unicode 17 marks, as harfrust 0.13.3's UCD table. */
+  @Test
+  public void unicode17Classes() {
+    assertEquals(230, CombiningClass.of(0x1acf));
+    assertEquals(230, CombiningClass.of(0x1ad5));
+  }
+
   @Test
   public void classes() {
     assertEquals(9, CombiningClass.of(0x094d));
