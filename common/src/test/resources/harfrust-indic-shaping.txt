@@ -214,3 +214,4 @@ Kailasa.ttc	\u0f0b\u0f64	27+214|116+1343
 /System/Library/Fonts/KohinoorBangla.ttc	\u09bf\u09b7\u09bf\u09c7	19+273|104+660|499+271|19+273|61+565
 /System/Library/Fonts/Kohinoor.ttc	\u0915\u093f\u200d\u0947	780+273|1+0|51+770|36@-248,0+0
 /System/Library/Fonts/KohinoorBangla.ttc	\u09c7\u0995\u09c7	499+271|104+660|499+271|32+691
+/System/Library/Fonts/Kohinoor.ttc	\u0930\u200c\u0947	77+402|1+0|817@6,0+0

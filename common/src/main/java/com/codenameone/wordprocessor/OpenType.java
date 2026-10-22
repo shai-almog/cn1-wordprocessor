@@ -299,8 +299,8 @@ final class OpenType {
    * glyphs the lookup flag ignores are skipped; a default ignorable is SKIP_MAYBE (skipped
    * unless it is the glyph {@code want} expects). GPOS treats every default ignorable so
    * (ignore_zwnj, ignore_zwj and ignore_hidden); GSUB never skips hidden ones (CGJ, Mongolian
-   * FVS, TAG) and keeps ZWJ/ZWNJ, since its auto-ZWJ depends on per-feature manual-joiner flags
-   * not modelled here. The glyph a lookup starts at is never skipped for being ignorable.
+   * FVS, TAG) and keeps ZWJ/ZWNJ in the input sequence, since auto-ZWJ there depends on
+   * per-feature manual-joiner flags not modelled here. The glyph a lookup starts at is never skipped for being ignorable.
    */
   int nextIndex(int lookup, int flag, List<Glyph> buffer, int i, int step, Want want)
       throws IOException {
@@ -309,7 +309,8 @@ final class OpenType {
 
   /**
    * As above; {@code context} marks backtrack/lookahead matching, where GSUB also skips ZWJ
-   * (harfrust's ignore_zwj is set for context matching; ZWNJ there depends on auto-ZWNJ).
+   * and ZWNJ (harfrust's ignore_zwj, and ignore_zwnj under auto_zwnj, as hb-shape gives for
+   * Kohinoor U+0930 200C 0947).
    */
   int nextIndex(int lookup, int flag, List<Glyph> buffer, int i, int step, Want want,
       boolean context) throws IOException {
@@ -318,7 +319,7 @@ final class OpenType {
       if (skip(lookup, flag, g)) continue;
       boolean maybe = ignorable(g)
           && (positioning
-              || !hidden(g.cp) && g.cp != 0x200c && (context || g.cp != 0x200d));
+              || !hidden(g.cp) && (context || g.cp != 0x200c && g.cp != 0x200d));
       if (maybe && (want == null || !want.ok(g.id))) continue;
       int syllable = buffer.get(i).syllable;
       return perSyllable && syllable != 0 && g.syllable != syllable ? -1 : j;
