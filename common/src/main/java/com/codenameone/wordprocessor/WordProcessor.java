@@ -7996,7 +7996,8 @@ public class WordProcessor {
         .scheduleBackgroundTask(
             () -> {
               try {
-                byte[] pdf = PdfExporter.write(spec, pages, DocumentFonts.PDF);
+                final var printWarnings = new ArrayList<String>();
+                byte[] pdf = PdfExporter.write(spec, pages, DocumentFonts.PDF, printWarnings);
                 try (var out = FileSystemStorage.getInstance().openOutputStream(path)) {
                   out.write(pdf);
                 }
@@ -8016,7 +8017,9 @@ public class WordProcessor {
                                               ? "Print" + " cancelled"
                                               : result.isFailed()
                                                   ? "Print" + " failed:" + " " + result.getError()
-                                                  : "Document sent to printing system");
+                                                  : "Document sent to printing system"
+                                                      + (printWarnings.isEmpty() ? ""
+                                                          : " - " + printWarnings.get(0)));
                                     });
                           } catch (RuntimeException ex) {
                             printing = false;

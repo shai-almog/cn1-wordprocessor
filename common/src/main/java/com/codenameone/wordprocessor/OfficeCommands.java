@@ -90,6 +90,22 @@ final class OfficeCommands implements Commands.Extension {
   }
 
   /** The document as printed: tracked changes resolved to their final text unless markup prints. */
+  /**
+   * Faces embedded by the command PDF exports (file.exportPdf, file.share); null keeps the
+   * standard Helvetica fonts.
+   */
+  static volatile PdfExporter.FontProvider pdfFonts;
+
+  /**
+   * The printable PDF of {@code d} for the command exports, adding to {@code warnings} what the
+   * export changed (such as a restricted-license face substituted).
+   */
+  static byte[] pdf(Document d, java.util.List<String> warnings) throws java.io.IOException {
+    var fonts = pdfFonts;
+    return fonts == null ? PdfExporter.write(printable(d))
+        : PdfExporter.write(printable(d), fonts, warnings);
+  }
+
   public static Document printable(Document d) {
     if (AppOptions.flag("printMarkup")) return d;
     for (Revisions.Change c : Revisions.list(d)) d = Revisions.resolve(d, c.revision.id, true);
@@ -193,9 +209,10 @@ final class OfficeCommands implements Commands.Extension {
           String name = a.containsKey("name") ? Commands.str(a, "name") : title == null || title.trim().isEmpty() ? "Document" : title.trim();
           byte[] data;
           String mime;
+          var warnings = new java.util.ArrayList<String>();
           try {
             if ("pdf".equals(format)) {
-              data = PdfExporter.write(printable(s.document()));
+              data = pdf(s.document(), warnings);
               mime = "application/pdf";
             } else if ("docx".equals(format)) {
               var out = new ByteArrayOutputStream();
@@ -207,9 +224,11 @@ final class OfficeCommands implements Commands.Extension {
           } catch (IOException e) {
             throw new IllegalStateException("Share failed: " + e.getMessage(), e);
           }
-          return Json.object(
+          var result = Json.object(
               "name", name + "." + format, "mime", mime, "bytes", data.length,
               "base64", new String(com.codename1.util.Base64.encodeNoNewline(data)));
+          if (!warnings.isEmpty()) result.put("warnings", warnings);
+          return result;
         });
     c.query("file.versions", "save?:string,restore?:integer,compare?:integer",
         "Version History: save a labelled version, list versions, restore one (undoable) or compare it with the current document",

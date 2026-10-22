@@ -89,10 +89,13 @@ final class FileCommands implements Commands.Extension {
     c.query("file.exportPdf", "",
         "Export the document as PDF (base64)", (s, a) -> {
           try {
-            byte[] pdf = PdfExporter.write(OfficeCommands.printable(s.document()));
-            return Json.object(
+            var warnings = new java.util.ArrayList<String>();
+            byte[] pdf = OfficeCommands.pdf(s.document(), warnings);
+            var result = Json.object(
                 "bytes", pdf.length,
                 "base64", new String(com.codename1.util.Base64.encodeNoNewline(pdf)));
+            if (!warnings.isEmpty()) result.put("warnings", warnings);
+            return result;
           } catch (IOException ex) {
             throw new IllegalStateException("PDF export failed: " + ex.getMessage(), ex);
           }

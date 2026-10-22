@@ -142,4 +142,25 @@ public class FontLicenseTest {
     assertTrue(warnings.get(0), warnings.get(0).contains("SourceSans3-Regular"));
     assertTrue(warnings.get(0), warnings.get(0).contains("license"));
   }
+
+  /** The command export paths (file.exportPdf, file.share) report the substitution too. */
+  @Test
+  public void commandExportsReportTheWarning() throws Exception {
+    var s = new Session(Document.empty());
+    s.replace("abc");
+    var commands = new Commands();
+    var saved = OfficeCommands.pdfFonts;
+    OfficeCommands.pdfFonts = new Provider("SourceSans3-Regular");
+    try {
+      for (String[] c : new String[][] {{"file.exportPdf"}, {"file.share", "format", "pdf"}}) {
+        var a = new java.util.LinkedHashMap<String, Object>();
+        if (c.length > 1) a.put(c[1], c[2]);
+        var result = (java.util.Map<?, ?>) commands.execute(s, c[0], a);
+        assertTrue(c[0] + " " + result.keySet(),
+            String.valueOf(result.get("warnings")).contains("SourceSans3-Regular"));
+      }
+    } finally {
+      OfficeCommands.pdfFonts = saved;
+    }
+  }
 }
