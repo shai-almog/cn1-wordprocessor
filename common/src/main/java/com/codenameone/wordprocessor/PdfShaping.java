@@ -331,7 +331,9 @@ final class PdfShaping {
     String[] scripts;
     int block = indicBlock(script);
     if (AatShaper.applies(font))
-      return aat(font, ot, buffer, rtl, kerning, ptem, gsubScripts(script, block));
+      // With morx a script shaper becomes harfrust's dumber shaper (fallback_position off), so
+      // only default-shaper runs (no complex script) may take the legacy 'kern' table.
+      return aat(font, ot, buffer, rtl, kerning, ptem, gsubScripts(script, block), script == null);
     // Scripts of the Universal Shaping Engine use it when the font has their GSUB script, as
     // HarfBuzz; otherwise they take the default shaper.
     boolean use = script != null && block < 0 && isUse(script) && ot.hasScript(true, script);
@@ -456,7 +458,10 @@ final class PdfShaping {
     // sequences; the run is then put in visual order.
     ot.apply(false, scripts, buffer, f, masks);
     if (rtl) reverse(buffer, ot);
-    if (kerning && ot.lookups(false, scripts, "kern").length == 0)
+    // Legacy 'kern' table when the run's script has no GPOS 'kern', only for shapers with
+    // fallback_position on (default, Arabic, Hebrew, Hangul), as harfrust's apply_kern.
+    boolean fallbackPosition = !complex && !"thai".equals(script) && !"lao ".equals(script);
+    if (kerning && fallbackPosition && ot.lookups(false, scripts, "kern").length == 0)
       for (int i = 0; i + 1 < buffer.size(); i++)
         buffer.get(i).adv += font.kern(buffer.get(i).id, buffer.get(i + 1).id);
     if (rtl && (use || "syrc".equals(script))) marksBeforeBase(buffer, ot);
@@ -506,12 +511,13 @@ final class PdfShaping {
   /**
    * harfrust's AAT path: 'morx' instead of GSUB (with the dumber shaper, so no script shaper and
    * marks keep their advances); positioning by 'kerx', else GPOS when the face has it (its kern,
-   * curs, dist, abvm, blwm, mark and mkmk), else the 'kern' table; then 'trak'. Default ignorables
+   * curs, dist, abvm, blwm, mark and mkmk), else the 'kern' table (default-shaper runs only);
+   * then 'trak'. Default ignorables
    * the chains left alone are hidden as a zero-advance space, as HarfBuzz.
    */
   private static List<OpenType.Glyph> aat(PdfFonts.TrueType font, OpenType ot,
-      List<OpenType.Glyph> buffer, boolean rtl, boolean kerning, float ptem, String[] scripts)
-      throws java.io.IOException {
+      List<OpenType.Glyph> buffer, boolean rtl, boolean kerning, float ptem, String[] scripts,
+      boolean fallbackPosition) throws java.io.IOException {
     var aat = new AatShaper(font);
     aat.morx(buffer, rtl);
     int space = font.glyph(' ');
@@ -546,7 +552,7 @@ final class PdfShaping {
     }
     if (rtl) reverse(buffer, ot);
     if (aat.hasKerx()) aat.kerx(buffer, kerning);
-    else if (kerning && (!gpos || ot.lookups(false, scripts, "kern").length == 0))
+    else if (kerning && fallbackPosition && (!gpos || ot.lookups(false, scripts, "kern").length == 0))
       for (int i = 0; i + 1 < buffer.size(); i++)
         buffer.get(i).adv += font.kern(buffer.get(i).id, buffer.get(i + 1).id);
     if (!gpos) AatShaper.removeDeleted(buffer);

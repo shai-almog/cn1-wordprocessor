@@ -207,3 +207,6 @@ Myanmar Sangam MN.ttc	\u1000\u103b\u103d	114+2212|298+314
 # Marks reordered by modified combining class before shaping (virama+nukta becomes nukta+virama); hb-shape 14.2.1.
 /System/Library/Fonts/Kohinoor.ttc	\u0915\u094d\u093c	87+770|132@-248,0+0
 /System/Library/Fonts/NotoSansKannada.ttc	\u0c95\u0ccd\u0cbc	167+782|57@-241,0+0
+# morx faces whose run takes a non-default shaper (dumber with morx, fallback_position off): no legacy kern table; hb-shape 14.2.1.
+Kailasa.ttc	\u0f3c\u0f44	76+1382|84+1229
+Kailasa.ttc	\u0f0b\u0f64	27+214|116+1343

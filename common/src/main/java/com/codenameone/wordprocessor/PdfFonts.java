@@ -496,10 +496,13 @@ final class PdfFonts {
     }
 
     private Map<Integer, Integer> kernPairs;
-    private int[] kernLookups;
     private final Map<Integer, Integer> kernCache = new HashMap<>();
 
-    /** Pair adjustment in font units from GPOS 'kern' PairPos lookups, else the 'kern' table. */
+    /**
+     * Pair adjustment in font units from the legacy 'kern' table only (harfrust's apply_kern
+     * fallback). GPOS 'kern' is applied by the shaper for the run's own script; other scripts'
+     * GPOS kerning never leaks in through this fallback.
+     */
     int kern(int left, int right) {
       if (left == 0 || right == 0) return 0;
       int key = left << 16 | right;
@@ -507,17 +510,11 @@ final class PdfFonts {
       if (cached != null) return cached;
       int value;
       try {
-        if (kernLookups == null) kernLookups = gposLookups();
-        value = 0;
-        for (int lookup : kernLookups) value += pairLookup(lookup, left, right);
-        if (kernLookups.length == 0) {
-          if (kernPairs == null) kernPairs = kernTable();
-          var v = kernPairs.get(key);
-          value = v == null ? 0 : v;
-        }
+        if (kernPairs == null) kernPairs = kernTable();
+        var v = kernPairs.get(key);
+        value = v == null ? 0 : v;
       } catch (IOException | RuntimeException malformed) {
-        // A corrupt GPOS / kern table: no kerning rather than an aborted export.
-        kernLookups = new int[0];
+        // A corrupt kern table: no kerning rather than an aborted export.
         kernPairs = new HashMap<>();
         value = 0;
       }
@@ -543,66 +540,6 @@ final class PdfFonts {
         at += length;
       }
       return pairs;
-    }
-
-    /** Lookup table offsets of every GPOS 'kern' feature (PairPos, possibly via Extension). */
-    private int[] gposLookups() throws IOException {
-      var t = tables.get("GPOS");
-      if (t == null || t[1] < 10) return new int[0];
-      int base = t[0], features = base + u16(base + 6), lookups = base + u16(base + 8);
-      var indices = new TreeSet<Integer>();
-      for (int i = 0, n = u16(features); i < n; i++) {
-        int record = features + 2 + 6 * i;
-        if (!"kern".equals(tag(record))) continue;
-        int feature = features + u16(record + 4);
-        for (int k = 0, c = u16(feature + 2); k < c; k++) indices.add(u16(feature + 4 + 2 * k));
-      }
-      var result = new ArrayList<Integer>();
-      int count = u16(lookups);
-      for (int index : indices) {
-        if (index >= count) continue;
-        int lookup = lookups + u16(lookups + 2 + 2 * index), type = u16(lookup);
-        for (int s = 0, n = u16(lookup + 4); s < n; s++) {
-          int sub = lookup + u16(lookup + 6 + 2 * s);
-          if (type == 9 && u16(sub + 2) == 2) result.add(sub + u32(sub + 4));
-          else if (type == 2) result.add(sub);
-        }
-      }
-      int[] out = new int[result.size()];
-      for (int i = 0; i < out.length; i++) out[i] = result.get(i);
-      return out;
-    }
-
-    private int pairLookup(int sub, int left, int right) throws IOException {
-      int format = u16(sub), index = coverage(sub + u16(sub + 2), left);
-      if (index < 0) return 0;
-      int f1 = u16(sub + 4), f2 = u16(sub + 6), size1 = 2 * bits(f1 & 0xff),
-          size2 = 2 * bits(f2 & 0xff);
-      if ((f1 & 4) == 0) return 0;
-      int advance = 2 * bits(f1 & 3);
-      if (format == 1) {
-        if (index >= u16(sub + 8)) return 0;
-        int set = sub + u16(sub + 10 + 2 * index), record = 2 + size1 + size2;
-        int low = 0, high = u16(set) - 1;
-        while (low <= high) {
-          int mid = (low + high) >>> 1, at = set + 2 + mid * record, glyph = u16(at);
-          if (glyph < right) low = mid + 1;
-          else if (glyph > right) high = mid - 1;
-          else return s16(at + 2 + advance);
-        }
-        return 0;
-      }
-      if (format != 2) return 0;
-      int c1 = classOf(sub + u16(sub + 8), left), c2 = classOf(sub + u16(sub + 10), right);
-      int count1 = u16(sub + 12), count2 = u16(sub + 14);
-      if (c1 >= count1 || c2 >= count2) return 0;
-      return s16(sub + 16 + (c1 * count2 + c2) * (size1 + size2) + advance);
-    }
-
-    private static int bits(int v) {
-      int n = 0;
-      for (; v != 0; v &= v - 1) n++;
-      return n;
     }
 
     int coverage(int table, int glyph) throws IOException {

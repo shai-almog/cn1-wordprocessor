@@ -127,9 +127,12 @@ final class OpenType {
     int table = substitution ? gsub : gpos;
     try {
       if (table >= 0) {
-        var all = new String[scripts.length + 1];
+        // harfrust's script selection: the run's tags, then DFLT, dflt and latn.
+        var all = new String[scripts.length + 3];
         System.arraycopy(scripts, 0, all, 0, scripts.length);
         all[scripts.length] = "DFLT";
+        all[scripts.length + 1] = "dflt";
+        all[scripts.length + 2] = "latn";
         int script = script(table, all);
         if (script >= 0 && font.u16(script) != 0) {
           int lang = script + font.u16(script),
