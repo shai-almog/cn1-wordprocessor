@@ -1,6 +1,8 @@
 package com.codenameone.wordprocessor;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assume.assumeTrue;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -13,7 +15,8 @@ import org.junit.Test;
  * Wordcraft's shaper (harfrust 0.13.3), with the macOS Sangam MN faces (shaped by their 'morx'
  * and 'kerx' / GPOS, as harfrust prefers 'morx') and GSUB-only faces (Kohinoor, ITF Devanagari,
  * Shree714, Mukta Mahee, Noto Sans Kannada/Oriya, Tamil Sangam MN) through the Indic shaper.
- * Fonts that are not installed are skipped.
+ * Fonts that are not installed are skipped; when none is (Linux CI) the test reports SKIPPED
+ * rather than passing with nothing checked.
  */
 public class IndicShapingParityTest {
   private static final String SUPPLEMENTAL = "/System/Library/Fonts/Supplemental/";
@@ -21,7 +24,7 @@ public class IndicShapingParityTest {
   @Test
   public void matchesHarfrust() throws Exception {
     var failures = new StringBuilder();
-    int checked = 0;
+    int checked = 0, fonts = 0;
     try (var in = new BufferedReader(new InputStreamReader(
         IndicShapingParityTest.class.getResourceAsStream("/harfrust-indic-shaping.txt"), "UTF-8"))) {
       String path = null;
@@ -36,6 +39,7 @@ public class IndicShapingParityTest {
           if (f.exists())
             try (var fin = new FileInputStream(f)) {
               font = new PdfFonts.TrueType(FontSubset.face(fin.readAllBytes(), 0));
+              fonts++;
             }
         }
         if (font == null) continue;
@@ -53,6 +57,8 @@ public class IndicShapingParityTest {
               .append(got).append('\n');
       }
     }
+    assumeTrue("no reference font installed (macOS only)", fonts > 0);
+    assertTrue("no string checked", checked > 0);
     assertEquals(checked + " checked", "", failures.toString());
   }
 
