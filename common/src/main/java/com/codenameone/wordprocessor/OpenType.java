@@ -250,6 +250,7 @@ final class OpenType {
       throws IOException {
     int lookup = lookupTable(substitution, index), flag = font.u16(lookup + 2);
     positioning = !substitution;
+    lookupMask = mask;
     for (int i = 0; i < buffer.size(); ) {
       var g = buffer.get(i);
       if ((g.mask & mask) == 0 || skip(lookup, flag, g)) {
@@ -275,6 +276,9 @@ final class OpenType {
 
   /** Whether the lookup being run skips ZWNJ in context matching (harfrust's auto_zwnj). */
   private boolean autoZwnj = true;
+
+  /** The feature mask of the lookup being run; input glyphs after the first must carry it. */
+  private int lookupMask = -1;
 
   /** Whether the lookup being run is a GPOS one (set by runLookup). */
   boolean positioning;
@@ -356,7 +360,11 @@ final class OpenType {
           && (positioning
               || !hidden(g.cp) && (g.cp == 0x200c ? context && autoZwnj
                   : g.cp != 0x200d || context));
-      if (maybe && (want == null || !want.ok(g.id))) continue;
+      // harfrust's may_match: an input glyph without the lookup's mask (e.g. a final halant
+      // outside the 'half' range) does not match; context glyphs match any mask.
+      boolean masked = !context && (g.mask & lookupMask) == 0;
+      if (maybe && (masked || want == null || !want.ok(g.id))) continue;
+      if (masked) return -1;
       int syllable = buffer.get(i).syllable;
       return perSyllable && syllable != 0 && g.syllable != syllable ? -1 : j;
     }

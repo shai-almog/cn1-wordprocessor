@@ -21,7 +21,7 @@ public class IgnorableSkipTest {
 
   private static List<OpenType.Glyph> buffer(int... cps) {
     var buffer = new ArrayList<OpenType.Glyph>();
-    for (int i = 0; i < cps.length; i++) buffer.add(new OpenType.Glyph(i + 1, cps[i], i, i + 1, 0));
+    for (int i = 0; i < cps.length; i++) buffer.add(new OpenType.Glyph(i + 1, cps[i], i, i + 1, 1));
     return buffer;
   }
 

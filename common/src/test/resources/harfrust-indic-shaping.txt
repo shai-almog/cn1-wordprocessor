@@ -220,3 +220,4 @@ Kailasa.ttc	\u0f0b\u0f64	27+214|116+1343
 /System/Library/Fonts/KohinoorGujarati.ttc	\u0abf\u200c\u0abf	21+295|21+295|3+0|96+651
 /System/Library/Fonts/Kohinoor.ttc	\u0924\u200c\u093f\u093f\u200c\u0901	28+273|1+0|781+273|66+556|1+0|129+0
 /System/Library/Fonts/KohinoorTelugu.ttc	\u200c\u0c4d\u0c37\u0c48\u0c4d\u0c48	105+660|29+0|36+0|81+0|29+0|36+0|3+0|138@-317,-302+0
+/System/Library/Fonts/KohinoorBangla.ttc	\u0995\u09cd\u09b7\u09cd	64+871|75@-154,-3+0
