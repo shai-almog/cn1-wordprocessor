@@ -43,9 +43,10 @@ public final class InlineField {
   /**
    * Longest instruction of a citation manager's ADDIN field (Zotero's CSL JSON, EndNote's
    * EN.CITE/EN.REFLIST embedded XML), as Wordcraft's docx reader caps an instruction at
-   * MAX_INSTR = 2 MiB (read/story.rs); other field codes stay short.
+   * MAX_INSTR = 2 MiB (read/story.rs). Wordcraft has that single cap for every field, so other
+   * instructions (a HYPERLINK to a long data: URL) share it.
    */
-  public static final int MAX_ADDIN_INSTRUCTION = 2 * 1024 * 1024, MAX_INSTRUCTION = 8192, MAX_RESULT = 1000000;
+  public static final int MAX_ADDIN_INSTRUCTION = 2 * 1024 * 1024, MAX_INSTRUCTION = MAX_ADDIN_INSTRUCTION, MAX_RESULT = 1000000;
 
   /**
    * The instruction cut to its length limit, as Wordcraft's docx reader stops collecting an

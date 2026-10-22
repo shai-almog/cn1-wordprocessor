@@ -116,12 +116,20 @@ public class RangeFieldsTest {
   }
 
   @Test
+  public void longHyperlinkDataUrlsAreKept() {
+    String url = "HYPERLINK \"data:image/png;base64," + repeat("A", 100000) + "\"";
+    assertEquals(url, InlineField.truncate(url));
+    assertTrue(InlineField.valid(url, "link"));
+    assertEquals(2 * 1024 * 1024, InlineField.truncate("QUOTE " + repeat("q", 3 * 1024 * 1024)).length());
+  }
+
+  @Test
   public void overLimitInstructionsAreTruncatedAndTheFieldKept() throws Exception {
     var opened = open("<w:p><w:r><w:fldChar w:fldCharType=\"begin\"/></w:r>"
-        + "<w:r><w:instrText>QUOTE " + repeat("x", 9000) + "</w:instrText></w:r>"
+        + "<w:r><w:instrText>QUOTE " + repeat("x", InlineField.MAX_INSTRUCTION) + "</w:instrText></w:r>"
         + "<w:r><w:fldChar w:fldCharType=\"separate\"/></w:r><w:r><w:t>big</w:t></w:r>"
         + "<w:r><w:fldChar w:fldCharType=\"end\"/></w:r></w:p>"
-        + "<w:p><w:fldSimple w:instr=\"QUOTE " + repeat("y", 9000) + "\"><w:r><w:t>simple</w:t></w:r></w:fldSimple></w:p>"
+        + "<w:p><w:fldSimple w:instr=\"QUOTE " + repeat("y", InlineField.MAX_INSTRUCTION) + "\"><w:r><w:t>simple</w:t></w:r></w:fldSimple></w:p>"
         + "<w:p><w:r><w:fldChar w:fldCharType=\"begin\"/></w:r>"
         + "<w:r><w:instrText xml:space=\"preserve\"> ADDIN EN.REFLIST " + repeat("z", InlineField.MAX_ADDIN_INSTRUCTION)
         + "</w:instrText></w:r>"
