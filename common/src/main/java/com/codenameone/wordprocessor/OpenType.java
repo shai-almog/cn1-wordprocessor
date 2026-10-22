@@ -15,6 +15,8 @@ final class OpenType {
   /** One glyph of the shaping buffer; positions are in font units. */
   static final class Glyph {
     int id, cp, start, end, mask, cat, pos, flags, syllable, adv, dx, dy, components = 1;
+    /** Buffer index of the glyph this mark is attached to during GPOS, or -1. */
+    int attach = -1;
 
     Glyph(int id, int cp, int start, int end, int mask) {
       this.id = id;
@@ -169,12 +171,26 @@ final class OpenType {
     for (int f = 0; f < features.length; f++)
       for (int l : lookups(substitution, scripts, features[f]))
         order.merge(l, masks[f], (a, b) -> a | b);
+    if (!substitution) for (var g : buffer) g.attach = -1;
     for (var e : order.entrySet()) {
       try {
         runLookup(substitution, e.getKey(), buffer, e.getValue());
       } catch (IOException | RuntimeException malformed) {
         // A malformed lookup is skipped; the remaining ones still apply.
       }
+    }
+    if (substitution) return;
+    // Mark offsets are relative to the glyph they attach to until every lookup has run, then
+    // the parent's final offset is added, as harfrust's propagate_attachment_offsets (so a
+    // mkmk attachment keeps a parent offset that a later lookup gave, e.g. Noto Sans Oriya's
+    // virama on a subjoined ssa). Parents precede their marks, so one pass suffices.
+    for (int i = 0; i < buffer.size(); i++) {
+      var g = buffer.get(i);
+      if (g.attach >= 0 && g.attach < i) {
+        if (!rtl) g.dx += buffer.get(g.attach).dx;
+        g.dy += buffer.get(g.attach).dy;
+      }
+      g.attach = -1;
     }
   }
 
@@ -673,8 +689,12 @@ final class OpenType {
       }
       int between = 0;
       for (int k = b; k < i; k++) between += buffer.get(k).adv;
-      g.dx = base.dx + font.s16(anchor + 2) - font.s16(markAnchor + 2) - between;
-      g.dy = base.dy + font.s16(anchor + 4) - font.s16(markAnchor + 4);
+      // A right-to-left run takes the base's horizontal offset now: this shaper's RTL offsets are
+      // rewritten into visual order later (reverse, marksBeforeBase), and the parity data
+      // (Syriac) matches hb-shape only so.
+      g.dx = (rtl ? base.dx : 0) + font.s16(anchor + 2) - font.s16(markAnchor + 2) - between;
+      g.dy = font.s16(anchor + 4) - font.s16(markAnchor + 4);
+      g.attach = b;
       return i + 1;
     }
     return -1;
