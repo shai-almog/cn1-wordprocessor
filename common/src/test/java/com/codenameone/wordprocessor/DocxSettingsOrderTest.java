@@ -57,4 +57,15 @@ public class DocxSettingsOrderTest {
     var d = Docx.read(new ByteArrayInputStream(docx(null))).document.trackChanges(true);
     ordered(settings(d, null), "trackRevisions", "footnotePr", "compat");
   }
+
+  @Test
+  public void compatibilityModeSettingMustBeDigits() throws Exception {
+    var d = Docx.read(new ByteArrayInputStream(docx(null))).document;
+    d = d.properties(d.properties.withSetting(Docx.COMPAT_SETTING, "15\"/><w:injected/><w:x w:y=\""));
+    String xml = settings(d, null);
+    assertFalse(xml, xml.contains("<w:injected"));
+    assertTrue(xml, xml.contains("w:val=\"15\""));
+    d = d.properties(d.properties.withSetting(Docx.COMPAT_SETTING, "14"));
+    assertTrue(settings(d, null).contains("w:val=\"14\""));
+  }
 }

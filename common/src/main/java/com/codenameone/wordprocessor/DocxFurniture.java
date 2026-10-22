@@ -250,7 +250,7 @@ final class DocxFurniture {
                   + "\"><w:compatSetting w:name=\"compatibilityMode\""
                   + " w:uri=\"http://schemas.microsoft.com/office/word\""
                   + " w:val=\""
-                  + document.properties.setting(Docx.COMPAT_SETTING, "15")
+                  + compatibilityMode(document.properties.setting(Docx.COMPAT_SETTING, "15"))
                   + "\"/></w:compat>"));
     for (int i = settings.getNumChildren() - 1; i >= 0; i--)
       if (!settings.getChildAt(i).isTextElement()
@@ -339,6 +339,17 @@ final class DocxFurniture {
                     + kind
                     + "+xml\"/>")
             .getBytes("UTF-8"));
+  }
+
+  /**
+   * The stored compatibilityMode when it is 1-4 ASCII digits; anything else (it is pasted into
+   * XML) is dropped for the default 15, which new documents need for border-at-margin tables.
+   */
+  static String compatibilityMode(String value) {
+    if (value == null || value.isEmpty() || value.length() > 4) return "15";
+    for (int i = 0; i < value.length(); i++)
+      if (value.charAt(i) < '0' || value.charAt(i) > '9') return "15";
+    return value;
   }
 
   /** CT_Settings child sequence (ECMA-376 17.15.1.78). */
