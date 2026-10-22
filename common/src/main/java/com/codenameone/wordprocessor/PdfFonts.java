@@ -25,7 +25,14 @@ final class PdfFonts {
     if (!validName(name)) throw new IOException("Invalid PDF font name");
     var face = faces.get(name);
     if (face == null) {
-      face = new Face(name, provider.bytes(name), faces.size() + 4);
+      try {
+        face = new Face(name, provider.bytes(name), faces.size() + 4);
+      } catch (IOException unusable) {
+        // Name the face, so a restricted-license (OS/2 fsType 0x0002) or bitmap-only (0x0200)
+        // chosen font is reported rather than an anonymous failure; fallback faces that fail
+        // here are skipped by Chain.pick, and installed faces by SystemFonts.find.
+        throw new IOException("Font " + name + ": " + unusable.getMessage(), unusable);
+      }
       faces.put(name, face);
     }
     return face;
