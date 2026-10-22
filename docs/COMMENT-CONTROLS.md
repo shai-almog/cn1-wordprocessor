@@ -11,5 +11,5 @@ Anchoring of comments inside table cells is described in [CELL-COMMENTS.md](CELL
 ## Limitations
 
 - Cross-cell and note/margin-story comment ranges are not supported.
-- Comment bodies are plain text (paragraph breaks kept); Wordcraft stores a rich comment part, so formatted comment text is not yet at parity. Comment initials are not kept. Mentions are not supported (Wordcraft has none either).
+- Comment and reply bodies are rich (formatted paragraphs, as Wordcraft's comment part) and keep the author's initials (`w:initials`). Mentions are not supported (Wordcraft has none either).
 - Full Word UI and rendering fidelity for comments is incomplete.

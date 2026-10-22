@@ -4963,6 +4963,8 @@ public class WordProcessor {
     }
     Speech.engine().stop();
     if (!"stop".equals(action) && !Speech.engine().speechSupported()) {
+      readAloudStatus.setText("Stopped");
+      closeReadAloudPlayer();
       showDialog("Read Aloud", "Text to speech is not available on this platform.", "Close", null);
       return;
     }

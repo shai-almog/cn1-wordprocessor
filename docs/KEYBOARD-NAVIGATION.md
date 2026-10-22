@@ -1,6 +1,6 @@
 # Keyboard navigation
 
-Shortcuts follow Codename One's editors on every port (`EditKeys`); Ctrl on Windows, Linux and the browser is Command on the Mac, Alt is Option:
+Shortcuts follow Codename One's editors on every port (`EditKeys`); Ctrl on Windows, Linux and the browser is Command on the Mac, Alt is Option. Codename One defines its control modifier as "control or command", so Ctrl+Left/Right jumps to the line edge on every platform, including Windows and Linux where native apps move by word on Ctrl and Alt+Left/Right is the word move here:
 
 | Keys | Move |
 | --- | --- |
