@@ -179,38 +179,110 @@ public final class Balloons {
     }
     if (revisions) {
       boolean deletions = "revisions".equals(mode);
-      for (int p = 0; p < r.pages.size() && count < MAX_BALLOONS; p++)
+      // Paragraph marks by id, so a deletion running across a deleted mark stays one balloon.
+      var marks = new java.util.HashMap<String, Revision>();
+      for (Block block : d.blocks)
+        if (block instanceof Paragraph para) marks.put(para.id, para.breakRevision);
+        else if (block instanceof Table t)
+          for (int tr = 0; tr < t.rows(); tr++)
+            for (int tc = 0; tc < t.columns(); tc++)
+              if (!t.covered(tr, tc)) for (Paragraph para : t.cell(tr, tc)) marks.put(para.id, para.breakRevision);
+      // Wordcraft's deletion_balloons (cmd/review.rs): deleted text running on across spans,
+      // lines and deleted paragraph marks by the same author is one balloon, its text cut to
+      // DELETION_TEXT_CHARS and an ellipsis; a move's source has a "Moved from" balloon instead.
+      var cards = new ArrayList<Pending>();
+      Pending open = null;
+      String lastPara = null;
+      for (int p = 0; p < r.pages.size(); p++)
         for (LayoutEngine.Line line : r.pages.get(p).lines) {
           if (line.block < 0) continue;
+          if (open != null && lastPara != null && !lastPara.equals(line.paragraphId)) {
+            Revision mark = marks.get(lastPara);
+            if (mark != null && !mark.inserted() && mark.move == null && mark.author.equals(open.who.author))
+              open.add("\u00b6");
+            else open = null;
+          }
+          lastPara = line.paragraphId;
           for (LayoutEngine.Span span : line.spans) {
             var rev = span.style.revision;
+            boolean deleted = deletions && rev != null && !rev.inserted();
+            if (deleted && rev.move == null) {
+              if (open != null && open.who.author.equals(rev.author)) {
+                open.add(span.text);
+                continue;
+              }
+              if (count >= MAX_BALLOONS) continue;
+              float[] foot = line.toPage(line.x + span.x, line.y + line.height);
+              open = new Pending(rev, p, foot);
+              open.add(span.text);
+              count++;
+              cards.add(open);
+              continue;
+            }
+            if (span.text != null && !span.text.isEmpty()) open = null;
             String label = null;
             Revision who = null;
-            if (deletions && rev != null && !rev.inserted()) {
-              label = "Deleted: " + span.text;
+            if (deleted) {
+              label = "Moved from";
               who = rev;
             } else if (span.style.formatRevision != null) {
               label = "Formatted";
               who = span.style.formatRevision;
             }
-            if (label == null) continue;
+            if (label == null || count >= MAX_BALLOONS) continue;
             count++;
-            int color = authorColor(d, who.author);
-            var items = new ArrayList<Item>();
-            float x = STRIPE + PAD, y = PAD;
-            items.add(new Item(name(who.author), x, y, inner, SIZE, true, color));
-            y += m.height(head) + 2;
-            // Laid out with the full paragraph engine, as the comment cards are.
-            y = rich(items, java.util.Collections.singletonList(new Paragraph("balloon", RichText.of(label, body))),
-                x, y, inner, body, m, d, engine);
             float[] foot = line.toPage(line.x + span.x, line.y + line.height);
-            pages.get(p).add(new Card(who.id, p, foot[0], foot[1], items, y + PAD, color));
+            var c = new Pending(who, p, foot);
+            c.label = label;
+            cards.add(c);
             break;
           }
         }
+      for (Pending c : cards) {
+        int color = authorColor(d, c.who.author);
+        var items = new ArrayList<Item>();
+        float x = STRIPE + PAD, y = PAD;
+        items.add(new Item(name(c.who.author), x, y, inner, SIZE, true, color));
+        y += m.height(head) + 2;
+        String label = c.label != null ? c.label : "Deleted: " + c.text;
+        // Laid out with the full paragraph engine, as the comment cards are.
+        y = rich(items, java.util.Collections.singletonList(new Paragraph("balloon", RichText.of(label, body))),
+            x, y, inner, body, m, d, engine);
+        pages.get(c.page).add(new Card(c.who.id, c.page, c.foot[0], c.foot[1], items, y + PAD, color));
+      }
     }
     for (int p = 0; p < pages.size(); p++) place(pages.get(p), r.pages.get(p).spec.width, r.pages.get(p).spec.height);
     return pages;
+  }
+
+  /** Wordcraft's DELETION_TEXT_CHARS: at most this many deleted characters show in a balloon. */
+  static final int DELETION_TEXT_CHARS = 200;
+
+  /** A revision balloon being gathered: its anchor and, for a deletion, the text so far. */
+  private static final class Pending {
+    final Revision who;
+    final int page;
+    final float[] foot;
+    final StringBuilder text = new StringBuilder();
+    int chars;
+    String label;
+
+    Pending(Revision who, int page, float[] foot) {
+      this.who = who;
+      this.page = page;
+      this.foot = foot;
+    }
+
+    void add(String s) {
+      if (s == null) return;
+      for (int i = 0; i < s.length() && chars <= DELETION_TEXT_CHARS; i++) {
+        char c = s.charAt(i);
+        if (c == '\t' || c == '\n' || c == '\u000b' || c == '\f') c = ' ';
+        else if (c == '\ufffc' || c < 0x20 || c >= 0x7f && c < 0xa0) continue;
+        chars++;
+        text.append(chars > DELETION_TEXT_CHARS ? '\u2026' : c);
+      }
+    }
   }
 
   /** {page, x, y} of a comment's start at the foot of its line, null when not in the body. */

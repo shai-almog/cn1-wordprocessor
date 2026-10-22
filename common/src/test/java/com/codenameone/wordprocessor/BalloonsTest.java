@@ -261,4 +261,50 @@ public class BalloonsTest {
     assertEquals(left * k, x0, 1f);
     assertTrue(x1 < w * k);
   }
+
+  private static List<String> revisionLabels(Document d, float width) {
+    var engine = new LayoutEngine(METRICS);
+    engine.setHideDeleted(true);
+    var r = engine.layout(d, 0);
+    var out = new java.util.ArrayList<String>();
+    for (List<Balloons.Card> page : Balloons.layout(d, r, METRICS, "revisions"))
+      for (Balloons.Card c : page) {
+        var t = new StringBuilder();
+        for (int k = 1; k < c.items.size(); k++) if (c.items.get(k).text != null) t.append(c.items.get(k).text);
+        out.add(t.toString().replace(" ", ""));
+      }
+    return out;
+  }
+
+  @Test
+  public void aDeletionAcrossLinesAndMarksIsOneTruncatedBalloon() {
+    // Wordcraft review.rs deletion_balloons: one balloon per deletion, cut to
+    // DELETION_TEXT_CHARS characters and an ellipsis.
+    var s = new Session(Document.empty());
+    var long_ = new StringBuilder();
+    for (int i = 0; i < 400; i++) long_.append("word ");
+    s.replace(long_ + "\nsecond paragraph");
+    s.trackChanges(true);
+    s.selectRange(0, 0, 1, 6);
+    s.deleteBackward();
+    var labels = revisionLabels(s.document(), 0);
+    assertEquals(labels.toString(), 1, labels.size());
+    String l = labels.get(0);
+    assertTrue(l, l.startsWith("Deleted:wordword") && l.endsWith("…"));
+  }
+
+  @Test
+  public void aMovesSourceHasAMovedFromBalloonOnly() {
+    var s = new Session(Document.empty());
+    s.replace("First one.\nSecond one.\nThird one.");
+    s.reviewAuthor("Ana");
+    s.trackChanges(true);
+    s.selectRange(1, 0, 2, 0);
+    String text = s.cut();
+    s.select(0, 0, 0);
+    s.pasteText(text);
+    var labels = revisionLabels(s.document(), 0);
+    assertTrue(labels.toString(), labels.contains("Movedfrom"));
+    for (String l : labels) assertFalse(labels.toString(), l.startsWith("Deleted:"));
+  }
 }
