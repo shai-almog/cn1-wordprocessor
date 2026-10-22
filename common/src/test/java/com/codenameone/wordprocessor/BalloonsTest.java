@@ -433,4 +433,28 @@ public class BalloonsTest {
     var labels = revisionLabels(d, 0);
     assertEquals(labels.toString(), 1, java.util.Collections.frequency(labels, "Deleted:\u00b6"));
   }
+
+  @Test
+  public void aDeletedMarkOfAnRtlParagraphAnchorsAtItsLeftEnd() {
+    var s = new Session(Document.empty());
+    s.replace("one\ntwo");
+    s.selectRange(0, 0, 1, 3);
+    s.mapParagraphs(p -> p.with("rtl", "true"));
+    s.reviewAuthor("Ana");
+    s.trackChanges(true);
+    s.selectRange(0, 3, 1, 0);
+    s.deleteBackward();
+    var d = s.document();
+    var engine = new LayoutEngine(METRICS);
+    engine.setHideDeleted(true);
+    var r = engine.layout(d, 0);
+    LayoutEngine.Line first = null;
+    for (LayoutEngine.Line l : r.pages.get(0).lines) if (first == null && l.block >= 0) first = l;
+    assertTrue(first.rtl);
+    Balloons.Card card = null;
+    for (List<Balloons.Card> page : Balloons.layout(d, r, METRICS, "revisions")) for (Balloons.Card c : page) card = c;
+    assertNotNull(card);
+    float left = first.toPage(first.x, 0)[0], right = first.toPage(first.x + first.width, 0)[0];
+    assertEquals(left + " " + right, left, card.anchorX, 0.5f);
+  }
 }

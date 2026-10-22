@@ -214,7 +214,9 @@ public final class Balloons {
             if (mark != null && !mark.inserted() && mark.move == null) {
               if (open == null || !open.who.author.equals(mark.author)) {
                 if (count < MAX_BALLOONS) {
-                  float[] foot = lastLine.toPage(lastLine.x + lastLine.width, lastLine.y + lastLine.height);
+                  // The mark sits at the paragraph's logical end: the left end of a right-to-left line.
+                  float endX = lastLine.rtl ? lastLine.x : lastLine.x + lastLine.width;
+                  float[] foot = lastLine.toPage(endX, lastLine.y + lastLine.height);
                   open = new Pending(mark, lastPage, foot);
                   cards.add(open);
                   count++;
