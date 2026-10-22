@@ -12,6 +12,15 @@ final class PdfFonts {
   private final PdfExporter.FontProvider provider;
   private final Map<String, Face> faces = new LinkedHashMap<>();
   private final Set<String> broken = new HashSet<>();
+  /** Export warnings, such as a chosen face substituted because its license forbids embedding. */
+  final Set<String> warnings = new LinkedHashSet<>();
+
+  /** A face whose OS/2 fsType forbids outline embedding. */
+  static final class Restricted extends IOException {
+    Restricted(String message) {
+      super(message);
+    }
+  }
 
   PdfFonts(PdfExporter.FontProvider provider) {
     this.provider = provider;
@@ -27,10 +36,11 @@ final class PdfFonts {
     if (face == null) {
       try {
         face = new Face(name, provider.bytes(name), faces.size() + 4);
+      } catch (Restricted restricted) {
+        // A restricted chosen face is substituted by Chain; fallback faces that fail here are
+        // skipped by Chain.pick, and installed faces by SystemFonts.find.
+        throw restricted;
       } catch (IOException unusable) {
-        // Name the face, so a restricted-license (OS/2 fsType 0x0002) or bitmap-only (0x0200)
-        // chosen font is reported rather than an anonymous failure; fallback faces that fail
-        // here are skipped by Chain.pick, and installed faces by SystemFonts.find.
         throw new IOException("Font " + name + ": " + unusable.getMessage(), unusable);
       }
       faces.put(name, face);
@@ -48,11 +58,37 @@ final class PdfFonts {
     final List<Face> loaded = new ArrayList<>();
 
     Chain(TextStyle style) throws IOException {
-      primary = face(style);
       rest =
           provider instanceof PdfExporter.FallbackFonts
               ? new ArrayList<>(((PdfExporter.FallbackFonts) provider).fallbacks(style))
               : new ArrayList<String>();
+      String name = provider.name(style);
+      Face chosen;
+      try {
+        chosen = broken.contains(name) ? null : face(style);
+      } catch (Restricted restricted) {
+        broken.add(name);
+        chosen = null;
+      }
+      if (chosen == null) {
+        // The chosen face's license forbids embedding: substitute the next loadable fallback,
+        // else the installed face covering Latin, and warn rather than failing the export.
+        while (chosen == null && !rest.isEmpty()) {
+          var next = rest.remove(0);
+          if (broken.contains(next)) continue;
+          try {
+            chosen = named(next);
+          } catch (IOException unusable) {
+            broken.add(next);
+          }
+        }
+        if (chosen == null) chosen = system('a');
+        if (chosen == null)
+          throw new IOException("Font " + name + ": license prohibits embedding and no substitute");
+        warnings.add("Font " + name + " cannot be embedded (license restriction); substituted "
+            + chosen.name);
+      }
+      primary = chosen;
     }
 
     Face pick(int cp) throws IOException {
@@ -275,6 +311,7 @@ final class PdfFonts {
 
     /** Subset tag: six capitals derived from the used glyphs, as PDF 9.6.4 asks. */
     String tag() {
+      if (font.wholeFont) return name;
       int h = glyphCodes.hashCode() ^ name.hashCode();
       var sb = new StringBuilder();
       for (int i = 0; i < 6; i++) {
@@ -289,12 +326,13 @@ final class PdfFonts {
       int file;
       if (font.cff) {
         var t = font.tables.get("CFF ");
-        byte[] cff = Cff.subset(Arrays.copyOfRange(font.data, t[0], t[0] + t[1]), glyphCodes);
+        byte[] table = Arrays.copyOfRange(font.data, t[0], t[0] + t[1]);
+        byte[] cff = font.wholeFont ? table : Cff.subset(table, glyphCodes);
         file = add(objects, stream("/Subtype /CIDFontType0C", cff, true));
       } else if (font.cff2) {
         file = add(objects, stream("/Subtype /OpenType", font.data, true));
       } else {
-        byte[] subset = FontSubset.subset(font, glyphCodes);
+        byte[] subset = font.wholeFont ? font.data : FontSubset.subset(font, glyphCodes);
         file = add(objects, stream("/Length1 " + subset.length, subset, true));
       }
       int descriptor =
@@ -393,6 +431,8 @@ final class PdfFonts {
     final float italic;
     /** CFF (version 1) or CFF2 outlines instead of TrueType 'glyf' ones. */
     final boolean cff, cff2;
+    /** OS/2 fsType 0x0100: the license forbids subsetting, so the whole font is embedded. */
+    final boolean wholeFont;
 
     TrueType(byte[] bytes) throws IOException {
       if (bytes == null || bytes.length > 20 * 1024 * 1024)
@@ -424,8 +464,14 @@ final class PdfFonts {
       var post = tables.get("post");
       italic = post != null && post[1] >= 8 ? ((int) raw32(post[0] + 4)) / 65536f : 0;
       var os = tables.get("OS/2");
-      if (os != null && os[1] >= 10 && (u16(os[0] + 8) & 0x202) != 0)
-        throw new IOException("Font license prohibits outline embedding");
+      // OS/2 fsType: when several usage bits are set the least restrictive wins, so 0x0002
+      // (restricted) forbids embedding only without 0x0004 (preview & print) or 0x0008
+      // (editable); 0x0200 (bitmap embedding only) forbids outlines; 0x0100 (no subsetting)
+      // embeds the whole font.
+      int fsType = os != null && os[1] >= 10 ? u16(os[0] + 8) : 0;
+      if ((fsType & 0xe) == 0x2 || (fsType & 0x200) != 0)
+        throw new Restricted("Font license prohibits outline embedding");
+      wholeFont = (fsType & 0x100) != 0;
       int base = table("cmap", 4),
           length = tables.get("cmap")[1],
           n = u16(base + 2),

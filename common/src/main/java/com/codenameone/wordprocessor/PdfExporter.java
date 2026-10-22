@@ -183,6 +183,15 @@ public final class PdfExporter {
 
   /** Paginate and embed with the same font instances, loading each face at most once per export. */
   public static byte[] write(Document document, FontProvider provider) throws IOException {
+    return write(document, provider, null);
+  }
+
+  /**
+   * As {@link #write(Document, FontProvider)}, adding to {@code warnings} (when not null) what the
+   * export changed, such as a chosen face substituted because its license forbids embedding.
+   */
+  public static byte[] write(Document document, FontProvider provider, List<String> warnings)
+      throws IOException {
     if (provider == null) return write(document);
     final var fonts = new PdfFonts(provider);
     LayoutEngine.Result layout;
@@ -191,7 +200,9 @@ public final class PdfExporter {
     } catch (FontFailure failure) {
       throw failure.error;
     }
-    return writeWithFonts(document.page, layout, fonts, document);
+    byte[] pdf = writeWithFonts(document.page, layout, fonts, document);
+    if (warnings != null) warnings.addAll(fonts.warnings);
+    return pdf;
   }
 
   /** Headless pagination using the same font advances as embedded PDF export. */
@@ -300,8 +311,17 @@ public final class PdfExporter {
 
   public static byte[] write(PageSpec fallback, LayoutEngine.Result layout, FontProvider provider)
       throws IOException {
-    return writeWithFonts(
-        fallback, layout, provider == null ? null : new PdfFonts(provider), null);
+    return write(fallback, layout, provider, null);
+  }
+
+  /** As above, adding export warnings (such as substituted restricted faces) to {@code warnings}. */
+  public static byte[] write(
+      PageSpec fallback, LayoutEngine.Result layout, FontProvider provider, List<String> warnings)
+      throws IOException {
+    var fonts = provider == null ? null : new PdfFonts(provider);
+    byte[] pdf = writeWithFonts(fallback, layout, fonts, null);
+    if (warnings != null && fonts != null) warnings.addAll(fonts.warnings);
+    return pdf;
   }
 
   private static byte[] writeWithFonts(

@@ -8049,6 +8049,7 @@ public class WordProcessor {
         () -> {
           try {
             byte[] bytes;
+            final var exportWarnings = new ArrayList<String>();
             if ("docx".equals(format)) {
               boolean allow = false;
               var losses = Docx.conversionWarnings(snapshot, pkg);
@@ -8074,7 +8075,9 @@ public class WordProcessor {
               Odt.write(snapshot, out);
               bytes = out.toByteArray();
             } else if ("pdf".equals(format))
-              bytes = PdfExporter.write(snapshot.page, editor.printLayout(), DocumentFonts.PDF);
+              bytes =
+                  PdfExporter.write(
+                      snapshot.page, editor.printLayout(), DocumentFonts.PDF, exportWarnings);
             else if ("cn1doc".equals(format)) bytes = ProjectFile.write(snapshot, pkg);
             else if ("tex".equals(format)) bytes = Latex.write(snapshot).getBytes("UTF-8");
             else {
@@ -8107,6 +8110,7 @@ public class WordProcessor {
                   status.setText(
                       ok
                           ? "Saved " + message
+                              + (exportWarnings.isEmpty() ? "" : " - " + exportWarnings.get(0))
                           : message == null ? "Save cancelled" : "Save failed: " + message);
                   if (ok && afterSave != null && epoch == documentEpoch) {
                     if (session.document() == snapshot) afterSave.run();
