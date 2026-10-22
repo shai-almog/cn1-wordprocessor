@@ -100,34 +100,65 @@ public final class TextFormats {
   /** Deepest element nesting passed to the HTML parser, which recurses once per open element. */
   static final int MAX_HTML_DEPTH = 64;
 
-  private static final String HTML_VOID =
-      " area base br col embed hr img input link meta param source track wbr basefont frame keygen ";
+  /** CN1 HTMLParser's EMPTY_TAGS: the only elements it does not nest content into. */
+  private static final String HTML_VOID = " br link meta base area basefont col frame hr img input isindex param ";
   private static final String HTML_TABLE = " table tr td th tbody thead tfoot caption colgroup col ";
   private static final String HTML_BLOCK =
       " p div li ul ol dl dt dd blockquote h1 h2 h3 h4 h5 h6 pre section article header footer table tr td th ";
 
-  private static boolean nameChar(char c) {
-    return c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c >= '0' && c <= '9' || c == '-' || c == ':' || c == '_';
+  private static boolean htmlSpace(char c) {
+    return c == ' ' || c == '\n' || c == '\r' || c == '\t';
   }
 
-  /** Index just past the '>' ending the tag that starts at {@code from}, honoring quotes; -1 if none. */
-  private static int tagEnd(String s, int from) {
-    char quote = 0;
-    for (int i = from; i < s.length(); i++) {
-      char c = s.charAt(i);
-      if (quote != 0) {
-        if (c == quote) quote = 0;
-      } else if (c == '"' || c == '\'') quote = c;
-      else if (c == '>') return i + 1;
-    }
-    return -1;
+  private static int skipSpace(String s, int p) {
+    while (p < s.length() && htmlSpace(s.charAt(p))) p++;
+    return p;
   }
 
   /**
-   * HTML with opening and closing tags deeper than {@code max} open elements removed and their
-   * text kept, so hostile nesting (thousands of lists, spans, quotes) cannot overflow the stack of
-   * the recursive HTML parser. Void elements, self-closing tags, comments, CDATA, declarations and
-   * script/style raw text do not nest; unclosed tags close when an enclosing tag closes. A dropped
+   * End of the opening tag whose name ends at {@code p}, read as CN1's XMLParser.parseTag reads
+   * attributes (quotes only delimit a value after '='); {@code [end, selfClosed]}, or null at EOF.
+   */
+  private static int[] openTagEnd(String s, int p) {
+    int n = s.length();
+    while (true) {
+      p = skipSpace(s, p);
+      if (p >= n) return null;
+      char c = s.charAt(p);
+      if (c == '>') return new int[] {p + 1, 0};
+      if (c == '/') {
+        p++;
+        if (p < n && s.charAt(p) == '>') return new int[] {p + 1, 1};
+        continue;
+      }
+      while (p < n && !htmlSpace(s.charAt(p)) && s.charAt(p) != '=' && s.charAt(p) != '>') p++;
+      if (p < n && s.charAt(p) == '>') return new int[] {p + 1, 0};
+      p = skipSpace(s, p);
+      if (p >= n) return null;
+      if (s.charAt(p) != '=') continue;
+      p = skipSpace(s, p + 1);
+      if (p >= n) return null;
+      c = s.charAt(p);
+      if (c == '"' || c == '\'') {
+        int q = s.indexOf(c, p + 1);
+        if (q < 0) return null;
+        p = q + 1;
+      } else {
+        p++;
+        while (p < n && !htmlSpace(s.charAt(p)) && s.charAt(p) != '/' && s.charAt(p) != '>') p++;
+      }
+    }
+  }
+
+  /**
+   * HTML with opening tags deeper than {@code max} open elements removed (their text kept), so
+   * hostile nesting cannot overflow CN1's recursive HTML parser. The depth mirrors that parser
+   * (XMLParser.parseTagContent/parseTag, HTMLParser.EMPTY_TAGS) so it cannot be fooled: every '<'
+   * that is not a comment, CDATA or declaration opens an element; only its EMPTY_TAGS and "/>" tags
+   * do not nest; a close tag ends an element only when its full text (up to '>') equals the
+   * innermost open element's name, otherwise the parser ignores it, so here it is dropped and does
+   * not change the depth. style, title and textarea contents are parsed as markup by CN1, so tags
+   * inside them count; only script is skipped raw, up to the exact text "</script>". A dropped
    * block close leaves a space so words do not run together. Generalizes TextBlocks.flattenTables.
    */
   static String limitHtmlDepth(String html, int max) {
@@ -148,87 +179,65 @@ public final class TextFormats {
       if (lt < 0) break;
       out.append(html, i, lt);
       i = lt;
-      if (lc.startsWith("<!--", lt)) {
-        int e = html.indexOf("-->", lt + 4);
-        e = e < 0 ? n : e + 3;
+      if (lt + 1 >= n) break;
+      char c1 = html.charAt(lt + 1);
+      if (c1 == '!' || c1 == '?') {
+        String endMark = lc.startsWith("<!--", lt) ? "-->" : lc.startsWith("<![cdata[", lt) ? "]]>" : ">";
+        int e = html.indexOf(endMark, lt + (endMark.length() == 3 ? 4 : 2));
+        e = e < 0 ? n : e + endMark.length();
         out.append(html, lt, e);
         i = e;
         continue;
       }
-      if (lc.startsWith("<![cdata[", lt)) {
-        int e = html.indexOf("]]>", lt + 9);
-        e = e < 0 ? n : e + 3;
-        out.append(html, lt, e);
-        i = e;
+      if (c1 == '/') {
+        int gt = html.indexOf('>', lt + 2);
+        if (gt < 0) break;
+        String name = lc.substring(lt + 2, gt);
+        boolean table = tablesExtracted && HTML_TABLE.indexOf(" " + name + " ") >= 0;
+        if (table) out.append(html, lt, gt + 1);
+        else if (!stack.isEmpty() && stack.get(stack.size() - 1).equals(name)) {
+          stack.remove(stack.size() - 1);
+          out.append(html, lt, gt + 1);
+        } else if (name.length() > 0 && HTML_BLOCK.indexOf(" " + name + " ") >= 0) out.append(' ');
+        i = gt + 1;
         continue;
       }
-      if (lt + 1 < n && (html.charAt(lt + 1) == '!' || html.charAt(lt + 1) == '?')) {
-        int e = html.indexOf('>', lt);
-        e = e < 0 ? n : e + 1;
-        out.append(html, lt, e);
-        i = e;
-        continue;
-      }
-      boolean close = lt + 1 < n && html.charAt(lt + 1) == '/';
-      int j = lt + (close ? 2 : 1);
-      int k = j;
-      while (k < n && nameChar(html.charAt(k))) k++;
-      if (k == j || !(lc.charAt(j) >= 'a' && lc.charAt(j) <= 'z')) {
-        out.append('<');
-        i = lt + 1;
-        continue;
-      }
+      int j = skipSpace(html, lt + 1), k = j;
+      while (k < n && !htmlSpace(html.charAt(k)) && html.charAt(k) != '>' && html.charAt(k) != '/') k++;
+      if (k >= n) break;
       String name = lc.substring(j, k);
-      int end = tagEnd(html, k);
-      if (end < 0) {
-        out.append(html, lt, n);
-        i = n;
-        break;
-      }
-      if (tablesExtracted && HTML_TABLE.indexOf(" " + name + " ") >= 0) {
-        out.append(html, lt, end);
-        i = end;
-        continue;
-      }
-      if (close) {
-        // Close the nearest matching open element (looking a bounded way up the stack).
-        int at = -1;
-        for (int s = stack.size() - 1; s >= 0 && s >= stack.size() - 256; s--)
-          if (stack.get(s).equals(name)) {
-            at = s;
-            break;
-          }
-        boolean keep = at >= 0 ? at < max : stack.size() < max;
-        if (at >= 0) while (stack.size() > at) stack.remove(stack.size() - 1);
-        if (keep) out.append(html, lt, end);
-        else if (HTML_BLOCK.indexOf(" " + name + " ") >= 0) out.append(' ');
-        i = end;
-        continue;
-      }
-      boolean selfClosing = end - 2 >= k && html.charAt(end - 2) == '/';
-      boolean nests = !selfClosing && HTML_VOID.indexOf(" " + name + " ") < 0;
       boolean keep = stack.size() < max;
-      if (keep) out.append(html, lt, end);
-      i = end;
-      boolean raw = name.equals("script") || name.equals("style");
-      if (raw || name.equals("textarea") || name.equals("title")) {
-        if (selfClosing) continue;
-        // Raw text: copied verbatim up to its own close tag (dropped with the tag for script/style).
-        int e = lc.indexOf("</" + name, i);
-        if (e < 0) e = n;
-        if (keep || !raw) out.append(html, i, e);
-        i = e;
-        if (e < n) {
-          int ce = tagEnd(html, e + 2 + name.length());
-          ce = ce < 0 ? n : ce;
-          if (keep) out.append(html, e, ce);
-          i = ce;
+      if (name.equals("script")) {
+        // HTMLParser skips the unsupported script tag raw: to the first '>' (quotes ignored),
+        // then, unless that ended "/>", to the exact (case-insensitive) "</script>".
+        int gt = html.indexOf('>', k);
+        int e = gt < 0 ? n : gt + 1;
+        if (gt > 0 && html.charAt(gt - 1) != '/') {
+          int close = lc.indexOf("</script>", e);
+          e = close < 0 ? n : close + 9;
         }
+        if (keep) out.append(html, lt, e);
+        i = e;
         continue;
       }
-      if (nests) stack.add(name);
+      int[] end = openTagEnd(html, k);
+      if (end == null) break;
+      if (tablesExtracted && HTML_TABLE.indexOf(" " + name + " ") >= 0) {
+        out.append(html, lt, end[0]);
+        i = end[0];
+        continue;
+      }
+      if (keep) {
+        out.append(html, lt, end[0]);
+        if (end[1] == 0 && HTML_VOID.indexOf(" " + name + " ") < 0) stack.add(name);
+      }
+      i = end[0];
     }
-    out.append(html, i, n);
+    if (i < n) {
+      // An unterminated tag at the end: the parser stops there, so keep only text before it.
+      if (html.charAt(i) == '<') out.append(stack.size() < max ? html.substring(i) : "");
+      else out.append(html, i, n);
+    }
     return out.toString();
   }
 

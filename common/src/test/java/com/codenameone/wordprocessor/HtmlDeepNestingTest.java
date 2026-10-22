@@ -14,7 +14,13 @@ public class HtmlDeepNestingTest {
     return b.append("<p>after</p></body></html>").toString();
   }
 
+  /** The limited HTML parses directly, without the safety net in TextFormats.read. */
+  private static void parses(String html) {
+    com.codename1.ui.editor.RichTextImporter.parse(TextFormats.limitHtmlDepth(html, TextFormats.MAX_HTML_DEPTH), RichTextFormat.HTML);
+  }
+
   private static void assertReads(String html) {
+    parses(html);
     String text = TextFormats.read(html, RichTextFormat.HTML, true).plainText();
     assertTrue(text, text.contains("innermost"));
     assertTrue(text, text.contains("after"));
@@ -39,6 +45,33 @@ public class HtmlDeepNestingTest {
   public void deepMixedNestingWithVoidsCommentsAndScriptIsCapped() {
     assertReads(nest("<div><b><br><img src=\"x.png\"/><!-- <i> --><span class='a>b'><script>if (a<b) x='<em>';</script>",
         "</span></b></div>", 3000));
+  }
+
+  private static String repeat(String s, int n) {
+    var b = new StringBuilder();
+    for (int i = 0; i < n; i++) b.append(s);
+    return b.toString();
+  }
+
+  @Test
+  public void misnestedClosesAreCapped() {
+    assertReads("<html><body>" + repeat("<i><b></i>", 3000) + "innermost<p>after</p></body></html>");
+    assertReads("<html><body>" + repeat("<span><b></span>", 3000) + "innermost<p>after</p></body></html>");
+    assertReads("<html><body>" + repeat("<b></b ></B.c>", 3000) + "innermost<p>after</p></body></html>");
+  }
+
+  @Test
+  public void tagsInsideStyleTextareaTitleAndScriptAreCounted() {
+    for (String t : new String[] {"style", "textarea", "title"})
+      // The close does not match the innermost open span, so the parser keeps the rest inside the
+      // element (and the importer may hide it); it must not overflow.
+      parses("<html><body><" + t + ">" + repeat("<span>", 3000) + "</" + t + ">innermost<p>after</p></body></html>");
+    // The parser skips script only up to the exact \"</script>\"; a spaced close does not end it there.
+    parses("<html><body><script>" + repeat("<span>", 3000) + "</script >innermost<p>after</p></body></html>");
+    // An unclosed script swallows the rest, as the parser does; it must not overflow either.
+    parses("<html><body><script a=\">\">" + repeat("<span>", 3000) + "x");
+    assertReads("<html><body>" + repeat("<b x'>", 3000) + "innermost<p>after</p></body></html>");
+    assertReads("<html><body>" + repeat("<wbr><source><embed>", 1000) + "innermost<p>after</p></body></html>");
   }
 
   @Test
