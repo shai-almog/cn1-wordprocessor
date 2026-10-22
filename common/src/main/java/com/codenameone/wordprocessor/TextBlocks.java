@@ -71,6 +71,42 @@ final class TextBlocks {
     return text;
   }
 
+  /** Deepest table nesting read from HTML/RTF cells; deeper cells keep only their text. */
+  static final int MAX_NESTING = 64;
+  /** Current cell nesting depth (readers run on one thread). */
+  private static int nesting;
+
+  /** HTML with its table structure tags removed; a closing cell or row leaves a space. */
+  static String flattenTables(String html) {
+    String lc = html.toLowerCase();
+    var b = new StringBuilder(html.length());
+    int i = 0;
+    while (i < html.length()) {
+      int lt = lc.indexOf('<', i);
+      if (lt < 0) break;
+      b.append(html, i, lt);
+      int j = lt + 1;
+      boolean close = j < lc.length() && lc.charAt(j) == '/';
+      if (close) j++;
+      int k = j;
+      while (k < lc.length() && (lc.charAt(k) >= 'a' && lc.charAt(k) <= 'z' || lc.charAt(k) >= '0' && lc.charAt(k) <= '9')) k++;
+      String name = lc.substring(j, k);
+      boolean structural = name.equals("table") || name.equals("tr") || name.equals("td") || name.equals("th")
+          || name.equals("tbody") || name.equals("thead") || name.equals("tfoot") || name.equals("caption")
+          || name.equals("colgroup") || name.equals("col");
+      int gt = lc.indexOf('>', lt);
+      if (!structural || gt < 0) {
+        b.append('<');
+        i = lt + 1;
+        continue;
+      }
+      if (close && (name.equals("td") || name.equals("th") || name.equals("tr"))) b.append(' ');
+      i = gt + 1;
+    }
+    b.append(html, i, html.length());
+    return b.toString();
+  }
+
   private Sequence<Block> cell(String source) {
     var out = new Sequence<Block>();
     if (source.trim().length() > 0) {
@@ -81,7 +117,20 @@ final class TextBlocks {
         // RTF cells keep their \\pict groups as cell pictures too (Wordcraft's RTF reader).
         boolean nested = format == RichTextFormat.HTML && (lower.indexOf("<table") >= 0 || lower.indexOf("<img") >= 0)
             || format == RichTextFormat.RTF && source.indexOf("{\\pict") >= 0;
-        Document d = TextFormats.read(source, format, nested);
+        // Each nested table level recurses through TextFormats.read; past MAX_NESTING levels the
+        // cell is read as plain text (tables flattened) so deep nesting cannot overflow the stack.
+        // The table tags are dropped too: the HTML parser itself recurses per open element.
+        if (nesting >= MAX_NESTING) {
+          nested = false;
+          if (format == RichTextFormat.HTML) source = flattenTables(source);
+        }
+        Document d;
+        nesting++;
+        try {
+          d = TextFormats.read(source, format, nested);
+        } finally {
+          nesting--;
+        }
         for (Block b : d.blocks)
           if (b instanceof Table inner) {
             long[] n = {next};
