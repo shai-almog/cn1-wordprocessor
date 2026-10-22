@@ -242,21 +242,36 @@ final class OpenType {
   }
 
   /** Whether the lookup being run is a GPOS one (set by runLookup). */
-  private boolean positioning;
+  boolean positioning;
 
   /**
    * A default-ignorable character (ZWJ, ZWNJ, variation selectors...) not replaced by GSUB,
-   * as HarfBuzz/harfrust's _hb_glyph_info_is_default_ignorable.
+   * as HarfBuzz/harfrust's _hb_glyph_info_is_default_ignorable (harfrust's is_default_ignorable
+   * table: U+115F, U+1160, U+3164, U+FFA0, U+180F and U+1BCA0..1BCA3 are not in it).
    */
   static boolean ignorable(Glyph g) {
-    if ((g.flags & SUBSTITUTED) != 0) return false;
-    int c = g.cp;
-    return c == 0xad || c == 0x34f || c == 0x61c || c >= 0x115f && c <= 0x1160
-        || c >= 0x17b4 && c <= 0x17b5 || c >= 0x180b && c <= 0x180f || c >= 0x200b && c <= 0x200f
-        || c >= 0x202a && c <= 0x202e || c >= 0x2060 && c <= 0x206f || c == 0x3164
-        || c >= 0xfe00 && c <= 0xfe0f || c == 0xfeff || c == 0xffa0 || c >= 0xfff0 && c <= 0xfff8
-        || c >= 0x1bca0 && c <= 0x1bca3 || c >= 0x1d173 && c <= 0x1d17a
-        || c >= 0xe0000 && c <= 0xe0fff;
+    return (g.flags & SUBSTITUTED) == 0 && ignorable(g.cp);
+  }
+
+  static boolean ignorable(int c) {
+    return c == 0xad || c == 0x34f || c == 0x61c || c >= 0x17b4 && c <= 0x17b5
+        || c >= 0x180b && c <= 0x180e || c >= 0x200b && c <= 0x200f
+        || c >= 0x202a && c <= 0x202e || c >= 0x2060 && c <= 0x206f
+        || c >= 0xfe00 && c <= 0xfe0f || c == 0xfeff || c >= 0xfff0 && c <= 0xfff8
+        || c >= 0x1d173 && c <= 0x1d17a || c >= 0xe0000 && c <= 0xe0fff;
+  }
+
+  /**
+   * harfrust's HIDDEN unicode property: CGJ, Mongolian free variation selectors 1-3 and TAG
+   * characters, default ignorables that GSUB matching does not skip (GPOS does).
+   */
+  static boolean hidden(int c) {
+    return c == 0x34f || c >= 0x180b && c <= 0x180d || c >= 0xe0020 && c <= 0xe007f;
+  }
+
+  /** The glyph a lookup expects at a matched position, for skippable glyphs it may still match. */
+  interface Want {
+    boolean ok(int glyph) throws IOException;
   }
 
   /** Whether lookup flag {@code flag} ignores {@code g}. */
@@ -276,15 +291,28 @@ final class OpenType {
 
   private int nextIndex(int lookup, int flag, List<Glyph> buffer, int i, int step)
       throws IOException {
-    for (int j = i + step; j >= 0 && j < buffer.size(); j += step)
-      // GPOS matching also skips default ignorables, as harfrust's skippy iterator (ignore_zwnj
-      // and ignore_zwj are both set for GPOS); GSUB keeps them, since its auto-ZWJ depends on
-      // per-feature manual-joiner flags not modelled here. The glyph a lookup starts at is never
-      // skipped for being ignorable (harfrust only checks its glyph properties).
-      if (!(positioning && ignorable(buffer.get(j))) && !skip(lookup, flag, buffer.get(j))) {
-        int syllable = buffer.get(i).syllable;
-        return perSyllable && syllable != 0 && buffer.get(j).syllable != syllable ? -1 : j;
-      }
+    return nextIndex(lookup, flag, buffer, i, step, null);
+  }
+
+  /**
+   * The next position from {@code i} the lookup matches against, as harfrust's skippy iterator:
+   * glyphs the lookup flag ignores are skipped; a default ignorable is SKIP_MAYBE (skipped
+   * unless it is the glyph {@code want} expects). GPOS treats every default ignorable so
+   * (ignore_zwnj, ignore_zwj and ignore_hidden); GSUB never skips hidden ones (CGJ, Mongolian
+   * FVS, TAG) and keeps ZWJ/ZWNJ, since its auto-ZWJ depends on per-feature manual-joiner flags
+   * not modelled here. The glyph a lookup starts at is never skipped for being ignorable.
+   */
+  int nextIndex(int lookup, int flag, List<Glyph> buffer, int i, int step, Want want)
+      throws IOException {
+    for (int j = i + step; j >= 0 && j < buffer.size(); j += step) {
+      var g = buffer.get(j);
+      if (skip(lookup, flag, g)) continue;
+      boolean maybe = ignorable(g)
+          && (positioning || !hidden(g.cp) && g.cp != 0x200c && g.cp != 0x200d);
+      if (maybe && (want == null || !want.ok(g.id))) continue;
+      int syllable = buffer.get(i).syllable;
+      return perSyllable && syllable != 0 && g.syllable != syllable ? -1 : j;
+    }
     return -1;
   }
 
@@ -360,8 +388,9 @@ final class OpenType {
         at[0] = i;
         boolean match = count > 0;
         for (int k = 1; k < count && match; k++) {
-          at[k] = nextIndex(lookup, flag, buffer, at[k - 1], 1);
-          match = at[k] >= 0 && buffer.get(at[k]).id == font.u16(lig + 4 + 2 * (k - 1));
+          int expected = font.u16(lig + 4 + 2 * (k - 1));
+          at[k] = nextIndex(lookup, flag, buffer, at[k - 1], 1, id -> id == expected);
+          match = at[k] >= 0 && buffer.get(at[k]).id == expected;
         }
         if (!match) continue;
         int start = g.start, end = g.end, flags = g.flags;
@@ -469,20 +498,25 @@ final class OpenType {
         positions[0] = i;
         boolean ok = true;
         for (int k = 1; k < input && ok; k++) {
-          positions[k] = nextIndex(lookup, flag, buffer, positions[k - 1], 1);
-          ok = positions[k] >= 0
-              && matches(format, inputDef, buffer.get(positions[k]).id, font.u16(inputAt + 2 * (k - 1)));
+          int value = font.u16(inputAt + 2 * (k - 1)), def = inputDef;
+          Want want = id -> matches(format, def, id, value);
+          positions[k] = nextIndex(lookup, flag, buffer, positions[k - 1], 1, want);
+          ok = positions[k] >= 0 && want.ok(buffer.get(positions[k]).id);
         }
         if (!ok) continue;
         int p = i;
         for (int k = 0; k < backtrack && ok; k++) {
-          p = nextIndex(lookup, flag, buffer, p, -1);
-          ok = p >= 0 && matches(format, backDef, buffer.get(p).id, font.u16(backAt + 2 * k));
+          int value = font.u16(backAt + 2 * k), def = backDef;
+          Want want = id -> matches(format, def, id, value);
+          p = nextIndex(lookup, flag, buffer, p, -1, want);
+          ok = p >= 0 && want.ok(buffer.get(p).id);
         }
         p = positions[input - 1];
         for (int k = 0; k < lookahead && ok; k++) {
-          p = nextIndex(lookup, flag, buffer, p, 1);
-          ok = p >= 0 && matches(format, lookDef, buffer.get(p).id, font.u16(lookAt + 2 * k));
+          int value = font.u16(lookAt + 2 * k), def = lookDef;
+          Want want = id -> matches(format, def, id, value);
+          p = nextIndex(lookup, flag, buffer, p, 1, want);
+          ok = p >= 0 && want.ok(buffer.get(p).id);
         }
         if (!ok) continue;
         return apply(substitution, buffer, positions, at, records, depth);
@@ -498,10 +532,10 @@ final class OpenType {
     positions[0] = i;
     if (font.coverage(sub + font.u16(inputAt), buffer.get(i).id) < 0) return null;
     for (int k = 1; k < input; k++) {
-      positions[k] = nextIndex(lookup, flag, buffer, positions[k - 1], 1);
-      if (positions[k] < 0
-          || font.coverage(sub + font.u16(inputAt + 2 * k), buffer.get(positions[k]).id) < 0)
-        return null;
+      int cover = sub + font.u16(inputAt + 2 * k);
+      Want want = id -> font.coverage(cover, id) >= 0;
+      positions[k] = nextIndex(lookup, flag, buffer, positions[k - 1], 1, want);
+      if (positions[k] < 0 || !want.ok(buffer.get(positions[k]).id)) return null;
     }
     return positions;
   }
@@ -509,9 +543,10 @@ final class OpenType {
       int count, int listAt, int sub) throws IOException {
     int p = from;
     for (int k = 0; k < count; k++) {
-      p = nextIndex(lookup, flag, buffer, p, step);
-      if (p < 0 || font.coverage(sub + font.u16(listAt + 2 * k), buffer.get(p).id) < 0)
-        return false;
+      int cover = sub + font.u16(listAt + 2 * k);
+      Want want = id -> font.coverage(cover, id) >= 0;
+      p = nextIndex(lookup, flag, buffer, p, step, want);
+      if (p < 0 || !want.ok(buffer.get(p).id)) return false;
     }
     return true;
   }
