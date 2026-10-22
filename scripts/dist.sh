@@ -34,19 +34,30 @@ case $platform in
     if [[ $identity != - ]]; then
       limit 300 codesign --force --timestamp --sign "$identity" "dist/$name.dmg"
       if [[ -n ${NOTARY_APPLE_ID:-} ]]; then
-        # Apple can hold a submission for hours (a new team's first ones especially), so wait a
-        # bounded time. An unstapled but accepted DMG still passes Gatekeeper online; the staple
-        # only adds offline first launch.
+        # Apple can hold a submission for hours (a new team's first ones especially), so each wait
+        # is bounded; a submission still queued at the limit (exit 142) is not resubmitted.
         creds=(--apple-id "$NOTARY_APPLE_ID" --team-id "$NOTARY_TEAM_ID" --password "$NOTARY_PASSWORD")
-        status=0
-        limit 1500 xcrun notarytool submit "dist/$name.dmg" "${creds[@]}" --wait --timeout 20m || status=$?
-        if [[ $status == 0 ]]; then
+        # The notary service answers HTTP 500 for hours at a time; an upload that never got a
+        # verdict is retried, while an Invalid verdict is final. A tag build fails rather than
+        # releasing a DMG Gatekeeper rejects as "Unnotarized Developer ID".
+        log=$(mktemp) status=1 notarized=
+        for attempt in 1 2 3; do
+          status=0
+          limit 900 xcrun notarytool submit "dist/$name.dmg" "${creds[@]}" --wait --timeout 12m 2>&1 | tee "$log" || status=$?
+          [[ $status == 0 ]] && grep -q "status: Accepted" "$log" && { notarized=1; break; }
+          [[ $status == 142 ]] && break
+          grep -q "status: Invalid" "$log" && break
+          [[ $attempt == 3 || $SECONDS -gt 1800 ]] && break
+          echo "Notary attempt $attempt gave no verdict (exit $status); retrying in $((attempt * 90))s"
+          sleep $((attempt * 90))
+        done
+        if [[ -n $notarized ]]; then
           limit 300 xcrun stapler staple "dist/$name.dmg" \
-            || echo "::warning::Stapling $name.dmg failed; it is signed and may be notarized, but not stapled"
-        elif [[ $status == 142 ]]; then
-          echo "::warning::Notarization of $name.dmg did not finish in 25 minutes; it is signed, not stapled"
+            || echo "::warning::Stapling $name.dmg failed; it is notarized but not stapled"
         else
-          echo "::warning::Notarization of $name.dmg failed (exit $status; see notarytool output above); it is signed, not notarized"
+          msg="Notarization of $name.dmg failed (last exit $status; see notarytool output above); it is signed, not notarized, and Gatekeeper will refuse to open it"
+          [[ ${GITHUB_REF_TYPE:-} == tag ]] && { echo "::error::$msg"; exit 1; }
+          echo "::warning::$msg"
         fi
       fi
     fi ;;
