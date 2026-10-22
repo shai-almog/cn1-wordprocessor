@@ -335,6 +335,60 @@ public class SimulatorUiTest {
   }
 
   @Test
+  public void selectedObjectResizesByItsHandles() throws Exception {
+    edt(() -> ((Form) field(app, "form")).show());
+    for (int i = 0; i < 100 && Display.getInstance().getCurrent() != field(app, "form"); i++)
+      Thread.sleep(50);
+    final int[] canvas = {-1};
+    edt(
+        () -> {
+          load("Before");
+          ((Form) field(app, "form")).revalidate();
+          editor().resetScroll();
+          Method pen = WordProcessor.class.getDeclaredMethod("selectDrawTool", String.class);
+          pen.setAccessible(true);
+          pen.invoke(app, "pen");
+          pen.invoke(app, "");
+          editor().refresh();
+          assertFalse(editor().isInking());
+          var blocks = session().document().blocks;
+          for (int i = 0; i < blocks.size(); i++)
+            if (blocks.get(i) instanceof Picture p && p.drawing != null && "canvas".equals(p.drawing.kind))
+              canvas[0] = i;
+          assertTrue(canvas[0] >= 0);
+        });
+    Thread.sleep(450);
+    edt(
+        () -> {
+          var editor = editor();
+          int[] r = editor.pictureRect(canvas[0]);
+          var before = (Picture) session().document().blocks.get(canvas[0]);
+          // A click selects; the bottom-right handle then drags the size, keeping the ratio.
+          editor.pointerPressed(r[0] + r[2] / 2, r[1] + r[3] / 2);
+          editor.pointerReleased(r[0] + r[2] / 2, r[1] + r[3] / 2);
+          editor.pointerPressed(r[0] + r[2], r[1] + r[3]);
+          editor.pointerDragged(r[0] + r[2] + 20, r[1] + r[3] + 20);
+          editor.pointerDragged(r[0] + r[2] + 40, r[1] + r[3] + 40);
+          editor.pointerReleased(r[0] + r[2] + 40, r[1] + r[3] + 40);
+          editor.refresh();
+          var after = (Picture) session().document().blocks.get(canvas[0]);
+          assertTrue("the corner handle enlarges the object", after.width > before.width + 5);
+          assertEquals("a corner keeps the aspect ratio", before.width / before.height, after.width / after.height, .01);
+          // A side handle changes one dimension only.
+          int[] s = editor.pictureRect(canvas[0]);
+          editor.pointerPressed(s[0] + s[2], s[1] + s[3] / 2);
+          editor.pointerDragged(s[0] + s[2] - 30, s[1] + s[3] / 2);
+          editor.pointerReleased(s[0] + s[2] - 30, s[1] + s[3] / 2);
+          var narrow = (Picture) session().document().blocks.get(canvas[0]);
+          assertTrue("the right handle narrows it", narrow.width < after.width - 5);
+          assertEquals("the right handle keeps the height", after.height, narrow.height, .01);
+          session().undo();
+          assertEquals("one undo step", after.width, ((Picture) session().document().blocks.get(canvas[0])).width, .01);
+        });
+    Thread.sleep(450);
+  }
+
+  @Test
   public void drawModeKeepsTheCanvasMovableAndEscapeLeavesIt() throws Exception {
     edt(() -> ((Form) field(app, "form")).show());
     for (int i = 0; i < 100 && Display.getInstance().getCurrent() != field(app, "form"); i++)

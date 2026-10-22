@@ -2057,7 +2057,17 @@ public final class EditorSurface extends Container
       }
     }
     paintInk(g);
-    if (selectedPicture != null && !moving) {
+    if (resizePic != null && resizing) {
+      // The frame the object will be resized to.
+      float[] r = resizedRect(resizePic, moveX, moveY);
+      int gx = getX() + pageX(resizePage) + getScrollX() + Math.round(r[0] * scale());
+      int gy = baseY + pageY(resizePage) + Math.round(r[1] * scale());
+      g.setColor(0x2b579a);
+      g.setAlpha(20);
+      g.fillRect(gx, gy, Math.round(r[2] * scale()), Math.round(r[3] * scale()));
+      g.setAlpha(255);
+      g.drawRect(gx, gy, Math.round(r[2] * scale()), Math.round(r[3] * scale()));
+    } else if (selectedPicture != null && !moving) {
       // A selected object's frame and its eight handles, as Word marks it.
       for (int page = 0; page < layout().pages.size(); page++)
         for (LayoutEngine.PlacedPicture pic : layout().pages.get(page).pictures) {
@@ -2656,6 +2666,7 @@ public final class EditorSurface extends Container
     finishComposing();
     String wasSelected = selectedPicture;
     selectedPicture = null;
+    if (wasSelected != null && pressHandle(wasSelected, x, y)) return;
     var line = lineAt(x, y);
     for (int page = 0; page < layout().pages.size(); page++) {
       float px = (x - viewportX() - pageX(page)) / scale();
@@ -2797,6 +2808,81 @@ public final class EditorSurface extends Container
     return best;
   }
 
+  /** The object whose handle is being dragged, the handle (column * 3 + row) and its page. */
+  private LayoutEngine.PlacedPicture resizePic;
+  private int resizeHandle, resizePage;
+  private boolean resizing;
+
+  /** A press on a handle of the selected object starts resizing it, as Word's sizing handles. */
+  private boolean pressHandle(String id, int x, int y) {
+    float tolerance = OfficeTheme.px(6) / scale();
+    for (int page = 0; page < layout().pages.size(); page++) {
+      float px = (x - viewportX() - pageX(page)) / scale();
+      float py = (y - viewportY() + getScrollY() - pageY(page)) / scale();
+      for (LayoutEngine.PlacedPicture pic : layout().pages.get(page).pictures) {
+        if (!id.equals(pic.picture().id())) continue;
+        for (int i = 0; i <= 2; i++)
+          for (int j = 0; j <= 2; j++) {
+            if (i == 1 && j == 1) continue;
+            float hx = pic.x() + pic.width() * i / 2, hy = pic.y() + pic.height() * j / 2;
+            if (Math.abs(px - hx) > tolerance || Math.abs(py - hy) > tolerance) continue;
+            if (!selectObject(pic)) return false;
+            stopInput();
+            resizePic = pic;
+            resizeHandle = i * 3 + j;
+            resizePage = page;
+            movePressX = moveX = x;
+            movePressY = moveY = y;
+            selectedPicture = id;
+            return true;
+          }
+      }
+    }
+    return false;
+  }
+
+  /**
+   * The resized frame {x, y, w, h} in page points for the pointer at x, y: the handle's edges
+   * follow it and the opposite ones stay; a corner keeps the aspect ratio, as Word's corner handles.
+   */
+  private float[] resizedRect(LayoutEngine.PlacedPicture pic, int x, int y) {
+    float dx = (x - movePressX) / scale(), dy = (y - movePressY) / scale();
+    int i = resizeHandle / 3, j = resizeHandle % 3;
+    float min = 4;
+    float w = pic.width() + (i == 2 ? dx : i == 0 ? -dx : 0);
+    float h = pic.height() + (j == 2 ? dy : j == 0 ? -dy : 0);
+    w = Math.max(min, w);
+    h = Math.max(min, h);
+    if (i != 1 && j != 1 && pic.width() > 0 && pic.height() > 0) {
+      float k = Math.max(w / pic.width(), h / pic.height());
+      w = Math.max(min, pic.width() * k);
+      h = Math.max(min, pic.height() * k);
+    }
+    float left = i == 0 ? pic.x() + pic.width() - w : pic.x();
+    float top = j == 0 ? pic.y() + pic.height() - h : pic.y();
+    return new float[] {left, top, w, h};
+  }
+
+  /** Applies a handle drag; a press that barely moved changes nothing. */
+  private boolean dropResized(int x, int y) {
+    var pic = resizePic;
+    resizePic = null;
+    resizing = false;
+    if (pic == null) return false;
+    if (Math.abs(x - movePressX) + Math.abs(y - movePressY) < OfficeTheme.px(4)) return true;
+    float[] r = resizedRect(pic, x, y);
+    var blocks = session.editingDocument().blocks;
+    if (pic.block() >= blocks.size() || !(blocks.get(pic.block()) instanceof Picture p)) return true;
+    var next = p.resize(r[2], r[3], p.alt, p.align);
+    // A floating object dragged by a left or top handle keeps its opposite edge where it was.
+    boolean moved = Math.abs(r[0] - pic.x()) > .01f || Math.abs(r[1] - pic.y()) > .01f;
+    if (moved && !"inline".equals(p.wrap()) && !pic.inCell()) next = next.movedTo(r[0], r[1]);
+    session.replacePicture(pic.block(), next);
+    refresh();
+    changed.run();
+    return true;
+  }
+
   /**
    * Drops a dragged object: as Wordcraft, it floats with its top left where it was dropped,
    * measured from its anchor page's top left (Square wrapped if it was inline). A press that
@@ -2845,6 +2931,13 @@ public final class EditorSurface extends Container
     }
     if (ink != null && inkBlock >= 0) {
       inkDrag(x, y);
+      return;
+    }
+    if (resizePic != null) {
+      moveX = x;
+      moveY = y;
+      resizing = Math.abs(x - movePressX) + Math.abs(y - movePressY) >= OfficeTheme.px(4);
+      repaint();
       return;
     }
     if (movePic != null) {
@@ -2914,6 +3007,10 @@ public final class EditorSurface extends Container
     }
     int edit = editPictureOnRelease;
     editPictureOnRelease = -1;
+    if (dropResized(x, y)) {
+      dragBlock = -1;
+      return;
+    }
     if (dropMoved(x, y)) {
       dragBlock = -1;
       return;
