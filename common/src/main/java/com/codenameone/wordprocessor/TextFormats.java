@@ -97,6 +97,141 @@ public final class TextFormats {
     return read(text, format, true, base, images, warnings);
   }
 
+  /** Deepest element nesting passed to the HTML parser, which recurses once per open element. */
+  static final int MAX_HTML_DEPTH = 64;
+
+  private static final String HTML_VOID =
+      " area base br col embed hr img input link meta param source track wbr basefont frame keygen ";
+  private static final String HTML_TABLE = " table tr td th tbody thead tfoot caption colgroup col ";
+  private static final String HTML_BLOCK =
+      " p div li ul ol dl dt dd blockquote h1 h2 h3 h4 h5 h6 pre section article header footer table tr td th ";
+
+  private static boolean nameChar(char c) {
+    return c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c >= '0' && c <= '9' || c == '-' || c == ':' || c == '_';
+  }
+
+  /** Index just past the '>' ending the tag that starts at {@code from}, honoring quotes; -1 if none. */
+  private static int tagEnd(String s, int from) {
+    char quote = 0;
+    for (int i = from; i < s.length(); i++) {
+      char c = s.charAt(i);
+      if (quote != 0) {
+        if (c == quote) quote = 0;
+      } else if (c == '"' || c == '\'') quote = c;
+      else if (c == '>') return i + 1;
+    }
+    return -1;
+  }
+
+  /**
+   * HTML with opening and closing tags deeper than {@code max} open elements removed and their
+   * text kept, so hostile nesting (thousands of lists, spans, quotes) cannot overflow the stack of
+   * the recursive HTML parser. Void elements, self-closing tags, comments, CDATA, declarations and
+   * script/style raw text do not nest; unclosed tags close when an enclosing tag closes. A dropped
+   * block close leaves a space so words do not run together. Generalizes TextBlocks.flattenTables.
+   */
+  static String limitHtmlDepth(String html, int max) {
+    return limitHtmlDepth(html, max, false);
+  }
+
+  /**
+   * As {@link #limitHtmlDepth(String, int)}; with {@code tablesExtracted} table structure tags are
+   * kept and not counted, because TextBlocks lifts tables out before parsing and caps their nesting.
+   */
+  static String limitHtmlDepth(String html, int max, boolean tablesExtracted) {
+    String lc = html.toLowerCase();
+    var out = new StringBuilder(html.length());
+    var stack = new java.util.ArrayList<String>();
+    int i = 0, n = html.length();
+    while (i < n) {
+      int lt = html.indexOf('<', i);
+      if (lt < 0) break;
+      out.append(html, i, lt);
+      i = lt;
+      if (lc.startsWith("<!--", lt)) {
+        int e = html.indexOf("-->", lt + 4);
+        e = e < 0 ? n : e + 3;
+        out.append(html, lt, e);
+        i = e;
+        continue;
+      }
+      if (lc.startsWith("<![cdata[", lt)) {
+        int e = html.indexOf("]]>", lt + 9);
+        e = e < 0 ? n : e + 3;
+        out.append(html, lt, e);
+        i = e;
+        continue;
+      }
+      if (lt + 1 < n && (html.charAt(lt + 1) == '!' || html.charAt(lt + 1) == '?')) {
+        int e = html.indexOf('>', lt);
+        e = e < 0 ? n : e + 1;
+        out.append(html, lt, e);
+        i = e;
+        continue;
+      }
+      boolean close = lt + 1 < n && html.charAt(lt + 1) == '/';
+      int j = lt + (close ? 2 : 1);
+      int k = j;
+      while (k < n && nameChar(html.charAt(k))) k++;
+      if (k == j || !(lc.charAt(j) >= 'a' && lc.charAt(j) <= 'z')) {
+        out.append('<');
+        i = lt + 1;
+        continue;
+      }
+      String name = lc.substring(j, k);
+      int end = tagEnd(html, k);
+      if (end < 0) {
+        out.append(html, lt, n);
+        i = n;
+        break;
+      }
+      if (tablesExtracted && HTML_TABLE.indexOf(" " + name + " ") >= 0) {
+        out.append(html, lt, end);
+        i = end;
+        continue;
+      }
+      if (close) {
+        // Close the nearest matching open element (looking a bounded way up the stack).
+        int at = -1;
+        for (int s = stack.size() - 1; s >= 0 && s >= stack.size() - 256; s--)
+          if (stack.get(s).equals(name)) {
+            at = s;
+            break;
+          }
+        boolean keep = at >= 0 ? at < max : stack.size() < max;
+        if (at >= 0) while (stack.size() > at) stack.remove(stack.size() - 1);
+        if (keep) out.append(html, lt, end);
+        else if (HTML_BLOCK.indexOf(" " + name + " ") >= 0) out.append(' ');
+        i = end;
+        continue;
+      }
+      boolean selfClosing = end - 2 >= k && html.charAt(end - 2) == '/';
+      boolean nests = !selfClosing && HTML_VOID.indexOf(" " + name + " ") < 0;
+      boolean keep = stack.size() < max;
+      if (keep) out.append(html, lt, end);
+      i = end;
+      boolean raw = name.equals("script") || name.equals("style");
+      if (raw || name.equals("textarea") || name.equals("title")) {
+        if (selfClosing) continue;
+        // Raw text: copied verbatim up to its own close tag (dropped with the tag for script/style).
+        int e = lc.indexOf("</" + name, i);
+        if (e < 0) e = n;
+        if (keep || !raw) out.append(html, i, e);
+        i = e;
+        if (e < n) {
+          int ce = tagEnd(html, e + 2 + name.length());
+          ce = ce < 0 ? n : ce;
+          if (keep) out.append(html, e, ce);
+          i = ce;
+        }
+        continue;
+      }
+      if (nests) stack.add(name);
+    }
+    out.append(html, i, n);
+    return out.toString();
+  }
+
   static Document read(String text, RichTextFormat format, boolean blocks) {
     return read(text, format, blocks, null, null, null);
   }
@@ -104,6 +239,7 @@ public final class TextFormats {
   static Document read(
       String text, RichTextFormat format, boolean blocks, String base, ImageSource images,
       java.util.List<String> warnings) {
+    if (format == RichTextFormat.HTML && text != null) text = limitHtmlDepth(text, MAX_HTML_DEPTH, blocks);
     TextBlocks extracted = new TextBlocks(format);
     extracted.base = base;
     extracted.images = images;
