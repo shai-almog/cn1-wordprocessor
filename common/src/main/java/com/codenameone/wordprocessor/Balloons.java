@@ -179,77 +179,34 @@ public final class Balloons {
     }
     if (revisions) {
       boolean deletions = "revisions".equals(mode);
-      // Paragraph marks by id at any depth (nested cells too), so a deletion running across a
-      // deleted mark stays one balloon, as Wordcraft walks every paragraph path of the body.
-      var marks = new java.util.HashMap<String, Revision>();
-      collectMarks(d.blocks, marks);
       var cards = new ArrayList<Pending>();
-      // Wordcraft's deletion_balloons (cmd/review.rs): deleted text running on across spans,
-      // lines and deleted paragraph marks by the same author is one balloon, its text cut to
-      // DELETION_TEXT_CHARS and an ellipsis. A move's ends are not deletions: each end (move
-      // name, from/to) has one "Moved from"/"Moved to" balloon, as move_changes.
+      // Wordcraft's deletion_balloons (cmd/review.rs) walks the document, not the layout: deleted
+      // text running on across runs and deleted paragraph marks by the same author, in paragraph
+      // order (table cells and nested cells too), is one balloon, its text cut to
+      // DELETION_TEXT_CHARS and an ellipsis. Walking laid-out lines instead split a deletion
+      // whose row breaks across pages (the row's cells interleave) and repeated a header row's
+      // deletion on every page the header repeats on. Each balloon anchors at the first laid-out
+      // occurrence of its start, never at a repeated header copy.
+      if (deletions) {
+        var found = new ArrayList<Pending>();
+        collectDeletions(d.blocks, found, new Pending[1]);
+        for (Pending c : found) {
+          if (count >= MAX_BALLOONS) break;
+          if (!anchorDeletion(r, c)) continue;
+          cards.add(c);
+          count++;
+        }
+      }
+      // A move's ends are not deletions: each end (move name, from/to) has one "Moved from"/
+      // "Moved to" balloon, as move_changes. Formatting changes have a "Formatted" balloon per
+      // line. Repeated header copies are skipped: their originals carry the balloons.
       var seenMoves = new java.util.HashSet<String>();
-      Pending open = null;
-      String lastPara = null;
-      int lastPage = 0;
-      LayoutEngine.Line lastLine = null;
-      // Each paragraph's final laid-out line: a table row split across pages interleaves its
-      // cells' lines, so a cell paragraph is "left" once per page; its mark counts only once,
-      // when leaving its final line (the model paragraph's end).
-      var finalLine = new java.util.HashMap<String, LayoutEngine.Line>();
-      for (LayoutEngine.Page pg : r.pages)
-        for (LayoutEngine.Line l : pg.lines) if (l.block >= 0 && l.paragraphId != null) finalLine.put(l.paragraphId, l);
-      for (int p = 0; p <= r.pages.size(); p++) {
-        List<LayoutEngine.Line> lines = p < r.pages.size() ? r.pages.get(p).lines : java.util.Collections.<LayoutEngine.Line>emptyList();
-        for (int li = 0; li <= lines.size(); li++) {
-          boolean end = p == r.pages.size();
-          if (end && li > 0) break;
-          LayoutEngine.Line line = end ? null : li < lines.size() ? lines.get(li) : null;
-          if (line == null && !end) continue;
-          if (line != null && line.block < 0) continue;
-          String para = line == null ? null : line.paragraphId;
-          if (lastPara != null && !lastPara.equals(para)) {
-            // Leaving a paragraph: its deleted mark joins the open deletion or starts one.
-            Revision mark = deletions && finalLine.get(lastPara) == lastLine ? marks.get(lastPara) : null;
-            if (mark != null && !mark.inserted() && mark.move == null) {
-              if (open == null || !open.who.author.equals(mark.author)) {
-                if (count < MAX_BALLOONS) {
-                  // The mark sits at the paragraph's logical end: the left end of a right-to-left line.
-                  float endX = lastLine.rtl ? lastLine.x : lastLine.x + lastLine.width;
-                  float[] foot = lastLine.toPage(endX, lastLine.y + lastLine.height);
-                  open = new Pending(mark, lastPage, foot);
-                  cards.add(open);
-                  count++;
-                } else open = null;
-              }
-              if (open != null) open.add("\u00b6");
-            } else open = null;
-          }
-          if (line == null) break;
-          lastPara = para;
-          lastPage = p;
-          lastLine = line;
+      for (int p = 0; p < r.pages.size(); p++)
+        for (LayoutEngine.Line line : r.pages.get(p).lines) {
+          if (line.block < 0 || line.repeatedHeader) continue;
           boolean formatted = false;
           for (LayoutEngine.Span span : line.spans) {
             var rev = span.style.revision;
-            boolean deleted = deletions && rev != null && !rev.inserted();
-            if (deleted && rev.move == null) {
-              if (open != null && open.who.author.equals(rev.author)) {
-                open.add(span.text);
-                continue;
-              }
-              if (count >= MAX_BALLOONS) {
-                open = null;
-                continue;
-              }
-              float[] foot = line.toPage(line.x + span.x, line.y + line.height);
-              open = new Pending(rev, p, foot);
-              open.add(span.text);
-              count++;
-              cards.add(open);
-              continue;
-            }
-            if (span.text != null && !span.text.isEmpty()) open = null;
             String label = null;
             Revision who = null;
             if (deletions && rev != null && rev.move != null) {
@@ -269,7 +226,6 @@ public final class Balloons {
             cards.add(c);
           }
         }
-      }
       for (Pending c : cards) {
         int color = authorColor(d, c.who.author);
         var items = new ArrayList<Item>();
@@ -287,12 +243,82 @@ public final class Balloons {
     return pages;
   }
 
-  private static void collectMarks(Sequence<Block> blocks, java.util.Map<String, Revision> marks) {
+  /**
+   * Gathers the document's tracked deletions in paragraph order, as Wordcraft's
+   * deletion_balloons: {@code open[0]} is the deletion still running on.
+   */
+  private static void collectDeletions(Sequence<Block> blocks, List<Pending> out, Pending[] open) {
     for (Block block : blocks)
-      if (block instanceof Paragraph para) marks.put(para.id, para.breakRevision);
-      else if (block instanceof Table t)
+      if (block instanceof Paragraph para) {
+        int n = para.text.length();
+        var styles = new TextStyle[n];
+        para.text.fill(styles, new boolean[n]);
+        String plain = para.text.plainText();
+        for (int i = 0; i < n; i++) {
+          Revision rev = styles[i] == null ? null : styles[i].revision;
+          if (rev == null || rev.inserted() || rev.move != null) {
+            open[0] = null;
+            continue;
+          }
+          if (open[0] == null || !open[0].who.author.equals(rev.author)) {
+            open[0] = new Pending(rev, para.id, i, false);
+            out.add(open[0]);
+          }
+          open[0].add(String.valueOf(plain.charAt(i)));
+        }
+        Revision mark = para.breakRevision;
+        if (mark == null || mark.inserted() || mark.move != null) {
+          open[0] = null;
+          continue;
+        }
+        if (open[0] == null || !open[0].who.author.equals(mark.author)) {
+          open[0] = new Pending(mark, para.id, n, true);
+          out.add(open[0]);
+        }
+        open[0].add("\u00b6");
+      } else if (block instanceof Table t)
         for (int r = 0; r < t.rows(); r++)
-          for (int c = 0; c < t.columns(); c++) if (!t.covered(r, c)) collectMarks(t.blocks(r, c), marks);
+          for (int c = 0; c < t.columns(); c++) if (!t.covered(r, c)) collectDeletions(t.blocks(r, c), out, open);
+  }
+
+  /**
+   * Anchors deletion {@code c} at the first laid-out line holding its start (for a paragraph
+   * mark, the paragraph's last line, at its logical end), skipping repeated header copies.
+   * False when the paragraph is not laid out in the body.
+   */
+  private static boolean anchorDeletion(LayoutEngine.Result r, Pending c) {
+    int bestPage = -1, bestRank = 4;
+    LayoutEngine.Line best = null;
+    for (int p = 0; p < r.pages.size(); p++)
+      for (LayoutEngine.Line l : r.pages.get(p).lines) {
+        if (l.block < 0 || l.repeatedHeader || !c.paraId.equals(l.paragraphId)) continue;
+        int rank;
+        if (c.mark) rank = best == null || l.end > best.end ? 0 : 4;
+        else if (c.offset >= l.start && c.offset < l.end) rank = 0;
+        else if (c.offset >= l.start && c.offset <= l.end) rank = 1;
+        else if (l.end >= c.offset) rank = 2;
+        else rank = 3;
+        if (c.mark ? rank == 0 : rank < bestRank) {
+          best = l;
+          bestRank = rank;
+          bestPage = p;
+        }
+      }
+    if (best == null) return false;
+    float x;
+    if (c.mark) x = best.rtl ? best.x : best.x + best.width;
+    else {
+      x = best.x;
+      for (LayoutEngine.Span s : best.spans)
+        if (c.offset >= s.start && c.offset <= s.end) {
+          float f = s.end > s.start ? (c.offset - s.start) / (float) (s.end - s.start) : 0;
+          x = best.x + (s.rtl ? s.x + s.width * (1 - f) : s.x + s.width * f);
+          break;
+        }
+    }
+    c.page = bestPage;
+    c.foot = best.toPage(x, best.y + best.height);
+    return true;
   }
 
   /** Wordcraft's DELETION_TEXT_CHARS: at most this many deleted characters show in a balloon. */
@@ -301,8 +327,12 @@ public final class Balloons {
   /** A revision balloon being gathered: its anchor and, for a deletion, the text so far. */
   private static final class Pending {
     final Revision who;
-    final int page;
-    final float[] foot;
+    int page;
+    float[] foot;
+    /** A deletion's start in the document: its paragraph, offset, and whether it is the mark. */
+    String paraId;
+    int offset;
+    boolean mark;
     final StringBuilder text = new StringBuilder();
     int chars;
     String label;
@@ -311,6 +341,13 @@ public final class Balloons {
       this.who = who;
       this.page = page;
       this.foot = foot;
+    }
+
+    Pending(Revision who, String paraId, int offset, boolean mark) {
+      this.who = who;
+      this.paraId = paraId;
+      this.offset = offset;
+      this.mark = mark;
     }
 
     void add(String s) {
@@ -329,7 +366,7 @@ public final class Balloons {
   static float[] anchor(LayoutEngine.Result r, ReviewComment c) {
     for (int p = 0; p < r.pages.size(); p++)
       for (LayoutEngine.Line line : r.pages.get(p).lines) {
-        if (line.block < 0 || !c.startId.equals(line.paragraphId)) continue;
+        if (line.block < 0 || line.repeatedHeader || !c.startId.equals(line.paragraphId)) continue;
         if (c.start < line.start || c.start > line.end) continue;
         float x = line.width;
         for (LayoutEngine.Span s : line.spans)

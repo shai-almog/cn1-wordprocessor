@@ -76,6 +76,12 @@ public final class LayoutEngine {
     public final int block, row, column, start, end, page;
 
     /**
+     * A copy of a table header row's line repeated at the top of a later page (Wordcraft's
+     * repeated header rows): the same paragraph laid out again, not more of its text.
+     */
+    public boolean repeatedHeader;
+
+    /**
      * For text of a table nested in cell (row, column) of {@code block}: the nested cell's path
      * inside that cell, as block, row, column triples (Session.cellPath without the first triple).
      */
@@ -408,9 +414,11 @@ public final class LayoutEngine {
       raw.mirrored = line.rtl;
       raw.spans.addAll(line.spans);
       raw.barTabs = line.barTabs;
-      out.add(
+      var moved =
           new Line(line.block, line.row, line.column, line.paragraphId, line.page, line.x + dx,
-              line.y + dy, raw, line.marker, line.clipHeight).at(line.path));
+              line.y + dy, raw, line.marker, line.clipHeight).at(line.path);
+      moved.repeatedHeader = line.repeatedHeader;
+      out.add(moved);
     }
     return out;
   }
@@ -3627,7 +3635,9 @@ public final class LayoutEngine {
         int index, boolean repeat, List<CellLayout> headers, float[] tops, float headerHeight) {
       nextColumn();
       if (repeat && !headers.isEmpty()) {
+        int from = current.size();
         emitCells(headers, index, tops, 0, headerHeight);
+        for (int i = from; i < current.size(); i++) current.get(i).repeatedHeader = true;
         y += headerHeight;
       }
     }

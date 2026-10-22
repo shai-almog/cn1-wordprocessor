@@ -457,4 +457,87 @@ public class BalloonsTest {
     float left = first.toPage(first.x, 0)[0], right = first.toPage(first.x + first.width, 0)[0];
     assertEquals(left + " " + right, left, card.anchorX, 0.5f);
   }
+
+  private static int tableAt(Session s) {
+    int at = 0;
+    for (int i = 0; i < s.document().blocks.size(); i++) if (s.document().blocks.get(i) instanceof Table) at = i;
+    return at;
+  }
+
+  @Test
+  public void aDeletionInARepeatedHeaderRowIsOneBalloonOnTheFirstPage() {
+    // Wordcraft's deletion_balloons walks the document, not the laid-out lines: the header
+    // row's repeats on later pages are copies, not more deletions.
+    var s = new Session(Document.empty());
+    s.insertTable(100, 1);
+    int at = tableAt(s);
+    var f = ((Table) s.document().blocks.get(at)).format.headerRows(1);
+    for (int i = 1; i < 100; i++) f = f.minHeight(i, 40);
+    s.formatTable(at, f);
+    s.enterCell(at, 0, 0);
+    s.replace("head keep");
+    s.reviewAuthor("Ana");
+    s.trackChanges(true);
+    s.selectRange(0, 0, 0, 4);
+    s.deleteBackward();
+    s.leaveCell();
+    var d = s.document();
+    var engine = new LayoutEngine(METRICS);
+    engine.setHideDeleted(true);
+    var r = engine.layout(d, 0);
+    int headerPages = 0;
+    for (LayoutEngine.Page pg : r.pages) {
+      boolean has = false;
+      for (LayoutEngine.Line l : pg.lines) has |= l.block == at && l.row == 0;
+      if (has) headerPages++;
+    }
+    assertTrue("header repeats on " + headerPages, headerPages >= 3);
+    var cards = Balloons.layout(d, r, METRICS, "revisions");
+    int found = 0, page = -1;
+    for (int p = 0; p < cards.size(); p++)
+      for (Balloons.Card c : cards.get(p)) {
+        var t = new StringBuilder();
+        for (int k = 1; k < c.items.size(); k++) if (c.items.get(k).text != null) t.append(c.items.get(k).text);
+        if (t.toString().replace(" ", "").startsWith("Deleted:")) {
+          found++;
+          page = p;
+        }
+      }
+    assertEquals(1, found);
+    assertEquals(0, page);
+  }
+
+  @Test
+  public void aDeletionContinuingIntoTheNextPageOfASplitRowIsOneBalloon() {
+    var s = new Session(Document.empty());
+    s.insertTable(1, 2);
+    int at = tableAt(s);
+    s.enterCell(at, 0, 1);
+    s.replace("b");
+    s.leaveCell();
+    s.enterCell(at, 0, 0);
+    String longText = "word ".repeat(4000).trim();
+    s.replace(longText);
+    s.reviewAuthor("Ana");
+    s.trackChanges(true);
+    s.selectRange(0, 500, 0, longText.length() - 500);
+    s.deleteBackward();
+    s.leaveCell();
+    var d = s.document();
+    var engine = new LayoutEngine(METRICS);
+    engine.setHideDeleted(false);
+    var r = engine.layout(d, 0);
+    var pages = new java.util.HashSet<Integer>();
+    for (int p = 0; p < r.pages.size(); p++)
+      for (LayoutEngine.Line l : r.pages.get(p).lines) if (l.block == at) pages.add(p);
+    assertTrue("row split: " + pages, pages.size() > 1);
+    int found = 0;
+    for (List<Balloons.Card> page : Balloons.layout(d, r, METRICS, "revisions"))
+      for (Balloons.Card c : page) {
+        var t = new StringBuilder();
+        for (int k = 1; k < c.items.size(); k++) if (c.items.get(k).text != null) t.append(c.items.get(k).text);
+        if (t.toString().startsWith("Deleted:")) found++;
+      }
+    assertEquals(1, found);
+  }
 }
