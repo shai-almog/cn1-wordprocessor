@@ -201,3 +201,6 @@ Myanmar Sangam MN.ttc	\u1000\u103b\u103d	114+2212|298+314
 /System/Library/Fonts/Supplemental/Tamil Sangam MN.ttc	\u0ba4\u0bae\u0bbf\u0bb4\u0bcd	452+1387|543+1699|475+1371
 /System/Library/Fonts/Supplemental/Tamil Sangam MN.ttc	\u0b95\u0bcc	1229+1524|445+1459|1235+1741
 /System/Library/Fonts/Supplemental/Tamil Sangam MN.ttc	\u0b94	444+3171
+# Default ignorables skipped by GPOS mark attachment (auto-ZWJ/ZWNJ matcher); hb-shape 14.2.1, which matches harfrust here.
+/System/Library/Fonts/Kohinoor.ttc	\u0915\u200c\u0902	51+770|1+0|128@-248,0+0
+/System/Library/Fonts/Kohinoor.ttc	\u0915\u200d\u0902	51+770|1+0|128@-248,0+0

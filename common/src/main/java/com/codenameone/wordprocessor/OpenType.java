@@ -226,6 +226,7 @@ final class OpenType {
   private void runLookup(boolean substitution, int index, List<Glyph> buffer, int mask)
       throws IOException {
     int lookup = lookupTable(substitution, index), flag = font.u16(lookup + 2);
+    positioning = !substitution;
     for (int i = 0; i < buffer.size(); ) {
       var g = buffer.get(i);
       if ((g.mask & mask) == 0 || skip(lookup, flag, g)) {
@@ -235,6 +236,24 @@ final class OpenType {
       int next = applyAt(substitution, lookup, buffer, i, 0);
       i = next < 0 ? i + 1 : Math.max(next, i + 1);
     }
+  }
+
+  /** Whether the lookup being run is a GPOS one (set by runLookup). */
+  private boolean positioning;
+
+  /**
+   * A default-ignorable character (ZWJ, ZWNJ, variation selectors...) not replaced by GSUB,
+   * as HarfBuzz/harfrust's _hb_glyph_info_is_default_ignorable.
+   */
+  static boolean ignorable(Glyph g) {
+    if ((g.flags & SUBSTITUTED) != 0) return false;
+    int c = g.cp;
+    return c == 0xad || c == 0x34f || c == 0x61c || c >= 0x115f && c <= 0x1160
+        || c >= 0x17b4 && c <= 0x17b5 || c >= 0x180b && c <= 0x180f || c >= 0x200b && c <= 0x200f
+        || c >= 0x202a && c <= 0x202e || c >= 0x2060 && c <= 0x206f || c == 0x3164
+        || c >= 0xfe00 && c <= 0xfe0f || c == 0xfeff || c == 0xffa0 || c >= 0xfff0 && c <= 0xfff8
+        || c >= 0x1bca0 && c <= 0x1bca3 || c >= 0x1d173 && c <= 0x1d17a
+        || c >= 0xe0000 && c <= 0xe0fff;
   }
 
   /** Whether lookup flag {@code flag} ignores {@code g}. */
@@ -255,7 +274,11 @@ final class OpenType {
   private int nextIndex(int lookup, int flag, List<Glyph> buffer, int i, int step)
       throws IOException {
     for (int j = i + step; j >= 0 && j < buffer.size(); j += step)
-      if (!skip(lookup, flag, buffer.get(j))) {
+      // GPOS matching also skips default ignorables, as harfrust's skippy iterator (ignore_zwnj
+      // and ignore_zwj are both set for GPOS); GSUB keeps them, since its auto-ZWJ depends on
+      // per-feature manual-joiner flags not modelled here. The glyph a lookup starts at is never
+      // skipped for being ignorable (harfrust only checks its glyph properties).
+      if (!(positioning && ignorable(buffer.get(j))) && !skip(lookup, flag, buffer.get(j))) {
         int syllable = buffer.get(i).syllable;
         return perSyllable && syllable != 0 && buffer.get(j).syllable != syllable ? -1 : j;
       }
@@ -572,11 +595,11 @@ final class OpenType {
         var p = buffer.get(j);
         int cls = glyphClass(p.id);
         if (type == 6) {
-          if (skip(lookup, flag, p)) continue;
+          if (ignorable(p) || skip(lookup, flag, p)) continue;
           b = cls == 3 ? j : -1;
           break;
         }
-        if (cls == 3) continue;
+        if (cls == 3 || ignorable(p)) continue;
         b = j;
         break;
       }
