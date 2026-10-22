@@ -31,17 +31,19 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
+      # SimulatorUiTest needs an X display, as in build.yml.
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends xvfb
       - name: Build and test (timed, cold Maven repository)
         run: |
           export WORDPROCESSOR_MAVEN_REPO="$PWD/.local/maven-repository"
           start=$(date +%s)
-          mvn -B -ntp -Dmaven.repo.local="$WORDPROCESSOR_MAVEN_REPO" install | tee build.log
+          xvfb-run -a mvn -B -ntp -Dmaven.repo.local="$WORDPROCESSOR_MAVEN_REPO" install | tee build.log
           echo "$(( $(date +%s) - start ))" > java-build-test-seconds.txt
       - name: Test only (timed, compiled)
         run: |
           export WORDPROCESSOR_MAVEN_REPO="$PWD/.local/maven-repository"
           start=$(date +%s)
-          mvn -B -ntp -Dmaven.repo.local="$WORDPROCESSOR_MAVEN_REPO" \
+          xvfb-run -a mvn -B -ntp -Dmaven.repo.local="$WORDPROCESSOR_MAVEN_REPO" \
             -pl common surefire:test | tee test.log
           echo "$(( $(date +%s) - start ))" > java-test-seconds.txt
           grep -h 'Tests run:' test.log | grep -v ' in ' | awk -F'[:,]' '{s+=$2} END{print s}' > java-tests.txt
