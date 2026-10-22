@@ -326,6 +326,8 @@ final class PdfShaping {
       buffer.add(new OpenType.Glyph(cp < 32 ? 0 : font.glyph(shown), cp, i, end, GLOBAL));
       i = end;
     }
+    // hb_ot_shape_normalize's reorder round: marks sorted by modified combining class.
+    CombiningClass.reorder(buffer);
     String[] scripts;
     int block = indicBlock(script);
     if (AatShaper.applies(font))

@@ -204,3 +204,6 @@ Myanmar Sangam MN.ttc	\u1000\u103b\u103d	114+2212|298+314
 # Default ignorables skipped by GPOS mark attachment (auto-ZWJ/ZWNJ matcher); hb-shape 14.2.1, which matches harfrust here.
 /System/Library/Fonts/Kohinoor.ttc	\u0915\u200c\u0902	51+770|1+0|128@-248,0+0
 /System/Library/Fonts/Kohinoor.ttc	\u0915\u200d\u0902	51+770|1+0|128@-248,0+0
+# Marks reordered by modified combining class before shaping (virama+nukta becomes nukta+virama); hb-shape 14.2.1.
+/System/Library/Fonts/Kohinoor.ttc	\u0915\u094d\u093c	87+770|132@-248,0+0
+/System/Library/Fonts/NotoSansKannada.ttc	\u0c95\u0ccd\u0cbc	167+782|57@-241,0+0
