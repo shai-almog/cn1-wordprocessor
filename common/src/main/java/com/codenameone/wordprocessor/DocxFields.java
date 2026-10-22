@@ -41,7 +41,8 @@ final class DocxFields {
     // Wordcraft's FieldStart (docx read/story.rs is_range_instr), it opens a range field whose
     // result is the paragraphs' own content, closed by the end marker in a later paragraph.
     if (parser.stack.size() == 1 && parser.stack.get(0).separated
-        && InlineField.rangeInstruction(parser.stack.get(0).instruction.toString())) {
+        && InlineField.rangeInstruction(parser.stack.get(0).instruction.toString())
+        && InlineField.valid(parser.stack.get(0).instruction.toString().trim(), "")) {
       var open = parser.stack.remove(0);
       var mark = new InlineField(open.instruction.toString().trim(), "", open.locked, false).start();
       parser.text = parser.text.concat(RichText.field(mark, open.style)).concat(open.result);
@@ -80,6 +81,12 @@ final class DocxFields {
         return;
       }
       warnings.add("Nested field result is flattened within its parent field");
+    }
+    if (!InlineField.valid(instruction, field.result.plainText())) {
+      // An over-limit field must not abort the whole read: keep its result as ordinary text.
+      warnings.add("Oversized field shown as its result text");
+      append(field.result);
+      return;
     }
     String formats = instruction.startsWith(Zotero.PREFIX) ? formats(field.result, field.style) : "";
     if (formats.isEmpty()) checkResult(field.result, field.style);
@@ -125,6 +132,9 @@ final class DocxFields {
       String instruction = Xml.attr(node, "instr", "");
       if (instruction.trim().isEmpty()) {
         warnings.add("Field without instructions");
+        append(result);
+      } else if (!InlineField.valid(instruction, result.plainText())) {
+        warnings.add("Oversized field shown as its result text");
         append(result);
       } else {
         checkResult(result, result.styleAt(0));

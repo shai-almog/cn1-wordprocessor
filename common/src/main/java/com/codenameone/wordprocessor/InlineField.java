@@ -32,16 +32,31 @@ public final class InlineField {
   }
 
   public InlineField(String instruction, String result, boolean locked, boolean showCode, String formats) {
-    if (instruction == null
-        || instruction.trim().isEmpty()
-        || instruction.length() > (instruction.startsWith(Zotero.PREFIX) ? 1000000 : 8192)
-        || result == null
-        || result.length() > 1000000) throw new IllegalArgumentException("Invalid field");
+    if (!valid(instruction, result)) throw new IllegalArgumentException("Invalid field");
     this.instruction = instruction;
     this.result = result;
     this.locked = locked;
     this.showCode = showCode;
     this.formats = formats == null || formats.length() > 200000 ? "" : formats;
+  }
+
+  /**
+   * Longest instruction of a citation manager's ADDIN field (Zotero's CSL JSON, EndNote's
+   * EN.CITE/EN.REFLIST embedded XML), as Wordcraft's docx reader caps an instruction at
+   * MAX_INSTR = 2 MiB (read/story.rs); other field codes stay short.
+   */
+  public static final int MAX_ADDIN_INSTRUCTION = 2 * 1024 * 1024, MAX_INSTRUCTION = 8192, MAX_RESULT = 1000000;
+
+  /** True when a field with this instruction and result can be built; readers degrade others to text. */
+  public static boolean valid(String instruction, String result) {
+    return instruction != null
+        && !instruction.trim().isEmpty()
+        && instruction.length()
+            <= (instruction.startsWith(Zotero.PREFIX) || rangeInstruction(instruction)
+                ? MAX_ADDIN_INSTRUCTION
+                : MAX_INSTRUCTION)
+        && result != null
+        && result.length() <= MAX_RESULT;
   }
 
   /** True for the start mark of a range field (its result is the text up to its end mark). */

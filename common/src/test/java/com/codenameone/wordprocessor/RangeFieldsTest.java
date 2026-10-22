@@ -73,4 +73,30 @@ public class RangeFieldsTest {
     assertFalse(InlineField.rangeInstruction("PAGE"));
     assertTrue(InlineField.rangeInstruction(" addin x"));
   }
+
+  private static String repeat(String s, int n) {
+    var b = new StringBuilder();
+    for (int i = 0; i < n; i++) b.append(s);
+    return b.toString();
+  }
+
+  @Test
+  public void largeEndNoteCitationAndOversizedFieldsDoNotAbortTheRead() throws Exception {
+    String xml = "&lt;EndNote&gt;&lt;Cite&gt;" + repeat("&lt;Author&gt;Doe&lt;/Author&gt;", 1500) + "&lt;/Cite&gt;&lt;/EndNote&gt;";
+    var opened = open("<w:p><w:r><w:fldChar w:fldCharType=\"begin\"/></w:r>"
+        + "<w:r><w:instrText xml:space=\"preserve\"> ADDIN EN.CITE " + xml + "</w:instrText></w:r>"
+        + "<w:r><w:fldChar w:fldCharType=\"separate\"/></w:r><w:r><w:t>(Doe)</w:t></w:r>"
+        + "<w:r><w:fldChar w:fldCharType=\"end\"/></w:r></w:p>"
+        + "<w:p><w:r><w:fldChar w:fldCharType=\"begin\"/></w:r>"
+        + "<w:r><w:instrText>QUOTE " + repeat("x", 9000) + "</w:instrText></w:r>"
+        + "<w:r><w:fldChar w:fldCharType=\"separate\"/></w:r><w:r><w:t>big</w:t></w:r>"
+        + "<w:r><w:fldChar w:fldCharType=\"end\"/></w:r></w:p>"
+        + "<w:p><w:fldSimple w:instr=\"QUOTE " + repeat("y", 9000) + "\"><w:r><w:t>simple</w:t></w:r></w:fldSimple></w:p>");
+    var d = new Session(opened.document).document();
+    assertEquals(1, marks(d, true));
+    String text = d.plainText();
+    assertTrue(text, text.contains("(Doe)") && text.contains("big") && text.contains("simple"));
+    assertTrue(InlineField.valid("ADDIN EN.CITE " + repeat("z", 100000), ""));
+    assertFalse(InlineField.valid("ADDIN EN.CITE " + repeat("z", InlineField.MAX_ADDIN_INSTRUCTION), ""));
+  }
 }
