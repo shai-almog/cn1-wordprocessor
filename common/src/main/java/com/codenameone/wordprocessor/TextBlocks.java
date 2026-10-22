@@ -73,8 +73,8 @@ final class TextBlocks {
 
   /** Deepest table nesting read from HTML/RTF cells; deeper cells keep only their text. */
   static final int MAX_NESTING = 64;
-  /** Current cell nesting depth (readers run on one thread). */
-  private static int nesting;
+  /** Current cell nesting depth of the read on this thread (paste, open and CLI reads may overlap). */
+  private static final ThreadLocal<int[]> NESTING = new ThreadLocal<>();
 
   /** HTML with its table structure tags removed; a closing cell or row leaves a space. */
   static String flattenTables(String html) {
@@ -120,16 +120,18 @@ final class TextBlocks {
         // Each nested table level recurses through TextFormats.read; past MAX_NESTING levels the
         // cell is read as plain text (tables flattened) so deep nesting cannot overflow the stack.
         // The table tags are dropped too: the HTML parser itself recurses per open element.
-        if (nesting >= MAX_NESTING) {
+        int[] nesting = NESTING.get();
+        if (nesting == null) NESTING.set(nesting = new int[1]);
+        if (nesting[0] >= MAX_NESTING) {
           nested = false;
           if (format == RichTextFormat.HTML) source = flattenTables(source);
         }
         Document d;
-        nesting++;
+        nesting[0]++;
         try {
           d = TextFormats.read(source, format, nested);
         } finally {
-          nesting--;
+          nesting[0]--;
         }
         for (Block b : d.blocks)
           if (b instanceof Table inner) {
