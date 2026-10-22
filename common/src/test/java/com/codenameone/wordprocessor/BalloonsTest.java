@@ -392,6 +392,42 @@ public class BalloonsTest {
   }
 
   @Test
+  public void deletionsInNeighbouringCellsAreSeparateBalloons() {
+    var s = new Session(Document.empty());
+    s.replace("before");
+    s.select(0, 6, 6);
+    s.insertTable(1, 2);
+    int at = 0;
+    for (int i = 0; i < s.document().blocks.size(); i++) if (s.document().blocks.get(i) instanceof Table) at = i;
+    s.enterCell(at, 0, 0);
+    s.replace("ab");
+    s.leaveCell();
+    s.enterCell(at, 0, 1);
+    s.replace("cd");
+    s.leaveCell();
+    s.reviewAuthor("Ana");
+    s.trackChanges(true);
+    s.enterCell(at, 0, 0);
+    s.select(0, 1, 2);
+    s.deleteBackward();
+    s.leaveCell();
+    s.enterCell(at, 0, 1);
+    s.select(0, 0, 1);
+    s.deleteBackward();
+    s.leaveCell();
+    // Delete cell (0,0)'s own last mark too, so the deletion runs right up to the cell's end.
+    var d = s.document();
+    var t = (Table) d.blocks.get(at);
+    var cell = t.cell(0, 0);
+    var last = cell.get(cell.size() - 1);
+    var del = new Revision("r9", "delete", "Ana", "");
+    t = t.setCell(0, 0, cell.set(cell.size() - 1, last.breakRevision(del)));
+    d = d.blocks(d.blocks.set(at, t), d.nextId);
+    var labels = revisionLabels(d, 0);
+    assertEquals(labels.toString(), List.of("Deleted:b\u00b6", "Deleted:c"), labels);
+  }
+
+  @Test
   public void frameLinesLeavesTheEnginesLayoutCachesAlone() throws Exception {
     var d = commented();
     var engine = new LayoutEngine(METRICS);

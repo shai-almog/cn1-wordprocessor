@@ -276,9 +276,17 @@ public final class Balloons {
           out.add(open[0]);
         }
         open[0].add("\u00b6");
-      } else if (block instanceof Table t)
+      } else if (block instanceof Table t) {
+        // Each cell is its own story: as in Wordcraft, a deletion never joins across a cell or
+        // table boundary, because the positions on either side do not meet.
         for (int r = 0; r < t.rows(); r++)
-          for (int c = 0; c < t.columns(); c++) if (!t.covered(r, c)) collectDeletions(t.blocks(r, c), out, open);
+          for (int c = 0; c < t.columns(); c++)
+            if (!t.covered(r, c)) {
+              open[0] = null;
+              collectDeletions(t.blocks(r, c), out, open);
+            }
+        open[0] = null;
+      }
   }
 
   /**
