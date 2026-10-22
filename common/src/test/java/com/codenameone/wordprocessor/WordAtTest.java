@@ -16,6 +16,18 @@ public class WordAtTest {
   }
 
   @Test
+  public void emojiClustersAreSelectedWhole() {
+    String flag = "\uD83C\uDDEF\uD83C\uDDF5";
+    String family = "\uD83D\uDC68\u200D\uD83D\uDC69\u200D\uD83D\uDC67";
+    String heart = "\u2764\uFE0F";
+    assertArrayEquals(new int[] {2, 6}, TextNavigation.wordAt("a " + flag + " b", 2));
+    assertArrayEquals(new int[] {2, 6}, TextNavigation.wordAt("a " + flag + " b", 4));
+    assertArrayEquals(new int[] {2, 10}, TextNavigation.wordAt("a " + family + " b", 2));
+    assertArrayEquals(new int[] {2, 10}, TextNavigation.wordAt("a " + family + " b", 5));
+    assertArrayEquals(new int[] {2, 4}, TextNavigation.wordAt("a " + heart + " b", 2));
+  }
+
+  @Test
   public void supplementaryLettersArePartOfTheWord() {
     assertArrayEquals(new int[] {0, 4}, TextNavigation.wordAt("x" + BOLD_A + "y", 1));
   }

@@ -61,7 +61,12 @@ public final class TextNavigation {
       if (!isWordChar(cp)) break;
       z += Character.charCount(cp);
     }
-    if (a == z && z < n) z += Character.charCount(Character.codePointAt(text, z));
+    // Selections cover whole grapheme clusters, so typing over a flag, a ZWJ emoji sequence or
+    // an emoji with its variation selector replaces all of it rather than leaving parts behind.
+    RichText g = RichText.of(text);
+    while (a > 0 && !Graphemes.isBoundary(g, a)) a = Graphemes.previous(g, a);
+    if (a == z && z < n) z = Graphemes.next(g, z);
+    while (z < n && !Graphemes.isBoundary(g, z)) z = Graphemes.next(g, z);
     return new int[] {a, z};
   }
 
