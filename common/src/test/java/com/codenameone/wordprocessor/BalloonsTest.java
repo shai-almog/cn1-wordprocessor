@@ -289,7 +289,7 @@ public class BalloonsTest {
     var labels = revisionLabels(s.document(), 0);
     assertEquals(labels.toString(), 1, labels.size());
     String l = labels.get(0);
-    assertTrue(l, l.startsWith("Deleted:wordword") && l.endsWith("…"));
+    assertTrue(l, l.startsWith("Deleted:wordword") && l.endsWith("\u2026"));
   }
 
   @Test
