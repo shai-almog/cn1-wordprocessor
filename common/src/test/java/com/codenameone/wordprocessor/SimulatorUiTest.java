@@ -293,13 +293,21 @@ public class SimulatorUiTest {
           editor().repaint();
         });
     // The thumb's bounds are recorded when the scrollbar is painted.
-    for (int i = 0; i < 100 && thumb("scrollThumbH") <= 0; i++) Thread.sleep(50);
-    assertTrue("vertical scrollbar painted", thumb("scrollThumbH") > 0);
+    for (int i = 0; i < 100 && thumb("scrollThumbH") <= 0; i++) {
+      // A paint queued while another test's form was still showing can be dropped.
+      edt(() -> ((Form) field(app, "form")).repaint());
+      Thread.sleep(50);
+    }
+    var e = editor();
+    assertTrue("vertical scrollbar painted: current " + Display.getInstance().getCurrent().getClass().getSimpleName()
+        + " editor " + e.getWidth() + "x" + e.getHeight() + " scroll " + e.getScrollDimension().getHeight()
+        + " scrollableY " + e.isScrollableY() + " visible " + e.isScrollVisible() + " shown " + e.isVisible()
+        + " interactive " + e.getUIManager().getLookAndFeel().isInteractiveScroll(), thumb("scrollThumbH") > 0);
     edt(
         () -> {
           var editor = editor();
           int x = editor.getAbsoluteX() + thumb("scrollThumbX") + thumb("scrollThumbW") / 2;
-          int y = editor.getAbsoluteY() + thumb("scrollThumbY") + thumb("scrollThumbH") / 2;
+          int y = screenTop(editor) + thumb("scrollThumbY") + thumb("scrollThumbH") / 2;
           var before = session().selection();
           editor.pointerPressed(x, y);
           editor.pointerDragged(x, y + 40);
@@ -318,8 +326,8 @@ public class SimulatorUiTest {
           var editor = editor();
           start[0] = editor.getScrollY();
           int x = editor.getAbsoluteX() + thumb("scrollThumbX") + thumb("scrollThumbW") / 2;
-          int y = editor.getAbsoluteY() + thumb("scrollThumbY") + thumb("scrollThumbH") + 10;
-          assertTrue("track below the thumb", y < editor.getAbsoluteY() + editor.getHeight());
+          int y = screenTop(editor) + thumb("scrollThumbY") + thumb("scrollThumbH") + 10;
+          assertTrue("track below the thumb", y < screenTop(editor) + editor.getHeight());
           editor.pointerPressed(x, y);
           editor.pointerReleased(x, y);
           assertEquals("track click leaves the caret", 0, session().selection().block);
@@ -331,6 +339,69 @@ public class SimulatorUiTest {
       last = editor().getScrollY();
       Thread.sleep(150);
     }
+    // Scrolled away from the top, the thumb still grabs (the framework hit-tests it against a
+    // scrolled origin; the editor compensates) and dragging it up scrolls back.
+    edt(
+        () -> {
+          var editor = editor();
+          int from = editor.getScrollY();
+          assertTrue(from > 0);
+          int x = editor.getAbsoluteX() + thumb("scrollThumbX") + thumb("scrollThumbW") / 2;
+          int y = screenTop(editor) + thumb("scrollThumbY") + thumb("scrollThumbH") / 2;
+          var before = session().selection();
+          editor.pointerPressed(x, y);
+          editor.pointerDragged(x, y - 20);
+          editor.pointerDragged(x, y - 60);
+          editor.pointerReleased(x, y - 60);
+          assertTrue("scrolled thumb drag scrolls up", editor.getScrollY() < from);
+          assertEquals("scrolled thumb drag leaves the caret", before.block, session().selection().block);
+          assertEquals("", session().selectedText());
+        });
+    Thread.sleep(450);
+  }
+
+  /** The editor's top on screen: getAbsoluteY() subtracts its own scroll. */
+  private static int screenTop(EditorSurface editor) {
+    return editor.getAbsoluteY() + editor.getScrollY();
+  }
+
+  @Test
+  public void anObjectDraggedUpItsPageWrapsTheTextItLandsOn() throws Exception {
+    edt(() -> ((Form) field(app, "form")).show());
+    for (int i = 0; i < 100 && Display.getInstance().getCurrent() != field(app, "form"); i++)
+      Thread.sleep(50);
+    edt(
+        () -> {
+          var b = new StringBuilder();
+          for (int i = 0; i < 12; i++) b.append("Line ").append(i).append(" with enough words to reach across the page width\n");
+          load(b.toString());
+          var blocks = session().document().blocks;
+          var square = Picture.drawing("i900", Drawing.of("shape").with("wrap", "square"), 120, 60, "", "left");
+          session().replaceDocument(session().document().blocks(blocks.append(square), session().document().nextId));
+          ((Form) field(app, "form")).revalidate();
+          editor().resetScroll();
+          editor().refresh();
+        });
+    Thread.sleep(300);
+    edt(
+        () -> {
+          var editor = editor();
+          int last = session().document().blocks.size() - 1;
+          int[] r = editor.pictureRect(last);
+          int cx = r[0] + r[2] / 2, cy = r[1] + r[3] / 2;
+          editor.pointerPressed(cx, cy);
+          editor.pointerReleased(cx, cy);
+          Thread.sleep(600);
+          editor.pointerPressed(cx, cy);
+          editor.pointerDragged(cx + 100, cy - 60);
+          editor.pointerDragged(cx + 200, cy - (r[1] - editor.getAbsoluteY() - editor.getScrollY()) + 40);
+          editor.pointerReleased(cx + 200, cy - (r[1] - editor.getAbsoluteY() - editor.getScrollY()) + 40);
+          editor.refresh();
+          int at = -1;
+          var blocks = session().document().blocks;
+          for (int i = 0; i < blocks.size(); i++) if (blocks.get(i) instanceof Picture) at = i;
+          assertTrue("the anchor moves up with the object (now block " + at + ")", at >= 0 && at < 6);
+        });
     Thread.sleep(450);
   }
 

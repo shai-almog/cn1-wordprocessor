@@ -49,10 +49,51 @@ static void cn1WordKey(NSMenuItem *item, int key, int modifiers) {
 
 @implementation com_codenameone_wordprocessor_app_NativeDesktopImpl
 
+#if TARGET_OS_OSX
+/* The port builds the main window titled and then gives it the custom title bar by adding
+   NSWindowStyleMaskFullSizeContentView, which keeps the content rect and so drops the frame
+   by one title bar; its "CN1MainWindow" autosave then records the shorter frame, and every
+   launch reopened the window 32 points shorter (943, 911, 879 on three launches). The window
+   is remembered under its own name instead, restored once the title bar is custom, and only
+   saved from then on. */
+static void cn1WordRestoreWindowFrame(int attempt) {
+    static BOOL done = NO;
+    if (done) return;
+    NSWindow *w = [NSApp mainWindow];
+    if (w == nil) w = [[NSApp windows] firstObject];
+    if (w == nil || (w.styleMask & NSWindowStyleMaskFullSizeContentView) == 0) {
+        // The title bar becomes custom when the first form shows; a window that never gets
+        // it (attempt 40, two seconds) is remembered as it is.
+        if (attempt < 40) {
+            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 50 * NSEC_PER_MSEC), dispatch_get_main_queue(), ^{
+                cn1WordRestoreWindowFrame(attempt + 1);
+            });
+            return;
+        }
+        if (w == nil) return;
+    }
+    done = YES;
+    if (![w setFrameUsingName:@"WordProcessorWindow"]) {
+        // Not saved under this name yet: a window the old naming shrank below half the
+        // screen's height reopens at the first-launch size instead.
+        NSScreen *screen = w.screen != nil ? w.screen : [NSScreen mainScreen];
+        NSRect area = screen.visibleFrame;
+        if (screen != nil && w.frame.size.height < area.size.height / 2) {
+            NSRect frame = NSMakeRect(0, 0, floor(area.size.width * 0.8), floor(area.size.height * 0.9));
+            frame.origin.x = area.origin.x + floor((area.size.width - frame.size.width) / 2);
+            frame.origin.y = area.origin.y + floor((area.size.height - frame.size.height) / 2);
+            [w setFrame:frame display:YES animate:NO];
+        }
+    }
+    [w setFrameAutosaveName:@"WordProcessorWindow"];
+}
+#endif
+
 -(BOOL)install:(NSString*)spec {
 #if TARGET_OS_OSX
     NSString *lines = [spec copy];
     dispatch_async(dispatch_get_main_queue(), ^{
+        cn1WordRestoreWindowFrame(0);
         CN1MacInstallMainMenu();
         if (cn1WordTarget == nil) cn1WordTarget = [[CN1WordMenuTarget alloc] init];
         NSMenu *bar = [[NSMenu alloc] initWithTitle:@""];

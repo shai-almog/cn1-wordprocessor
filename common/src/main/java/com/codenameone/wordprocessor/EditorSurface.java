@@ -469,7 +469,9 @@ public final class EditorSurface extends Container
         else g.fillPolygon(xs, ys, n);
       }
       if (p.stroke() >= 0 && p.width() > 0) {
-        g.setColor(p.stroke());
+        // Pen strokes follow the text: dark ink turns light on a dark page, as Word's dark mode.
+        var kind = pic.picture().drawing == null ? null : pic.picture().drawing.kind;
+        g.setColor("ink".equals(kind) || "canvas".equals(kind) ? ink(p.stroke()) : p.stroke());
         float w = Math.max(1, p.width() * scale);
         if (shapes) g.drawShape(path, new Stroke(w, Stroke.CAP_ROUND, Stroke.JOIN_ROUND, 4));
         else if (p.closed()) g.drawPolygon(xs, ys, n);
@@ -2565,6 +2567,25 @@ public final class EditorSurface extends Container
     return false;
   }
 
+  /** What a pointer gesture changes, for the agent-debug word_pointer tool. */
+  Map<String, Object> pointerState() {
+    var m = new LinkedHashMap<String, Object>();
+    m.put("selectedObject", selectedPicture);
+    m.put("inking", ink != null);
+    m.put("scrollY", getScrollY());
+    m.put("bounds", Arrays.asList(getAbsoluteX(), getAbsoluteY(), getWidth(), getHeight()));
+    m.put("scrollHeight", getScrollDimension().getHeight());
+    m.put("scrollVisible", isScrollVisible());
+    m.put("interactiveScroll", getUIManager().getLookAndFeel().isInteractiveScroll());
+    m.put("scrollbarPress", scrollbarPress);
+    var sel = session.selection();
+    m.put("block", sel.block);
+    m.put("caret", sel.caret);
+    m.put("anchorBlock", sel.anchorBlock);
+    m.put("anchor", sel.anchor);
+    return m;
+  }
+
   /** Pointer-space bounds {x, y, w, h} of the object in a block, or null when it is not laid out. */
   int[] pictureRect(int block) {
     float sc = scale();
@@ -2612,7 +2633,7 @@ public final class EditorSurface extends Container
     int ox = getX() + pageX(inkPage) + getScrollX(), oy = getY() + pageY(inkPage);
     boolean aa = g.isAntiAliased();
     g.setAntiAliased(true);
-    g.setColor(inkColor);
+    g.setColor(ink(inkColor));
     int w = Math.max(1, Math.round(sc * 1.5f));
     var prev = inkPoints.get(0);
     for (int i = 1; i < inkPoints.size(); i++) {
@@ -2646,9 +2667,23 @@ public final class EditorSurface extends Container
       return;
     }
     pressReachedContent = false;
-    super.pointerPressed(x, y);
+    super.pointerPressed(x, scrollbarY(x, y));
     scrollbarPress = !pressReachedContent;
     if (!scrollbarPress) placeCaret(x, y);
+  }
+
+  /**
+   * Component's interactive scrollbar records the thumb and track in unscrolled component
+   * coordinates but hit-tests and drags them against getAbsoluteY(), which subtracts this
+   * component's own scroll, so past the top of the document a press on the thumb missed it and
+   * selected text. Shifting the pointer by the scroll for presses in the scrollbar's column
+   * cancels that out; everything else keeps its real y.
+   */
+  private int scrollbarY(int x, int y) {
+    if (scrollbarPress) return y - getScrollY();
+    int band = getUIManager().getLookAndFeel().getVerticalScrollWidth() + OfficeTheme.px(2);
+    boolean column = isRTL() ? x < getAbsoluteX() + band : x >= getAbsoluteX() + getWidth() - band;
+    return column ? y - getScrollY() : y;
   }
 
   /** True while a desktop press is grabbing the scrollbar thumb or paging its track. */
@@ -2813,6 +2848,19 @@ public final class EditorSurface extends Container
   private int resizeHandle, resizePage;
   private boolean resizing;
 
+  /**
+   * Refreshes after a pointer edit of an object without scrolling: the caret sits after the
+   * object, and revealing it made the view jump away from what was just moved or resized.
+   */
+  private void objectEdited() {
+    int keep = getScrollY();
+    refresh();
+    changed.run();
+    int max = Math.max(0, getScrollDimension().getHeight() - getHeight());
+    setScrollY(Math.min(keep, max));
+    repaint();
+  }
+
   /** A press on a handle of the selected object starts resizing it, as Word's sizing handles. */
   private boolean pressHandle(String id, int x, int y) {
     float tolerance = OfficeTheme.px(6) / scale();
@@ -2878,8 +2926,7 @@ public final class EditorSurface extends Container
     boolean moved = Math.abs(r[0] - pic.x()) > .01f || Math.abs(r[1] - pic.y()) > .01f;
     if (moved && !"inline".equals(p.wrap()) && !pic.inCell()) next = next.movedTo(r[0], r[1]);
     session.replacePicture(pic.block(), next);
-    refresh();
-    changed.run();
+    objectEdited();
     return true;
   }
 
@@ -2902,8 +2949,7 @@ public final class EditorSurface extends Container
       float cx = (x - movePressX) / scale() + pic.x() - f[0], cy = (y - movePressY) / scale() + pic.y() - f[1];
       cx = Math.max(0, Math.min(Math.max(0, f[2] - pic.width()), cx));
       session.replacePicture(pic.block(), ((Picture) cellBlock).movedInCell(cx, cy));
-      refresh();
-      changed.run();
+      objectEdited();
       return true;
     }
     var block = session.document().blocks.get(pic.block());
@@ -2914,19 +2960,21 @@ public final class EditorSurface extends Container
     var spec = session.document().page;
     px = Math.max(-pic.width() / 2, Math.min(spec.width - pic.width() / 2, px));
     py = Math.max(-pic.height() / 2, Math.min(spec.height - pic.height() / 2, py));
-    // Dropped on another page: re-anchored to the paragraph there, as Wordcraft's move_object.
-    Document moved = to == movePage ? null : Picture.reanchored(session.document(), layout(), pic.block(), to, px, py);
+    // Re-anchored to the paragraph it was dropped beside, as Word moves the anchor with the
+    // object: the layout wraps only text after a float's anchor, so a float dragged up its page
+    // kept its old anchor below and the text it was dropped on ran underneath it. Wordcraft's
+    // move_object re-anchors only across pages.
+    Document moved = Picture.reanchored(session.document(), layout(), pic.block(), to, px, py);
     if (moved != null) session.replaceDocument(moved);
     else session.replacePicture(pic.block(), ((Picture) block).movedTo(px, py));
-    refresh();
-    changed.run();
+    objectEdited();
     return true;
   }
 
   @Override
   public void pointerDragged(int x, int y) {
     if (scrollbarPress) {
-      super.pointerDragged(x, y);
+      super.pointerDragged(x, scrollbarY(x, y));
       return;
     }
     if (ink != null && inkBlock >= 0) {
@@ -2997,8 +3045,8 @@ public final class EditorSurface extends Container
   @Override
   public void pointerReleased(int x, int y) {
     if (scrollbarPress) {
+      super.pointerReleased(x, scrollbarY(x, y));
       scrollbarPress = false;
-      super.pointerReleased(x, y);
       return;
     }
     if (ink != null && inkBlock >= 0) {

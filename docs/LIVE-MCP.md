@@ -31,3 +31,5 @@ Library tests and MCP model edits alone do not establish native input, rendering
 
 
 `scripts/ribbon-check.py` selects every ribbon tab of the running agent-debug app and fails on controls that overlap, are cut off, or are squeezed below the height their icon and text need (`word_ribbon_check`, RibbonLint). The simulator's test theme measures controls differently, so ribbon layout is only verified this way; `--screenshots DIR` saves each tab for review.
+
+`scripts/interaction-check.py` replaces the open document and drives pointer gestures through `word_pointer`, which delivers in-process press/drag/release events to the form as the port does (no OS input): scrollbar thumb drag and track paging away from the top, object click, corner resize, move, and draw mode (Pen, a stroke, moving the canvas by its edge, Select to leave). The simulator once passed a scrollbar fix that failed in the app because its test only grabbed the thumb at scroll 0, so interaction fixes are checked this way. Both scripts take `--port` (the agent-debug build's `-Dwordprocessor.agent.port`, default 18765).

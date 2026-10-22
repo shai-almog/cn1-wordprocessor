@@ -39,7 +39,8 @@ def ribbon_band(nodes, tabs):
     geometry rather than by containment.
     """
     strip = max(box(t)[1] + box(t)[3] for t in tabs)
-    width = max(box(n)[0] + box(n)[2] for n in nodes.values())
+    # The window's width: a tab wider than the window (References) has controls past its edge.
+    width = max(box(n)[2] for n in nodes.values() if box(n)[0] == 0 and box(n)[1] == 0)
     left = min(box(t)[0] for t in tabs)
     bottom = None
     for n in nodes.values():

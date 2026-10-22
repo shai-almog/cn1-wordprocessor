@@ -20,6 +20,15 @@ final class WordMcp {
 
     /** RibbonLint's findings for every ribbon tab, measured in the running look and feel. */
     List<String> ribbonDefects();
+
+    /** Delivers an in-process pointer event to the form at display point x, y (no OS input). */
+    void pointer(String type, int x, int y);
+
+    /** Display bounds {x, y, w, h} of the object in a body block, or null when not laid out. */
+    int[] objectRect(int block);
+
+    /** Editor state a pointer gesture changes: selected object, inking, scroll and selection. */
+    Map<String, Object> pointerState();
   }
 
   private static boolean started;
@@ -62,6 +71,36 @@ final class WordMcp {
             "Select each ribbon tab and report controls squeezed below their preferred size, overlapping, or cut off.",
             "{\"type\":\"object\",\"properties\":{}}",
             json -> onEdt(() -> Json.object("defects", context.ribbonDefects()))));
+    MCP.addTool(
+        new Tool(
+            "word_pointer",
+            "Deliver in-process pointer events (press, drag, release) at display points to the form, as a mouse would through the port, each optionally followed by waitMs; returns the editor's pointer state. Optional block also returns that object's display bounds first.",
+            "{\"type\":\"object\",\"properties\":{\"block\":{\"type\":\"integer\"},\"events\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"type\":{\"type\":\"string\",\"enum\":[\"press\",\"drag\",\"release\"]},\"x\":{\"type\":\"integer\"},\"y\":{\"type\":\"integer\"},\"waitMs\":{\"type\":\"integer\"}},\"required\":[\"type\",\"x\",\"y\"]}}}}",
+            json -> {
+              var args = Json.parse(json);
+              List<Object> events = (List<Object>) args.get("events");
+              if (events != null)
+                for (Object o : events) {
+                  Map<String, Object> e = (Map<String, Object>) o;
+                  onEdt(
+                      () -> {
+                        context.pointer((String) e.get("type"), num(e, "x"), num(e, "y"));
+                        return null;
+                      });
+                  int wait = num(e, "waitMs");
+                  Thread.sleep(wait > 0 ? Math.min(wait, 5000) : 30);
+                }
+              return onEdt(
+                  () -> {
+                    var state = new LinkedHashMap<String, Object>(context.pointerState());
+                    int block = num(args, "block");
+                    if (block >= 0) {
+                      int[] r = context.objectRect(block);
+                      state.put("rect", r == null ? null : Arrays.asList(r[0], r[1], r[2], r[3]));
+                    }
+                    return state;
+                  });
+            }));
     MCP.addTool(
         new Tool(
             "word_load",

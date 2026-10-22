@@ -8213,6 +8213,23 @@ public class WordProcessor {
             public java.util.List<String> ribbonDefects() {
               return RibbonLint.check(ribbon, form::revalidate);
             }
+
+            public void pointer(String type, int x, int y) {
+              switch (type) {
+                case "press" -> form.pointerPressed(x, y);
+                case "drag" -> form.pointerDragged(x, y);
+                case "release" -> form.pointerReleased(x, y);
+                default -> throw new IllegalArgumentException("Unknown pointer event " + type);
+              }
+            }
+
+            public int[] objectRect(int block) {
+              return editor.pictureRect(block);
+            }
+
+            public Map<String, Object> pointerState() {
+              return editor.pointerState();
+            }
           });
     } catch (Exception ex) {
       Log.e(ex);
