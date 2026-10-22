@@ -304,11 +304,21 @@ final class OpenType {
    */
   int nextIndex(int lookup, int flag, List<Glyph> buffer, int i, int step, Want want)
       throws IOException {
+    return nextIndex(lookup, flag, buffer, i, step, want, false);
+  }
+
+  /**
+   * As above; {@code context} marks backtrack/lookahead matching, where GSUB also skips ZWJ
+   * (harfrust's ignore_zwj is set for context matching; ZWNJ there depends on auto-ZWNJ).
+   */
+  int nextIndex(int lookup, int flag, List<Glyph> buffer, int i, int step, Want want,
+      boolean context) throws IOException {
     for (int j = i + step; j >= 0 && j < buffer.size(); j += step) {
       var g = buffer.get(j);
       if (skip(lookup, flag, g)) continue;
       boolean maybe = ignorable(g)
-          && (positioning || !hidden(g.cp) && g.cp != 0x200c && g.cp != 0x200d);
+          && (positioning
+              || !hidden(g.cp) && g.cp != 0x200c && (context || g.cp != 0x200d));
       if (maybe && (want == null || !want.ok(g.id))) continue;
       int syllable = buffer.get(i).syllable;
       return perSyllable && syllable != 0 && g.syllable != syllable ? -1 : j;
@@ -508,14 +518,14 @@ final class OpenType {
         for (int k = 0; k < backtrack && ok; k++) {
           int value = font.u16(backAt + 2 * k), def = backDef;
           Want want = id -> matches(format, def, id, value);
-          p = nextIndex(lookup, flag, buffer, p, -1, want);
+          p = nextIndex(lookup, flag, buffer, p, -1, want, true);
           ok = p >= 0 && want.ok(buffer.get(p).id);
         }
         p = positions[input - 1];
         for (int k = 0; k < lookahead && ok; k++) {
           int value = font.u16(lookAt + 2 * k), def = lookDef;
           Want want = id -> matches(format, def, id, value);
-          p = nextIndex(lookup, flag, buffer, p, 1, want);
+          p = nextIndex(lookup, flag, buffer, p, 1, want, true);
           ok = p >= 0 && want.ok(buffer.get(p).id);
         }
         if (!ok) continue;
@@ -545,7 +555,7 @@ final class OpenType {
     for (int k = 0; k < count; k++) {
       int cover = sub + font.u16(listAt + 2 * k);
       Want want = id -> font.coverage(cover, id) >= 0;
-      p = nextIndex(lookup, flag, buffer, p, step, want);
+      p = nextIndex(lookup, flag, buffer, p, step, want, true);
       if (p < 0 || !want.ok(buffer.get(p).id)) return false;
     }
     return true;

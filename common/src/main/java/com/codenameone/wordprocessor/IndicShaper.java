@@ -615,7 +615,7 @@ final class IndicShaper {
     }
     if (cp >= 0x200b && cp <= 0x200f || cp == 0x00ad || cp == 0x2060 || cp == 0xfeff) return true;
     if (cp >= 'a' && cp <= 'z' || cp >= 'A' && cp <= 'Z') return true;
-    return cp >= 0x00c0 && cp <= 0x024f && cp != 0x00d7 && cp != 0x00f7 || cp == 0x25cc;
+    return cp >= 0x00c0 && cp <= 0x024f && cp != 0x00d7 && cp != 0x00f7;
   }
 
   /** harfrust's find_syllables_indic: the Ragel scanner; returns whether a cluster was broken. */

@@ -210,3 +210,7 @@ Myanmar Sangam MN.ttc	\u1000\u103b\u103d	114+2212|298+314
 # morx faces whose run takes a non-default shaper (dumber with morx, fallback_position off): no legacy kern table; hb-shape 14.2.1.
 Kailasa.ttc	\u0f3c\u0f44	76+1382|84+1229
 Kailasa.ttc	\u0f0b\u0f64	27+214|116+1343
+/System/Library/Fonts/Kohinoor.ttc	\u094d\u0915\u093f\u200d\u0947	159+660|132@-193,0+0|780+273|1+0|51+770|36@-248,0+0
+/System/Library/Fonts/KohinoorBangla.ttc	\u09bf\u09b7\u09bf\u09c7	19+273|104+660|499+271|19+273|61+565
+/System/Library/Fonts/Kohinoor.ttc	\u0915\u093f\u200d\u0947	780+273|1+0|51+770|36@-248,0+0
+/System/Library/Fonts/KohinoorBangla.ttc	\u09c7\u0995\u09c7	499+271|104+660|499+271|32+691
