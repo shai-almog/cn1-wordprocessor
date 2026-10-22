@@ -166,13 +166,17 @@ public final class TextFormats {
   }
 
   /**
-   * As {@link #limitHtmlDepth(String, int)}; with {@code tablesExtracted} table structure tags are
-   * kept and not counted, because TextBlocks lifts tables out before parsing and caps their nesting.
+   * As {@link #limitHtmlDepth(String, int)}; with {@code tablesExtracted} table structure tags
+   * count toward the depth too (with HTML's implied cell/row/row-group end tags written out), so
+   * the limiter alone bounds the parser even for stray table tags TextBlocks does not lift out.
    */
   static String limitHtmlDepth(String html, int max, boolean tablesExtracted) {
     String lc = html.toLowerCase();
     var out = new StringBuilder(html.length());
     var stack = new java.util.ArrayList<String>();
+    // Tables (nested ones included) open inside a table dropped for depth: all their table tags
+    // are dropped too, so their rows' cells do not become stray siblings in the kept table.
+    int dropped = 0;
     int i = 0, n = html.length();
     while (i < n) {
       int lt = html.indexOf('<', i);
@@ -193,9 +197,16 @@ public final class TextFormats {
         int gt = html.indexOf('>', lt + 2);
         if (gt < 0) break;
         String name = lc.substring(lt + 2, gt);
-        boolean table = tablesExtracted && HTML_TABLE.indexOf(" " + name + " ") >= 0;
-        if (table) out.append(html, lt, gt + 1);
-        else if (!stack.isEmpty() && stack.get(stack.size() - 1).equals(name)) {
+        boolean tableTag = tablesExtracted && HTML_TABLE.indexOf(" " + name + " ") >= 0;
+        int open = tableTag && dropped == 0 ? tableOpen(stack, name) : -1;
+        if (tableTag && dropped > 0) {
+          if (name.equals("table")) dropped--;
+        } else if (open >= 0) {
+          // A table tag closes its element and whatever was left open inside it.
+          closeTo(stack, open + 1, out);
+          stack.remove(open);
+          out.append(html, lt, gt + 1);
+        } else if (!stack.isEmpty() && stack.get(stack.size() - 1).equals(name)) {
           stack.remove(stack.size() - 1);
           out.append(html, lt, gt + 1);
         } else if (name.length() > 0 && HTML_BLOCK.indexOf(" " + name + " ") >= 0) out.append(' ');
@@ -223,9 +234,22 @@ public final class TextFormats {
       int[] end = openTagEnd(html, k);
       if (end == null) break;
       if (tablesExtracted && HTML_TABLE.indexOf(" " + name + " ") >= 0) {
-        out.append(html, lt, end[0]);
-        i = end[0];
-        continue;
+        if (dropped > 0) {
+          if (name.equals("table") && end[1] == 0) dropped++;
+          i = end[0];
+          continue;
+        }
+        // Table tags count toward the depth like any other: tables TextBlocks lifts out never
+        // reach the parser, but stray ones (and a direct parse) would nest it without bound.
+        // As HTML's implied end tags, a new cell, row or row group closes the open one of its
+        // kind in the same table. The parser does not imply them, so they are written out: a
+        // table with omitted end tags (or a run of stray rows) stays shallow instead of nesting.
+        implicitTableClose(stack, name, out);
+        // A table (or row) is kept only with room for its rows and cells, so its text is not
+        // left in a table without a cell.
+        int room = name.equals("table") || TABLE_ROWS.indexOf(" " + name + " ") >= 0 ? 3 : name.equals("tr") ? 2 : 0;
+        keep = stack.size() + room < max;
+        if (!keep && name.equals("table") && end[1] == 0) dropped = 1;
       }
       if (keep) {
         out.append(html, lt, end[0]);
@@ -239,6 +263,41 @@ public final class TextFormats {
       else out.append(html, i, n);
     }
     return out.toString();
+  }
+
+  private static final String TABLE_ROWS = " tbody thead tfoot ";
+
+  /** Index in {@code stack} of the open table element a close tag {@code name} ends, or -1. */
+  private static int tableOpen(java.util.List<String> stack, String name) {
+    for (int i = stack.size() - 1; i >= 0; i--) {
+      String s = stack.get(i);
+      if (s.equals(name)) return i;
+      if (s.equals("table")) return -1;
+    }
+    return -1;
+  }
+
+  /** Pops {@code stack} down to {@code size} entries, writing each popped element's end tag. */
+  private static void closeTo(java.util.List<String> stack, int size, StringBuilder out) {
+    while (stack.size() > size) out.append("</").append(stack.remove(stack.size() - 1)).append('>');
+  }
+
+  /** Pops the cell, row or row group a new {@code name} tag implicitly closes. */
+  private static void implicitTableClose(java.util.List<String> stack, String name, StringBuilder out) {
+    boolean cell = name.equals("td") || name.equals("th"), row = name.equals("tr"),
+        group = TABLE_ROWS.indexOf(" " + name + " ") >= 0;
+    if (!cell && !row && !group) return;
+    for (int i = stack.size() - 1; i >= 0; i--) {
+      String s = stack.get(i);
+      if (s.equals("table")) return;
+      boolean sCell = s.equals("td") || s.equals("th"), sRow = s.equals("tr"),
+          sGroup = TABLE_ROWS.indexOf(" " + s + " ") >= 0;
+      if (cell ? sCell : row ? sCell || sRow : sCell || sRow || sGroup) {
+        closeTo(stack, i, out);
+        return;
+      }
+      if (cell && sRow || row && sGroup) return;
+    }
   }
 
   /**

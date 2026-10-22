@@ -95,4 +95,25 @@ public class HtmlDeepNestingTest {
     assertEquals("<p>a<br>b<!-- <x> --><b>c</b></p>", out);
     assertEquals("<b>x</b>", TextFormats.limitHtmlDepth("<b><i>x</i></b>", 1));
   }
+
+  private static void parsesExtracted(String html) {
+    // The limiter alone must bound the parser's depth, without the StackOverflowError net.
+    com.codename1.ui.editor.RichTextImporter.parse(
+        TextFormats.limitHtmlDepth(html, TextFormats.MAX_HTML_DEPTH, true), RichTextFormat.HTML);
+  }
+
+  @Test
+  public void strayRowsAndCellsCountTowardTheLimit() {
+    parsesExtracted("<tr><td><span>".repeat(3000) + "x");
+  }
+
+  @Test
+  public void unclosedTablesCountTowardTheLimit() {
+    parsesExtracted("<table><tr><td><span>".repeat(3000) + "x");
+  }
+
+  @Test
+  public void strayRowGroupsCountTowardTheLimit() {
+    parsesExtracted("<tbody>".repeat(3000) + "x");
+  }
 }
