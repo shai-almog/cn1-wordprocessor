@@ -424,8 +424,9 @@ public class SimulatorUiTest {
           host.getContentPane().setHeight(OfficeTheme.px(200));
           host.getContentPane().layoutContainer();
           frame.layoutContainer();
-          assertNotNull("the first group stays", groups[0].getParent());
-          assertNull("the last group folds into a button", groups[2].getParent());
+          assertTrue("the first group stays", groups[0].isVisible());
+          assertFalse("the last group folds into a button", groups[2].isVisible());
+          org.junit.Assert.assertSame("a folded group stays in the tree for appearance updates", frame, groups[2].getParent().getParent());
           var buttons = new java.util.ArrayList<String>();
           collectButtons(frame, buttons);
           assertTrue("its button carries the caption: " + buttons, buttons.stream().anyMatch(t -> t.startsWith("Group 2")));
@@ -434,7 +435,7 @@ public class SimulatorUiTest {
           host.getContentPane().invalidate();
           host.getContentPane().layoutContainer();
           frame.layoutContainer();
-          assertNotNull("a wide window unfolds it", groups[2].getParent());
+          assertTrue("a wide window unfolds it", groups[2].isVisible());
         });
   }
 
@@ -478,10 +479,12 @@ public class SimulatorUiTest {
           // A click selects; the bottom-right handle then drags the size, keeping the ratio.
           editor.pointerPressed(r[0] + r[2] / 2, r[1] + r[3] / 2);
           editor.pointerReleased(r[0] + r[2] / 2, r[1] + r[3] / 2);
+          // Twice its size: wider than the page, so the layout draws it scaled down (as on CI's
+          // smaller window, where the side handle below then changed the height).
           editor.pointerPressed(r[0] + r[2], r[1] + r[3]);
           editor.pointerDragged(r[0] + r[2] + 20, r[1] + r[3] + 20);
-          editor.pointerDragged(r[0] + r[2] + 40, r[1] + r[3] + 40);
-          editor.pointerReleased(r[0] + r[2] + 40, r[1] + r[3] + 40);
+          editor.pointerDragged(r[0] + 2 * r[2], r[1] + 2 * r[3]);
+          editor.pointerReleased(r[0] + 2 * r[2], r[1] + 2 * r[3]);
           editor.refresh();
           var after = (Picture) session().document().blocks.get(canvas[0]);
           assertTrue("the corner handle enlarges the object", after.width > before.width + 5);

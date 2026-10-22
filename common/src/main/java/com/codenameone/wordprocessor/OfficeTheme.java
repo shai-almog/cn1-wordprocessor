@@ -201,7 +201,18 @@ final class OfficeTheme {
       super(BoxLayout.x());
       this.groups = groups;
       standIns = new Button[groups.length];
-      for (Component group : groups) add(group);
+      // Each group is followed by the button it folds into; folding hides one or the other, so
+      // a folded group stays in the tree and still gets appearance and state updates.
+      for (int i = 0; i < groups.length; i++) {
+        add(groups[i]);
+        add(standIn(i));
+        show(standIns[i], false);
+      }
+    }
+
+    private static void show(Component c, boolean visible) {
+      c.setHidden(!visible);
+      c.setVisible(visible);
     }
 
     void move(int direction) {
@@ -225,11 +236,9 @@ final class OfficeTheme {
       while (k < n - 1 && needed(k) > width) k++;
       if (k == folded) return false;
       folded = k;
-      removeAll();
       for (int i = 0; i < n; i++) {
-        var group = groups[i];
-        if (group.getParent() != null) group.getParent().removeComponent(group);
-        add(i < n - k ? group : standIn(i));
+        show(groups[i], i < n - k);
+        show(standIns[i], i >= n - k);
       }
       setScrollX(0);
       return true;
@@ -239,8 +248,17 @@ final class OfficeTheme {
     int needed(int k) {
       int w = 0;
       for (int i = 0; i < groups.length; i++)
-        w += i < groups.length - k ? groups[i].getPreferredW() : standIn(i).getPreferredW();
+        w += width(i < groups.length - k ? groups[i] : standIn(i));
       return w + px(10);
+    }
+
+    /** A component's width shown: a hidden component's preferred width is 0. */
+    private static int width(Component c) {
+      if (!c.isHidden()) return c.getPreferredW();
+      c.setHidden(false);
+      int w = c.getPreferredW();
+      c.setHidden(true);
+      return w;
     }
 
     private Button standIn(int i) {
@@ -253,7 +271,9 @@ final class OfficeTheme {
       b.addActionListener(
           e -> {
             var group = groups[i];
-            if (group.getParent() != null) group.getParent().removeComponent(group);
+            int at = getComponentIndex(group);
+            removeComponent(group);
+            show(group, true);
             var popup = new Dialog(new BorderLayout());
             popup.getDialogStyle().setBgColor(RIBBON);
             surface(popup.getContentPane(), RIBBON);
@@ -261,8 +281,11 @@ final class OfficeTheme {
             applyAppearance(popup);
             popup.setDisposeWhenPointerOutOfBounds(true);
             popup.showPopupDialog(b);
-            // Closed: the group waits detached until it is shown again here or unfolds.
+            // Closed: the group goes back to its place in the row, hidden while folded.
             if (group.getParent() != null) group.getParent().removeComponent(group);
+            addComponent(at, group);
+            show(group, i < groups.length - folded);
+            revalidate();
           });
       return standIns[i] = b;
     }

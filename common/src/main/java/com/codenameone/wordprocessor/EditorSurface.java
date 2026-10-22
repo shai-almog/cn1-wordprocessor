@@ -1403,6 +1403,10 @@ public final class EditorSurface extends Container
                     return true;
                   }));
     setScrollableY(true);
+    // Pinned on desktop: Component.initLaf resets the scrollbar's visibility from the theme each
+    // time the look and feel is refreshed, and a theme without scrollVisibleBool (a mobile one,
+    // or one reloaded for an appearance change) hid the scrollbar for good.
+    if (!OfficeTheme.mobile()) setScrollVisible(true);
     setScrollableX(true);
     // Component.pointerPressed consumes a press on the interactive scrollbar's thumb or track
     // before it fires these listeners, so a press that never reaches them belongs to a scrollbar.
@@ -3000,7 +3004,12 @@ public final class EditorSurface extends Container
     float[] r = resizedRect(pic, x, y);
     var blocks = session.editingDocument().blocks;
     if (pic.block() >= blocks.size() || !(blocks.get(pic.block()) instanceof Picture p)) return true;
-    var next = p.resize(r[2], r[3], p.alt, p.align);
+    // The layout draws an object larger than its page scaled down; the handles move the drawn
+    // frame, so the document size scales back by the same factor (a side handle keeps the
+    // other dimension exactly).
+    float k = pic.width() > 0 ? p.width / pic.width() : 1;
+    int i = resizeHandle / 3, j = resizeHandle % 3;
+    var next = p.resize(i == 1 ? p.width : r[2] * k, j == 1 ? p.height : r[3] * k, p.alt, p.align);
     // A floating object dragged by a left or top handle keeps its opposite edge where it was.
     boolean moved = Math.abs(r[0] - pic.x()) > .01f || Math.abs(r[1] - pic.y()) > .01f;
     if (moved && !"inline".equals(p.wrap()) && !pic.inCell()) next = next.movedTo(r[0], r[1]);
