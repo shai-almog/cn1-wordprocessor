@@ -258,8 +258,47 @@ public final class ReviewComment {
       while (a < n && old.charAt(a) == line.charAt(a)) a++;
       int z = 0;
       while (z < n - a && old.charAt(old.length() - 1 - z) == line.charAt(line.length() - 1 - z)) z++;
-      var style = p.text.length() == 0 ? TextStyle.DEFAULT : p.text.styleAt(Math.min(p.text.length() - 1, Math.max(0, a - 1)));
-      out.add(p.text(p.text.replace(a, old.length() - z, RichText.of(line.substring(a, line.length() - z), style))));
+      // plainText() shows a field (or note) as its display text while it is one RichText
+      // position: map plain offsets to positions, widening the edit to whole atoms it touches.
+      int[] at = new int[old.length()], atomStart = new int[old.length()], atomEnd = new int[old.length()];
+      p.text.visit(
+          new RichText.Visitor() {
+            int plain;
+
+            public void run(int offset, String text, TextStyle style) {
+              for (int k = 0; k < text.length(); k++, plain++) {
+                at[plain] = offset + k;
+                atomStart[plain] = plain;
+                atomEnd[plain] = plain + 1;
+              }
+            }
+
+            public void field(int offset, InlineField field, TextStyle style) {
+              atom(offset, field.display());
+            }
+
+            public void note(int offset, Note note, TextStyle style) {
+              atom(offset, note.label);
+            }
+
+            private void atom(int offset, String shown) {
+              int from = plain;
+              for (int k = 0; k < shown.length(); k++, plain++) {
+                at[plain] = offset;
+                atomStart[plain] = from;
+                atomEnd[plain] = from + shown.length();
+              }
+            }
+          });
+      int e = old.length() - z;
+      if (a < old.length()) a = atomStart[a];
+      if (e > 0 && e > a) e = atomEnd[e - 1];
+      z = old.length() - e;
+      int from = a < old.length() ? at[a] : p.text.length();
+      int to = e == 0 ? 0 : e >= old.length() ? p.text.length() : at[e];
+      if (to < from) to = from;
+      var style = p.text.length() == 0 ? TextStyle.DEFAULT : p.text.styleAt(Math.min(p.text.length() - 1, Math.max(0, from - 1)));
+      out.add(p.text(p.text.replace(from, to, RichText.of(line.substring(a, line.length() - z), style))));
     }
     return out;
   }
