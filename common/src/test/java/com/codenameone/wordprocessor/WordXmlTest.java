@@ -286,4 +286,33 @@ public class WordXmlTest {
     assertFalse(first.text.styleAt(6).bold);
     assertEquals("Second", ((Paragraph) story.get(1)).text.toString());
   }
+
+  @Test
+  public void word2003DeletedFieldStaysDeleted() throws Exception {
+    String xml = "<?xml version=\"1.0\"?><w:wordDocument xmlns:w=\"" + W2003 + "\""
+        + " xmlns:aml=\"http://schemas.microsoft.com/aml/2001/core\"><w:body><w:p><w:r><w:t>Page </w:t></w:r>"
+        + "<aml:annotation aml:id=\"1\" aml:author=\"Bo\" w:type=\"Word.Deletion\"><aml:content>"
+        + "<w:r><w:fldChar w:fldCharType=\"begin\"/></w:r><w:r><w:instrText> PAGE </w:instrText></w:r>"
+        + "<w:r><w:fldChar w:fldCharType=\"separate\"/></w:r><w:r><w:t>7</w:t></w:r>"
+        + "<w:r><w:fldChar w:fldCharType=\"end\"/></w:r></aml:content></aml:annotation></w:p></w:body></w:wordDocument>";
+    String docx = new String(WordXml.parts(xml.getBytes("UTF-8"), new java.util.HashSet<>()).get("word/document.xml"), "UTF-8");
+    assertFalse(docx, docx.contains("<w:instrText"));
+    assertTrue(docx, docx.contains("<w:delInstrText"));
+    var p = open(xml).document.paragraph(0);
+    InlineField[] field = {null};
+    TextStyle[] style = {null};
+    p.text.visit(
+        new RichText.Visitor() {
+          public void run(int offset, String text, TextStyle s) {}
+
+          public void field(int offset, InlineField f, TextStyle s) {
+            field[0] = f;
+            style[0] = s;
+          }
+        });
+    assertNotNull(p.text.toString(), field[0]);
+    assertEquals("PAGE", field[0].instruction.trim());
+    assertNotNull(style[0].revision);
+    assertFalse(style[0].revision.inserted());
+  }
 }

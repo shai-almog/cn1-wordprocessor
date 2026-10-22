@@ -593,7 +593,9 @@ final class WordXml {
         Element content = Xml.child(e, "content");
         if (content != null) children(content, inner);
         String body = inner.toString();
-        if (del) body = body.replace("<w:t>", "<w:delText>").replace("<w:t ", "<w:delText ").replace("</w:t>", "</w:delText>");
+        if (del) body = body.replace("<w:t>", "<w:delText>").replace("<w:t ", "<w:delText ").replace("</w:t>", "</w:delText>")
+            .replace("<w:instrText>", "<w:delInstrText>").replace("<w:instrText ", "<w:delInstrText ")
+            .replace("</w:instrText>", "</w:delInstrText>");
         String tag = del ? "w:del" : "w:ins";
         out.append('<').append(tag).append(authorDate(e, id)).append('>').append(body).append("</").append(tag).append('>');
       } else if ("Word.Insertion".equals(type)) {
