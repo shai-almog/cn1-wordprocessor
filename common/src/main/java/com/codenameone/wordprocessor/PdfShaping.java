@@ -426,9 +426,19 @@ final class PdfShaping {
       gsub(ot, scripts, buffer, new String[] {"calt", "liga", "clig"}, all);
     }
     boolean gdef = font.tables.containsKey("GDEF");
+    int space = font.glyph(' ');
     for (int i = 0; i < buffer.size(); i++) {
       var g = buffer.get(i);
-      if (g.id == 0 && (g.cp == 0x200c || g.cp == 0x200d) && buffer.size() > 1) {
+      // Default ignorables GSUB left alone are hidden as harfrust's hide_default_ignorables: the
+      // space glyph with no advance, or removed when the face has no space (so a CGJ or variation
+      // selector the face lacks is never .notdef with an advance).
+      if (OpenType.ignorable(g) && space != 0) {
+        g.id = space;
+        g.flags |= OpenType.HIDDEN;
+      }
+      if ((g.id == 0 && (g.cp == 0x200c || g.cp == 0x200d)
+              || OpenType.ignorable(g) && space == 0)
+          && buffer.size() > 1) {
         var keep = buffer.get(i > 0 ? i - 1 : i + 1);
         keep.start = Math.min(keep.start, g.start);
         keep.end = Math.max(keep.end, g.end);
@@ -523,7 +533,7 @@ final class PdfShaping {
     int space = font.glyph(' ');
     for (int i = 0; i < buffer.size(); i++) {
       var g = buffer.get(i);
-      boolean hidden = (g.cp == 0x200c || g.cp == 0x200d) && g.id == font.glyph(g.cp);
+      boolean hidden = OpenType.ignorable(g.cp) && g.id == font.glyph(g.cp);
       if (hidden && space == 0 && buffer.size() > 1) {
         var keep = buffer.get(i > 0 ? i - 1 : i + 1);
         keep.start = Math.min(keep.start, g.start);
