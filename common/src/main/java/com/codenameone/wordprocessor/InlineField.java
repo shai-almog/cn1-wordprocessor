@@ -47,6 +47,20 @@ public final class InlineField {
    */
   public static final int MAX_ADDIN_INSTRUCTION = 2 * 1024 * 1024, MAX_INSTRUCTION = 8192, MAX_RESULT = 1000000;
 
+  /**
+   * The instruction cut to its length limit, as Wordcraft's docx reader stops collecting an
+   * instruction at MAX_INSTR (read/story.rs) and keeps the field rather than dropping it.
+   */
+  public static String truncate(String instruction) {
+    if (instruction == null) return null;
+    int limit = instruction.startsWith(Zotero.PREFIX) || rangeInstruction(instruction)
+        ? MAX_ADDIN_INSTRUCTION
+        : MAX_INSTRUCTION;
+    if (instruction.length() <= limit) return instruction;
+    if (Character.isHighSurrogate(instruction.charAt(limit - 1))) limit--;
+    return instruction.substring(0, limit);
+  }
+
   /** True when a field with this instruction and result can be built; readers degrade others to text. */
   public static boolean valid(String instruction, String result) {
     return instruction != null

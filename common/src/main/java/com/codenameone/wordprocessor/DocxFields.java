@@ -42,9 +42,9 @@ final class DocxFields {
     // result is the paragraphs' own content, closed by the end marker in a later paragraph.
     if (parser.stack.size() == 1 && parser.stack.get(0).separated
         && InlineField.rangeInstruction(parser.stack.get(0).instruction.toString())
-        && InlineField.valid(parser.stack.get(0).instruction.toString().trim(), "")) {
+        && InlineField.valid(InlineField.truncate(parser.stack.get(0).instruction.toString().trim()), "")) {
       var open = parser.stack.remove(0);
-      var mark = new InlineField(open.instruction.toString().trim(), "", open.locked, false).start();
+      var mark = new InlineField(InlineField.truncate(open.instruction.toString().trim()), "", open.locked, false).start();
       parser.text = parser.text.concat(RichText.field(mark, open.style)).concat(open.result);
     }
     while (!parser.stack.isEmpty()) {
@@ -68,7 +68,8 @@ final class DocxFields {
 
   private void close() {
     var field = stack.remove(stack.size() - 1);
-    var instruction = field.instruction.toString().trim();
+    // An over-limit instruction is cut to the limit and the field kept (Wordcraft MAX_INSTR).
+    var instruction = InlineField.truncate(field.instruction.toString().trim());
     if (instruction.isEmpty()) {
       warnings.add("Field without instructions");
       append(field.result);
@@ -129,7 +130,7 @@ final class DocxFields {
     }
     if ("fldSimple".equals(kind)) {
       RichText result = read(node, reader, links, warnings);
-      String instruction = Xml.attr(node, "instr", "");
+      String instruction = InlineField.truncate(Xml.attr(node, "instr", ""));
       if (instruction.trim().isEmpty()) {
         warnings.add("Field without instructions");
         append(result);
@@ -206,7 +207,11 @@ final class DocxFields {
         append(Docx.ruby(child, style));
       } else if (("instrText".equals(type) || "delInstrText".equals(type))) {
         if (stack.isEmpty()) warnings.add("Instruction outside a field");
-        else stack.get(stack.size() - 1).instruction.append(Xml.text(child));
+        else {
+          // Stop collecting past the ADDIN limit, as Wordcraft does; close() truncates exactly.
+          var instr = stack.get(stack.size() - 1).instruction;
+          if (instr.length() <= InlineField.MAX_ADDIN_INSTRUCTION) instr.append(Xml.text(child));
+        }
       } else if (("t".equals(type) || "delText".equals(type))
           || "tab".equals(type)
           || "br".equals(type)
