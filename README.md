@@ -3,7 +3,7 @@
 This vibe-coded clone of [Wordcraft](https://github.com/storytold/wordcraft), written in
 **Java** with [Codename One](https://www.codenameone.com), does more than the Rust original.
 It has more functionality, deeper native integration and more platforms. It is faster, uses
-less RAM and costs less CI time, and it does all of that in about **a third of the lines of
+less RAM and costs less CI time, and it does all of that in about **two thirds of the lines of
 code and tokens**.
 
 That should make the "rewrite it in Rust" movement rethink its direction.
@@ -18,17 +18,17 @@ same 502-row Word feature catalog.
 <!-- ci-summary:begin -->
 | Front | Java (this app) | Rust (Wordcraft) |
 | --- | --- | --- |
-| **Faster startup** | 256 / 228 / 152 ms | 706 / 253 / 300 ms |
-| **Faster editing** | 9.2 / 8.0 / 5.9 ms to type a character | 39.7 / 16.1 / 16.8 ms to type a character |
-| **Less RAM** | 101 / 101 / 86 MiB | 143 / 185 / 106 MiB |
-| **Smaller executable** | 26.0 / 28.6 / 24.5 MiB | 55.0 / 75.2 / 57.5 MiB |
+| **Faster startup** | 370 / 231 / 288 ms | 821 / 246 / 455 ms |
+| **Faster editing** | 8.9 / 10.7 / 12.4 ms to type a character | 51.9 / 14.9 / 24.9 ms to type a character |
+| **Less RAM** | 112 / 111 / 90 MiB | 145 / 187 / 106 MiB |
+| **Smaller executable** | 34.7 / 37.7 / 32.5 MiB | 55.0 / 75.2 / 57.5 MiB |
 | **More platforms from one source** | macOS, Linux, Windows, iPhone/iPad, Android, browser | macOS, Linux, Windows, browser |
 | **More features, deeper native** | native menu bar, rich copy out, drag out, high contrast | see [below](#more-features-and-deeper-native) |
 | **Equally functional** | 487 / 487 implementable catalog rows | 487 rows implemented, 15 stubs |
-| **Easier for LLMs** | 43,679 lines, 483,125 tokens | 118,659 lines, 1,646,847 tokens |
-| **Cheaper CI per test** | 116 ms (647 tests in 75 s) | 532 ms (1,922 tests in 1,023 s) |
+| **Easier for LLMs** | 76,275 lines, 1,006,395 tokens | 118,659 lines, 1,646,847 tokens |
+| **Cheaper CI per test** | 86 ms (1,123 tests in 97 s) | 500 ms (1,922 tests in 961 s) |
 
-Desktop figures are macOS / Linux / Windows, measured on GitHub's runners by CI run [39438215005](https://github.com/shai-almog/cn1-wordprocessor/actions/runs/39438215005) (commit `a729b74`) with the 1,000-paragraph document: launch to first painted document, idle resident memory, and command to painted frame. Code counts are application code without tests or comment lines. Java wins 39 of the 42 desktop measurements; the rest are listed in [Per-OS results](#per-os-results).
+Desktop figures are macOS / Linux / Windows, measured on GitHub's runners by CI run [39825464193](https://github.com/shai-almog/cn1-wordprocessor/actions/runs/39825464193) (commit `502edf9`) with the 1,000-paragraph document: launch to first painted document, idle resident memory, and command to painted frame. Code counts are application code without tests or comment lines. Java wins 38 of the 42 desktop measurements; the rest are listed in [Per-OS results](#per-os-results).
 <!-- ci-summary:end -->
 
 ## How can Java beat Rust on RAM and performance?
@@ -73,70 +73,70 @@ Every number here comes from one CI run on GitHub-hosted runners, with both apps
 source, run on the same machine and given the same fixtures.
 
 <!-- ci-tables:begin -->
-Measured by CI run [39438215005](https://github.com/shai-almog/cn1-wordprocessor/actions/runs/39438215005) on commit `a729b74` (2026-10-20), GitHub-hosted runners, same runner and fixtures for both apps. Medians; startup is 10 fresh launches to the first painted document, latency is command to painted frame. Regenerate with `scripts/ci-readme-tables.py RUN_ID`.
+Measured by CI run [39825464193](https://github.com/shai-almog/cn1-wordprocessor/actions/runs/39825464193) on commit `502edf9` (2026-10-22), GitHub-hosted runners, same runner and fixtures for both apps. Medians; startup is 10 fresh launches to the first painted document, latency is command to painted frame. Regenerate with `scripts/ci-readme-tables.py RUN_ID`.
 
 ### macOS
 
-[arm64 GitHub macos15 runner, 3 CPUs](https://github.com/shai-almog/cn1-wordprocessor/actions/runs/39438215005/job/118681360991)
+[arm64 GitHub macos15 runner, 3 CPUs](https://github.com/shai-almog/cn1-wordprocessor/actions/runs/39825464193/job/119987459213)
 
 | Measure (lower is better) | Codename One | Wordcraft (Rust) | Better |
 |---|---:|---:|---|
-| Startup, 1 paragraph | 193 ms | 631 ms | CN1 |
-| Startup, 1,000 paragraphs | 256 ms | 706 ms | CN1 |
-| Startup, 10,000 paragraphs | 556 ms | 1401 ms | CN1 |
-| Idle RAM, 1 paragraph | 87 MiB | 107 MiB | CN1 |
-| Idle RAM, 1,000 paragraphs | 101 MiB | 143 MiB | CN1 |
-| Idle RAM, 10,000 paragraphs | 213 MiB | 367 MiB | CN1 |
-| Peak RAM, 1,000-paragraph workload | 220 MiB | 221 MiB | CN1 |
-| Type a character to painted frame | 9.2 ms | 39.7 ms | CN1 |
-| Undo to painted frame | 8.3 ms | 39.6 ms | CN1 |
-| Paste 10,000 chars to painted frame | 14.2 ms | 64.1 ms | CN1 |
-| Save DOCX to painted frame | 7.7 ms | 7.5 ms | **Wordcraft** |
-| Reopen DOCX to painted frame | 19.6 ms | 105.0 ms | CN1 |
-| Export PDF to painted frame | 27.0 ms | 431.5 ms | CN1 |
-| Executable size | 26.0 MiB | 55.0 MiB | CN1 |
+| Startup, 1 paragraph | 320 ms | 651 ms | CN1 |
+| Startup, 1,000 paragraphs | 370 ms | 821 ms | CN1 |
+| Startup, 10,000 paragraphs | 917 ms | 1670 ms | CN1 |
+| Idle RAM, 1 paragraph | 96 MiB | 106 MiB | CN1 |
+| Idle RAM, 1,000 paragraphs | 112 MiB | 145 MiB | CN1 |
+| Idle RAM, 10,000 paragraphs | 220 MiB | 364 MiB | CN1 |
+| Peak RAM, 1,000-paragraph workload | 230 MiB | 223 MiB | **Wordcraft** |
+| Type a character to painted frame | 8.9 ms | 51.9 ms | CN1 |
+| Undo to painted frame | 8.9 ms | 52.3 ms | CN1 |
+| Paste 10,000 chars to painted frame | 45.4 ms | 76.6 ms | CN1 |
+| Save DOCX to painted frame | 7.7 ms | 12.0 ms | CN1 |
+| Reopen DOCX to painted frame | 31.6 ms | 132.0 ms | CN1 |
+| Export PDF to painted frame | 36.4 ms | 565.3 ms | CN1 |
+| Executable size | 34.7 MiB | 55.0 MiB | CN1 |
 
 ### Linux
 
-[x86_64 GitHub ubuntu24 runner, 4 CPUs](https://github.com/shai-almog/cn1-wordprocessor/actions/runs/39438215005/job/118681360992)
+[x86_64 GitHub ubuntu24 runner, 4 CPUs](https://github.com/shai-almog/cn1-wordprocessor/actions/runs/39825464193/job/119987459064)
 
 | Measure (lower is better) | Codename One | Wordcraft (Rust) | Better |
 |---|---:|---:|---|
-| Startup, 1 paragraph | 168 ms | 169 ms | CN1 |
-| Startup, 1,000 paragraphs | 228 ms | 253 ms | CN1 |
-| Startup, 10,000 paragraphs | 795 ms | 1006 ms | CN1 |
-| Idle RAM, 1 paragraph | 86 MiB | 162 MiB | CN1 |
-| Idle RAM, 1,000 paragraphs | 101 MiB | 185 MiB | CN1 |
-| Idle RAM, 10,000 paragraphs | 181 MiB | 386 MiB | CN1 |
-| Peak RAM, 1,000-paragraph workload | 184 MiB | 221 MiB | CN1 |
-| Type a character to painted frame | 8.0 ms | 16.1 ms | CN1 |
-| Undo to painted frame | 7.6 ms | 16.0 ms | CN1 |
-| Paste 10,000 chars to painted frame | 17.6 ms | 26.4 ms | CN1 |
-| Save DOCX to painted frame | 5.8 ms | 5.7 ms | **Wordcraft** |
-| Reopen DOCX to painted frame | 23.1 ms | 84.7 ms | CN1 |
-| Export PDF to painted frame | 21.0 ms | 562.0 ms | CN1 |
-| Executable size | 28.6 MiB | 75.2 MiB | CN1 |
+| Startup, 1 paragraph | 170 ms | 166 ms | **Wordcraft** |
+| Startup, 1,000 paragraphs | 231 ms | 246 ms | CN1 |
+| Startup, 10,000 paragraphs | 838 ms | 973 ms | CN1 |
+| Idle RAM, 1 paragraph | 94 MiB | 164 MiB | CN1 |
+| Idle RAM, 1,000 paragraphs | 111 MiB | 187 MiB | CN1 |
+| Idle RAM, 10,000 paragraphs | 198 MiB | 387 MiB | CN1 |
+| Peak RAM, 1,000-paragraph workload | 190 MiB | 241 MiB | CN1 |
+| Type a character to painted frame | 10.7 ms | 14.9 ms | CN1 |
+| Undo to painted frame | 9.4 ms | 15.1 ms | CN1 |
+| Paste 10,000 chars to painted frame | 18.0 ms | 27.0 ms | CN1 |
+| Save DOCX to painted frame | 7.7 ms | 5.9 ms | **Wordcraft** |
+| Reopen DOCX to painted frame | 25.9 ms | 83.5 ms | CN1 |
+| Export PDF to painted frame | 35.4 ms | 563.8 ms | CN1 |
+| Executable size | 37.7 MiB | 75.2 MiB | CN1 |
 
 ### Windows
 
-[AMD64 GitHub win25-vs2026 runner, 4 CPUs](https://github.com/shai-almog/cn1-wordprocessor/actions/runs/39438215005/job/118681360832)
+[AMD64 GitHub win25-vs2026 runner, 4 CPUs](https://github.com/shai-almog/cn1-wordprocessor/actions/runs/39825464193/job/119987459831)
 
 | Measure (lower is better) | Codename One | Wordcraft (Rust) | Better |
 |---|---:|---:|---|
-| Startup, 1 paragraph | 112 ms | 239 ms | CN1 |
-| Startup, 1,000 paragraphs | 152 ms | 300 ms | CN1 |
-| Startup, 10,000 paragraphs | 484 ms | 793 ms | CN1 |
-| Idle RAM, 1 paragraph | 68 MiB | 82 MiB | CN1 |
-| Idle RAM, 1,000 paragraphs | 86 MiB | 106 MiB | CN1 |
-| Idle RAM, 10,000 paragraphs | 168 MiB | 307 MiB | CN1 |
-| Peak RAM, 1,000-paragraph workload | 170 MiB | 163 MiB | **Wordcraft** |
-| Type a character to painted frame | 5.9 ms | 16.8 ms | CN1 |
-| Undo to painted frame | 5.5 ms | 16.8 ms | CN1 |
-| Paste 10,000 chars to painted frame | 16.4 ms | 26.6 ms | CN1 |
-| Save DOCX to painted frame | 4.5 ms | 5.9 ms | CN1 |
-| Reopen DOCX to painted frame | 15.2 ms | 74.6 ms | CN1 |
-| Export PDF to painted frame | 13.8 ms | 477.6 ms | CN1 |
-| Executable size | 24.5 MiB | 57.5 MiB | CN1 |
+| Startup, 1 paragraph | 189 ms | 343 ms | CN1 |
+| Startup, 1,000 paragraphs | 288 ms | 455 ms | CN1 |
+| Startup, 10,000 paragraphs | 1203 ms | 1444 ms | CN1 |
+| Idle RAM, 1 paragraph | 71 MiB | 82 MiB | CN1 |
+| Idle RAM, 1,000 paragraphs | 90 MiB | 106 MiB | CN1 |
+| Idle RAM, 10,000 paragraphs | 169 MiB | 308 MiB | CN1 |
+| Peak RAM, 1,000-paragraph workload | 183 MiB | 165 MiB | **Wordcraft** |
+| Type a character to painted frame | 12.4 ms | 24.9 ms | CN1 |
+| Undo to painted frame | 10.5 ms | 25.0 ms | CN1 |
+| Paste 10,000 chars to painted frame | 31.1 ms | 40.4 ms | CN1 |
+| Save DOCX to painted frame | 7.4 ms | 10.3 ms | CN1 |
+| Reopen DOCX to painted frame | 31.5 ms | 261.2 ms | CN1 |
+| Export PDF to painted frame | 32.7 ms | 775.2 ms | CN1 |
+| Executable size | 32.5 MiB | 57.5 MiB | CN1 |
 <!-- ci-tables:end -->
 
 Note on PDF export: our exporter covers less typography than Wordcraft's. It has no complex
@@ -196,7 +196,7 @@ The complete comparison, including features where the two are level, is in
 
 ![Source size](docs/images/source.svg)
 
-About a third of the code and a quarter of the tokens (tiktoken `o200k_base`) for the
+About two thirds of the code and three fifths of the tokens (tiktoken `o200k_base`) for the
 same catalog: an agent reads the whole application in a fraction of the context, and every
 edit touches less code.
 
@@ -208,9 +208,9 @@ The two suites have different sizes, so the chart divides runner time by the num
 Functional tests run on the JVM against the same Java code that ships natively, with no native
 toolchain; Rust must compile its dependency tree and test binaries before running anything.
 
-### Why does Wordcraft have three times as many tests?
+### Why does Wordcraft have more tests?
 
-Wordcraft has 1,926 `#[test]` functions; this app now has over 800 JUnit tests (the CI chart
+Wordcraft has 1,926 `#[test]` functions; this app now has over 1,100 JUnit tests (the CI chart
 above counts the suite at its last metrics run). Counted at Wordcraft's pinned revision:
 
 - **About a quarter test plumbing that egui leaves to the application.** `ui-egui` alone has
