@@ -5,18 +5,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * The desktop menu bar, defined once. The Mac builds it natively (submenus, separators, check
- * marks, the application/Window/Help menus); other desktops get the same entries as framework
- * commands, one native menu per top-level title.
+ * The desktop menu bar, defined once and published through the framework's native menu bridge:
+ * submenus, separators, check marks and shortcuts. Standard entries (Hide, Services, Window) are
+ * the platform's own; phones and tablets get the runnable entries in the side menu.
  */
 final class AppMenus {
-  /** A platform menu bar that can show the full structure. */
-  interface Native {
-    boolean install(String spec);
-
-    void check(int id, boolean on);
-  }
-
   /** Current state of a check-marked entry. */
   interface State {
     boolean on();
@@ -25,47 +18,48 @@ final class AppMenus {
   static final int CMD = 1, SHIFT = 2, ALT = 4;
 
   private static final class Item {
-    final String kind, title, selector;
+    final String path, title;
+    String role;
+    boolean everywhere;
     final char key;
-    final int modifiers, depth;
+    final int modifiers;
     final Runnable action;
     final State checked;
-    int id;
-    boolean shown;
+    final boolean separator;
+    Command command;
 
-    Item(String kind, int depth, String title, char key, int modifiers, Runnable action,
-        String selector, State checked) {
-      this.kind = kind;
-      this.depth = depth;
+    Item(String path, String title, char key, int modifiers, Runnable action, String role, State checked,
+        boolean separator) {
+      this.path = path;
       this.title = title;
       this.key = key;
       this.modifiers = modifiers;
       this.action = action;
-      this.selector = selector;
+      this.role = role;
       this.checked = checked;
+      this.separator = separator;
     }
   }
 
   private final List<Item> items = new ArrayList<>();
-  private final List<Item> byId = new ArrayList<>();
-  private int depth;
-  private Native installed;
+  private final List<String> path = new ArrayList<>();
+  private boolean started;
 
   /** Starts a top-level menu; the first one is the application menu. */
   AppMenus menu(String title) {
-    items.add(new Item("M", 0, title, (char) 0, 0, null, null, null));
-    depth = 1;
+    path.clear();
+    path.add(started ? title : Command.DESKTOP_MENU_APP);
+    started = true;
     return this;
   }
 
   AppMenus submenu(String title) {
-    items.add(new Item("M", depth, title, (char) 0, 0, null, null, null));
-    depth++;
+    path.add(title.replace("/", "//"));
     return this;
   }
 
   AppMenus end() {
-    depth--;
+    path.remove(path.size() - 1);
     return this;
   }
 
@@ -74,7 +68,7 @@ final class AppMenus {
   }
 
   AppMenus item(String title, char key, int modifiers, Runnable action) {
-    return add(new Item("I", depth, title, key, modifiers, action, null, null));
+    return add(title, key, modifiers, action, null, null);
   }
 
   AppMenus toggle(String title, State on, Runnable action) {
@@ -82,91 +76,62 @@ final class AppMenus {
   }
 
   AppMenus toggle(String title, char key, int modifiers, State on, Runnable action) {
-    return add(new Item("I", depth, title, key, modifiers, action, null, on));
+    return add(title, key, modifiers, action, null, on);
   }
 
   /**
-   * An AppKit responder-chain action (copy:, undo:, performMiniaturize:) on the Mac; elsewhere
-   * {@code fallback}, or nothing when it is null.
+   * A standard command ({@code Command.DESKTOP_ROLE_*}). The Mac keeps its own item for the role,
+   * which goes through the responder chain; elsewhere {@code fallback} runs, or the entry is left
+   * out when it is null.
    */
-  AppMenus system(String title, String selector, char key, int modifiers, Runnable fallback) {
-    items.add(new Item("A", depth, title, key, modifiers, fallback, selector, null));
-    return this;
+  AppMenus system(String title, String role, char key, int modifiers, Runnable fallback) {
+    return fallback == null ? this : add(title, key, modifiers, fallback, role, null);
   }
 
-  /** The Services submenu AppKit fills in. */
-  AppMenus services() {
-    items.add(new Item("V", depth, "Services", (char) 0, 0, null, null, null));
+  /** Gives the last entry a standard role on every platform, the Mac included. */
+  AppMenus role(String role) {
+    Item last = items.get(items.size() - 1);
+    last.role = role;
+    last.everywhere = true;
     return this;
   }
 
   AppMenus separator() {
-    items.add(new Item("S", depth, "", (char) 0, 0, null, null, null));
+    items.add(new Item(menuPath(), "", (char) 0, 0, null, null, null, true));
     return this;
   }
 
-  private AppMenus add(Item item) {
-    byId.add(item);
-    item.id = byId.size();
-    items.add(item);
+  private AppMenus add(String title, char key, int modifiers, Runnable action, String role, State on) {
+    items.add(new Item(menuPath(), title, key, modifiers, action, role, on, false));
     return this;
   }
 
-  /** The tab-separated spec {@link Native#install} reads. */
-  String spec() {
-    var b = new StringBuilder();
-    for (Item i : items) {
-      if (b.length() > 0) b.append('\n');
-      i.shown = i.checked != null && i.checked.on();
-      b.append(i.kind).append('\t').append(i.depth).append('\t')
-          .append("A".equals(i.kind) ? i.selector : String.valueOf(i.id)).append('\t')
-          .append((int) i.key).append('\t').append(i.modifiers).append('\t')
-          .append(i.title.replace('\t', ' ').replace('\n', ' ')).append('\t')
-          .append(i.shown ? '1' : '0');
-    }
-    return b.toString();
+  private String menuPath() {
+    return String.join("/", path);
   }
 
-  /** Installs natively; false when the platform cannot, so {@link #commands} should be used. */
-  boolean install(Native menuBar) {
-    if (menuBar == null || !menuBar.install(spec())) return false;
-    installed = menuBar;
-    return true;
-  }
-
-  /** Runs the item a native selection names. */
-  void fire(int id) {
-    if (id >= 1 && id <= byId.size() && byId.get(id - 1).action != null) byId.get(id - 1).action.run();
-  }
-
-  /** Pushes check marks that changed since the last call. */
+  /** Pushes check marks that changed; the framework republishes the native menu. */
   void sync() {
-    if (installed == null) return;
-    for (Item i : byId)
-      if (i.checked != null) {
+    for (Item i : items)
+      if (i.checked != null && i.command != null) {
         boolean on = i.checked.on();
-        if (on != i.shown) {
-          i.shown = on;
-          installed.check(i.id, on);
-        }
+        if (on != i.command.isDesktopChecked()) i.command.setDesktopChecked(on);
       }
   }
 
   /**
-   * The entries as framework commands for desktops without the native structure: each runnable
-   * item is placed in the native menu named by its top-level menu.
+   * The entries as framework commands, each running through {@code wrap}. With {@code menuBar}
+   * they carry their menu path, separators, check marks and shortcuts; without it only the
+   * runnable entries are returned, for a side menu.
    */
-  List<Command> commands(java.util.function.Function<Runnable, Runnable> wrap) {
+  List<Command> commands(java.util.function.Function<Runnable, Runnable> wrap, boolean menuBar) {
     var out = new ArrayList<Command>();
-    String menu = "";
-    boolean app = true;
     for (Item i : items) {
-      if ("M".equals(i.kind) && i.depth == 0) {
-        app = menu.isEmpty();
-        menu = i.title;
+      i.command = null;
+      if (i.separator) {
+        if (menuBar) out.add(Command.createDesktopSeparator(i.path));
         continue;
       }
-      if (i.action == null || "M".equals(i.kind)) continue;
       final Runnable run = wrap.apply(i.action);
       var c =
           new Command(i.title) {
@@ -175,15 +140,14 @@ final class AppMenus {
               run.run();
             }
           };
-      if (app)
-        c.setDesktopMenu(
-            i.title.startsWith("About") ? Command.DESKTOP_MENU_ABOUT
-                : i.title.startsWith("Preferences") || i.title.startsWith("Settings")
-                    ? Command.DESKTOP_MENU_PREFERENCES
-                    : i.title.startsWith("Quit") ? Command.DESKTOP_MENU_QUIT : Command.DESKTOP_MENU_APP);
-      else c.setDesktopMenu(menu);
-      if (i.key != 0) c.setDesktopShortcut(i.key, toFramework(i.modifiers));
+      i.command = c;
       out.add(c);
+      if (!menuBar) continue;
+      c.setDesktopMenu(i.path);
+      if (i.role != null) c.setDesktopRole(i.role);
+      if (i.role != null && !i.everywhere) c.setDesktopPlatforms("win", "linux", "web");
+      if (i.key != 0) c.setDesktopShortcut(i.key, toFramework(i.modifiers));
+      if (i.checked != null) c.setDesktopChecked(i.checked.on());
     }
     return out;
   }
@@ -193,13 +157,6 @@ final class AppMenus {
     if ((m & CMD) != 0) out |= Command.DESKTOP_SHORTCUT_MODIFIER_PRIMARY;
     if ((m & SHIFT) != 0) out |= Command.DESKTOP_SHORTCUT_MODIFIER_SHIFT;
     if ((m & ALT) != 0) out |= Command.DESKTOP_SHORTCUT_MODIFIER_ALT;
-    return out;
-  }
-
-  /** Titles of every runnable entry, for command search. */
-  List<String[]> titles() {
-    var out = new ArrayList<String[]>();
-    for (Item i : byId) out.add(new String[] {i.title, String.valueOf(i.id)});
     return out;
   }
 }

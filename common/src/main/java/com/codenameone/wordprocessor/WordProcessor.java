@@ -434,7 +434,6 @@ public class WordProcessor {
     if (pendingRecovery != null) showRecoveryBar();
     OfficeTheme.applyAppearance(form);
     form.show();
-    fitWindowToScreen();
     // No appearance-change callback exists, so follow the OS setting with a cheap poll.
     new UITimer(
             () -> {
@@ -5506,40 +5505,7 @@ public class WordProcessor {
         v -> run("document.title", Json.object("title", v)));
   }
 
-  /** Platform menu bar with the full structure (the Mac's AppKit menu), set by the launcher. */
-  public interface MenuBar {
-    boolean install(String spec);
-
-    void check(int id, boolean on);
-
-    void about(String version, String credits);
-
-    void fitWindow(int widthPercent, int heightPercent);
-  }
-
-  private MenuBar menuBar;
-
-  /**
-   * The first launch opens a window sized for writing (most of the screen, centered) rather than
-   * the port's small default; afterwards the window keeps the frame the user gives it.
-   */
-  private void fitWindowToScreen() {
-    if (menuBar == null || com.codename1.io.Preferences.get("wordprocessor.windowFitted", false)) return;
-    com.codename1.io.Preferences.set("wordprocessor.windowFitted", true);
-    menuBar.fitWindow(80, 90);
-  }
   private AppMenus menus;
-
-  public void setMenuBar(MenuBar menuBar) {
-    this.menuBar = menuBar;
-  }
-
-  /** A native menu selection; may arrive on any thread. */
-  public void menuSelected(int id) {
-    Display.getInstance().callSerially(() -> {
-      if (menus != null) menus.fire(id);
-    });
-  }
 
   private Runnable menuAction(String name, Runnable action) {
     uiActions.put(name, action);
@@ -5571,17 +5537,10 @@ public class WordProcessor {
     final int cmd = AppMenus.CMD, shift = AppMenus.CMD | AppMenus.SHIFT, alt = AppMenus.CMD | AppMenus.ALT;
     var m = new AppMenus();
     m.menu(APP_NAME)
-        .item("About " + APP_NAME, menuAction("About", this::about))
-        .separator()
+        .system("About " + APP_NAME, Command.DESKTOP_ROLE_ABOUT, (char) 0, 0, menuAction("About", this::about))
         .item("Settings…", ',', cmd, menuAction("Settings", this::preferences))
-        .separator()
-        .services()
-        .separator()
-        .system("Hide " + APP_NAME, "hide:", 'h', cmd, null)
-        .system("Hide Others", "hideOtherApplications:", 'h', alt, null)
-        .system("Show All", "unhideAllApplications:", (char) 0, 0, null)
-        .separator()
-        .system("Quit " + APP_NAME, "terminate:", 'q', cmd, () -> Display.getInstance().exitApplication());
+        .role(Command.DESKTOP_ROLE_SETTINGS)
+        .system("Quit " + APP_NAME, Command.DESKTOP_ROLE_QUIT, 'q', cmd, () -> Display.getInstance().exitApplication());
     m.menu("File")
         .item("New Document", 'n', cmd, menuAction("New Document", this::newDocument))
         .item("New from Template…", 'p', shift, menuAction("New from Template", cmd("file.newFromTemplate")))
@@ -5615,17 +5574,16 @@ public class WordProcessor {
         .item("Properties…", menuAction("Properties", this::propertiesDialog))
         .item("Rename…", menuAction("Rename", this::rename));
     m.menu("Edit")
-        .system("Undo", "undo:", 'z', cmd, () -> run("edit.undo", Json.object()))
-        .system("Redo", "redo:", 'z', shift, () -> run("edit.redo", Json.object()))
+        .system("Undo", Command.DESKTOP_ROLE_UNDO, 'z', cmd, () -> run("edit.undo", Json.object()))
+        .system("Redo", Command.DESKTOP_ROLE_REDO, 'z', shift, () -> run("edit.redo", Json.object()))
         .item("Undo History…", menuAction("Undo History", this::undoHistory))
         .separator()
-        .system("Cut", "cut:", 'x', cmd, () -> clipboard("cut"))
-        .system("Copy", "copy:", 'c', cmd, () -> clipboard("copy"))
-        .system("Paste", "paste:", 'v', cmd, () -> clipboard("paste"))
+        .system("Cut", Command.DESKTOP_ROLE_CUT, 'x', cmd, () -> clipboard("cut"))
+        .system("Copy", Command.DESKTOP_ROLE_COPY, 'c', cmd, () -> clipboard("copy"))
+        .system("Paste", Command.DESKTOP_ROLE_PASTE, 'v', cmd, () -> clipboard("paste"))
         .item("Paste Special…", menuAction("Paste Special", this::pasteOptions))
         .item("Office Clipboard", menuAction("Office Clipboard", this::officeClipboard))
         .item("Clear Formatting", menuAction("Clear Formatting", this::clearFormatting))
-        .system("Select All", "selectAll:", 'a', cmd, null)
         .separator()
         .submenu("Find")
         .item("Find…", 'f', cmd, menuAction("Find", this::find))
@@ -5809,12 +5767,7 @@ public class WordProcessor {
         .separator()
         .item("Table Properties…", menuAction("Table Properties", this::tableLayout));
     m.menu("Window")
-        .system("Minimize", "performMiniaturize:", 'm', cmd, null)
-        .system("Zoom", "performZoom:", (char) 0, 0, null)
-        .separator()
-        .item("New Window", menuAction("New Window", viewCmd("view.newWindow")))
-        .separator()
-        .system("Bring All to Front", "arrangeInFront:", (char) 0, 0, null);
+        .item("New Window", menuAction("New Window", viewCmd("view.newWindow")));
     m.menu("Help")
         .item("Search Commands…", menuAction("Search Commands", this::searchCommands))
         .item("Keyboard Shortcuts…", menuAction("Keyboard Shortcuts", this::customizeKeyboardDialog))
@@ -5822,27 +5775,16 @@ public class WordProcessor {
         .item("Project Website", menuAction("Project Website", () -> Display.getInstance().execute(PROJECT_URL)))
         .item("Report a Problem", menuAction("Report a Problem", () -> Display.getInstance().execute(PROJECT_URL + "/issues")));
     menus = m;
-    final MenuBar bar = menuBar;
-    AppMenus.Native mac = bar == null ? null : new AppMenus.Native() {
-      public boolean install(String spec) {
-        return bar.install(spec);
-      }
-
-      public void check(int id, boolean on) {
-        bar.check(id, on);
-      }
-    };
     if (OfficeTheme.mobile()) {
       // Phones and tablets have no menu bar: the same entries go in the hamburger side menu.
       for (Command c : sideMenu) form.getToolbar().removeCommand(c);
       sideMenu.clear();
-      for (Command c : m.commands(r -> r)) {
+      for (Command c : m.commands(r -> r, false)) {
         form.getToolbar().addCommandToSideMenu(c);
         sideMenu.add(c);
       }
-    } else if (!m.install(mac)) {
-      var commands = m.commands(r -> r);
-      if (form.getToolbar() instanceof OfficeTitleBar title) title.nativeMenu(commands);
+    } else if (form.getToolbar() instanceof OfficeTitleBar title) {
+      title.nativeMenu(m.commands(r -> r, true));
     }
   }
 
@@ -5863,22 +5805,12 @@ public class WordProcessor {
     applyDarkPage();
   }
 
-  private static final String ABOUT_CREDITS =
-      "<div style=\"font-family:-apple-system,sans-serif;font-size:11px;text-align:center\">"
-          + "A word processor written in Java with Codename One and compiled to native code."
-          + "<br><br>Opens and saves Word (.docx), OpenDocument (.odt), RTF, HTML, Markdown and plain text, and exports PDF."
-          + "<br><br><a href=\"" + "https://github.com/shai-almog/cn1-wordprocessor" + "\">Project website</a>"
-          + " &middot; <a href=\"" + "https://github.com/shai-almog/cn1-wordprocessor/issues" + "\">Report a problem</a>"
-          + "<br><br>Source Sans 3 and JetBrains Mono fonts: SIL Open Font License 1.1."
-          + "<br>Built with <a href=\"https://www.codenameone.com\">Codename One</a>.</div>";
-
-  /** The platform About panel on the Mac; elsewhere a dialog with the same content. */
+  /**
+   * About dialog; the Mac menu keeps the standard About panel, which shows the bundle's
+   * Credits.rtf.
+   */
   private void about() {
     String version = Display.getInstance().getProperty("AppVersion", "1.0");
-    if (menuBar != null) {
-      menuBar.about(version, ABOUT_CREDITS);
-      return;
-    }
     var body = new Container(BoxLayout.y());
     var name = OfficeTheme.label(APP_NAME, 20, OfficeTheme.INK);
     name.getAllStyles().setFont(OfficeTheme.font(20, true));

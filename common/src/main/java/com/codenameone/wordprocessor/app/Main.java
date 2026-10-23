@@ -1,7 +1,8 @@
 package com.codenameone.wordprocessor.app;
 
 import com.codename1.io.FileSystemStorage;
-import com.codename1.system.NativeLookup;
+import com.codename1.io.filechooser.FileTypeFilter;
+import com.codename1.io.filechooser.SaveFileRequest;
 import com.codename1.ui.Dialog;
 import com.codename1.ui.Display;
 import com.codenameone.wordprocessor.WordProcessor;
@@ -15,30 +16,6 @@ public class Main extends com.codename1.system.Lifecycle {
     // The native stub constructs Main before Display.init(); create UI only here.
     app = new WordProcessor();
     app.init(context);
-    final NativeDesktop menu = NativeLookup.create(NativeDesktop.class);
-    if (menu != null && menu.isSupported()) {
-      NativeMenuCallback.listener = app::menuSelected;
-      app.setMenuBar(
-          new WordProcessor.MenuBar() {
-            public boolean install(String spec) {
-              // Keeps the native callback's Java entry point in the translated build.
-              if (spec.isEmpty()) NativeMenuCallback.fire(0);
-              return menu.install(spec);
-            }
-
-            public void check(int id, boolean on) {
-              menu.check(id, on);
-            }
-
-            public void about(String version, String credits) {
-              menu.about(version, credits);
-            }
-
-            public void fitWindow(int widthPercent, int heightPercent) {
-              menu.fitWindow(widthPercent, heightPercent);
-            }
-          });
-    }
     app.setFiles(
         new WordProcessor.Files() {
           public void open(WordProcessor.OpenCallback callback) {
@@ -96,41 +73,43 @@ public class Main extends com.codename1.system.Lifecycle {
 
           public void save(
               String name, String existingPath, byte[] bytes, WordProcessor.SaveCallback callback) {
+            if (existingPath == null) {
+              saveAs(name, bytes, callback);
+              return;
+            }
+            // Save rewrites the chosen location; one that can no longer be written (moved, or
+            // outside the iOS sandbox) asks again.
             Display.getInstance()
                 .scheduleBackgroundTask(
                     () -> {
-                      NativeFiles dialog = NativeLookup.create(NativeFiles.class);
-                      if (dialog != null && dialog.isSupported()) {
-                        // Save rewrites the chosen location; a location that can no longer be
-                        // written (moved, or exported outside the iOS sandbox) asks again.
-                        if (existingPath != null && dialog.writeFile(existingPath, bytes) == null) {
-                          done(callback, true, existingPath, existingPath);
-                          return;
-                        }
-                        String location = dialog.saveAs(name, mime(name), bytes);
-                        if (location == null) done(callback, false, null, null);
-                        else if (location.startsWith("error:"))
-                          done(callback, false, null, location.substring(6));
-                        else done(callback, true, location, location);
-                        return;
-                      }
-                      // No Save dialog (e.g. a browser without the File System Access API).
-                      if (Display.getInstance().downloadBytesAsFile(name, bytes)) {
-                        done(callback, true, null, "download offered: " + name);
-                        return;
-                      }
-                      String path = FileSystemStorage.getInstance().getAppHomePath() + name;
-                      try (OutputStream out = FileSystemStorage.getInstance().openOutputStream(path)) {
+                      try (OutputStream out =
+                          FileSystemStorage.getInstance().openOutputStream(existingPath)) {
                         out.write(bytes);
                       } catch (IOException ex) {
-                        done(callback, false, null, ex.getMessage());
+                        Display.getInstance().callSerially(() -> saveAs(name, bytes, callback));
                         return;
                       }
-                      done(callback, true, null, "local export: " + name);
-                      Display.getInstance().callSerially(() -> Display.getInstance().share(path, null, mime(name)));
+                      done(callback, true, existingPath, existingPath);
                     });
           }
         });
+  }
+
+  private static void saveAs(String name, byte[] bytes, WordProcessor.SaveCallback callback) {
+    String ext = name.substring(name.lastIndexOf('.') + 1);
+    Display.getInstance()
+        .showSaveDialog(
+            new SaveFileRequest()
+                .suggestedName(name)
+                .confirmOverwrite(true)
+                .addFilter(new FileTypeFilter(ext.toUpperCase()).extensions(ext).mimeTypes(mime(name)))
+                .content((result, out) -> out.write(bytes)),
+            result -> {
+              if (result.isCancelled()) callback.saved(false, null, null);
+              else if (result.getError() != null)
+                callback.saved(false, null, String.valueOf(result.getError().getMessage()));
+              else callback.saved(true, result.getPath(), result.getPath());
+            });
   }
 
   private static void done(WordProcessor.SaveCallback callback, boolean ok, String path, String message) {

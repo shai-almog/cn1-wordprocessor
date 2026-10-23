@@ -1,0 +1,41 @@
+--- a/Ports/MacPort/nativeSources/CN1MacChrome.m
++++ b/Ports/MacPort/nativeSources/CN1MacChrome.m
+@@ -120,6 +120,11 @@
+             break;
+         }
+     }
++    // File comes right after the application menu, ahead of the stock Edit menu,
++    // as in every Mac application; the other menus still go before Window.
++    if ([title isEqualToString:@"File"] && mainMenu.numberOfItems > 0) {
++        insertAt = 1;
++    }
+     [mainMenu insertItem:item atIndex:insertAt];
+ #ifndef CN1_USE_ARC
+     [item release];
+@@ -616,6 +621,10 @@
+         if (w == nil) {
+             return;
+         }
++        // Changing NSWindowStyleMaskFullSizeContentView keeps the content rect, so the
++        // frame would lose (or gain) a title bar; the autosaved frame then recorded the
++        // shorter window and it shrank by one title bar on every launch. Keep the frame.
++        NSRect frame = w.frame;
+         if (undecorated) {
+             // Full size content rather than a borderless window: the title bar
+             // goes away and the traffic lights stay, which is what a desktop
+@@ -625,6 +634,7 @@
+             w.titlebarAppearsTransparent = YES;
+             w.titleVisibility = NSWindowTitleHidden;
+             w.movableByWindowBackground = YES;
++            [w setFrame:frame display:YES];
+             cn1MacUpdateTitleInsets();
+         } else {
+             // Restored, unlike the Catalyst path, which only ever undecorates:
+@@ -634,6 +644,7 @@
+             w.titlebarAppearsTransparent = NO;
+             w.titleVisibility = NSWindowTitleVisible;
+             w.movableByWindowBackground = NO;
++            [w setFrame:frame display:YES];
+             NSView *view = [CN1MacHost sharedHost].renderingView;
+             if ([view isKindOfClass:[METALView class]]) {
+                 ((METALView *)view).cn1TitleBarRegions = nil;

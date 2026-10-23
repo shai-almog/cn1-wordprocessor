@@ -28,5 +28,5 @@ cn1 = side(cn1_exe, cn1_bundle) if cn1_bundle else {**side(cn1_exe, os.path.dirn
 json.dump({'os': osname, 'cn1': cn1, 'wordcraft': wc,
            'platform': platform.platform(), 'machine': f"{platform.machine()} GitHub {os.environ.get('ImageOS', osname)} runner",
            'cpuCount': os.cpu_count(), 'ramBytes': ram(),
-           'wordcraftRevision': os.environ['WORDCRAFT_REV'], 'frameworkRevision': 'cn1 7.0.278',
+           'wordcraftRevision': os.environ['WORDCRAFT_REV'], 'frameworkRevision': 'cn1 7.0.279',
            'cn1Revision': os.environ.get('GITHUB_SHA', '')}, sys.stdout, indent=2)
