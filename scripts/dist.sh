@@ -33,10 +33,16 @@ case $platform in
     limit 600 hdiutil create -quiet -volname Wordprocessor -srcfolder "$staging" -ov -format UDZO "dist/$name.dmg"
     if [[ $identity != - ]]; then
       limit 300 codesign --force --timestamp --sign "$identity" "dist/$name.dmg"
-      if [[ -n ${NOTARY_APPLE_ID:-} ]]; then
+      if [[ -n ${NOTARY_KEY_P8:-} || -n ${NOTARY_APPLE_ID:-} ]]; then
         # Apple can hold a submission for hours (a new team's first ones especially), so each wait
         # is bounded; a submission still queued at the limit (exit 142) is not resubmitted.
-        creds=(--apple-id "$NOTARY_APPLE_ID" --team-id "$NOTARY_TEAM_ID" --password "$NOTARY_PASSWORD")
+        if [[ -n ${NOTARY_KEY_P8:-} ]]; then
+          # An App Store Connect API key skips the Apple ID sign-in, whose outages answer HTTP 500.
+          key=$(mktemp); trap 'rm -f "$key"' EXIT; printf '%s\n' "$NOTARY_KEY_P8" > "$key"
+          creds=(--key "$key" --key-id "$NOTARY_KEY_ID" --issuer "$NOTARY_ISSUER_ID")
+        else
+          creds=(--apple-id "$NOTARY_APPLE_ID" --team-id "$NOTARY_TEAM_ID" --password "$NOTARY_PASSWORD")
+        fi
         # The notary service answers HTTP 500 for hours at a time; an upload that never got a
         # verdict is retried, while an Invalid verdict is final. A tag build fails rather than
         # releasing a DMG Gatekeeper rejects as "Unnotarized Developer ID".

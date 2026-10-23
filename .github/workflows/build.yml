@@ -89,7 +89,10 @@ jobs:
       - name: macOS signing identity
         # Repository secrets: MACOS_CERT_P12 (base64 Developer ID Application .p12) and
         # MACOS_CERT_PASSWORD; NOTARY_APPLE_ID, NOTARY_TEAM_ID and NOTARY_PASSWORD (an
-        # app-specific password) for notarization. Absent secrets give an ad-hoc signed app.
+        # app-specific password) for notarization, or the App Store Connect API key NOTARY_KEY_P8
+        # (the .p8 text) with NOTARY_KEY_ID and NOTARY_ISSUER_ID, which is preferred: it skips the
+        # Apple ID sign-in, whose outages fail notarization with HTTP 500. Absent secrets give an
+        # ad-hoc signed app.
         if: matrix.platform == 'mac' && env.MACOS_CERT_P12 != ''
         run: |
           kc="$RUNNER_TEMP/signing.keychain-db" pw=$(uuidgen)
@@ -116,6 +119,9 @@ jobs:
           NOTARY_APPLE_ID: ${{ secrets.NOTARY_APPLE_ID }}
           NOTARY_TEAM_ID: ${{ secrets.NOTARY_TEAM_ID }}
           NOTARY_PASSWORD: ${{ secrets.NOTARY_PASSWORD }}
+          NOTARY_KEY_P8: ${{ secrets.NOTARY_KEY_P8 }}
+          NOTARY_KEY_ID: ${{ secrets.NOTARY_KEY_ID }}
+          NOTARY_ISSUER_ID: ${{ secrets.NOTARY_ISSUER_ID }}
         run: scripts/dist.sh ${{ matrix.platform }} "$VERSION"
       - uses: actions/upload-artifact@v4
         with:
