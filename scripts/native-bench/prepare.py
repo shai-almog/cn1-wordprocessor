@@ -16,7 +16,6 @@ f=editor/'WordProcessor.java';s=f.read_text()
 s=patch(s,'var recovered = recovery.recover();','var recovered = NativeBenchmark.input == null ? recovery.recover() : NativeBenchmark.load();')
 # The benchmark document opens directly, in the port's default window size (as Wordcraft's).
 s=patch(s,'recovered = offerRecovery(recovered);','if (NativeBenchmark.input == null) recovered = offerRecovery(recovered);')
-s=patch(s,'    fitWindowToScreen();\n','    if (NativeBenchmark.input == null) fitWindowToScreen();\n')
 s=patch(s,'new UITimer(this::autosave).schedule(1000, true, form);','if (NativeBenchmark.input == null) new UITimer(this::autosave).schedule(1000, true, form);\n    else new NativeBenchmark(session, editor, this::edited, form);\n    editor.repaint();')
 s=patch(s,'public void stop() {','public void stop() {\n    if (NativeBenchmark.input != null) return;')
 f.write_text(s)
